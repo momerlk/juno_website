@@ -155,9 +155,6 @@
 */
 
 #intro .features-box .bg-cover {
-  -ms-backface-visibility: hidden;
-  -moz-backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   height: 192px;
 }
 #intro .features-box:nth-child(1) .bg-cover {
