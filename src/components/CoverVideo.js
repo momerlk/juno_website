@@ -7,8 +7,9 @@ const VideoContainer = styled.div`
 width : 100%;
 
 video {
-    width : 60%;
-    height : 90%;
+    width : 55%;
+    height : 75%;
+    margin-top : 5%;
     margin-left: 30%;
 }
 `

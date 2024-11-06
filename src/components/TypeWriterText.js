@@ -7,7 +7,6 @@ import Button from "./Button";
 const Title = styled.h2`
 font-size : ${props => props.theme.fontxxl};
 text-transform: capitalize;
-width : 80%;
 font-weight: 700;
 
 color : ${props => props.theme.text};
