@@ -58,7 +58,7 @@ const Navigation = () => {
                     <MenuItem>Team</MenuItem>
                     <MenuItem>Faq</MenuItem>
                 </Menu>
-                <Button text={"Download"} link={"https://google.com"}/>
+                <Button text={"Seller's Program"} link={"https://google.com"}/>
             </NavBar>
         </Section>
     )

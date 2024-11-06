@@ -16,7 +16,7 @@ function App() {
   return (
     <>
     <GlobalStyles />
-    <ThemeProvider theme={dark}>
+    <ThemeProvider theme={light}>
       <Navigation />
       <Home />
       <About />
