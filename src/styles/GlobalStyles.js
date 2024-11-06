@@ -1,5 +1,6 @@
 import "@fontsource/akaya-telivigala"
 import "@fontsource/sora"
+import '@fontsource-variable/league-spartan';
 import { createGlobalStyle } from "styled-components"
 
 const GlobalStyles = createGlobalStyle`
@@ -15,13 +16,14 @@ h1,h2,h3,h4,h5 : {
 
 body {
     font-family : 'Sora', sans-serif;
-
+    overflow-x : hidden;
 }
 
 a {
     color : inherit;
     text-decoration : none;
 }
+
 
 
 `
