@@ -53,7 +53,7 @@ const DrawSVG = () => {
     } , [])
 
     return (
-        <VectorContainer>
+        <VectorContainer ref={ref}>
             <Vector />
         </VectorContainer>
     )
