@@ -1,7 +1,8 @@
 import React from "react";
-import styled from "styled-components";
+import styled, { ThemeProvider } from "styled-components";
 import Carousel from "../Carousel";
 import Button from "../Button";
+import { dark } from "../../styles/Themes";
 
 const Section = styled.section`
 min-height : 100vh;
@@ -56,12 +57,19 @@ const SubText = styled.p`
 `
 
 const SubTextLight = styled.p`
-    font-size : ${props => props.theme.fontlg};
+    font-size : ${props => props.theme.fontmd};
     color : ${props => `rgba(${props.theme.bodyRgba} , 0.6)`};
     align-self: flex-start;
     width : 80%;
     margin : 1rem auto;
     font-weight: 400;
+`
+
+const ButtonContainer = styled.div`
+    width : 80%;
+    margin : 1rem auto;
+    align-self : flex-start;
+
 `
 
 const About = () => {
@@ -81,7 +89,13 @@ const About = () => {
                     <SubTextLight>
                     The app uses a powerful recommendation system that personalizes product feeds based on user interactions, such as swiping right or left to like or dislike items and swiping up to add items to the cart.
                     </SubTextLight>
-                    <Button text="Download Now" link="#"/>
+                    <ThemeProvider theme={dark}>
+                        <ButtonContainer>
+                            <Button text="Download Now" link="/"/>
+                        </ButtonContainer>
+                        
+                    </ThemeProvider>
+                    
                 </Box>
             </Container>
         </Section>
