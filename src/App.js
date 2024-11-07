@@ -1,8 +1,7 @@
-import logo from './logo.svg';
 import './App.css';
 import GlobalStyles from './styles/GlobalStyles';
 import { ThemeProvider } from 'styled-components';
-import { dark, light } from './styles/Themes';
+import { light } from './styles/Themes';
 import Navigation from './components/Navigation';
 import Home from './components/sections/Home';
 import About from './components/sections/About';
