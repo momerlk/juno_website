@@ -53,7 +53,7 @@ const Navigation = () => {
                 <Menu>
                     <MenuItem>Home</MenuItem>
                     <MenuItem>About</MenuItem>
-                    <MenuItem>Roadmap</MenuItem>
+                    <MenuItem>Features</MenuItem>
                     <MenuItem>Showcase</MenuItem>
                     <MenuItem>Team</MenuItem>
                     <MenuItem>Faq</MenuItem>

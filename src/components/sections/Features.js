@@ -1,11 +1,11 @@
 import React from "react"
 
-const Roadmap = () => {
+const Features = () => {
     return (
         <div>
-            Roadmap
+            Features
         </div>
     )
 }
 
-export default Roadmap;
+export default Features;
