@@ -115,52 +115,52 @@ const Carousel = () => {
             >
                 <SwiperSlide> 
                     <div className="product-card">
-                        <img src={img1} alt="product" /> 
+                        <img src={img1} alt="alkaram" /> 
                     </div>
                 </SwiperSlide>
                 <SwiperSlide>
                     <div className="product-card">
-                        <img src={img2} alt="image" /> 
+                        <img src={img2} alt="zara" /> 
                     </div>         
                 </SwiperSlide>
                 <SwiperSlide>
                     <div className="product-card">
-                        <img src={img3} alt="fashion" /> 
+                        <img src={img3} alt="hsy" /> 
                     </div>         
                 </SwiperSlide>
                 <SwiperSlide>
                     <div className="product-card">
-                        <img src={img4} alt="test" /> 
+                        <img src={img4} alt="shah jahan" /> 
                     </div>         
                 </SwiperSlide>
                 <SwiperSlide>
                     <div className="product-card">
-                        <img src={img5} alt="random" /> 
+                        <img src={img5} alt="akbar" /> 
                     </div>         
                 </SwiperSlide>
                 <SwiperSlide>
                     <div className="product-card">
-                        <img src={img6} alt="product" /> 
+                        <img src={img6} alt="aurangzeb" /> 
                     </div>         
                 </SwiperSlide>
                 <SwiperSlide>
                     <div className="product-card">
-                        <img src={img7} alt="omer" /> 
+                        <img src={img7} alt="insaan" /> 
                     </div>         
                 </SwiperSlide>
                 <SwiperSlide>
                     <div className="product-card">
-                        <img src={img8} alt="prod" /> 
+                        <img src={img8} alt="aurat" /> 
                     </div>         
                 </SwiperSlide>
                 <SwiperSlide>
                     <div className="product-card">
-                        <img src={img9} alt="apparel" /> 
+                        <img src={img9} alt="banda" /> 
                     </div>         
                 </SwiperSlide>
                 <SwiperSlide> 
                     <div className="product-card">
-                        <img src={img10} alt="alkarm" /> 
+                        <img src={img10} alt="bandi" /> 
                     </div>         
                 </SwiperSlide>
             

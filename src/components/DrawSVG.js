@@ -36,7 +36,8 @@ const DrawSVG = () => {
         svg.style.strokeDasharray = length;
         svg.style.strokeDashoffset = length;
 
-        let t1 = gsap.timeline({
+        // let t1 = 
+        gsap.timeline({
             scrollTrigger : {
                 trigger : element,
                 start : "top center",
