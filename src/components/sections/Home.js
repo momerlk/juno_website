@@ -88,7 +88,7 @@ const Home = () => {
                     <Circle>
                         &#x2193;
                     </Circle>
-                    <img src={RoundedBlack}/>
+                    <img src={RoundedBlack} alt="Up Button"/>
                 </Round>
             </Container>
         </Section>
