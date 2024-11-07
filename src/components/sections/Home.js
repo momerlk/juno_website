@@ -3,7 +3,6 @@ import styled, { keyframes } from "styled-components";
 import TypeWriterText from "../TypeWriterText";
 import CoverVideo from "../CoverVideo";
 import RoundedBlack from "../../assets/Rounded-Text-Black.png"
-import RoundedWhite from "../../assets/Rounded-Text-White.png"
 
 const Section = styled.section`
 min-height: ${props => `calc(100vh - ${props.theme.navHeight})`};

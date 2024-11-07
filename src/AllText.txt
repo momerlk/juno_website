@@ -38,8 +38,8 @@ Ape Killers!
 About Section👇
 
 - Welcome To The Weirdos Club.
-- The WEIRDOS CLUB is a private collection of NFTs—unique digital collectibles. The Weirdos are stored as ERC-721 tokens on the Ethereum blockchain and hosted on IPFS.
-- With more than 200+ hand drawn traits, each NFT is unique and comes with a membership to an exclusive group of successful investors. Join an ambitious ever-growing community with multiple benefits and utilities.
+- Juno fosters a community where users can interact, share their collections, discuss fashion choices, and even shop together. 
+- The app uses a powerful recommendation system that personalizes product feeds based on user interactions, such as swiping right or left to like or dislike items and swiping up to add items to the cart.
 - Join Our Discord
 
 RoadMap Section👇
