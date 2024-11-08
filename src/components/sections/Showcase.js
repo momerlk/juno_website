@@ -41,14 +41,16 @@ div {
 `
 
 const ProductItem = ({img , number , price}) => {
-
+    return (
+        <></>
+    )
 }
 
 function Showcase(){
     return (
         <Section>
             <Row direction="none">
-                <div>Item</div>
+                <ProductItem></ProductItem>
                 <div>Item</div>
                 <div>Item</div>
             </Row>
