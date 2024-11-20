@@ -21,8 +21,8 @@ function App() {
       <About />
       <Roadmap />
       <Showcase />
-      <Faq />
       <Team />
+      <Faq />
       <Footer />
     </ThemeProvider>
     </>
