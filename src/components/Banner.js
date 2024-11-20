@@ -1,7 +1,6 @@
 import React from "react";
 import styled from "styled-components";
 import bannerImg from "../assets/juno_banner.webp"
-import Button from "./Button"
 
 const Section = styled.section`
 width : 100vw;

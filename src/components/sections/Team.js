@@ -3,7 +3,6 @@ import styled from "styled-components"
 
 import omer from "../../assets/team/omer.png"
 import zayan from "../../assets/team/zayan.jpeg"
-import img3 from "../../assets/products/3.webp"
 
 const Section = styled.section`
 min-height : 100vh;

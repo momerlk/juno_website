@@ -29,18 +29,18 @@ width : fit-content;
 
 `  
 
-const Container = styled.div`
-width : 75%;
-margin : 2rem auto;
+// const Container = styled.div`
+// width : 75%;
+// margin : 2rem auto;
 
-display : flex;
-justify-content: center;
-align-content: center;
-`
+// display : flex;
+// justify-content: center;
+// align-content: center;
+// `
 
-const Box = styled.div`
-width : 45%;
-`
+// const Box = styled.div`
+// width : 45%;
+// `
 
 const Faq = () => {
     return (
