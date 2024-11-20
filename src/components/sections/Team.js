@@ -1,8 +1,8 @@
 import React from "react"
 import styled from "styled-components"
 
-import img1 from "../../assets/products/1.webp"
-import img2 from "../../assets/products/2.webp"
+import omer from "../../assets/team/omer.png"
+import zayan from "../../assets/team/zayan.jpeg"
 import img3 from "../../assets/products/3.webp"
 
 const Section = styled.section`
@@ -100,7 +100,7 @@ color : ${props => `rgba(${props.theme.textRgba},0.9)`};
 
 margin-top : 1rem;
 
-font-weight : 400;
+font-weight : 600;
 ` 
 
 const MemberComponent = ({img, name="", EngPosition="" , UrduPosition=""}) => {
@@ -110,8 +110,7 @@ const MemberComponent = ({img, name="", EngPosition="" , UrduPosition=""}) => {
                 <img src={img} alt={name}/> 
             </ImgContainer>
             <Name>{name}</Name>
-            <Name>{UrduPosition}</Name>
-            {/* <Position>{EngPosition}</Position> */}
+            <Position>{EngPosition} | {UrduPosition}</Position>
         </Item>
     )
 }
@@ -121,9 +120,9 @@ const Team = () => {
         <Section>
             <Title>Team</Title>
             <Container>
-                <MemberComponent img={img1} name={"Omer Malik"} EngPosition={"CEO"} UrduPosition={"بادشاہ "}/>
-                <MemberComponent img={img2} name={"Amr Nazir"} EngPosition={"COO"} UrduPosition={"نائب"}/>
-                <MemberComponent img={img3} name={"Zayan Hussain"} EngPosition={"CXO"} UrduPosition={"دستیار "}/>
+                <MemberComponent img={omer} name={"Omer Malik"} EngPosition={"CEO"} UrduPosition={"بادشاہ "}/>
+                <MemberComponent img={zayan} name={"Amr Nazir"} EngPosition={"COO"} UrduPosition={"نائب"}/>
+                <MemberComponent img={zayan} name={"Zayan Hussain"} EngPosition={"CCO"} UrduPosition={"دستیار "}/>
             </Container>
         </Section>
     )
