@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import { BarChart, Upload, CreditCard, LogOut, Store } from 'lucide-react';
+import JunoStudioAccounts from './JunoStudioAccounts';
+import SubscriptionModal from './SubscriptionModal';
 
 const SellerDashboard: React.FC = () => {
   const { seller, logout } = useSellerAuth();
@@ -16,9 +18,24 @@ const SellerDashboard: React.FC = () => {
     }
   };
 
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+
   const handleSubscription = () => {
-    // TODO: Implement subscription payment logic
-    console.log('Processing subscription payment');
+    setIsSubscriptionModalOpen(true);
+  };
+
+  const handleSubscriptionUpdate = async (plan, paymentDetails) => {
+    try {
+      // TODO: Implement actual subscription API call with payment processing
+      console.log('Processing subscription:', {
+        plan,
+        cardNumber: paymentDetails.cardNumber.slice(-4), // Only log last 4 digits
+        expiryDate: paymentDetails.expiryDate,
+        name: paymentDetails.name
+      });
+    } catch (error) {
+      console.error('Subscription update failed:', error);
+    }
   };
 
   return (
@@ -110,7 +127,7 @@ const SellerDashboard: React.FC = () => {
           </motion.div>
         </div>
 
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
@@ -123,7 +140,29 @@ const SellerDashboard: React.FC = () => {
           <div className="text-center py-12">
             <p className="text-neutral-400">Analytics dashboard coming soon</p>
           </div>
-        </motion.div>
+        </motion.div> */}
+
+        <JunoStudioAccounts />
+
+        <SubscriptionModal
+          isOpen={isSubscriptionModalOpen}
+          onClose={() => setIsSubscriptionModalOpen(false)}
+          onSubscribe={handleSubscriptionUpdate}
+          currentPlan={seller?.subscriptionStatus === 'active' ? {
+            id: 'standard',
+            name: 'Standard',
+            price: 4999,
+            billingPeriod: 'monthly',
+            features: [
+              'Unlimited products',
+              'Advanced analytics',
+              'Priority support',
+              'Multiple user accounts',
+              'API access',
+              'Custom integrations'
+            ]
+          } : undefined}
+        />
       </div>
     </div>
   );

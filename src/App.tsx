@@ -16,6 +16,7 @@ import SellerDashboard from './components/seller/SellerDashboard';
 import SellerOnboarding from './components/seller/SellerOnboarding';
 import ProtectedRoute from './components/seller/ProtectedRoute';
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
+import { JunoStudioProvider } from './contexts/JunoStudioContext';
 
 function App() {
   useEffect(() => {
@@ -32,7 +33,8 @@ function App() {
   return (
     <Router>
       <SellerAuthProvider>
-        <div className="min-h-screen bg-background text-white">
+        <JunoStudioProvider>
+          <div className="min-h-screen bg-background text-white">
           {!window.location.pathname.startsWith('/seller') && <Navbar />}
           <Routes>
             <Route path="/" element={
@@ -64,7 +66,8 @@ function App() {
             } />
           </Routes>
           <Footer />
-        </div>
+          </div>
+        </JunoStudioProvider>
       </SellerAuthProvider>
     </Router>
   );
