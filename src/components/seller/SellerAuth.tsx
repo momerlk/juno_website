@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Store } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const SellerAuth: React.FC = () => {
+  const navigate = useNavigate();
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,8 +20,10 @@ const SellerAuth: React.FC = () => {
     try {
       if (isSignup) {
         await signup(email, password, businessName);
+        navigate('/seller/onboarding');
       } else {
         await login(email, password);
+        navigate('/seller/dashboard');
       }
     } catch (err) {
       setError('Authentication failed. Please try again.');
@@ -118,12 +122,10 @@ const SellerAuth: React.FC = () => {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => setIsSignup(!isSignup)}
+              onClick={() => navigate("/seller/onboarding")}  
               className="text-sm text-neutral-400 hover:text-primary"
             >
-              {isSignup
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up"}
+              {"Don't have an account? Sign up"}
             </button>
           </div>
         </form>

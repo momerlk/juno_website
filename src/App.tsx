@@ -13,6 +13,7 @@ import Footer from './components/Footer';
 import ScreenshotsSection from './components/ScreenshotsSection';
 import SellerAuth from './components/seller/SellerAuth';
 import SellerDashboard from './components/seller/SellerDashboard';
+import SellerOnboarding from './components/seller/SellerOnboarding';
 import ProtectedRoute from './components/seller/ProtectedRoute';
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
 
@@ -57,6 +58,9 @@ function App() {
               <ProtectedRoute>
                 <SellerDashboard />
               </ProtectedRoute>
+            } />
+            <Route path="/seller/onboarding" element={
+                <SellerOnboarding />
             } />
           </Routes>
           <Footer />
