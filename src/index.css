@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-neutral-100 font-sans;
+    background-image: radial-gradient(circle at 30% 10%, rgba(123, 66, 246, 0.08) 0%, transparent 40%),
+                      radial-gradient(circle at 80% 40%, rgba(0, 229, 255, 0.07) 0%, transparent 40%),
+                      radial-gradient(circle at 40% 80%, rgba(255, 69, 133, 0.07) 0%, transparent 40%);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold leading-tight;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+
+  p {
+    @apply leading-relaxed;
+  }
+}
+
+@layer components {
+  .container {
+    @apply px-4 md:px-6 mx-auto max-w-7xl;
+  }
+  
+  .btn {
+    @apply px-6 py-3 rounded-lg font-medium transition-all duration-300 inline-flex items-center justify-center;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-secondary-dark;
+  }
+  
+  .btn-accent {
+    @apply bg-accent text-background hover:bg-accent-dark;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-neutral-700 text-neutral-200 hover:border-neutral-500 hover:text-white;
+  }
+  
+  .card {
+    @apply bg-background-light rounded-2xl p-6 transition-all duration-300;
+  }
+  
+  .card-hover {
+    @apply hover:shadow-lg hover:-translate-y-1 hover:shadow-glow-primary;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent;
+  }
+
+  .section {
+    @apply py-16 md:py-24;
+  }
+
+  .navbar {
+    @apply fixed top-0 left-0 right-0 z-50 transition-all duration-300;
+  }
+
+  .navbar-scrolled {
+    @apply bg-background/95 backdrop-blur-md border-b border-neutral-800;
+  }
+}
