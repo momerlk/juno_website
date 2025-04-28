@@ -9,6 +9,7 @@ import Mission from './components/Mission';
 import Contact from './components/Contact';
 import DownloadSection from './components/DownloadSection';
 import Footer from './components/Footer';
+import ScreenshotsSection from './components/ScreenshotsSection';
 
 function App() {
   useEffect(() => {
@@ -28,6 +29,7 @@ function App() {
       <main>
         <Hero />
         <JunoApp />
+        <ScreenshotsSection />
         <Mission />
         <JunoStudio />
         <Pricing />
