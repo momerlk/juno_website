@@ -24,8 +24,8 @@ const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: 'Home', href: '#home' },
-    { name: 'Juno App', href: '#juno-app' },
-    { name: 'Juno Studio', href: '#juno-studio' },
+    { name: 'Shop', href: '#juno-app' },
+    { name: 'Studio', href: '#juno-studio' },
     { name: 'Pricing', href: '#pricing' },
     { name: 'Team', href: '#team' },
     { name: 'Contact', href: '#contact' },
@@ -38,7 +38,7 @@ const Navbar: React.FC = () => {
           <a href="#home" className="flex items-center space-x-2" onClick={closeMenu}>
             <div className="flex items-center">
               <span className="font-bold text-2xl">
-                <span className="text-primary">Juno</span>
+                <span className="text-primary">juno</span>
               </span>
             </div>
           </a>

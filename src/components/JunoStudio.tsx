@@ -100,7 +100,7 @@ const JunoStudio: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.6 }}
           className="mt-16 text-center"
         >
-          <a href="#pricing" className="btn btn-secondary inline-flex items-center group">
+          <a href="#pricing" className="btn btn-primary inline-flex items-center group">
             View Pricing
             <ArrowRight size={20} className="ml-2 transition-transform group-hover:translate-x-1" />
           </a>

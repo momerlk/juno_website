@@ -75,7 +75,7 @@
   }
 
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#FF1818] to-[#FF6E00]
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#f12711] to-[#f5af19];
   }
 
   .section {

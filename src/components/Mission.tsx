@@ -89,7 +89,7 @@ const Mission: React.FC = () => {
               <p className="text-lg text-center italic text-neutral-300">
                 "At Juno, we believe fashion discovery should be as fun and intuitive as scrolling through your favorite social media feed. Our technology brings brands and consumers together in a way that's never been done before."
               </p>
-              <p className="text-center mt-4 text-neutral-400">- Alex Chen, Founder & CEO</p>
+              <p className="text-center mt-4 text-neutral-400">- Omer Malik, Founder</p>
             </div>
           </div>
         </motion.div>
