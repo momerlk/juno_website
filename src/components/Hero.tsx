@@ -1,7 +1,7 @@
 import React from 'react';
 import { Smartphone, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import splashImage from './assets/screenshots/splash.png';
+import splashImage from "../assets/screenshots/splash.png"
 
 
 const Hero: React.FC = () => {
