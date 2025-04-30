@@ -105,26 +105,36 @@ const Footer: React.FC = () => {
             <h4 className="text-lg font-semibold mb-4">Company</h4>
             <ul className="space-y-2">
               <li>
-                <a href="#mission" className="text-neutral-400 hover:text-white transition-colors duration-300">
-                  Mission
+                <a href="/privacy-policy" className="text-neutral-400 hover:text-white transition-colors duration-300">
+                  Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="#team" className="text-neutral-400 hover:text-white transition-colors duration-300">
-                  Team
+                <a href="/refund-policy" className="text-neutral-400 hover:text-white transition-colors duration-300">
+                  Refund Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="text-neutral-400 hover:text-white transition-colors duration-300">
-                  Careers
+                <a href="/service-policy" className="text-neutral-400 hover:text-white transition-colors duration-300">
+                  Service Policy
                 </a>
               </li>
               <li>
-                <a href="#contact" className="text-neutral-400 hover:text-white transition-colors duration-300">
-                  Contact
+                <a href="/terms-and-conditions" className="text-neutral-400 hover:text-white transition-colors duration-300">
+                  Terms And Conditions
                 </a>
               </li>
             </ul>
+            <div className="mt-6">
+              <h4 className="text-lg font-semibold mb-4">Business Details</h4>
+              <address className="text-neutral-400 not-italic">
+                Vogue Towers, MM Alam Road<br />
+                Block C2, Gulberg III, Lahore<br />
+                <a href="tel:+15551234567" className="hover:text-white transition-colors duration-300">
+                  +92 300 0856955
+                </a>
+              </address>
+            </div>
           </div>
         </div>
 
@@ -132,15 +142,21 @@ const Footer: React.FC = () => {
           <p className="text-neutral-500 text-sm mb-4 md:mb-0">
             &copy; {currentYear} Juno. All rights reserved.
           </p>
-          <div className="flex space-x-6">
-            <a href="#" className="text-neutral-500 hover:text-neutral-300 text-sm">
+          <div className="flex flex-wrap gap-4 md:gap-6">
+            <a href="/privacy-policy" className="text-neutral-500 hover:text-neutral-300 text-sm">
               Privacy Policy
             </a>
-            <a href="#" className="text-neutral-500 hover:text-neutral-300 text-sm">
-              Terms of Service
+            <a href="/terms-and-conditions" className="text-neutral-500 hover:text-neutral-300 text-sm">
+              Terms & Conditions
             </a>
-            <a href="#" className="text-neutral-500 hover:text-neutral-300 text-sm">
-              Cookie Policy
+            <a href="/return-policy" className="text-neutral-500 hover:text-neutral-300 text-sm">
+              Return Policy
+            </a>
+            <a href="/service-policy" className="text-neutral-500 hover:text-neutral-300 text-sm">
+              Service Policy
+            </a>
+            <a href="/refund-policy" className="text-neutral-500 hover:text-neutral-300 text-sm">
+              Refund Policy
             </a>
           </div>
         </div>

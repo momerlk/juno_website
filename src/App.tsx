@@ -17,6 +17,10 @@ import SellerOnboarding from './components/seller/SellerOnboarding';
 import ProtectedRoute from './components/seller/ProtectedRoute';
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
 import { JunoStudioProvider } from './contexts/JunoStudioContext';
+import PrivacyPolicy from './components/policies/PrivacyPolicy';
+import RefundPolicy from './components/policies/RefundPolicy';
+import ShippingServicePolicy from './components/policies/ShippingServicePolicy';
+import TermsConditions from './components/policies/TermsConditions';
 
 function App() {
   useEffect(() => {
@@ -50,6 +54,12 @@ function App() {
                 <Contact />
               </main>
             } />
+
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/service-policy" element={<ShippingServicePolicy />} />
+            <Route path="/terms-and-conditions" element={<TermsConditions />} />
+
             <Route path="/seller" element={
               <ProtectedRoute>
                 <Navigate to="/seller/dashboard" replace />
