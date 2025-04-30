@@ -51,7 +51,7 @@ const Pricing: React.FC = () => {
                 </div>
                 <div className="text-center md:text-right">
                   <div className="text-3xl md:text-4xl font-bold">
-                    <span className="gradient-text">$4,999</span>
+                    <span className="gradient-text">Rs. 4,999</span>
                     <span className="text-neutral-400 text-xl">/month</span>
                   </div>
                   <p className="text-neutral-400 text-lg">+ 5% transaction fee</p>
