@@ -1,6 +1,8 @@
 import React from 'react';
 import { Smartphone, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import splashImage from './assets/screenshots/splash.png';
+
 
 const Hero: React.FC = () => {
   return (
@@ -52,7 +54,7 @@ const Hero: React.FC = () => {
               <div className="relative w-[280px] md:w-[320px] animate-float">
                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-secondary/20 blur-xl rounded-full"></div>
                 <img
-                  src="./src/assets/screenshots/splash.png"
+                  src={splashImage}
                   alt="Juno App Preview"
                   className="relative z-10 rounded-3xl  border-background-light shadow-xl"
                 />

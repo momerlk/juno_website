@@ -165,6 +165,7 @@ const SellerOnboarding: React.FC = () => {
   const handleSubmit = async () => {
     // TODO: Implement form submission logic
     console.log('Form submitted:', formData);
+    alert(`formData = ${JSON.stringify(formData)}`)
     navigate('/seller/dashboard');
   };
 
