@@ -1,14 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import * as api from "../api"
 
-interface Seller {
-  id: string;
-  email: string;
-  businessName: string;
-  subscriptionStatus: 'active' | 'inactive' | 'pending';
-}
+
 
 interface SellerAuthContextType {
-  seller: Seller | null;
+  seller:  api.LoginResponse | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -27,7 +23,7 @@ export const useSellerAuth = () => {
 };
 
 export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [seller, setSeller] = useState<Seller | null>(null);
+  const [seller, setSeller] = useState<api.LoginResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -52,15 +48,29 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      // TODO: Implement actual login API call
-      const mockSeller: Seller = {
-        id: '1',
-        email,
-        businessName: 'Test Business',
-        subscriptionStatus: 'active'
-      };
-      localStorage.setItem('seller', JSON.stringify(mockSeller));
-      setSeller(mockSeller);
+      const userAgent = navigator.userAgent;
+
+      
+
+      const response = await api.sellerLogin({
+        email : email,
+        password : password,
+        device_info : {
+          app_version: "0.1.0",
+          device_id: "",
+          device_name: "",
+          device_type: /Mobile|Android|iP(hone|od|ad)/.test(userAgent) ? 'mobile' : 'web',
+          ip_address: "",
+          last_used: new Date().toISOString(),
+          os_version: userAgent.match(/Windows|Mac OS X|Linux|Android|iOS/)![0],
+          user_agent: userAgent,
+        }
+      });
+
+      alert(`token = ${response.token}`)
+
+      localStorage.setItem('seller', JSON.stringify(response));
+      setSeller(response);
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -70,23 +80,7 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const signup = async (email: string, password: string, businessName: string) => {
-    try {
-      setIsLoading(true);
-      // TODO: Implement actual signup API call
-      const mockSeller: Seller = {
-        id: '1',
-        email,
-        businessName,
-        subscriptionStatus: 'pending'
-      };
-      localStorage.setItem('seller', JSON.stringify(mockSeller));
-      setSeller(mockSeller);
-    } catch (error) {
-      console.error('Signup failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+
   };
 
   const logout = () => {

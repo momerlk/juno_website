@@ -85,40 +85,40 @@ const Team: React.FC = () => {
 
   const teamMembers: TeamMember[] = [
     {
-      name: "Alex Chen",
+      name: "Omer Ali Malik",
       role: "Founder & CEO",
-      image: "https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-      bio: "Fashion industry veteran with a passion for technology and innovation.",
+      image: "",
+      bio: "Handling Product and Operations",
       social: {
-        linkedin: "#",
+        linkedin: "https://linkedin.com/in/omer-malik-395a2a2a5",
         twitter: "#",
       }
     },
     {
-      name: "Sophia Johnson",
-      role: "CTO",
-      image: "https://images.pexels.com/photos/3775087/pexels-photo-3775087.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-      bio: "Tech visionary with experience building consumer mobile applications.",
+      name: "Amr Nazir",
+      role: "COO",
+      image: "",
+      bio: "Handling sales and business operations",
       social: {
         linkedin: "#",
         github: "#",
       }
     },
     {
-      name: "Marcus Williams",
-      role: "Creative Director",
-      image: "https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-      bio: "Designer with a background in fashion and digital product design.",
+      name: "Ali Mukarram",
+      role: "CMO",
+      image: "",
+      bio: "Handling marketing and sales",
       social: {
         linkedin: "#",
         twitter: "#",
       }
     },
     {
-      name: "Olivia Garcia",
-      role: "Head of Partnerships",
-      image: "https://images.pexels.com/photos/3756679/pexels-photo-3756679.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-      bio: "Building relationships between brands and the Juno platform.",
+      name: "Shahzaib Abid",
+      role: "Developer",
+      image: "",
+      bio: "Handling Product",
       social: {
         linkedin: "#",
         twitter: "#",

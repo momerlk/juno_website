@@ -68,11 +68,11 @@ const DownloadSection: React.FC = () => {
           >
             <div className="relative max-w-xs">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/30 to-secondary/30 blur-3xl rounded-full"></div>
-              <img
+              {/* <img
                 src="https://images.pexels.com/photos/4050388/pexels-photo-4050388.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
                 alt="Juno App Preview"
                 className="relative z-10 rounded-3xl border-4 border-background-light shadow-xl"
-              />
+              /> */}
               <div className="absolute -top-4 -left-4 z-20 bg-primary rounded-full px-4 py-2 shadow-lg shadow-primary/20">
                 <span className="text-white font-medium text-sm">Try Juno</span>
               </div>

@@ -6,31 +6,33 @@ import { Upload, MapPin, Building2, CreditCard, Truck, FileText, Tags, CheckCirc
 import FormInput from './FormInput';
 import FormStep from './FormStep';
 
+import * as api from "../../api"
+
 interface FormData {
   // Login Credentials
   email: string;
   password: string;
 
   // Business Information
-  businessName: string;
-  legalName: string;
+  business_name: string;
+  legal_name: string;
   description: string;
-  shortDescription: string;
+  short_description: string;
 
   // Brand Identity
-  logo: File | null;
-  banner: File | null;
-  mobileBanner: File | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  banner_mobile_url: string | null;
 
   // Contact Information
   contact: {
-    contactPersonName: string;
+    contact_person_name: string;
     email: string;
-    supportEmail: string;
-    phoneNumber: string;
-    alternatePhoneNumber: string;
+    support_email: string;
+    phone_number: string;
+    alternate_phone_number: string;
     whatsapp: string;
-    businessHours: string;
+    business_hours: string;
   };
 
   // Store Location
@@ -38,40 +40,33 @@ interface FormData {
     address: string;
     city: string;
     state: string;
-    postalCode: string;
+    postal_code: string;
     country: string;
     latitude: number;
     longitude: number;
     neighborhood: string;
-    storeDirections: string;
-    pickupAvailable: boolean;
-    pickupHours: string;
+    store_directions: string;
+    pickup_available: boolean;
+    pickup_hours: string;
   };
 
   // Business Profile
-  businessDetails: {
-    businessType: string;
-    foundedYear: number;
-    numberOfEmployees: string;
-    businessCategory: string;
-    businessSubcategory: string;
-    registrationNumber: string;
-    ntnNumber: string;
-    salesTaxNumber: string;
+  business_details: {
+    business_type: string;
+    founded_year: number;
+    number_of_employees: string;
+    business_category: string;
+    business_subcategory: string;
   };
 
   // KYC Documents
-  kycDocuments: {
-    cnicFront: File | null;
-    cnicBack: File | null;
-    businessCertificate: File | null;
-    taxCertificate: File | null;
-    utilityBill: File | null;
-    storeImages: File[];
+  kyc_documents: {
+    cnic_front: string | null;
+    cnic_back: string | null;
   };
 
   // Bank Account Details
-  bankDetails: {
+  bank_details: {
     bankName: string;
     accountTitle: string;
     accountNumber: string;
@@ -85,35 +80,29 @@ interface FormData {
   };
 
   // Shipping Settings
-  shippingSettings: {
-    defaultHandlingTime: number;
-    freeShippingThreshold: number;
-    platformShipping: boolean;
-    selfShipping: boolean;
-    shippingCutoffTime: string;
-    shippingProfiles: Array<{
-      profileName: string;
+  shipping_settings: {
+    default_handling_time: number;
+    free_shipping_threshold: number;
+    platform_shipping: boolean;
+    self_shipping: boolean;
+    shipping_profiles: Array<{
+      profile_name: string;
       regions: string[];
-      shippingRates: Array<{
-        deliveryMethod: string;
-        estimatedDays: number;
+      shipping_rates: Array<{
+        delivery_method: string;
+        estimated_days: number;
         rate: number;
       }>;
     }>;
   };
 
   // Return Policy
-  returnPolicy: string;
+  return_policy: string;
 
   // Store Categories & Tags
   categories: string[];
   tags: string[];
 
-  // Commission Settings
-  commissionSettings: {
-    commissionRate: number;
-    commissionType: string;
-  };
 
   // Status
   status: string;
@@ -123,54 +112,47 @@ interface FormData {
 const initialFormData: FormData = {
   email: '',
   password: '',
-  businessName: '',
-  legalName: '',
+  business_name: '',
+  legal_name: '',
   description: '',
-  shortDescription: '',
-  logo: null,
-  banner: null,
-  mobileBanner: null,
+  short_description: '',
+  logo_url: null,
+  banner_url: null,
+  banner_mobile_url: null,
   contact: {
-    contactPersonName: '',
+    contact_person_name: '',
     email: '',
-    supportEmail: '',
-    phoneNumber: '',
-    alternatePhoneNumber: '',
+    support_email: '',
+    phone_number: '',
+    alternate_phone_number: '',
     whatsapp: '',
-    businessHours: ''
+    business_hours: ''
   },
   location: {
     address: '',
     city: '',
     state: '',
-    postalCode: '',
+    postal_code: '',
     country: 'Pakistan',
     latitude: 0,
     longitude: 0,
     neighborhood: '',
-    storeDirections: '',
-    pickupAvailable: false,
-    pickupHours: ''
+    store_directions: '',
+    pickup_available: false,
+    pickup_hours: ''
   },
-  businessDetails: {
-    businessType: '',
-    foundedYear: new Date().getFullYear(),
-    numberOfEmployees: '',
-    businessCategory: '',
-    businessSubcategory: '',
-    registrationNumber: '',
-    ntnNumber: '',
-    salesTaxNumber: ''
+  business_details: {
+    business_type: '',
+    founded_year: new Date().getFullYear(),
+    number_of_employees: '',
+    business_category: '',
+    business_subcategory: '',
   },
-  kycDocuments: {
-    cnicFront: null,
-    cnicBack: null,
-    businessCertificate: null,
-    taxCertificate: null,
-    utilityBill: null,
-    storeImages: []
+  kyc_documents: {
+    cnic_front: null,
+    cnic_back: null,
   },
-  bankDetails: {
+  bank_details: {
     bankName: '',
     accountTitle: '',
     accountNumber: '',
@@ -182,21 +164,17 @@ const initialFormData: FormData = {
     paymentSchedule: '',
     paymentThreshold: 0
   },
-  shippingSettings: {
-    defaultHandlingTime: 1,
-    freeShippingThreshold: 0,
-    platformShipping: true,
-    selfShipping: false,
-    shippingCutoffTime: '',
-    shippingProfiles: []
+  shipping_settings: {
+    default_handling_time: 1,
+    free_shipping_threshold: 0,
+    platform_shipping: true,
+    self_shipping: false,
+    shipping_profiles: []
   },
-  returnPolicy: '',
+  return_policy: '',
   categories: [],
   tags: [],
-  commissionSettings: {
-    commissionRate: 0,
-    commissionType: 'percentage'
-  },
+
   status: 'pending',
   verified: false
 };
@@ -224,6 +202,7 @@ const SellerOnboarding: React.FC = () => {
   const handleSubmit = async () => {
     try {
       
+      console.log(formData);
       const resp = await fetch('http://localhost:8080/api/v1/seller/auth/register', {
         method: 'POST',
         headers: {
@@ -232,13 +211,16 @@ const SellerOnboarding: React.FC = () => {
         body: JSON.stringify(formData)
       });
 
+      const respJSON = resp.text();
+
       if (!resp.ok) {
-        throw new Error('Registration failed');
+        console.log(respJSON)
+        alert('Registration has failed. Please check your network connection or information and try again.');
       }
 
       if (resp.ok || resp.status === 201) {
         alert('Registration successful. Please check your email for verification.');
-        navigate('/seller/login');
+        navigate('/seller/auth');
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -303,26 +285,26 @@ const SellerOnboarding: React.FC = () => {
             icon={<Building2 size={32} className="text-primary" />}
           >
             <FormInput
-              id="businessName"
+              id="business_name"
               label="Business Name"
-              value={formData.businessName}
-              onChange={(value) => setFormData({ ...formData, businessName: value })}
+              value={formData.business_name}
+              onChange={(value) => setFormData({ ...formData, business_name: value })}
               required
               placeholder="Your business name"
             />
             <FormInput
-              id="legalName"
+              id="legal_name"
               label="Your Legal Name"
-              value={formData.legalName}
-              onChange={(value) => setFormData({ ...formData, legalName: value })}
+              value={formData.legal_name}
+              onChange={(value) => setFormData({ ...formData, legal_name: value })}
               required
               placeholder="Legal registered name of the person onboarding"
             />
             <FormInput
-              id="shortDescription"
+              id="short_description"
               label="Short Description"
-              value={formData.shortDescription}
-              onChange={(value) => setFormData({ ...formData, shortDescription: value })}
+              value={formData.short_description}
+              onChange={(value) => setFormData({ ...formData, short_description: value })}
               required
               maxLength={80}
               placeholder="Brief description of your business"
@@ -363,15 +345,18 @@ const SellerOnboarding: React.FC = () => {
                   <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
-                      {formData.logo ? formData.logo.name : 'Choose a logo'}
+                      {formData.logo_url ? formData.logo_url : 'Choose a logo'}
                     </span>
                     <input
                       type="file"
                       className="hidden"
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) setFormData({ ...formData, logo: file });
+                        if (file) {
+                          const url = await api.uploadFileAndGetUrl(file!);
+                          setFormData({ ...formData, logo_url: url });
+                        }
                       }}
                       required
                     />
@@ -387,15 +372,18 @@ const SellerOnboarding: React.FC = () => {
                   <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
-                      {formData.banner ? formData.banner.name : 'Choose a banner'}
+                      {formData.banner_url ? formData.banner_url : 'Choose a banner'}
                     </span>
                     <input
                       type="file"
                       className="hidden"
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) setFormData({ ...formData, banner: file });
+                        if (file) {
+                          const url = await api.uploadFileAndGetUrl(file!);
+                          setFormData({ ...formData, banner_url: url });
+                        }
                       }}
                       required
                     />
@@ -411,15 +399,18 @@ const SellerOnboarding: React.FC = () => {
                   <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
-                      {formData.mobileBanner ? formData.mobileBanner.name : 'Choose a mobile banner'}
+                      {formData.banner_mobile_url ? formData.banner_mobile_url : 'Choose a mobile banner'}
                     </span>
                     <input
                       type="file"
                       className="hidden"
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) setFormData({ ...formData, mobileBanner: file });
+                        if (file) {
+                          const url = await api.uploadFileAndGetUrl(file!);
+                          setFormData({ ...formData, banner_mobile_url: url });
+                        }
                       }}
                       required
                     />
@@ -441,12 +432,12 @@ const SellerOnboarding: React.FC = () => {
             icon={<Mail size={32} className="text-primary" />}
           >
             <FormInput
-              id="contactPersonName"
+              id="contact_person_name"
               label="Contact Person Name"
-              value={formData.contact.contactPersonName}
+              value={formData.contact.contact_person_name}
               onChange={(value) => setFormData({
                 ...formData,
-                contact: { ...formData.contact, contactPersonName: value }
+                contact: { ...formData.contact, contact_person_name: value }
               })}
               required
               placeholder="Full name of contact person"
@@ -466,25 +457,25 @@ const SellerOnboarding: React.FC = () => {
             />
 
             <FormInput
-              id="supportEmail"
+              id="support_email"
               label="Support Email (Optional)"
               type="email"
-              value={formData.contact.supportEmail}
+              value={formData.contact.support_email}
               onChange={(value) => setFormData({
                 ...formData,
-                contact: { ...formData.contact, supportEmail: value }
+                contact: { ...formData.contact, support_email: value }
               })}
               placeholder="support@business.com"
             />
 
             <FormInput
-              id="phoneNumber"
+              id="phone_number"
               label="Phone Number"
               type="tel"
-              value={formData.contact.phoneNumber}
+              value={formData.contact.phone_number}
               onChange={(value) => setFormData({
                 ...formData,
-                contact: { ...formData.contact, phoneNumber: value }
+                contact: { ...formData.contact, phone_number: value }
               })}
               required
               placeholder="+92 XXX XXXXXXX"
@@ -494,10 +485,10 @@ const SellerOnboarding: React.FC = () => {
               id="alternatePhone"
               label="Alternate Phone Number (Optional)"
               type="tel"
-              value={formData.contact.alternatePhoneNumber}
+              value={formData.contact.alternate_phone_number}
               onChange={(value) => setFormData({
                 ...formData,
-                contact: { ...formData.contact, alternatePhoneNumber: value }
+                contact: { ...formData.contact, alternate_phone_number: value }
               })}
               placeholder="+92 XXX XXXXXXX"
             />
@@ -515,12 +506,12 @@ const SellerOnboarding: React.FC = () => {
             />
 
             <FormInput
-              id="businessHours"
+              id="business_hours"
               label="Business Hours"
-              value={formData.contact.businessHours}
+              value={formData.contact.business_hours}
               onChange={(value) => setFormData({
                 ...formData,
-                contact: { ...formData.contact, businessHours: value }
+                contact: { ...formData.contact, business_hours: value }
               })}
               required
               placeholder="Mon-Sat, 10AM - 6PM"
@@ -574,13 +565,13 @@ const SellerOnboarding: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <FormInput
-                id="postalCode"
+                id="postal_code"
                 label="Postal Code"
                 type="number"
-                value={formData.location.postalCode}
+                value={formData.location.postal_code}
                 onChange={(value) => setFormData({
                   ...formData,
-                  location: { ...formData.location, postalCode: value }
+                  location: { ...formData.location, postal_code: value }
                 })}
                 required
                 placeholder="Postal code"
@@ -635,12 +626,12 @@ const SellerOnboarding: React.FC = () => {
             />
 
             <FormInput
-              id="storeDirections"
+              id="store_directions"
               label="Store Directions (Optional)"
-              value={formData.location.storeDirections}
+              value={formData.location.store_directions}
               onChange={(value) => setFormData({
                 ...formData,
-                location: { ...formData.location, storeDirections: value }
+                location: { ...formData.location, store_directions: value }
               })}
               placeholder="Landmarks or directions to find your store"
             />
@@ -649,27 +640,27 @@ const SellerOnboarding: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  id="pickupAvailable"
-                  checked={formData.location.pickupAvailable}
+                  id="pickup_available"
+                  checked={formData.location.pickup_available}
                   onChange={(e) => setFormData({
                     ...formData,
-                    location: { ...formData.location, pickupAvailable: e.target.checked }
+                    location: { ...formData.location, pickup_available: e.target.checked }
                   })}
                   className="w-4 h-4 text-primary bg-background border-neutral-700 rounded focus:ring-primary focus:ring-2"
                 />
-                <label htmlFor="pickupAvailable" className="text-sm text-neutral-400">
+                <label htmlFor="pickup_available" className="text-sm text-neutral-400">
                   Pickup Available?
                 </label>
               </div>
 
-              {formData.location.pickupAvailable && (
+              {formData.location.pickup_available && (
                 <FormInput
-                  id="pickupHours"
+                  id="pickup_hours"
                   label="Pickup Hours"
-                  value={formData.location.pickupHours}
+                  value={formData.location.pickup_hours}
                   onChange={(value) => setFormData({
                     ...formData,
-                    location: { ...formData.location, pickupHours: value }
+                    location: { ...formData.location, pickup_hours: value }
                   })}
                   required
                   placeholder="e.g. Same as business hours"
@@ -687,14 +678,14 @@ const SellerOnboarding: React.FC = () => {
           >
             <div className="space-y-4">
               <div className="space-y-1">
-                <label htmlFor="businessType" className="block text-sm font-medium text-neutral-400">
+                <label htmlFor="business_type" className="block text-sm font-medium text-neutral-400">
                   Business Type<span className="text-red-500 ml-1">*</span>
                 </label>
                 <select
-                  id="businessType"
-                  value={formData.businessDetails.businessType}
+                  id="business_type"
+                  value={formData.business_details.business_type}
                   onChange={(e) => {
-                    formData.businessDetails.businessType = e.target.value;
+                    formData.business_details.business_type = e.target.value;
                     setFormData({ ...formData });
                   }}
                   className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -710,12 +701,12 @@ const SellerOnboarding: React.FC = () => {
               </div>
 
               <FormInput
-                id="foundedYear"
+                id="founded_year"
                 label="Founded Year"
                 type="number"
-                value={formData.businessDetails.foundedYear as unknown as string}
+                value={formData.business_details.founded_year as unknown as string}
                 onChange={(value) => {
-                  formData.businessDetails.foundedYear = parseInt(value) || 0;
+                  formData.business_details.founded_year = parseInt(value) || 0;
                   setFormData({ ...formData });
                 }}
                 required
@@ -728,9 +719,9 @@ const SellerOnboarding: React.FC = () => {
                 </label>
                 <select
                   id="employeeCount"
-                  value={formData.businessDetails.numberOfEmployees}
+                  value={formData.business_details.number_of_employees}
                   onChange={(e) => {
-                    formData.businessDetails.numberOfEmployees = e.target.value;
+                    formData.business_details.number_of_employees = e.target.value;
                     setFormData({ ...formData });
                   }}
                   className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -747,14 +738,14 @@ const SellerOnboarding: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="businessCategory" className="block text-sm font-medium text-neutral-400">
+                <label htmlFor="business_category" className="block text-sm font-medium text-neutral-400">
                   Business Category<span className="text-red-500 ml-1">*</span>
                 </label>
                 <select
-                  id="businessCategory"
-                  value={formData.businessDetails.businessCategory}
+                  id="business_category"
+                  value={formData.business_details.business_category}
                   onChange={(e) => {
-                    formData.businessDetails.businessCategory = e.target.value;
+                    formData.business_details.business_category = e.target.value;
                     setFormData({ ...formData });
                   }}
                   className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -775,9 +766,9 @@ const SellerOnboarding: React.FC = () => {
               <FormInput
                 id="subcategory"
                 label="Subcategory"
-                value={formData.businessDetails.businessSubcategory}
+                value={formData.business_details.business_subcategory}
                 onChange={(value) => {
-                  formData.businessDetails.businessSubcategory = value;
+                  formData.business_details.business_subcategory = value;
                   setFormData({ ...formData });
                 }}
                 required
@@ -802,15 +793,19 @@ const SellerOnboarding: React.FC = () => {
                   <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
-                      {formData.kycDocuments.cnicFront ? formData.kycDocuments.cnicFront.name : 'Upload CNIC front'}
+                      {formData.kyc_documents.cnic_front ? formData.kyc_documents.cnic_front : 'Upload CNIC front'}
                     </span>
                     <input
                       type="file"
                       className="hidden"
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) formData.kycDocuments.cnicFront = file;
+                        if (file) {
+                          const url = await api.uploadFileAndGetUrl(file!);
+                          formData.kyc_documents.cnic_front = url;
+                          setFormData({ ...formData });
+                        }
 
                         setFormData({ ...formData });
                       }}
@@ -828,15 +823,19 @@ const SellerOnboarding: React.FC = () => {
                   <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
-                      {formData.kycDocuments.cnicBack ? formData.kycDocuments.cnicBack.name : 'Upload CNIC back'}
+                      {formData.kyc_documents.cnic_back ? formData.kyc_documents.cnic_back : 'Upload CNIC back'}
                     </span>
                     <input
                       type="file"
                       className="hidden"
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) formData.kycDocuments.cnicBack = file;
+                        if (file) {
+                          const url = await api.uploadFileAndGetUrl(file!);
+                          formData.kyc_documents.cnic_front = url;
+                          setFormData({ ...formData });
+                        }
                         setFormData({ ...formData });
                       }}
                       required
@@ -869,11 +868,11 @@ const SellerOnboarding: React.FC = () => {
                     <input
                       type="radio"
                       value="self"
-                      checked={formData.shippingSettings.selfShipping === true}
+                      checked={formData.shipping_settings.self_shipping === true}
                       onChange={_ => {
-                        formData.shippingSettings.selfShipping = true;
-                        formData.shippingSettings.platformShipping = false;
-                        setFormData({...formData, shippingSettings: {...formData.shippingSettings } });
+                        formData.shipping_settings.self_shipping = true;
+                        formData.shipping_settings.platform_shipping = false;
+                        setFormData({...formData, shipping_settings: {...formData.shipping_settings } });
                       }}
                       className="form-radio text-primary focus:ring-primary h-4 w-4"
                     />
@@ -883,11 +882,11 @@ const SellerOnboarding: React.FC = () => {
                     <input
                       type="radio"
                       value="platform"
-                      checked={formData.shippingSettings.platformShipping}
+                      checked={formData.shipping_settings.platform_shipping}
                       onChange={_ => {
-                        formData.shippingSettings.selfShipping = false;
-                        formData.shippingSettings.platformShipping = true;
-                        setFormData({...formData, shippingSettings: {...formData.shippingSettings } });
+                        formData.shipping_settings.self_shipping = false;
+                        formData.shipping_settings.platform_shipping = true;
+                        setFormData({...formData, shipping_settings: {...formData.shipping_settings } });
                       }}
                       className="form-radio text-primary focus:ring-primary h-4 w-4"
                     />
@@ -896,22 +895,22 @@ const SellerOnboarding: React.FC = () => {
                 </div>
               </div>
 
-              {formData.shippingSettings.selfShipping === true && (
+              {formData.shipping_settings.self_shipping === true && (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-neutral-400">
                       Shipping Profiles
                     </label>
-                    {formData.shippingSettings.shippingProfiles.map((profile, index) => (
+                    {formData.shipping_settings.shipping_profiles.map((profile, index) => (
                       <div key={index} className="p-4 bg-background-light rounded-lg space-y-4">
                         <FormInput
                           id={`profile-name-${index}`}
                           label="Profile Name"
-                          value={profile.profileName}
+                          value={profile.profile_name}
                           onChange={(value) => {
-                            const newProfiles = [...formData.shippingSettings.shippingProfiles];
-                            newProfiles[index] = { ...profile, profileName: value };
-                            formData.shippingSettings.shippingProfiles = newProfiles;
+                            const newProfiles = [...formData.shipping_settings.shipping_profiles];
+                            newProfiles[index] = { ...profile, profile_name: value };
+                            formData.shipping_settings.shipping_profiles = newProfiles;
                             setFormData({ ...formData });
                           }}
                           required
@@ -926,12 +925,12 @@ const SellerOnboarding: React.FC = () => {
                             multiple
                             value={profile.regions}
                             onChange={(e) => {
-                              const newProfiles = [...formData.shippingSettings.shippingProfiles];
+                              const newProfiles = [...formData.shipping_settings.shipping_profiles];
                               newProfiles[index] = {
                                 ...profile,
                                 regions: Array.from(e.target.selectedOptions, option => option.value)
                               };
-                              formData.shippingSettings.shippingProfiles = newProfiles;
+                              formData.shipping_settings.shipping_profiles = newProfiles;
                               setFormData({ ...formData });
                             }}
                             className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -948,8 +947,8 @@ const SellerOnboarding: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            const newProfiles = formData.shippingSettings.shippingProfiles.filter((_, i) => i !== index);
-                            formData.shippingSettings.shippingProfiles = newProfiles;
+                            const newProfiles = formData.shipping_settings.shipping_profiles.filter((_, i) => i !== index);
+                            formData.shipping_settings.shipping_profiles = newProfiles;
                             setFormData({ ...formData });
                           }}
                           className="text-red-500 text-sm hover:text-red-400"
@@ -963,11 +962,11 @@ const SellerOnboarding: React.FC = () => {
                       onClick={() => {
                         setFormData({
                           ...formData,
-                          shippingSettings : {
-                           ...formData.shippingSettings,
-                          shippingProfiles: [
-                            ...formData.shippingSettings.shippingProfiles,
-                            { profileName: '', regions: [], shippingRates: [] }
+                          shipping_settings : {
+                           ...formData.shipping_settings,
+                          shipping_profiles: [
+                            ...formData.shipping_settings.shipping_profiles,
+                            { profile_name: '', regions: [], shipping_rates: [] }
                           ]
                           }
                         });
@@ -981,12 +980,12 @@ const SellerOnboarding: React.FC = () => {
               )}
 
               <FormInput
-                id="defaultHandlingTime"
+                id="default_handling_time"
                 label="Default Handling Time (days)"
                 type="number"
-                value={formData.shippingSettings.defaultHandlingTime.toString()}
+                value={formData.shipping_settings.default_handling_time.toString()}
                 onChange={(value) => {
-                  formData.shippingSettings.defaultHandlingTime = parseInt(value) || 1;
+                  formData.shipping_settings.default_handling_time = parseInt(value) || 1;
                   setFormData({ ...formData })
                 }}
                 required
@@ -994,12 +993,12 @@ const SellerOnboarding: React.FC = () => {
               />
 
               <FormInput
-                id="freeShippingThreshold"
+                id="free_shipping_threshold"
                 label="Free Shipping Threshold (PKR)"
                 type="number"
-                value={formData.shippingSettings.freeShippingThreshold.toString()}
+                value={formData.shipping_settings.free_shipping_threshold.toString()}
                 onChange={(value) => {
-                  formData.shippingSettings.freeShippingThreshold = parseInt(value) || 0;
+                  formData.shipping_settings.free_shipping_threshold = parseInt(value) || 0;
                   setFormData({ ...formData })
                 }}
                 required
@@ -1019,13 +1018,13 @@ const SellerOnboarding: React.FC = () => {
       //     >
       //       <div className="space-y-4">
       //         <div className="space-y-1">
-      //           <label htmlFor="returnPolicy" className="block text-sm font-medium text-neutral-400">
+      //           <label htmlFor="return_policy" className="block text-sm font-medium text-neutral-400">
       //             Return Policy<span className="text-red-500 ml-1">*</span>
       //           </label>
       //           <textarea
-      //             id="returnPolicy"
-      //             value={formData.returnPolicy}
-      //             onChange={(e) => setFormData({ ...formData, returnPolicy: e.target.value })}
+      //             id="return_policy"
+      //             value={formData.return_policy}
+      //             onChange={(e) => setFormData({ ...formData, return_policy: e.target.value })}
       //             rows={6}
       //             className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
       //             placeholder="Specify conditions for returns (e.g., unused items, within 7 days)"
@@ -1162,9 +1161,9 @@ const SellerOnboarding: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Business Information</h3>
-                  <p className="text-neutral-400">Business Name: <span className="text-white">{formData.businessName}</span></p>
-                  <p className="text-neutral-400">Legal Name: <span className="text-white">{formData.legalName}</span></p>
-                  <p className="text-neutral-400">Business Type: <span className="text-white">{formData.businessDetails.businessType}</span></p>
+                  <p className="text-neutral-400">Business Name: <span className="text-white">{formData.business_name}</span></p>
+                  <p className="text-neutral-400">Legal Name: <span className="text-white">{formData.legal_name}</span></p>
+                  <p className="text-neutral-400">Business Type: <span className="text-white">{formData.business_details.business_type}</span></p>
                 </div>
 
                 <div className="space-y-4">
@@ -1176,8 +1175,8 @@ const SellerOnboarding: React.FC = () => {
                   <h3 className="text-lg font-semibold">Contact Details</h3>
                   <p className="text-neutral-400">Email: <span className="text-white">{formData.contact.email}</span></p>
 
-                  <p className="text-neutral-400">Phone: <span className="text-white">{formData.contact.phoneNumber}</span></p>
-                  <p className="text-neutral-400">Business Hours: <span className="text-white">{formData.contact.businessHours}</span></p>
+                  <p className="text-neutral-400">Phone: <span className="text-white">{formData.contact.phone_number}</span></p>
+                  <p className="text-neutral-400">Business Hours: <span className="text-white">{formData.contact.business_hours}</span></p>
                 </div>
 
                 <div className="space-y-4">

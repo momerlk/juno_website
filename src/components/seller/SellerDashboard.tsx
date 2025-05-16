@@ -18,6 +18,8 @@ const SellerDashboard: React.FC = () => {
     }
   };
 
+  alert(`seller = ${JSON.stringify(seller)}`)
+
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
 
   const handleSubscription = () => {
@@ -64,9 +66,9 @@ const SellerDashboard: React.FC = () => {
               <h2 className="text-xl font-semibold">Business Info</h2>
             </div>
             <div className="space-y-2">
-              <p className="text-neutral-400">Business Name: <span className="text-white">{seller?.businessName}</span></p>
-              <p className="text-neutral-400">Email: <span className="text-white">{seller?.email}</span></p>
-              <p className="text-neutral-400">Subscription: <span className={`${seller?.subscriptionStatus === 'active' ? 'text-green-500' : 'text-yellow-500'}`}>
+              <p className="text-neutral-400">Business Name: <span className="text-white">{seller?.user.name}</span></p>
+              <p className="text-neutral-400">Email: <span className="text-white">{seller?.user.email}</span></p>
+              <p className="text-neutral-400">Subscription: <span className={`${seller?.user.account_status === 'active' ? 'text-green-500' : 'text-yellow-500'}`}>
                 {/* {seller?.subscriptionStatus.charAt(0).toUpperCase() + seller?.subscriptionStatus.slice(1)} */}
               </span></p>
             </div>

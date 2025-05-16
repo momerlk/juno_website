@@ -11,115 +11,115 @@ const ScreenshotsSection: React.FC = () => {
   const screenshots = {
     app: [
       {
-        title: 'Smart Wardrobe',
-        description: 'Organize and manage your clothing collection effortlessly',
-        image: '/src/assets/screenshots/app-wardrobe.svg'
+        title: 'Swipe to Shop',
+        description: 'Discover new styles with a simple swipe. Shop fashion like never before—interactive, fast, and fun.',
+        image: '/src/assets/screenshots/juno_screenshots/3.png'
       },
       {
-        title: 'Style Recommendations',
-        description: 'Get personalized outfit suggestions based on your preferences',
-        image: '/src/assets/screenshots/app-recommendations.svg'
+        title: 'Build Outfits',
+        description: 'Mix and match pieces to create your own looks. Get AI-powered outfit suggestions tailored to your style.',
+        image: '/src/assets/screenshots/juno_screenshots/4.png'
       },
       {
-        title: 'Virtual Try-On',
-        description: 'See how clothes look on you before making a purchase',
-        image: '/src/assets/screenshots/app-tryon.svg'
+        title: 'Win prizes in Fashion Tournaments',
+        description: 'Compete in weekly styling challenges, showcase your fashion sense, and win exclusive rewards.',
+        image: '/src/assets/screenshots/juno_screenshots/5.png'
       }
     ],
     studio: [
       {
-        title: 'Design Dashboard',
-        description: 'Powerful tools for fashion designers and brands',
-        image: '/src/assets/screenshots/studio-dashboard.svg'
+        title: 'Inventory Management',
+        description: 'Track stock levels, update products in real-time, and never miss a sale. Built for growing fashion brands.',
+        image: '/src/assets/screenshots/juno_screenshots/2.png'
       },
       {
         title: 'Analytics Platform',
-        description: 'Track trends and customer preferences in real-time',
-        image: '/src/assets/screenshots/studio-analytics.svg'
+        description: 'Gain deep insights into customer behavior, sales trends, and product performance with real-time analytics.',
+        image: '/src/assets/screenshots/juno_screenshots/6.png'
       },
       {
-        title: 'Collection Manager',
-        description: 'Manage and showcase your fashion collections',
-        image: '/src/assets/screenshots/studio-collection.svg'
+        title: 'Order fulfillment',
+        description: 'Streamline order processing, shipping, and delivery to offer a smooth experience from cart to closet.',
+        image: '/src/assets/screenshots/juno_screenshots/7.png'
       }
     ]
   };
 
-  const ScreenshotCard = ({ title, description, image }: {
+
+  const FeatureSection = ({ title, description, image, index }: {
     title: string;
     description: string;
     image: string;
+    index: number;
   }) => (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5 }}
-      className="card card-hover"
+      initial={{ opacity: 0 }}
+      animate={inView ? { opacity: 1 } : {}}
+      transition={{ duration: 0.8 }}
+      className="min-h-screen flex items-center"
     >
-      <div className="aspect-[4/3] overflow-hidden rounded-xl mb-4">
-        <img
-          src={image}
-          alt={title}
-          className="w-full h-full object-cover"
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        {index % 2 === 0 ? (
+          <>
+            <div className="space-y-8 p-8 lg:p-16">
+              <h3 className="text-4xl lg:text-6xl font-bold leading-tight">{title}</h3>
+              <p className="text-xl lg:text-2xl text-neutral-400">{description}</p>
+            </div>
+            <div className="relative h-[80vh] w-full">
+              <img
+                src={image}
+                alt={title}
+                className="w-full h-full object-cover rounded-3xl shadow-2xl"
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="relative h-[80vh] w-full">
+              <img
+                src={image}
+                alt={title}
+                className="w-full h-full object-cover rounded-3xl shadow-2xl"
+              />
+            </div>
+            <div className="space-y-8 p-8 lg:p-16">
+              <h3 className="text-4xl lg:text-6xl font-bold leading-tight">{title}</h3>
+              <p className="text-xl lg:text-2xl text-neutral-400">{description}</p>
+            </div>
+          </>
+        )}
       </div>
-      <h4 className="mb-2">{title}</h4>
-      <p className="text-neutral-400">{description}</p>
     </motion.div>
   );
 
   return (
-    <section className="section bg-background" id="screenshots">
-      <div className="container" ref={ref}>
+    <section className="bg-background" id="screenshots">
+      <div ref={ref}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          className="text-center py-20"
         >
-          <h2 className="mb-4">
+          <h2 className="text-5xl lg:text-7xl font-bold mb-8">
             Experience the <span className="gradient-text">Future</span> of Fashion
           </h2>
-          <p className="text-neutral-400 max-w-2xl mx-auto">
+          <p className="text-xl lg:text-2xl text-neutral-400 max-w-3xl mx-auto">
             Discover how Juno revolutionizes your fashion journey with cutting-edge features
             and intuitive design
           </p>
         </motion.div>
 
-        <div className="space-y-20">
+        <div className="space-y-32">
           {/* Juno App Screenshots */}
-          <div>
-            <motion.h3
-              initial={{ opacity: 0, y: 20 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-center mb-10"
-            >
-              Juno App Features
-            </motion.h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {screenshots.app.map((screenshot, index) => (
-                <ScreenshotCard key={index} {...screenshot} />
-              ))}
-            </div>
-          </div>
+          {screenshots.app.map((screenshot, index) => (
+            <FeatureSection key={index} {...screenshot} index={index} />
+          ))}
 
           {/* Juno Studio Screenshots */}
-          <div>
-            <motion.h3
-              initial={{ opacity: 0, y: 20 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-center mb-10"
-            >
-              Juno Studio Features
-            </motion.h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {screenshots.studio.map((screenshot, index) => (
-                <ScreenshotCard key={index} {...screenshot} />
-              ))}
-            </div>
-          </div>
+          {screenshots.studio.map((screenshot, index) => (
+            <FeatureSection key={index} {...screenshot} index={index} />
+          ))}
         </div>
       </div>
     </section>
