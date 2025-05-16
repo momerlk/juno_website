@@ -12,6 +12,12 @@ interface FormData {
   // Login Credentials
   email: string;
   password: string;
+  confirmPassword: string;
+  formErrors: {
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  };
 
   // Business Information
   business_name: string;
@@ -112,6 +118,8 @@ interface FormData {
 const initialFormData: FormData = {
   email: '',
   password: '',
+  confirmPassword: '',
+  formErrors: {},
   business_name: '',
   legal_name: '',
   description: '',
@@ -187,7 +195,103 @@ const SellerOnboarding: React.FC = () => {
 
   const totalSteps = 8;
 
+  // Validation functions
+  const validateEmail = (email: string): string | undefined => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) return 'Email is required';
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    return undefined;
+  };
+
+  const validatePassword = (password: string): string | undefined => {
+    if (!password) return 'Password is required';
+    if (password.length < 8) return 'Password must be at least 8 characters long';
+    if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter';
+    if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least one number';
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return 'Password must contain at least one special character';
+    return undefined;
+  };
+
+  const validateConfirmPassword = (confirmPassword: string): string | undefined => {
+    if (!confirmPassword) return 'Please confirm your password';
+    if (confirmPassword !== formData.password) return 'Passwords do not match';
+    return undefined;
+  };
+
+  const validateBusinessName = (name: string): string | undefined => {
+    if (!name) return 'Business name is required';
+    if (name.length < 3) return 'Business name must be at least 3 characters long';
+    if (name.length > 50) return 'Business name must not exceed 50 characters';
+    if (!/^[\w\s\-&'.]+$/.test(name)) return 'Business name can only contain letters, numbers, spaces, and basic punctuation';
+    return undefined;
+  };
+
+  const validateLegalName = (name: string): string | undefined => {
+    if (!name) return 'Legal name is required';
+    if (name.length < 3) return 'Legal name must be at least 3 characters long';
+    if (name.length > 50) return 'Legal name must not exceed 50 characters';
+    if (!/^[\w\s\-'.]+$/.test(name)) return 'Legal name can only contain letters, spaces, and basic punctuation';
+    return undefined;
+  };
+
+  const validateShortDescription = (desc: string): string | undefined => {
+    if (!desc) return 'Short description is required';
+    if (desc.length < 10) return 'Short description must be at least 10 characters long';
+    if (desc.length > 80) return 'Short description must not exceed 80 characters';
+    return undefined;
+  };
+
+  const validateFullDescription = (desc: string): string | undefined => {
+    if (!desc) return 'Full description is required';
+    if (desc.length < 50) return 'Full description must be at least 50 characters long';
+    if (desc.length > 1000) return 'Full description must not exceed 1000 characters';
+    return undefined;
+  };
+
   const handleNext = () => {
+    if (currentStep === 1) {
+      // Validate login credentials before proceeding
+      const emailError = validateEmail(formData.email);
+      const passwordError = validatePassword(formData.password);
+      const confirmPasswordError = validateConfirmPassword(formData.confirmPassword);
+
+      setFormData(prev => ({
+        ...prev,
+        formErrors: {
+          ...prev.formErrors,
+          email: emailError,
+          password: passwordError,
+          confirmPassword: confirmPasswordError
+        }
+      }));
+
+      if (emailError || passwordError || confirmPasswordError) {
+        return;
+      }
+    } else if (currentStep === 2) {
+      // Validate business details before proceeding
+      const businessNameError = validateBusinessName(formData.business_name);
+      const legalNameError = validateLegalName(formData.legal_name);
+      const shortDescError = validateShortDescription(formData.short_description);
+      const fullDescError = validateFullDescription(formData.description);
+
+      setFormData(prev => ({
+        ...prev,
+        formErrors: {
+          ...prev.formErrors,
+          business_name: businessNameError,
+          legal_name: legalNameError,
+          short_description: shortDescError,
+          description: fullDescError
+        }
+      }));
+
+      if (businessNameError || legalNameError || shortDescError || fullDescError) {
+        return;
+      }
+    }
+
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
@@ -251,6 +355,33 @@ const SellerOnboarding: React.FC = () => {
           </motion.div>
         );
       case 1:
+        const handleEmailChange = (value: string) => {
+          const error = validateEmail(value);
+          setFormData(prev => ({
+            ...prev,
+            email: value,
+            formErrors: { ...prev.formErrors, email: error }
+          }));
+        };
+
+        const handlePasswordChange = (value: string) => {
+          const error = validatePassword(value);
+          setFormData(prev => ({
+            ...prev,
+            password: value,
+            formErrors: { ...prev.formErrors, password: error }
+          }));
+        };
+
+        const handleConfirmPasswordChange = (value: string) => {
+          const error = validateConfirmPassword(value);
+          setFormData(prev => ({
+            ...prev,
+            confirmPassword: value,
+            formErrors: { ...prev.formErrors, confirmPassword: error }
+          }));
+        };
+
         return (
           <FormStep
             title="Login Credentials"
@@ -262,22 +393,73 @@ const SellerOnboarding: React.FC = () => {
               label="Email Address"
               type="email"
               value={formData.email}
-              onChange={(value) => setFormData({ ...formData, email: value })}
+              onChange={handleEmailChange}
               required
               placeholder="Enter your email address"
+              error={formData.formErrors.email}
             />
             <FormInput
               id="password"
               label="Password"
               type="password"
               value={formData.password}
-              onChange={(value) => setFormData({ ...formData, password: value })}
+              onChange={handlePasswordChange}
               required
               placeholder="Choose a strong password"
+              error={formData.formErrors.password}
+              showPasswordStrength
+            />
+            <FormInput
+              id="confirmPassword"
+              label="Confirm Password"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleConfirmPasswordChange}
+              required
+              placeholder="Confirm your password"
+              error={formData.formErrors.confirmPassword}
             />
           </FormStep>
         );
       case 2:
+
+        const handleBusinessNameChange = (value: string) => {
+          const error = validateBusinessName(value);
+          setFormData(prev => ({
+            ...prev,
+            business_name: value,
+            formErrors: { ...prev.formErrors, business_name: error }
+          }));
+        };
+
+        const handleLegalNameChange = (value: string) => {
+          const error = validateLegalName(value);
+          setFormData(prev => ({
+            ...prev,
+            legal_name: value,
+            formErrors: { ...prev.formErrors, legal_name: error }
+          }));
+        };
+
+        const handleShortDescriptionChange = (value: string) => {
+          const error = validateShortDescription(value);
+          setFormData(prev => ({
+            ...prev,
+            short_description: value,
+            formErrors: { ...prev.formErrors, short_description: error }
+          }));
+        };
+
+        const handleFullDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+          const value = e.target.value;
+          const error = validateFullDescription(value);
+          setFormData(prev => ({
+            ...prev,
+            description: value,
+            formErrors: { ...prev.formErrors, description: error }
+          }));
+        };
+
         return (
           <FormStep
             title="Business Details"
@@ -288,26 +470,34 @@ const SellerOnboarding: React.FC = () => {
               id="business_name"
               label="Business Name"
               value={formData.business_name}
-              onChange={(value) => setFormData({ ...formData, business_name: value })}
+              onChange={handleBusinessNameChange}
               required
               placeholder="Your business name"
+              error={formData.formErrors.business_name}
+              maxLength={50}
+              helperText="Use your registered business name or brand name"
             />
             <FormInput
               id="legal_name"
               label="Your Legal Name"
               value={formData.legal_name}
-              onChange={(value) => setFormData({ ...formData, legal_name: value })}
+              onChange={handleLegalNameChange}
               required
               placeholder="Legal registered name of the person onboarding"
+              error={formData.formErrors.legal_name}
+              maxLength={50}
+              helperText="Enter your full legal name as it appears on official documents"
             />
             <FormInput
               id="short_description"
               label="Short Description"
               value={formData.short_description}
-              onChange={(value) => setFormData({ ...formData, short_description: value })}
+              onChange={handleShortDescriptionChange}
               required
               maxLength={80}
               placeholder="Brief description of your business"
+              error={formData.formErrors.short_description}
+              helperText={`${formData.short_description.length}/80 characters - This will appear in search results`}
             />
             <div className="space-y-1">
               <label htmlFor="fullDescription" className="block text-sm font-medium text-neutral-400">
@@ -316,16 +506,21 @@ const SellerOnboarding: React.FC = () => {
               <textarea
                 id="fullDescription"
                 value={formData.description}
-                onChange={(e) => {
-                  formData.description = e.target.value;
-
-                  setFormData({ ...formData });
-                }}
+                onChange={handleFullDescriptionChange}
                 rows={4}
+                maxLength={1000}
                 className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder="Detailed description of your business"
                 required
               />
+              <div className="flex justify-between mt-1">
+                <span className="text-sm text-neutral-400">
+                  {formData.description.length}/1000 characters
+                </span>
+                {formData.formErrors.description && (
+                  <span className="text-sm text-red-500">{formData.formErrors.description}</span>
+                )}
+              </div>
             </div>
           </FormStep>
         );
