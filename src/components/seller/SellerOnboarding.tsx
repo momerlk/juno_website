@@ -17,6 +17,41 @@ interface FormData {
     email?: string;
     password?: string;
     confirmPassword?: string;
+    business_name?: string;
+    legal_name?: string;
+    short_description?: string;
+    description?: string;
+
+
+    bankName?: string;
+    accountTitle?: string;
+    accountNumber?: string;
+    iban?: string;
+    branchCode?: string;
+    branchAddress?: string;
+    swiftCode?: string;
+    paymentMethod?: string;
+    paymentSchedule?: string;
+    paymentThreshold?: string;
+
+    contact_person_name : string;
+    business_email : string;
+    support_email : string;
+    phone_number : string;
+    alternate_phone_number : string;
+
+
+    business_type?: string;
+    founded_year?: string;
+    number_of_employees?: string;
+    business_category?: string;
+    business_subcategory?: string;
+    cnic_front?: string;
+    cnic_back?: string;
+
+
+
+
   };
 
   // Business Information
@@ -177,15 +212,158 @@ const initialFormData: FormData = {
     free_shipping_threshold: 0,
     platform_shipping: true,
     self_shipping: false,
-    shipping_profiles: []
-  },
-  return_policy: '',
-  categories: [],
-  tags: [],
-
-  status: 'pending',
-  verified: false
+  }
 };
+
+const validateHandlingTime = (days: number): string | null => {
+  if (!days || days < 1) {
+    return "Handling time must be at least 1 day";
+  }
+  if (days > 14) {
+    return "Handling time cannot exceed 14 days";
+  }
+  return null;
+};
+
+const validateFreeShippingThreshold = (amount: number): string | null => {
+  if (amount < 0) {
+    return "Free shipping threshold cannot be negative";
+  }
+  if (amount > 50000) {
+    return "Free shipping threshold cannot exceed 50,000 PKR";
+  }
+  return null;
+};
+
+const validateShippingProfile = (profile: any): Record<string, string> => {
+  const errors: Record<string, string> = {};
+
+  // Validate profile name
+  if (!profile.profile_name) {
+    errors.profile_name = "Profile name is required";
+  } else if (profile.profile_name.length < 3) {
+    errors.profile_name = "Profile name must be at least 3 characters";
+  } else if (profile.profile_name.length > 50) {
+    errors.profile_name = "Profile name cannot exceed 50 characters";
+  }
+
+  // Validate regions
+  if (!profile.regions || profile.regions.length === 0) {
+    errors.regions = "At least one region must be selected";
+  }
+
+  // Validate delivery days
+  if (!profile.delivery_days) {
+    errors.delivery_days = "Delivery days is required";
+  } else if (profile.delivery_days < 1) {
+    errors.delivery_days = "Delivery days must be at least 1";
+  } else if (profile.delivery_days > 30) {
+    errors.delivery_days = "Delivery days cannot exceed 30";
+  }
+
+  // Validate shipping rate
+  if (profile.shipping_rate === undefined || profile.shipping_rate === null) {
+    errors.shipping_rate = "Shipping rate is required";
+  } else if (profile.shipping_rate < 0) {
+    errors.shipping_rate = "Shipping rate cannot be negative";
+  } else if (profile.shipping_rate > 10000) {
+    errors.shipping_rate = "Shipping rate cannot exceed 10,000 PKR";
+  }
+
+  return errors;
+};
+
+const validateContactName = (name: string): string | null => {
+  if (!name.trim()) {
+    return "Contact person name is required";
+  }
+  if (name.length < 3) {
+    return "Name must be at least 3 characters long";
+  }
+  if (name.length > 50) {
+    return "Name cannot exceed 50 characters";
+  }
+  if (!/^[a-zA-Z\s]*$/.test(name)) {
+    return "Name can only contain letters and spaces";
+  }
+  return null;
+};
+
+const validateBusinessEmail = (email: string): string | null => {
+  if (!email.trim()) {
+    return "Business email is required";
+  }
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) {
+    return "Please enter a valid email address";
+  }
+  return null;
+};
+
+const validateSupportEmail = (email: string): string | null => {
+  if (!email.trim()) {
+    return null; // Optional field
+  }
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) {
+    return "Please enter a valid email address";
+  }
+  return null;
+};
+
+const validatePhoneNumber = (phone: string): string | null => {
+  if (!phone.trim()) {
+    return "Phone number is required";
+  }
+  // Pakistan phone number format: +92 XXX XXXXXXX
+  const phoneRegex = /^\+92\s?[0-9]{3}\s?[0-9]{7}$/;
+  if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+    return "Please enter a valid Pakistani phone number (+92 XXX XXXXXXX)";
+  }
+  return null;
+};
+
+const validateOptionalPhone = (phone: string): string | null => {
+  if (!phone.trim()) {
+    return null; // Optional field
+  }
+  const phoneRegex = /^\+92\s?[0-9]{3}\s?[0-9]{7}$/;
+  if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+    return "Please enter a valid Pakistani phone number (+92 XXX XXXXXXX)";
+  }
+  return null;
+};
+
+const validateBusinessHours = (hours: string): string | null => {
+  if (!hours.trim()) {
+    return "Business hours are required";
+  }
+  // Format: HH:MM-HH:MM, e.g., 09:00-17:00
+  const hoursRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!hoursRegex.test(hours)) {
+    return "Please enter valid business hours (e.g., 09:00-17:00)";
+  }
+  return null;
+};
+
+const validateCNICImage = (file: File | null): string | null => {
+  if (!file) {
+    return "Image is required";
+  }
+
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+  if (!validTypes.includes(file.type)) {
+    return "Only JPG, JPEG, and PNG files are allowed";
+  }
+
+  const maxSize = 5 * 1024 * 1024; // 5MB
+  if (file.size > maxSize) {
+    return "File size must not exceed 5MB";
+  }
+
+  return null;
+};
+
 
 const SellerOnboarding: React.FC = () => {
   const navigate = useNavigate();
@@ -249,6 +427,236 @@ const SellerOnboarding: React.FC = () => {
     return undefined;
   };
 
+  // Image validation functions
+  const validateImageFile = (file: File): string | undefined => {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+      return 'Please upload a JPEG, PNG, or WebP image';
+    }
+
+    if (file.size > maxSize) {
+      return 'Image size must not exceed 5MB';
+    }
+
+    return undefined;
+  };
+
+  const validateBrandImages = (): { logo?: string; banner?: string; bannerMobile?: string } => {
+    const errors: { logo?: string; banner?: string; bannerMobile?: string } = {};
+
+    if (!formData.logo_url) {
+      errors.logo = 'Logo is required';
+    }
+
+    if (!formData.banner_url) {
+      errors.banner = 'Landscape banner is required';
+    }
+
+    if (!formData.banner_mobile_url) {
+      errors.bannerMobile = 'Portrait banner is required';
+    }
+
+    return errors;
+  };
+
+  // Store location validation functions
+  const validateAddress = (address: string): string | undefined => {
+    if (!address.trim()) {
+      return 'Address is required';
+    }
+    if (address.length < 5) {
+      return 'Address must be at least 5 characters long';
+    }
+    if (address.length > 200) {
+      return 'Address must not exceed 200 characters';
+    }
+    return undefined;
+  };
+
+  const validateCity = (city: string): string | undefined => {
+    if (!city.trim()) {
+      return 'City is required';
+    }
+    if (!/^[a-zA-Z\s-]{2,50}$/.test(city)) {
+      return 'City name must be 2-50 characters and contain only letters, spaces, and hyphens';
+    }
+    return undefined;
+  };
+
+  const validateState = (state: string): string | undefined => {
+    if (!state.trim()) {
+      return 'State is required';
+    }
+    if (!/^[a-zA-Z\s-]{2,50}$/.test(state)) {
+      return 'State name must be 2-50 characters and contain only letters, spaces, and hyphens';
+    }
+    return undefined;
+  };
+
+  const validatePostalCode = (code: string): string | undefined => {
+    if (!code) {
+      return 'Postal code is required';
+    }
+    // Pakistan postal code format: 5 digits
+    if (!/^\d{5}$/.test(code)) {
+      return 'Postal code must be exactly 5 digits';
+    }
+    return undefined;
+  };
+
+  const validateCountry = (country: string): string | undefined => {
+    if (!country.trim()) {
+      return 'Country is required';
+    }
+    if (!/^[a-zA-Z\s-]{2,50}$/.test(country)) {
+      return 'Country name must be 2-50 characters and contain only letters, spaces, and hyphens';
+    }
+    return undefined;
+  };
+
+  const validateCoordinates = (value: number, type: 'latitude' | 'longitude'): string | undefined => {
+    if (value === 0) return undefined; // Optional field
+    
+    if (type === 'latitude') {
+      if (value < -90 || value > 90) {
+        return 'Latitude must be between -90 and 90 degrees';
+      }
+    } else {
+      if (value < -180 || value > 180) {
+        return 'Longitude must be between -180 and 180 degrees';
+      }
+    }
+    return undefined;
+  };
+
+  const validatePickupHours = (hours: string, isPickupAvailable: boolean): string | undefined => {
+    if (!isPickupAvailable) return undefined;
+    
+    if (!hours.trim()) {
+      return 'Pickup hours are required when pickup is available';
+    }
+    if (hours.length < 5 || hours.length > 100) {
+      return 'Pickup hours must be between 5 and 100 characters';
+    }
+    return undefined;
+  };
+
+  // Shipping settings validation functions
+  const validateHandlingTime = (days: number): string | undefined => {
+    if (days < 1) return 'Handling time must be at least 1 day';
+    if (days > 14) return 'Handling time cannot exceed 14 days';
+    return undefined;
+  };
+
+  const validateFreeShippingThreshold = (amount: number): string | undefined => {
+    if (amount < 0) return 'Free shipping threshold cannot be negative';
+    if (amount > 50000) return 'Free shipping threshold cannot exceed PKR 50,000';
+    return undefined;
+  };
+
+  const validateShippingProfile = (profile: { profile_name: string; regions: string[]; shipping_rates: Array<{ delivery_method: string; estimated_days: number; rate: number; }> }): { 
+    profile_name?: string;
+    regions?: string;
+    shipping_rates?: string;
+  } => {
+    const errors: { profile_name?: string; regions?: string; shipping_rates?: string; } = {};
+
+    if (!profile.profile_name.trim()) {
+      errors.profile_name = 'Profile name is required';
+    } else if (profile.profile_name.length < 3 || profile.profile_name.length > 50) {
+      errors.profile_name = 'Profile name must be between 3 and 50 characters';
+    }
+
+    if (!profile.regions.length) {
+      errors.regions = 'Please select at least one region';
+    }
+
+    if (!profile.shipping_rates.length) {
+      errors.shipping_rates = 'Please add at least one shipping rate';
+    } else {
+      for (const rate of profile.shipping_rates) {
+        if (rate.estimated_days < 1 || rate.estimated_days > 30) {
+          errors.shipping_rates = 'Estimated delivery days must be between 1 and 30';
+          break;
+        }
+        if (rate.rate < 0 || rate.rate > 10000) {
+          errors.shipping_rates = 'Shipping rate must be between 0 and 10,000 PKR';
+          break;
+        }
+      }
+    }
+
+    return errors;
+  };
+
+  // Add bank details validation functions
+  const validateBankName = (name: string): string | undefined => {
+    if (!name) return 'Bank name is required';
+    if (name.length < 2) return 'Bank name must be at least 2 characters long';
+    if (name.length > 50) return 'Bank name must not exceed 50 characters';
+    if (!/^[\w\s\-&'.]+$/.test(name)) return 'Bank name can only contain letters, numbers, spaces, and basic punctuation';
+    return undefined;
+  };
+
+  const validateAccountTitle = (title: string): string | undefined => {
+    if (!title) return 'Account title is required';
+    if (title.length < 3) return 'Account title must be at least 3 characters long';
+    if (title.length > 50) return 'Account title must not exceed 50 characters';
+    if (!/^[\w\s\-'.]+$/.test(title)) return 'Account title can only contain letters, spaces, and basic punctuation';
+    return undefined;
+  };
+
+  const validateAccountNumber = (number: string): string | undefined => {
+    if (!number) return 'Account number is required';
+    if (number.length < 8) return 'Account number must be at least 8 characters long';
+    if (number.length > 20) return 'Account number must not exceed 20 characters';
+    if (!/^\d+$/.test(number)) return 'Account number must contain only numbers';
+    return undefined;
+  };
+
+  const validateIBAN = (iban: string): string | undefined => {
+    if (!iban) return 'IBAN is required';
+    if (!/^PK\d{2}[A-Z]{4}\d{16}$/.test(iban)) return 'Please enter a valid Pakistani IBAN (e.g., PK36SCBL0000001123456702)';
+    return undefined;
+  };
+
+  const validateBranchCode = (code: string): string | undefined => {
+    if (!code) return 'Branch code is required';
+    if (!/^\d{4}$/.test(code)) return 'Branch code must be exactly 4 digits';
+    return undefined;
+  };
+
+  const validateBranchAddress = (address: string): string | undefined => {
+    if (!address) return 'Branch address is required';
+    if (address.length < 5) return 'Branch address must be at least 5 characters long';
+    if (address.length > 100) return 'Branch address must not exceed 100 characters';
+    return undefined;
+  };
+
+  const validateSwiftCode = (code: string): string | undefined => {
+    if (!code) return 'SWIFT code is required';
+    if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(code)) return 'Please enter a valid SWIFT code (8 or 11 characters)';
+    return undefined;
+  };
+
+  const validatePaymentMethod = (method: string): string | undefined => {
+    if (!method) return 'Payment method is required';
+    return undefined;
+  };
+
+  const validatePaymentSchedule = (schedule: string): string | undefined => {
+    if (!schedule) return 'Payment schedule is required';
+    return undefined;
+  };
+
+  const validatePaymentThreshold = (threshold: number): string | undefined => {
+    if (threshold < 0) return 'Payment threshold cannot be negative';
+    if (threshold > 1000000) return 'Payment threshold cannot exceed 1,000,000';
+    return undefined;
+  };
+
   const handleNext = () => {
     if (currentStep === 1) {
       // Validate login credentials before proceeding
@@ -288,6 +696,217 @@ const SellerOnboarding: React.FC = () => {
       }));
 
       if (businessNameError || legalNameError || shortDescError || fullDescError) {
+        return;
+      }
+    }
+
+    if (currentStep === 3) {
+      // Validate brand identity uploads
+      const imageErrors = validateBrandImages();
+      setFormData(prev => ({
+        ...prev,
+        formErrors: { ...prev.formErrors, ...imageErrors }
+      }));
+
+      if (Object.keys(imageErrors).length > 0) {
+        return;
+      }
+    }
+
+    if (currentStep === 4) {
+      // Validate contact details
+      const contactNameError = validateContactName(formData.contact.contact_person_name);
+      const businessEmailError = validateBusinessEmail(formData.contact.email);
+      const supportEmailError = validateSupportEmail(formData.contact.support_email);
+      const phoneNumberError = validatePhoneNumber(formData.contact.phone_number);
+      const alternatePhoneError = validateOptionalPhone(formData.contact.alternate_phone_number);
+
+      setFormData(prev => ({
+        ...prev,
+        formErrors: {
+          ...prev.formErrors,
+          contact_person_name: contactNameError!,
+          business_email: businessEmailError!,
+          support_email: supportEmailError!,
+          phone_number: phoneNumberError!,
+          alternate_phone_number: alternatePhoneError!,
+        }
+      }));
+
+      if (contactNameError || businessEmailError || supportEmailError || 
+          phoneNumberError || alternatePhoneError) {
+        return;
+      }
+    }
+
+    // Store Location Validation Functions
+    const validateAddress = (address: string): string => {
+      if (!address) return "Address is required";
+      if (address.trim().length < 5) return "Address must be at least 5 characters";
+      if (address.trim().length > 200) return "Address must not exceed 200 characters";
+      return "";
+    };
+
+    const validateCity = (city: string): string => {
+      if (!city) return "City is required";
+      if (city.trim().length < 2) return "City must be at least 2 characters";
+      if (city.trim().length > 50) return "City must not exceed 50 characters";
+      return "";
+    };
+
+    const validateState = (state: string): string => {
+      if (!state) return "State/Province is required";
+      if (state.trim().length < 2) return "State must be at least 2 characters";
+      if (state.trim().length > 50) return "State must not exceed 50 characters";
+      return "";
+    };
+
+    const validatePostalCode = (code: string): string => {
+      if (!code) return "Postal code is required";
+      const pakistaniPostalCodeRegex = /^\d{5}$/;
+      if (!pakistaniPostalCodeRegex.test(code)) return "Please enter a valid 5-digit postal code";
+      return "";
+    };
+
+    const validateLatitude = (lat: number): string => {
+      if (lat === undefined || lat === null) return "Latitude is required";
+      if (lat < -90 || lat > 90) return "Latitude must be between -90 and 90 degrees";
+      return "";
+    };
+
+    const validateLongitude = (lng: number): string => {
+      if (lng === undefined || lng === null) return "Longitude is required";
+      if (lng < -180 || lng > 180) return "Longitude must be between -180 and 180 degrees";
+      return "";
+    };
+
+    if (currentStep === 5) {
+      // Validate store location
+      const addressError = validateAddress(formData.location.address);
+      const cityError = validateCity(formData.location.city);
+      const stateError = validateState(formData.location.state);
+      const postalCodeError = validatePostalCode(formData.location.postal_code);
+      const latitudeError = validateLatitude(formData.location.latitude);
+      const longitudeError = validateLongitude(formData.location.longitude);
+      // const pickupHoursError = formData.location.pickup_available ? validatePickupHours(formData.location.pickup_hours) : "";
+
+      setFormData(prev => ({
+        ...prev,
+        formErrors: {
+          ...prev.formErrors,
+          address: addressError,
+          city: cityError,
+          state: stateError,
+          postal_code: postalCodeError,
+          latitude: latitudeError,
+          longitude: longitudeError,
+        }
+      }));
+
+      // Block progression if any validation errors exist
+      if (addressError || cityError || stateError || postalCodeError || 
+          latitudeError || longitudeError) {
+        return;
+      }
+    }
+
+    if (currentStep === 6) {
+      // Validate business profile
+      const businessTypeError = validateBusinessType(formData.business_details.business_type);
+      const foundedYearError = validateFoundedYear(formData.business_details.founded_year);
+      const employeeCountError = validateEmployeeCount(formData.business_details.number_of_employees);
+      const businessCategoryError = validateBusinessCategory(formData.business_details.business_category);
+      const subcategoryError = validateSubcategory(formData.business_details.business_subcategory);
+
+      setFormData(prev => ({
+        ...prev,
+        formErrors: {
+          ...prev.formErrors,
+          business_type: businessTypeError,
+          founded_year: foundedYearError,
+          number_of_employees: employeeCountError,
+          business_category: businessCategoryError,
+          business_subcategory: subcategoryError
+        }
+      }));
+
+      if (businessTypeError || foundedYearError || employeeCountError || 
+          businessCategoryError || subcategoryError) {
+        return;
+      }
+    }
+
+    if (currentStep === 7) {
+      // Validate KYC documents
+      let hasErrors = false;
+
+      if (!formData.kyc_documents.cnic_front) {
+        setFormData(prev => ({
+          ...prev,
+          formErrors: {
+            ...prev.formErrors,
+            cnic_front: "CNIC front image is required"
+          }
+        }));
+        hasErrors = true;
+      }
+
+      if (!formData.kyc_documents.cnic_back) {
+        setFormData(prev => ({
+          ...prev,
+          formErrors: {
+            ...prev.formErrors,
+            cnic_back: "CNIC back image is required"
+          }
+        }));
+        hasErrors = true;
+      }
+
+      if (hasErrors) {
+        return;
+      }
+    }
+
+    if (currentStep === 8) {
+      // Validate shipping settings
+      let hasErrors = false;
+      const newFormErrors = { ...formData.formErrors };
+
+      // Validate handling time
+      const handlingTimeError = validateHandlingTime(formData.shipping_settings.default_handling_time);
+      if (handlingTimeError) {
+        newFormErrors.default_handling_time = handlingTimeError;
+        hasErrors = true;
+      }
+
+      // Validate free shipping threshold
+      const thresholdError = validateFreeShippingThreshold(formData.shipping_settings.free_shipping_threshold);
+      if (thresholdError) {
+        newFormErrors.free_shipping_threshold = thresholdError;
+        hasErrors = true;
+      }
+
+      // Validate shipping profiles if self-shipping is selected
+      if (formData.shipping_settings.self_shipping) {
+        if (formData.shipping_settings.shipping_profiles.length === 0) {
+          newFormErrors.shipping_profiles = 'At least one shipping profile is required';
+          hasErrors = true;
+        } else {
+          formData.shipping_settings.shipping_profiles.forEach((profile, index) => {
+            const profileErrors = validateShippingProfile(profile);
+            if (Object.keys(profileErrors).length > 0) {
+              newFormErrors[`shipping_profile_${index}`] = profileErrors;
+              hasErrors = true;
+            }
+          });
+        }
+      }
+
+      if (hasErrors) {
+        setFormData(prev => ({
+          ...prev,
+          formErrors: newFormErrors
+        }));
         return;
       }
     }
@@ -524,6 +1143,8 @@ const SellerOnboarding: React.FC = () => {
             </div>
           </FormStep>
         );
+     
+
       case 3:
         return (
           <FormStep
@@ -537,80 +1158,146 @@ const SellerOnboarding: React.FC = () => {
                   Logo Upload<span className="text-red-500 ml-1">*</span>
                 </label>
                 <div className="flex items-center justify-center w-full">
-                  <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
+                  <label className={`w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed ${formData.formErrors.logo ? 'border-red-500' : 'border-neutral-700'} cursor-pointer hover:border-primary`}>
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
-                      {formData.logo_url ? formData.logo_url : 'Choose a logo'}
+                      {formData.logo_url ? 'Logo uploaded successfully' : 'Choose a logo (JPEG, PNG, WebP, max 5MB)'}
                     </span>
                     <input
                       type="file"
                       className="hidden"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const url = await api.uploadFileAndGetUrl(file!);
-                          setFormData({ ...formData, logo_url: url });
+                          const error = validateImageFile(file);
+                          if (error) {
+                            setFormData({
+                              ...formData,
+                              formErrors: { ...formData.formErrors, logo: error }
+                            });
+                            return;
+                          }
+                          try {
+                            const url = await api.uploadFileAndGetUrl(file);
+                            setFormData({
+                              ...formData,
+                              logo_url: url,
+                              formErrors: { ...formData.formErrors, logo: undefined }
+                            });
+                          } catch (error) {
+                            setFormData({
+                              ...formData,
+                              formErrors: { ...formData.formErrors, logo: 'Failed to upload logo. Please try again.' }
+                            });
+                          }
                         }
                       }}
                       required
                     />
                   </label>
                 </div>
+                {formData.formErrors.logo && (
+                  <p className="mt-1 text-sm text-red-500">{formData.formErrors.logo}</p>
+                )}
               </div>
 
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-neutral-400">
-                  LandScape Banner Upload<span className="text-red-500 ml-1">*</span>
+                  Landscape Banner Upload<span className="text-red-500 ml-1">*</span>
                 </label>
                 <div className="flex items-center justify-center w-full">
-                  <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
+                  <label className={`w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed ${formData.formErrors.banner ? 'border-red-500' : 'border-neutral-700'} cursor-pointer hover:border-primary`}>
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
-                      {formData.banner_url ? formData.banner_url : 'Choose a banner'}
+                      {formData.banner_url ? 'Banner uploaded successfully' : 'Choose a landscape banner (JPEG, PNG, WebP, max 5MB)'}
                     </span>
                     <input
                       type="file"
                       className="hidden"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const url = await api.uploadFileAndGetUrl(file!);
-                          setFormData({ ...formData, banner_url: url });
+                          const error = validateImageFile(file);
+                          if (error) {
+                            setFormData({
+                              ...formData,
+                              formErrors: { ...formData.formErrors, banner: error }
+                            });
+                            return;
+                          }
+                          try {
+                            const url = await api.uploadFileAndGetUrl(file);
+                            setFormData({
+                              ...formData,
+                              banner_url: url,
+                              formErrors: { ...formData.formErrors, banner: undefined }
+                            });
+                          } catch (error) {
+                            setFormData({
+                              ...formData,
+                              formErrors: { ...formData.formErrors, banner: 'Failed to upload banner. Please try again.' }
+                            });
+                          }
                         }
                       }}
                       required
                     />
                   </label>
                 </div>
+                {formData.formErrors.banner && (
+                  <p className="mt-1 text-sm text-red-500">{formData.formErrors.banner}</p>
+                )}
               </div>
 
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-neutral-400">
-                  Portrait Banner Upload 3:4 aspect ratio (not phone size) <span className="text-red-500 ml-1">*</span>
+                  Portrait Banner Upload (3:4 aspect ratio)<span className="text-red-500 ml-1">*</span>
                 </label>
                 <div className="flex items-center justify-center w-full">
-                  <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
+                  <label className={`w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed ${formData.formErrors.bannerMobile ? 'border-red-500' : 'border-neutral-700'} cursor-pointer hover:border-primary`}>
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
-                      {formData.banner_mobile_url ? formData.banner_mobile_url : 'Choose a mobile banner'}
+                      {formData.banner_mobile_url ? 'Portrait banner uploaded successfully' : 'Choose a portrait banner (JPEG, PNG, WebP, max 5MB)'}
                     </span>
                     <input
                       type="file"
                       className="hidden"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const url = await api.uploadFileAndGetUrl(file!);
-                          setFormData({ ...formData, banner_mobile_url: url });
+                          const error = validateImageFile(file);
+                          if (error) {
+                            setFormData({
+                              ...formData,
+                              formErrors: { ...formData.formErrors, bannerMobile: error }
+                            });
+                            return;
+                          }
+                          try {
+                            const url = await api.uploadFileAndGetUrl(file);
+                            setFormData({
+                              ...formData,
+                              banner_mobile_url: url,
+                              formErrors: { ...formData.formErrors, bannerMobile: undefined }
+                            });
+                          } catch (error) {
+                            setFormData({
+                              ...formData,
+                              formErrors: { ...formData.formErrors, bannerMobile: 'Failed to upload portrait banner. Please try again.' }
+                            });
+                          }
                         }
                       }}
                       required
                     />
                   </label>
                 </div>
+                {formData.formErrors.bannerMobile && (
+                  <p className="mt-1 text-sm text-red-500">{formData.formErrors.bannerMobile}</p>
+                )}
               </div>
 
               <p className="text-sm text-neutral-400 text-center">
@@ -630,12 +1317,21 @@ const SellerOnboarding: React.FC = () => {
               id="contact_person_name"
               label="Contact Person Name"
               value={formData.contact.contact_person_name}
-              onChange={(value) => setFormData({
-                ...formData,
-                contact: { ...formData.contact, contact_person_name: value }
-              })}
+              onChange={(value) => {
+                //const newFormData = formData;
+                //newFormData.contact.contact_person_name = value;
+                const error = validateContactName(value);
+                //newFormData.formErrors.
+                setFormData({
+                  ...formData,
+                  contact: { ...formData.contact, contact_person_name: value },
+                  // formErrors: { ...formData.formErrors, contact_person_name: error }
+                });
+              }}
               required
               placeholder="Full name of contact person"
+              error={formData.formErrors.contact_person_name}
+              helperText="Enter the full name of the primary contact person"
             />
 
             <FormInput
@@ -643,12 +1339,18 @@ const SellerOnboarding: React.FC = () => {
               label="Business Email"
               type="email"
               value={formData.contact.email}
-              onChange={(value) => setFormData({
-                ...formData,
-                contact: { ...formData.contact, email: value }
-              })}
+              onChange={(value) => {
+                const error = validateBusinessEmail(value);
+                setFormData({
+                  ...formData,
+                  contact: { ...formData.contact, email: value },
+                  formErrors: { ...formData.formErrors, business_email: error }
+                });
+              }}
               required
               placeholder="your@business.com"
+              error={formData.formErrors.business_email}
+              helperText="This email will be used for business communications"
             />
 
             <FormInput
@@ -656,11 +1358,17 @@ const SellerOnboarding: React.FC = () => {
               label="Support Email (Optional)"
               type="email"
               value={formData.contact.support_email}
-              onChange={(value) => setFormData({
-                ...formData,
-                contact: { ...formData.contact, support_email: value }
-              })}
+              onChange={(value) => {
+                const error = validateSupportEmail(value);
+                setFormData({
+                  ...formData,
+                  contact: { ...formData.contact, support_email: value },
+                  formErrors: { ...formData.formErrors, support_email: error }
+                });
+              }}
               placeholder="support@business.com"
+              error={formData.formErrors.support_email}
+              helperText="Separate email for customer support inquiries"
             />
 
             <FormInput
@@ -668,12 +1376,18 @@ const SellerOnboarding: React.FC = () => {
               label="Phone Number"
               type="tel"
               value={formData.contact.phone_number}
-              onChange={(value) => setFormData({
-                ...formData,
-                contact: { ...formData.contact, phone_number: value }
-              })}
+              onChange={(value) => {
+                const error = validatePhoneNumber(value);
+                setFormData({
+                  ...formData,
+                  contact: { ...formData.contact, phone_number: value },
+                  formErrors: { ...formData.formErrors, phone_number: error }
+                });
+              }}
               required
               placeholder="+92 XXX XXXXXXX"
+              error={formData.formErrors.phone_number}
+              helperText="Primary contact number in Pakistani format"
             />
 
             <FormInput
@@ -681,23 +1395,35 @@ const SellerOnboarding: React.FC = () => {
               label="Alternate Phone Number (Optional)"
               type="tel"
               value={formData.contact.alternate_phone_number}
-              onChange={(value) => setFormData({
-                ...formData,
-                contact: { ...formData.contact, alternate_phone_number: value }
-              })}
+              onChange={(value) => {
+                const error = validateOptionalPhone(value);
+                setFormData({
+                  ...formData,
+                  contact: { ...formData.contact, alternate_phone_number: value },
+                  formErrors: { ...formData.formErrors, alternate_phone_number: error }
+                });
+              }}
               placeholder="+92 XXX XXXXXXX"
+              error={formData.formErrors.alternate_phone_number}
+              helperText="Secondary contact number (optional)"
             />
 
             <FormInput
               id="whatsappNumber"
               label="WhatsApp Number (Optional)"
               type="tel"
-              value={formData.contact.whatsapp}
-              onChange={(value) => setFormData({
-                ...formData,
-                contact: { ...formData.contact, whatsapp: value }
-              })}
+              value={formData.contact.whatsapp_number}
+              onChange={(value) => {
+                const error = validateOptionalPhone(value);
+                setFormData({
+                  ...formData,
+                  contact: { ...formData.contact, whatsapp_number: value },
+                  formErrors: { ...formData.formErrors, whatsapp_number: error }
+                });
+              }}
               placeholder="+92 XXX XXXXXXX"
+              error={formData.formErrors.whatsapp_number}
+              helperText="WhatsApp number for business communications (optional)"
             />
 
             <FormInput
@@ -715,6 +1441,7 @@ const SellerOnboarding: React.FC = () => {
         );
       case 5:
         return (
+          <>
           <FormStep
             title="Store Location"
             subtitle="Where is your business located?"
@@ -724,12 +1451,18 @@ const SellerOnboarding: React.FC = () => {
               id="address"
               label="Address"
               value={formData.location.address}
-              onChange={(value) => setFormData({
-                ...formData,
-                location: { ...formData.location, address: value }
-              })}
+              onChange={(value) => {
+                const error = validateAddress(value);
+                setFormData({
+                  ...formData,
+                  location: { ...formData.location, address: value },
+                  formErrors: { ...formData.formErrors, address: error }
+                });
+              }}
               required
               placeholder="Street address"
+              error={formData.formErrors.address}
+              helperText="Enter complete street address (5-200 characters)"
             />
 
             <div className="grid grid-cols-2 gap-4">
@@ -737,24 +1470,36 @@ const SellerOnboarding: React.FC = () => {
                 id="city"
                 label="City"
                 value={formData.location.city}
-                onChange={(value) => setFormData({
-                  ...formData,
-                  location: { ...formData.location, city: value }
-                })}
+                onChange={(value) => {
+                  const error = validateCity(value);
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, city: value },
+                    formErrors: { ...formData.formErrors, city: error }
+                  });
+                }}
                 required
                 placeholder="City"
+                error={formData.formErrors.city}
+                helperText="Enter city name"
               />
 
               <FormInput
                 id="state"
-                label="State"
+                label="State/Province"
                 value={formData.location.state}
-                onChange={(value) => setFormData({
-                  ...formData,
-                  location: { ...formData.location, state: value }
-                })}
+                onChange={(value) => {
+                  const error = validateState(value);
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, state: value },
+                    formErrors: { ...formData.formErrors, state: error }
+                  });
+                }}
                 required
-                placeholder="State"
+                placeholder="e.g. Punjab"
+                error={formData.formErrors.state}
+                helperText="Enter state or province name"
               />
             </div>
 
@@ -762,26 +1507,118 @@ const SellerOnboarding: React.FC = () => {
               <FormInput
                 id="postal_code"
                 label="Postal Code"
-                type="number"
+                type="text"
                 value={formData.location.postal_code}
-                onChange={(value) => setFormData({
-                  ...formData,
-                  location: { ...formData.location, postal_code: value }
-                })}
+                onChange={(value) => {
+                  const error = validatePostalCode(value);
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, postal_code: value },
+                    formErrors: { ...formData.formErrors, postal_code: error }
+                  });
+                }}
                 required
-                placeholder="Postal code"
+                placeholder="12345"
+                error={formData.formErrors.postal_code}
+                helperText="Enter 5-digit postal code"
               />
 
               <FormInput
                 id="country"
                 label="Country"
                 value={formData.location.country}
-                onChange={(value) => setFormData({
-                  ...formData,
-                  location: { ...formData.location, country: value }
-                })}
+                disabled
+                helperText="Currently only available in Pakistan"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput
+                id="latitude"
+                label="Latitude"
+                type="number"
+                value={formData.location.latitude.toString()}
+                onChange={(value) => {
+                  const numValue = parseFloat(value) || 0;
+                  const error = validateLatitude(numValue);
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, latitude: numValue },
+                    formErrors: { ...formData.formErrors, latitude: error }
+                  });
+                }}
                 required
-                // disabled
+                placeholder="e.g. 31.5204"
+                error={formData.formErrors.latitude}
+                helperText="Value between -90 and 90 degrees"
+              />
+
+              <FormInput
+                id="longitude"
+                label="Longitude"
+                type="number"
+                value={formData.location.longitude.toString()}
+                onChange={(value) => {
+                  const numValue = parseFloat(value) || 0;
+                  const error = validateLongitude(numValue);
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, longitude: numValue },
+                    formErrors: { ...formData.formErrors, longitude: error }
+                  });
+                }}
+                required
+                placeholder="e.g. 74.3587"
+                error={formData.formErrors.longitude}
+                helperText="Value between -180 and 180 degrees"
+              />
+            </div>
+            
+            <div>
+
+              <FormInput
+                id="country"
+                label="Country"
+                value={formData.location.country}
+                onChange={(value) => {
+                  const error = validateCountry(value);
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, country: value },
+                    formErrors: { ...formData.formErrors, country: error }
+                  });
+                }}
+                required
+                placeholder="Country"
+                error={formData.formErrors.country}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput
+                id="postal_code"
+                label="Postal Code"
+                value={formData.location.postal_code}
+                onChange={(value) => {
+                  const error = validatePostalCode(value);
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, postal_code: value },
+                    formErrors: { ...formData.formErrors, postal_code: error }
+                  });
+                }}
+                required
+                placeholder="12345"
+                error={formData.formErrors.postal_code}
+                helperText="Enter 5-digit postal code"
+              />
+
+              <FormInput
+                id="country"
+                label="Country"
+                value={formData.location.country}
+                disabled
+                helperText="Currently only available in Pakistan"
               />
             </div>
 
@@ -790,22 +1627,36 @@ const SellerOnboarding: React.FC = () => {
                 id="latitude"
                 label="Latitude (Optional)"
                 value={formData.location.latitude as unknown as string}
-                onChange={(value) => setFormData({
-                  ...formData,
-                  location: { ...formData.location, latitude: parseFloat(value) || 0 }
-                })}
+                onChange={(value) => {
+                  const parsedValue = parseFloat(value) || 0;
+                  const error = validateCoordinates(parsedValue, 'latitude');
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, latitude: parsedValue },
+                    formErrors: { ...formData.formErrors, latitude: error }
+                  });
+                }}
                 placeholder="e.g. 31.5204"
+                error={formData.formErrors.latitude}
+                helperText="Value between -90 and 90 degrees"
               />
 
               <FormInput
                 id="longitude"
                 label="Longitude (Optional)"
                 value={formData.location.longitude as unknown as string}
-                onChange={(value) => setFormData({
-                  ...formData,
-                  location: { ...formData.location, longitude: parseFloat(value) || 0 }
-                })}
+                onChange={(value) => {
+                  const parsedValue = parseFloat(value) || 0;
+                  const error = validateCoordinates(parsedValue, 'longitude');
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, longitude: parsedValue },
+                    formErrors: { ...formData.formErrors, longitude: error }
+                  });
+                }}
                 placeholder="e.g. 74.3587"
+                error={formData.formErrors.longitude}
+                helperText="Value between -180 and 180 degrees"
               />
             </div>
 
@@ -853,125 +1704,206 @@ const SellerOnboarding: React.FC = () => {
                   id="pickup_hours"
                   label="Pickup Hours"
                   value={formData.location.pickup_hours}
-                  onChange={(value) => setFormData({
-                    ...formData,
-                    location: { ...formData.location, pickup_hours: value }
-                  })}
+                  onChange={(value) => {
+                    const error = validatePickupHours(value, formData.location.pickup_available);
+                    setFormData({
+                      ...formData,
+                      location: { ...formData.location, pickup_hours: value },
+                      formErrors: { ...formData.formErrors, pickup_hours: error }
+                    });
+                  }}
                   required
                   placeholder="e.g. Same as business hours"
+                  error={formData.formErrors.pickup_hours}
+                  helperText="Specify hours when pickup is available (5-100 characters)"
                 />
               )}
             </div>
           </FormStep>
+          </>
         );
-      case 6:
-        return (
-          <FormStep
-            title="Business Profile"
-            subtitle="Tell us more about your business type"
-            icon={<Building2 size={32} className="text-primary" />}
+      // Validation functions for business profile
+const validateBusinessType = (type: string): string => {
+  if (!type) return "Business type is required";
+  return "";
+};
+
+const validateFoundedYear = (year: number): string => {
+  const currentYear = new Date().getFullYear();
+  if (!year) return "Founded year is required";
+  if (year < 1900 || year > currentYear) return `Year must be between 1900 and ${currentYear}`;
+  return "";
+};
+
+const validateEmployeeCount = (count: string): string => {
+  if (!count) return "Number of employees is required";
+  return "";
+};
+
+const validateBusinessCategory = (category: string): string => {
+  if (!category) return "Business category is required";
+  return "";
+};
+
+const validateSubcategory = (subcategory: string): string => {
+  if (!subcategory) return "Subcategory is required";
+  if (subcategory.length < 2) return "Subcategory must be at least 2 characters";
+  if (subcategory.length > 50) return "Subcategory must not exceed 50 characters";
+  return "";
+};
+
+case 6:
+  return (
+    <FormStep
+      title="Business Profile"
+      subtitle="Tell us more about your business type"
+      icon={<Building2 size={32} className="text-primary" />}
+    >
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <label htmlFor="business_type" className="block text-sm font-medium text-neutral-400">
+            Business Type<span className="text-red-500 ml-1">*</span>
+          </label>
+          <select
+            id="business_type"
+            value={formData.business_details.business_type}
+            onChange={(e) => {
+              const value = e.target.value;
+              const error = validateBusinessType(value);
+              setFormData({
+                ...formData,
+                business_details: { ...formData.business_details, business_type: value },
+                formErrors: { ...formData.formErrors, business_type: error }
+              });
+            }}
+            className={`w-full px-3 py-2 bg-background border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+              formData.formErrors.business_type ? 'border-red-500' : 'border-neutral-700'
+            }`}
+            required
           >
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label htmlFor="business_type" className="block text-sm font-medium text-neutral-400">
-                  Business Type<span className="text-red-500 ml-1">*</span>
-                </label>
-                <select
-                  id="business_type"
-                  value={formData.business_details.business_type}
-                  onChange={(e) => {
-                    formData.business_details.business_type = e.target.value;
-                    setFormData({ ...formData });
-                  }}
-                  className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                >
-                  <option value="">Select business type</option>
-                  <option value="Sole Proprietorship">Sole Proprietorship</option>
-                  <option value="Partnership">Partnership</option>
-                  <option value="Private Limited">Private Limited</option>
-                  <option value="Public Limited">Public Limited</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
+            <option value="">Select business type</option>
+            <option value="Sole Proprietorship">Sole Proprietorship</option>
+            <option value="Partnership">Partnership</option>
+            <option value="Private Limited">Private Limited</option>
+            <option value="Public Limited">Public Limited</option>
+            <option value="Other">Other</option>
+          </select>
+          {formData.formErrors.business_type && (
+            <p className="mt-1 text-sm text-red-500">{formData.formErrors.business_type}</p>
+          )}
+        </div>
 
-              <FormInput
-                id="founded_year"
-                label="Founded Year"
-                type="number"
-                value={formData.business_details.founded_year as unknown as string}
-                onChange={(value) => {
-                  formData.business_details.founded_year = parseInt(value) || 0;
-                  setFormData({ ...formData });
-                }}
-                required
-                placeholder="e.g. 2020"
-              />
+        <FormInput
+          id="founded_year"
+          label="Founded Year"
+          type="number"
+          value={formData.business_details.founded_year as unknown as string}
+          onChange={(value) => {
+            const yearValue = parseInt(value) || 0;
+            const error = validateFoundedYear(yearValue);
+            setFormData({
+              ...formData,
+              business_details: { ...formData.business_details, founded_year: yearValue },
+              formErrors: { ...formData.formErrors, founded_year: error }
+            });
+          }}
+          required
+          placeholder="e.g. 2020"
+          error={formData.formErrors.founded_year}
+          helperText={`Enter a year between 1900 and ${new Date().getFullYear()}`}
+        />
 
-              <div className="space-y-1">
-                <label htmlFor="employeeCount" className="block text-sm font-medium text-neutral-400">
-                  Number of Employees<span className="text-red-500 ml-1">*</span>
-                </label>
-                <select
-                  id="employeeCount"
-                  value={formData.business_details.number_of_employees}
-                  onChange={(e) => {
-                    formData.business_details.number_of_employees = e.target.value;
-                    setFormData({ ...formData });
-                  }}
-                  className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                >
-                  <option value="">Select employee count</option>
-                  <option value="1-5">1-5</option>
-                  <option value="6-10">6-10</option>
-                  <option value="11-20">11-20</option>
-                  <option value="21-50">21-50</option>
-                  <option value="51-100">51-100</option>
-                  <option value="100+">100+</option>
-                </select>
-              </div>
+        <div className="space-y-1">
+          <label htmlFor="employeeCount" className="block text-sm font-medium text-neutral-400">
+            Number of Employees<span className="text-red-500 ml-1">*</span>
+          </label>
+          <select
+            id="employeeCount"
+            value={formData.business_details.number_of_employees}
+            onChange={(e) => {
+              const value = e.target.value;
+              const error = validateEmployeeCount(value);
+              setFormData({
+                ...formData,
+                business_details: { ...formData.business_details, number_of_employees: value },
+                formErrors: { ...formData.formErrors, number_of_employees: error }
+              });
+            }}
+            className={`w-full px-3 py-2 bg-background border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+              formData.formErrors.number_of_employees ? 'border-red-500' : 'border-neutral-700'
+            }`}
+            required
+          >
+            <option value="">Select employee count</option>
+            <option value="1-5">1-5</option>
+            <option value="6-10">6-10</option>
+            <option value="11-20">11-20</option>
+            <option value="21-50">21-50</option>
+            <option value="51-100">51-100</option>
+            <option value="100+">100+</option>
+          </select>
+          {formData.formErrors.number_of_employees && (
+            <p className="mt-1 text-sm text-red-500">{formData.formErrors.number_of_employees}</p>
+          )}
+        </div>
 
-              <div className="space-y-1">
-                <label htmlFor="business_category" className="block text-sm font-medium text-neutral-400">
-                  Business Category<span className="text-red-500 ml-1">*</span>
-                </label>
-                <select
-                  id="business_category"
-                  value={formData.business_details.business_category}
-                  onChange={(e) => {
-                    formData.business_details.business_category = e.target.value;
-                    setFormData({ ...formData });
-                  }}
-                  className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                >
-                  <option value="">Select business category</option>
-                  <option value="Fashion">Fashion</option>
-                  <option value="Jewelry & Accessories">Jewelry & Accessories</option>
-                  <option value="Bags & Luggage">Bags & Luggage</option>
-                  <option value="Kids & Babies">Kids & Babies</option>
-                  <option value="Handmade & Crafts">Handmade & Crafts</option>
-                  <option value="Shoes">Shoes</option>
-                  <option value="Sports & Outdoors">Sports & Outdoors</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
+        <div className="space-y-1">
+          <label htmlFor="business_category" className="block text-sm font-medium text-neutral-400">
+            Business Category<span className="text-red-500 ml-1">*</span>
+          </label>
+          <select
+            id="business_category"
+            value={formData.business_details.business_category}
+            onChange={(e) => {
+              const value = e.target.value;
+              const error = validateBusinessCategory(value);
+              setFormData({
+                ...formData,
+                business_details: { ...formData.business_details, business_category: value },
+                formErrors: { ...formData.formErrors, business_category: error }
+              });
+            }}
+            className={`w-full px-3 py-2 bg-background border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+              formData.formErrors.business_category ? 'border-red-500' : 'border-neutral-700'
+            }`}
+            required
+          >
+            <option value="">Select business category</option>
+            <option value="Fashion">Fashion</option>
+            <option value="Jewelry & Accessories">Jewelry & Accessories</option>
+            <option value="Bags & Luggage">Bags & Luggage</option>
+            <option value="Kids & Babies">Kids & Babies</option>
+            <option value="Handmade & Crafts">Handmade & Crafts</option>
+            <option value="Shoes">Shoes</option>
+            <option value="Sports & Outdoors">Sports & Outdoors</option>
+            <option value="Other">Other</option>
+          </select>
+          {formData.formErrors.business_category && (
+            <p className="mt-1 text-sm text-red-500">{formData.formErrors.business_category}</p>
+          )}
+        </div>
 
-              <FormInput
-                id="subcategory"
-                label="Subcategory"
-                value={formData.business_details.business_subcategory}
-                onChange={(value) => {
-                  formData.business_details.business_subcategory = value;
-                  setFormData({ ...formData });
-                }}
-                required
-                placeholder="e.g. Women's Clothing, Smartphones"
-              />
-            </div>
-          </FormStep>
-        );
+        <FormInput
+          id="subcategory"
+          label="Subcategory"
+          value={formData.business_details.business_subcategory}
+          onChange={(value) => {
+            const error = validateSubcategory(value);
+            setFormData({
+              ...formData,
+              business_details: { ...formData.business_details, business_subcategory: value },
+              formErrors: { ...formData.formErrors, business_subcategory: error }
+            });
+          }}
+          required
+          placeholder="e.g. Women's Clothing, Smartphones"
+          error={formData.formErrors.business_subcategory}
+          helperText="Enter a specific subcategory (2-50 characters)"
+        />
+      </div>
+    </FormStep>
+  );
+
       case 7:
         return (
           <FormStep
@@ -985,7 +1917,9 @@ const SellerOnboarding: React.FC = () => {
                   Upload CNIC Front<span className="text-red-500 ml-1">*</span>
                 </label>
                 <div className="flex items-center justify-center w-full">
-                  <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
+                  <label className={`w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed ${
+                    formData.formErrors.cnic_front ? 'border-red-500' : 'border-neutral-700'
+                  } cursor-pointer hover:border-primary`}>
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
                       {formData.kyc_documents.cnic_front ? formData.kyc_documents.cnic_front : 'Upload CNIC front'}
@@ -993,21 +1927,39 @@ const SellerOnboarding: React.FC = () => {
                     <input
                       type="file"
                       className="hidden"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/jpg"
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          const url = await api.uploadFileAndGetUrl(file!);
-                          formData.kyc_documents.cnic_front = url;
-                          setFormData({ ...formData });
+                        const error = validateCNICImage(file);
+                        
+                        if (file && !error) {
+                          try {
+                            const url = await api.uploadFileAndGetUrl(file);
+                            setFormData({
+                              ...formData,
+                              kyc_documents: { ...formData.kyc_documents, cnic_front: url },
+                              formErrors: { ...formData.formErrors, cnic_front: "" }
+                            });
+                          } catch (err) {
+                            setFormData({
+                              ...formData,
+                              formErrors: { ...formData.formErrors, cnic_front: "Failed to upload image. Please try again." }
+                            });
+                          }
+                        } else {
+                          setFormData({
+                            ...formData,
+                            formErrors: { ...formData.formErrors, cnic_front: error }
+                          });
                         }
-
-                        setFormData({ ...formData });
                       }}
                       required
                     />
                   </label>
                 </div>
+                {formData.formErrors.cnic_front && (
+                  <p className="mt-1 text-sm text-red-500">{formData.formErrors.cnic_front}</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -1015,7 +1967,9 @@ const SellerOnboarding: React.FC = () => {
                   Upload CNIC Back<span className="text-red-500 ml-1">*</span>
                 </label>
                 <div className="flex items-center justify-center w-full">
-                  <label className="w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
+                  <label className={`w-full flex flex-col items-center px-4 py-6 bg-background rounded-lg border-2 border-dashed ${
+                    formData.formErrors.cnic_back ? 'border-red-500' : 'border-neutral-700'
+                  } cursor-pointer hover:border-primary`}>
                     <Upload size={24} className="text-neutral-400 mb-2" />
                     <span className="text-sm text-neutral-400">
                       {formData.kyc_documents.cnic_back ? formData.kyc_documents.cnic_back : 'Upload CNIC back'}
@@ -1023,24 +1977,43 @@ const SellerOnboarding: React.FC = () => {
                     <input
                       type="file"
                       className="hidden"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/jpg"
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          const url = await api.uploadFileAndGetUrl(file!);
-                          formData.kyc_documents.cnic_front = url;
-                          setFormData({ ...formData });
+                        const error = validateCNICImage(file);
+                        
+                        if (file && !error) {
+                          try {
+                            const url = await api.uploadFileAndGetUrl(file);
+                            setFormData({
+                              ...formData,
+                              kyc_documents: { ...formData.kyc_documents, cnic_back: url },
+                              formErrors: { ...formData.formErrors, cnic_back: "" }
+                            });
+                          } catch (err) {
+                            setFormData({
+                              ...formData,
+                              formErrors: { ...formData.formErrors, cnic_back: "Failed to upload image. Please try again." }
+                            });
+                          }
+                        } else {
+                          setFormData({
+                            ...formData,
+                            formErrors: { ...formData.formErrors, cnic_back: error }
+                          });
                         }
-                        setFormData({ ...formData });
                       }}
                       required
                     />
                   </label>
                 </div>
+                {formData.formErrors.cnic_back && (
+                  <p className="mt-1 text-sm text-red-500">{formData.formErrors.cnic_back}</p>
+                )}
               </div>
 
               <p className="text-sm text-neutral-400 text-center">
-                Please ensure your CNIC images are clear and all details are visible
+                Please ensure your CNIC images are clear and all details are visible. Supported formats: JPG, JPEG, PNG (max 5MB)
               </p>
             </div>
           </FormStep>
@@ -1105,16 +2078,25 @@ const SellerOnboarding: React.FC = () => {
                           onChange={(value) => {
                             const newProfiles = [...formData.shipping_settings.shipping_profiles];
                             newProfiles[index] = { ...profile, profile_name: value };
-                            formData.shipping_settings.shipping_profiles = newProfiles;
-                            setFormData({ ...formData });
+                            const errors = validateShippingProfile(newProfiles[index]);
+                            setFormData({
+                              ...formData,
+                              shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+                              formErrors: {
+                                ...formData.formErrors,
+                                [`shipping_profile_${index}`]: errors
+                              }
+                            });
                           }}
                           required
                           placeholder="e.g., Standard Shipping"
+                          error={formData.formErrors[`shipping_profile_${index}`]?.profile_name}
+                          helperText="Profile name must be between 3 and 50 characters"
                         />
 
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-neutral-400">
-                            Regions
+                            Regions<span className="text-red-500 ml-1">*</span>
                           </label>
                           <select
                             multiple
@@ -1125,10 +2107,19 @@ const SellerOnboarding: React.FC = () => {
                                 ...profile,
                                 regions: Array.from(e.target.selectedOptions, option => option.value)
                               };
-                              formData.shipping_settings.shipping_profiles = newProfiles;
-                              setFormData({ ...formData });
+                              const errors = validateShippingProfile(newProfiles[index]);
+                              setFormData({
+                                ...formData,
+                                shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+                                formErrors: {
+                                  ...formData.formErrors,
+                                  [`shipping_profile_${index}`]: errors
+                                }
+                              });
                             }}
-                            className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                            className={`w-full px-3 py-2 bg-background border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                              formData.formErrors[`shipping_profile_${index}`]?.regions ? 'border-red-500' : 'border-neutral-700'
+                            }`}
                           >
                             <option value="Punjab">Punjab</option>
                             <option value="Sindh">Sindh</option>
@@ -1139,12 +2130,95 @@ const SellerOnboarding: React.FC = () => {
                           </select>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-4">
+              <FormInput
+                id="postal_code"
+                label="Postal Code"
+                value={formData.location.postal_code}
+                onChange={(value) => {
+                  const error = validatePostalCode(value);
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, postal_code: value },
+                    formErrors: { ...formData.formErrors, postal_code: error }
+                  });
+                }}
+                required
+                placeholder="12345"
+                error={formData.formErrors.postal_code}
+                helperText="Enter 5-digit postal code"
+              />
+
+              <FormInput
+                id="country"
+                label="Country"
+                value={formData.location.country}
+                disabled
+                helperText="Currently only available in Pakistan"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                          <FormInput
+                            id={`delivery-days-${index}`}
+                            label="Delivery Days"
+                            type="number"
+                            value={profile.delivery_days?.toString() || ''}
+                            onChange={(value) => {
+                              const newProfiles = [...formData.shipping_settings.shipping_profiles];
+                              newProfiles[index] = { ...profile, delivery_days: parseInt(value) || 0 };
+                              const errors = validateShippingProfile(newProfiles[index]);
+                              setFormData({
+                                ...formData,
+                                shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+                                formErrors: {
+                                  ...formData.formErrors,
+                                  [`shipping_profile_${index}`]: errors
+                                }
+                              });
+                            }}
+                            required
+                            placeholder="e.g., 3"
+                            error={formData.formErrors[`shipping_profile_${index}`]?.delivery_days}
+                            helperText="Delivery days must be between 1 and 30 days"
+                          />
+                          <FormInput
+                            id={`shipping-rate-${index}`}
+                            label="Shipping Rate (PKR)"
+                            type="number"
+                            value={profile.shipping_rate?.toString() || ''}
+                            onChange={(value) => {
+                              const newProfiles = [...formData.shipping_settings.shipping_profiles];
+                              newProfiles[index] = { ...profile, shipping_rate: parseInt(value) || 0 };
+                              const errors = validateShippingProfile(newProfiles[index]);
+                              setFormData({
+                                ...formData,
+                                shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+                                formErrors: {
+                                  ...formData.formErrors,
+                                  [`shipping_profile_${index}`]: errors
+                                }
+                              });
+                            }}
+                            required
+                            placeholder="e.g., 250"
+                            error={formData.formErrors[`shipping_profile_${index}`]?.shipping_rate}
+                            helperText="Shipping rate must be between 0 and 10,000 PKR"
+                          />
+                        </div>
+
                         <button
                           type="button"
                           onClick={() => {
                             const newProfiles = formData.shipping_settings.shipping_profiles.filter((_, i) => i !== index);
-                            formData.shipping_settings.shipping_profiles = newProfiles;
-                            setFormData({ ...formData });
+                            setFormData({
+                              ...formData,
+                              shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+                              formErrors: {
+                                ...formData.formErrors,
+                                [`shipping_profile_${index}`]: undefined
+                              }
+                            });
                           }}
                           className="text-red-500 text-sm hover:text-red-400"
                         >
@@ -1180,11 +2254,18 @@ const SellerOnboarding: React.FC = () => {
                 type="number"
                 value={formData.shipping_settings.default_handling_time.toString()}
                 onChange={(value) => {
-                  formData.shipping_settings.default_handling_time = parseInt(value) || 1;
-                  setFormData({ ...formData })
+                  const days = parseInt(value) || 1;
+                  const error = validateHandlingTime(days);
+                  setFormData({
+                    ...formData,
+                    shipping_settings: { ...formData.shipping_settings, default_handling_time: days },
+                    formErrors: { ...formData.formErrors, default_handling_time: error }
+                  });
                 }}
                 required
                 placeholder="e.g., 2"
+                error={formData.formErrors.default_handling_time}
+                helperText="Handling time must be between 1 and 14 days"
               />
 
               <FormInput
@@ -1193,11 +2274,18 @@ const SellerOnboarding: React.FC = () => {
                 type="number"
                 value={formData.shipping_settings.free_shipping_threshold.toString()}
                 onChange={(value) => {
-                  formData.shipping_settings.free_shipping_threshold = parseInt(value) || 0;
-                  setFormData({ ...formData })
+                  const amount = parseInt(value) || 0;
+                  const error = validateFreeShippingThreshold(amount);
+                  setFormData({
+                    ...formData,
+                    shipping_settings: { ...formData.shipping_settings, free_shipping_threshold: amount },
+                    formErrors: { ...formData.formErrors, free_shipping_threshold: error }
+                  });
                 }}
                 required
                 placeholder="e.g., 2000"
+                error={formData.formErrors.free_shipping_threshold}
+                helperText="Enter amount between 0 and 50,000 PKR"
               />
 
               
@@ -1477,5 +2565,7 @@ const SellerOnboarding: React.FC = () => {
     </div>
   );
 };
+
+
 
 export default SellerOnboarding;

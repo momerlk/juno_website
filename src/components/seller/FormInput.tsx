@@ -9,6 +9,7 @@ interface FormInputProps {
   onChange: (value: string) => void;
   required?: boolean;
   error?: string;
+  helperText?: string;
   maxLength?: number;
   icon?: React.ReactNode;
   className?: string;
@@ -33,7 +34,8 @@ const FormInput: React.FC<FormInputProps> = ({
   className = '',
   pattern,
   validate,
-  showPasswordStrength = false
+  showPasswordStrength = false,
+  helperText
 }) => {
   const getPasswordStrength = (password: string): { strength: number; message: string } => {
     let strength = 0;
@@ -97,7 +99,7 @@ const FormInput: React.FC<FormInputProps> = ({
           id={id}
           type={type}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleChange}
           maxLength={maxLength}
           placeholder={placeholder}
           required={required}
@@ -116,8 +118,10 @@ const FormInput: React.FC<FormInputProps> = ({
           minLength={minLength}
         />
       </div>
-      {error && (
-        <p className="text-sm text-red-500">{error}</p>
+      {(error || helperText) && (
+        <p className={`text-sm ${error ? 'text-red-500' : 'text-neutral-500'}`}>
+          {error || helperText}
+        </p>
       )}
       {maxLength && (
         <p className="text-xs text-neutral-500 text-right">
