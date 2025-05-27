@@ -371,7 +371,7 @@ const SellerOnboarding: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(initialFormData);
 
-  const totalSteps = 8;
+  const totalSteps = 7;
 
   // Validation functions
   const validateEmail = (email: string): string | undefined => {
@@ -590,6 +590,45 @@ const SellerOnboarding: React.FC = () => {
 
     return errors;
   };
+
+  const validateBusinessType = (type: string): string => {
+  if (!type) return "Business type is required";
+  const validTypes = ["Sole Proprietorship", "Partnership", "Private Limited", "Public Limited", "Other"];
+  if (!validTypes.includes(type)) return "Please select a valid business type";
+  return "";
+};
+
+const validateFoundedYear = (year: number): string => {
+  const currentYear = new Date().getFullYear();
+  if (!year) return "Founded year is required";
+  if (isNaN(year)) return "Founded year must be a valid number";
+  if (!Number.isInteger(year)) return "Founded year must be a whole number";
+  if (year < 1900 || year > currentYear) return `Year must be between 1900 and ${currentYear}`;
+  return "";
+};
+
+const validateEmployeeCount = (count: string): string => {
+  if (!count) return "Number of employees is required";
+  const validRanges = ["1-10", "11-50", "51-200", "201-500", "500+"];
+  if (!validRanges.includes(count)) return "Please select a valid employee range";
+  return "";
+};
+
+const validateBusinessCategory = (category: string): string => {
+  if (!category) return "Business category is required";
+  if (category.length < 2) return "Category must be at least 2 characters";
+  if (category.length > 50) return "Category must not exceed 50 characters";
+  return "";
+};
+
+const validateSubcategory = (subcategory: string): string => {
+  if (!subcategory) return "Subcategory is required";
+  if (subcategory.length < 2) return "Subcategory must be at least 2 characters";
+  if (subcategory.length > 50) return "Subcategory must not exceed 50 characters";
+  const alphanumericWithSpaces = /^[a-zA-Z0-9\s-_]+$/;
+  if (!alphanumericWithSpaces.test(subcategory)) return "Subcategory can only contain letters, numbers, spaces, hyphens and underscores";
+  return "";
+};
 
   // Add bank details validation functions
   const validateBankName = (name: string): string | undefined => {
@@ -1722,35 +1761,7 @@ const SellerOnboarding: React.FC = () => {
           </FormStep>
           </>
         );
-      // Validation functions for business profile
-const validateBusinessType = (type: string): string => {
-  if (!type) return "Business type is required";
-  return "";
-};
-
-const validateFoundedYear = (year: number): string => {
-  const currentYear = new Date().getFullYear();
-  if (!year) return "Founded year is required";
-  if (year < 1900 || year > currentYear) return `Year must be between 1900 and ${currentYear}`;
-  return "";
-};
-
-const validateEmployeeCount = (count: string): string => {
-  if (!count) return "Number of employees is required";
-  return "";
-};
-
-const validateBusinessCategory = (category: string): string => {
-  if (!category) return "Business category is required";
-  return "";
-};
-
-const validateSubcategory = (subcategory: string): string => {
-  if (!subcategory) return "Subcategory is required";
-  if (subcategory.length < 2) return "Subcategory must be at least 2 characters";
-  if (subcategory.length > 50) return "Subcategory must not exceed 50 characters";
-  return "";
-};
+    
 
 case 6:
   return (
@@ -1835,12 +1846,11 @@ case 6:
             required
           >
             <option value="">Select employee count</option>
-            <option value="1-5">1-5</option>
-            <option value="6-10">6-10</option>
-            <option value="11-20">11-20</option>
-            <option value="21-50">21-50</option>
-            <option value="51-100">51-100</option>
-            <option value="100+">100+</option>
+            <option value="1-10">1-10 employees</option>
+            <option value="11-50">11-50 employees</option>
+            <option value="51-200">51-200 employees</option>
+            <option value="201-500">201-500 employees</option>
+            <option value="500+">500+ employees</option>
           </select>
           {formData.formErrors.number_of_employees && (
             <p className="mt-1 text-sm text-red-500">{formData.formErrors.number_of_employees}</p>
@@ -1887,6 +1897,9 @@ case 6:
           id="subcategory"
           label="Subcategory"
           value={formData.business_details.business_subcategory}
+          required
+          placeholder="e.g. Women's Clothing, Handmade Jewelry"
+          helperText="Enter a specific subcategory (2-50 characters, alphanumeric with spaces, hyphens and underscores)"
           onChange={(value) => {
             const error = validateSubcategory(value);
             setFormData({
@@ -2019,279 +2032,279 @@ case 6:
           </FormStep>
         );
 
-      case 8:
-        return (
-          <FormStep
-            title="Shipping Settings"
-            subtitle="Set up your delivery options"
-            icon={<Truck size={32} className="text-primary" />}
-          >
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-neutral-400">
-                  Shipping Type<span className="text-red-500 ml-1">*</span>
-                </label>
-                <div className="flex items-center space-x-4">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      value="self"
-                      checked={formData.shipping_settings.self_shipping === true}
-                      onChange={_ => {
-                        formData.shipping_settings.self_shipping = true;
-                        formData.shipping_settings.platform_shipping = false;
-                        setFormData({...formData, shipping_settings: {...formData.shipping_settings } });
-                      }}
-                      className="form-radio text-primary focus:ring-primary h-4 w-4"
-                    />
-                    <span className="ml-2 text-white">Self-shipping</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      value="platform"
-                      checked={formData.shipping_settings.platform_shipping}
-                      onChange={_ => {
-                        formData.shipping_settings.self_shipping = false;
-                        formData.shipping_settings.platform_shipping = true;
-                        setFormData({...formData, shipping_settings: {...formData.shipping_settings } });
-                      }}
-                      className="form-radio text-primary focus:ring-primary h-4 w-4"
-                    />
-                    <span className="ml-2 text-white">Platform Shipping</span>
-                  </label>
-                </div>
-              </div>
+      // case 8:
+      //   return (
+      //     <FormStep
+      //       title="Shipping Settings"
+      //       subtitle="Set up your delivery options"
+      //       icon={<Truck size={32} className="text-primary" />}
+      //     >
+      //       <div className="space-y-6">
+      //         <div className="space-y-2">
+      //           <label className="block text-sm font-medium text-neutral-400">
+      //             Shipping Type<span className="text-red-500 ml-1">*</span>
+      //           </label>
+      //           <div className="flex items-center space-x-4">
+      //             <label className="inline-flex items-center">
+      //               <input
+      //                 type="radio"
+      //                 value="self"
+      //                 checked={formData.shipping_settings.self_shipping === true}
+      //                 onChange={_ => {
+      //                   formData.shipping_settings.self_shipping = true;
+      //                   formData.shipping_settings.platform_shipping = false;
+      //                   setFormData({...formData, shipping_settings: {...formData.shipping_settings } });
+      //                 }}
+      //                 className="form-radio text-primary focus:ring-primary h-4 w-4"
+      //               />
+      //               <span className="ml-2 text-white">Self-shipping</span>
+      //             </label>
+      //             <label className="inline-flex items-center">
+      //               <input
+      //                 type="radio"
+      //                 value="platform"
+      //                 checked={formData.shipping_settings.platform_shipping}
+      //                 onChange={_ => {
+      //                   formData.shipping_settings.self_shipping = false;
+      //                   formData.shipping_settings.platform_shipping = true;
+      //                   setFormData({...formData, shipping_settings: {...formData.shipping_settings } });
+      //                 }}
+      //                 className="form-radio text-primary focus:ring-primary h-4 w-4"
+      //               />
+      //               <span className="ml-2 text-white">Platform Shipping</span>
+      //             </label>
+      //           </div>
+      //         </div>
 
-              {formData.shipping_settings.self_shipping === true && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-neutral-400">
-                      Shipping Profiles
-                    </label>
-                    {formData.shipping_settings.shipping_profiles.map((profile, index) => (
-                      <div key={index} className="p-4 bg-background-light rounded-lg space-y-4">
-                        <FormInput
-                          id={`profile-name-${index}`}
-                          label="Profile Name"
-                          value={profile.profile_name}
-                          onChange={(value) => {
-                            const newProfiles = [...formData.shipping_settings.shipping_profiles];
-                            newProfiles[index] = { ...profile, profile_name: value };
-                            const errors = validateShippingProfile(newProfiles[index]);
-                            setFormData({
-                              ...formData,
-                              shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
-                              formErrors: {
-                                ...formData.formErrors,
-                                [`shipping_profile_${index}`]: errors
-                              }
-                            });
-                          }}
-                          required
-                          placeholder="e.g., Standard Shipping"
-                          error={formData.formErrors[`shipping_profile_${index}`]?.profile_name}
-                          helperText="Profile name must be between 3 and 50 characters"
-                        />
+      //         {formData.shipping_settings.self_shipping === true && (
+      //           <div className="space-y-4">
+      //             <div className="space-y-2">
+      //               <label className="block text-sm font-medium text-neutral-400">
+      //                 Shipping Profiles
+      //               </label>
+      //               {formData.shipping_settings.shipping_profiles.map((profile, index) => (
+      //                 <div key={index} className="p-4 bg-background-light rounded-lg space-y-4">
+      //                   <FormInput
+      //                     id={`profile-name-${index}`}
+      //                     label="Profile Name"
+      //                     value={profile.profile_name}
+      //                     onChange={(value) => {
+      //                       const newProfiles = [...formData.shipping_settings.shipping_profiles];
+      //                       newProfiles[index] = { ...profile, profile_name: value };
+      //                       const errors = validateShippingProfile(newProfiles[index]);
+      //                       setFormData({
+      //                         ...formData,
+      //                         shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+      //                         formErrors: {
+      //                           ...formData.formErrors,
+      //                           [`shipping_profile_${index}`]: errors
+      //                         }
+      //                       });
+      //                     }}
+      //                     required
+      //                     placeholder="e.g., Standard Shipping"
+      //                     error={formData.formErrors[`shipping_profile_${index}`]?.profile_name}
+      //                     helperText="Profile name must be between 3 and 50 characters"
+      //                   />
 
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-neutral-400">
-                            Regions<span className="text-red-500 ml-1">*</span>
-                          </label>
-                          <select
-                            multiple
-                            value={profile.regions}
-                            onChange={(e) => {
-                              const newProfiles = [...formData.shipping_settings.shipping_profiles];
-                              newProfiles[index] = {
-                                ...profile,
-                                regions: Array.from(e.target.selectedOptions, option => option.value)
-                              };
-                              const errors = validateShippingProfile(newProfiles[index]);
-                              setFormData({
-                                ...formData,
-                                shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
-                                formErrors: {
-                                  ...formData.formErrors,
-                                  [`shipping_profile_${index}`]: errors
-                                }
-                              });
-                            }}
-                            className={`w-full px-3 py-2 bg-background border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                              formData.formErrors[`shipping_profile_${index}`]?.regions ? 'border-red-500' : 'border-neutral-700'
-                            }`}
-                          >
-                            <option value="Punjab">Punjab</option>
-                            <option value="Sindh">Sindh</option>
-                            <option value="KPK">KPK</option>
-                            <option value="Balochistan">Balochistan</option>
-                            <option value="Gilgit-Baltistan">Gilgit-Baltistan</option>
-                            <option value="AJK">AJK</option>
-                          </select>
-                        </div>
+      //                   <div className="space-y-2">
+      //                     <label className="block text-sm font-medium text-neutral-400">
+      //                       Regions<span className="text-red-500 ml-1">*</span>
+      //                     </label>
+      //                     <select
+      //                       multiple
+      //                       value={profile.regions}
+      //                       onChange={(e) => {
+      //                         const newProfiles = [...formData.shipping_settings.shipping_profiles];
+      //                         newProfiles[index] = {
+      //                           ...profile,
+      //                           regions: Array.from(e.target.selectedOptions, option => option.value)
+      //                         };
+      //                         const errors = validateShippingProfile(newProfiles[index]);
+      //                         setFormData({
+      //                           ...formData,
+      //                           shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+      //                           formErrors: {
+      //                             ...formData.formErrors,
+      //                             [`shipping_profile_${index}`]: errors
+      //                           }
+      //                         });
+      //                       }}
+      //                       className={`w-full px-3 py-2 bg-background border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+      //                         formData.formErrors[`shipping_profile_${index}`]?.regions ? 'border-red-500' : 'border-neutral-700'
+      //                       }`}
+      //                     >
+      //                       <option value="Punjab">Punjab</option>
+      //                       <option value="Sindh">Sindh</option>
+      //                       <option value="KPK">KPK</option>
+      //                       <option value="Balochistan">Balochistan</option>
+      //                       <option value="Gilgit-Baltistan">Gilgit-Baltistan</option>
+      //                       <option value="AJK">AJK</option>
+      //                     </select>
+      //                   </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-              <FormInput
-                id="postal_code"
-                label="Postal Code"
-                value={formData.location.postal_code}
-                onChange={(value) => {
-                  const error = validatePostalCode(value);
-                  setFormData({
-                    ...formData,
-                    location: { ...formData.location, postal_code: value },
-                    formErrors: { ...formData.formErrors, postal_code: error }
-                  });
-                }}
-                required
-                placeholder="12345"
-                error={formData.formErrors.postal_code}
-                helperText="Enter 5-digit postal code"
-              />
+      //                   <div className="grid grid-cols-2 gap-4">
+      //         <FormInput
+      //           id="postal_code"
+      //           label="Postal Code"
+      //           value={formData.location.postal_code}
+      //           onChange={(value) => {
+      //             const error = validatePostalCode(value);
+      //             setFormData({
+      //               ...formData,
+      //               location: { ...formData.location, postal_code: value },
+      //               formErrors: { ...formData.formErrors, postal_code: error }
+      //             });
+      //           }}
+      //           required
+      //           placeholder="12345"
+      //           error={formData.formErrors.postal_code}
+      //           helperText="Enter 5-digit postal code"
+      //         />
 
-              <FormInput
-                id="country"
-                label="Country"
-                value={formData.location.country}
-                disabled
-                helperText="Currently only available in Pakistan"
-              />
-            </div>
+      //         <FormInput
+      //           id="country"
+      //           label="Country"
+      //           value={formData.location.country}
+      //           disabled
+      //           helperText="Currently only available in Pakistan"
+      //         />
+      //       </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                          <FormInput
-                            id={`delivery-days-${index}`}
-                            label="Delivery Days"
-                            type="number"
-                            value={profile.delivery_days?.toString() || ''}
-                            onChange={(value) => {
-                              const newProfiles = [...formData.shipping_settings.shipping_profiles];
-                              newProfiles[index] = { ...profile, delivery_days: parseInt(value) || 0 };
-                              const errors = validateShippingProfile(newProfiles[index]);
-                              setFormData({
-                                ...formData,
-                                shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
-                                formErrors: {
-                                  ...formData.formErrors,
-                                  [`shipping_profile_${index}`]: errors
-                                }
-                              });
-                            }}
-                            required
-                            placeholder="e.g., 3"
-                            error={formData.formErrors[`shipping_profile_${index}`]?.delivery_days}
-                            helperText="Delivery days must be between 1 and 30 days"
-                          />
-                          <FormInput
-                            id={`shipping-rate-${index}`}
-                            label="Shipping Rate (PKR)"
-                            type="number"
-                            value={profile.shipping_rate?.toString() || ''}
-                            onChange={(value) => {
-                              const newProfiles = [...formData.shipping_settings.shipping_profiles];
-                              newProfiles[index] = { ...profile, shipping_rate: parseInt(value) || 0 };
-                              const errors = validateShippingProfile(newProfiles[index]);
-                              setFormData({
-                                ...formData,
-                                shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
-                                formErrors: {
-                                  ...formData.formErrors,
-                                  [`shipping_profile_${index}`]: errors
-                                }
-                              });
-                            }}
-                            required
-                            placeholder="e.g., 250"
-                            error={formData.formErrors[`shipping_profile_${index}`]?.shipping_rate}
-                            helperText="Shipping rate must be between 0 and 10,000 PKR"
-                          />
-                        </div>
+      //       <div className="grid grid-cols-2 gap-4">
+      //                     <FormInput
+      //                       id={`delivery-days-${index}`}
+      //                       label="Delivery Days"
+      //                       type="number"
+      //                       value={profile.delivery_days?.toString() || ''}
+      //                       onChange={(value) => {
+      //                         const newProfiles = [...formData.shipping_settings.shipping_profiles];
+      //                         newProfiles[index] = { ...profile, delivery_days: parseInt(value) || 0 };
+      //                         const errors = validateShippingProfile(newProfiles[index]);
+      //                         setFormData({
+      //                           ...formData,
+      //                           shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+      //                           formErrors: {
+      //                             ...formData.formErrors,
+      //                             [`shipping_profile_${index}`]: errors
+      //                           }
+      //                         });
+      //                       }}
+      //                       required
+      //                       placeholder="e.g., 3"
+      //                       error={formData.formErrors[`shipping_profile_${index}`]?.delivery_days}
+      //                       helperText="Delivery days must be between 1 and 30 days"
+      //                     />
+      //                     <FormInput
+      //                       id={`shipping-rate-${index}`}
+      //                       label="Shipping Rate (PKR)"
+      //                       type="number"
+      //                       value={profile.shipping_rate?.toString() || ''}
+      //                       onChange={(value) => {
+      //                         const newProfiles = [...formData.shipping_settings.shipping_profiles];
+      //                         newProfiles[index] = { ...profile, shipping_rate: parseInt(value) || 0 };
+      //                         const errors = validateShippingProfile(newProfiles[index]);
+      //                         setFormData({
+      //                           ...formData,
+      //                           shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+      //                           formErrors: {
+      //                             ...formData.formErrors,
+      //                             [`shipping_profile_${index}`]: errors
+      //                           }
+      //                         });
+      //                       }}
+      //                       required
+      //                       placeholder="e.g., 250"
+      //                       error={formData.formErrors[`shipping_profile_${index}`]?.shipping_rate}
+      //                       helperText="Shipping rate must be between 0 and 10,000 PKR"
+      //                     />
+      //                   </div>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newProfiles = formData.shipping_settings.shipping_profiles.filter((_, i) => i !== index);
-                            setFormData({
-                              ...formData,
-                              shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
-                              formErrors: {
-                                ...formData.formErrors,
-                                [`shipping_profile_${index}`]: undefined
-                              }
-                            });
-                          }}
-                          className="text-red-500 text-sm hover:text-red-400"
-                        >
-                          Remove Profile
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData({
-                          ...formData,
-                          shipping_settings : {
-                           ...formData.shipping_settings,
-                          shipping_profiles: [
-                            ...formData.shipping_settings.shipping_profiles,
-                            { profile_name: '', regions: [], shipping_rates: [] }
-                          ]
-                          }
-                        });
-                      }}
-                      className="text-primary text-sm hover:text-primary/90"
-                    >
-                      + Add Shipping Profile
-                    </button>
-                  </div>
-                </div>
-              )}
+      //                   <button
+      //                     type="button"
+      //                     onClick={() => {
+      //                       const newProfiles = formData.shipping_settings.shipping_profiles.filter((_, i) => i !== index);
+      //                       setFormData({
+      //                         ...formData,
+      //                         shipping_settings: { ...formData.shipping_settings, shipping_profiles: newProfiles },
+      //                         formErrors: {
+      //                           ...formData.formErrors,
+      //                           [`shipping_profile_${index}`]: undefined
+      //                         }
+      //                       });
+      //                     }}
+      //                     className="text-red-500 text-sm hover:text-red-400"
+      //                   >
+      //                     Remove Profile
+      //                   </button>
+      //                 </div>
+      //               ))}
+      //               <button
+      //                 type="button"
+      //                 onClick={() => {
+      //                   setFormData({
+      //                     ...formData,
+      //                     shipping_settings : {
+      //                      ...formData.shipping_settings,
+      //                     shipping_profiles: [
+      //                       ...formData.shipping_settings.shipping_profiles,
+      //                       { profile_name: '', regions: [], shipping_rates: [] }
+      //                     ]
+      //                     }
+      //                   });
+      //                 }}
+      //                 className="text-primary text-sm hover:text-primary/90"
+      //               >
+      //                 + Add Shipping Profile
+      //               </button>
+      //             </div>
+      //           </div>
+      //         )}
 
-              <FormInput
-                id="default_handling_time"
-                label="Default Handling Time (days)"
-                type="number"
-                value={formData.shipping_settings.default_handling_time.toString()}
-                onChange={(value) => {
-                  const days = parseInt(value) || 1;
-                  const error = validateHandlingTime(days);
-                  setFormData({
-                    ...formData,
-                    shipping_settings: { ...formData.shipping_settings, default_handling_time: days },
-                    formErrors: { ...formData.formErrors, default_handling_time: error }
-                  });
-                }}
-                required
-                placeholder="e.g., 2"
-                error={formData.formErrors.default_handling_time}
-                helperText="Handling time must be between 1 and 14 days"
-              />
+      //         <FormInput
+      //           id="default_handling_time"
+      //           label="Default Handling Time (days)"
+      //           type="number"
+      //           value={formData.shipping_settings.default_handling_time.toString()}
+      //           onChange={(value) => {
+      //             const days = parseInt(value) || 1;
+      //             const error = validateHandlingTime(days);
+      //             setFormData({
+      //               ...formData,
+      //               shipping_settings: { ...formData.shipping_settings, default_handling_time: days },
+      //               formErrors: { ...formData.formErrors, default_handling_time: error }
+      //             });
+      //           }}
+      //           required
+      //           placeholder="e.g., 2"
+      //           error={formData.formErrors.default_handling_time}
+      //           helperText="Handling time must be between 1 and 14 days"
+      //         />
 
-              <FormInput
-                id="free_shipping_threshold"
-                label="Free Shipping Threshold (PKR)"
-                type="number"
-                value={formData.shipping_settings.free_shipping_threshold.toString()}
-                onChange={(value) => {
-                  const amount = parseInt(value) || 0;
-                  const error = validateFreeShippingThreshold(amount);
-                  setFormData({
-                    ...formData,
-                    shipping_settings: { ...formData.shipping_settings, free_shipping_threshold: amount },
-                    formErrors: { ...formData.formErrors, free_shipping_threshold: error }
-                  });
-                }}
-                required
-                placeholder="e.g., 2000"
-                error={formData.formErrors.free_shipping_threshold}
-                helperText="Enter amount between 0 and 50,000 PKR"
-              />
+      //         <FormInput
+      //           id="free_shipping_threshold"
+      //           label="Free Shipping Threshold (PKR)"
+      //           type="number"
+      //           value={formData.shipping_settings.free_shipping_threshold.toString()}
+      //           onChange={(value) => {
+      //             const amount = parseInt(value) || 0;
+      //             const error = validateFreeShippingThreshold(amount);
+      //             setFormData({
+      //               ...formData,
+      //               shipping_settings: { ...formData.shipping_settings, free_shipping_threshold: amount },
+      //               formErrors: { ...formData.formErrors, free_shipping_threshold: error }
+      //             });
+      //           }}
+      //           required
+      //           placeholder="e.g., 2000"
+      //           error={formData.formErrors.free_shipping_threshold}
+      //           helperText="Enter amount between 0 and 50,000 PKR"
+      //         />
 
               
-            </div>
-          </FormStep>
-        );
+      //       </div>
+      //     </FormStep>
+      //   );
       // case 10:
       //   return (
       //     <FormStep
@@ -2433,7 +2446,7 @@ case 6:
       //       </div>
       //     </FormStep>
       //   );
-      case 9:
+      case 8:
         return (
           <FormStep
             title="Review Your Store Details"
@@ -2479,7 +2492,7 @@ case 6:
             </div>
           </FormStep>
         );
-      case 10:
+      case 9:
         return (
           <FormStep
             title="You're All Set! 🎉"

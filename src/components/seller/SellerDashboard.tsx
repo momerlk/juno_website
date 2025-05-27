@@ -18,7 +18,6 @@ const SellerDashboard: React.FC = () => {
     }
   };
 
-  alert(`seller = ${JSON.stringify(seller)}`)
 
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
 
