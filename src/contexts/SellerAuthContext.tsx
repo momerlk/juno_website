@@ -51,8 +51,7 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const userAgent = navigator.userAgent;
 
       
-
-      const response = await api.sellerLogin({
+      const loginInfo = {
         email : email,
         password : password,
         device_info : {
@@ -65,9 +64,20 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           os_version: userAgent.match(/Windows|Mac OS X|Linux|Android|iOS/)![0],
           user_agent: userAgent,
         }
-      });
+      }
+      console.log(loginInfo);
 
+      const response = await api.sellerLogin(loginInfo);
 
+      try {
+        const seller = await api.getSellerProfile(response.token);
+        console.log(response)
+        response.user = seller;
+
+      } catch (error) {
+        alert("failed to get seller profile, error = " + error);
+      }
+      
 
       localStorage.setItem('seller', JSON.stringify(response));
       setSeller(response);

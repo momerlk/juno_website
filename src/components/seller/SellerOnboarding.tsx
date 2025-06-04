@@ -967,7 +967,7 @@ const validateSubcategory = (subcategory: string): string => {
       
       
       console.log(formData);
-      const resp = await fetch(`${api.urls.production}/seller/auth/register`, {
+      const resp = await fetch(`${api.api_url}/seller/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

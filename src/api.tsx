@@ -1,8 +1,8 @@
-export const urls = {
+const urls = {
   testing : "http://localhost:8080/api/v1",
   production : "https://junoapi-151943543811.asia-south2.run.app/api/v1"
 }
-const api_url = urls.production;
+export const api_url = urls.production;
 
 export async function uploadFileAndGetUrl(
   eventFile: File, 
@@ -78,125 +78,53 @@ export async function sellerLogin(request: LoginRequest): Promise<LoginResponse>
   }
 }
 
+export async function getSellerProfile(token: string): Promise<any> {
+  const bearer = `Bearer ${token}`;
+
+  const requestOptions = {
+    method: "GET",
+    headers: {
+      "Authorization": bearer,
+    },
+  };
+
+  const response = await fetch(`${api_url}/seller/profile`, requestOptions)
+  if (!response.ok) {
+    throw new Error(`HTTP Error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  return data;
+}
+
+export async function uploadProductCatalogue(token : string, file : File){
+  const bearer = `Bearer ${token}`;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const requestOptions = {
+    method: "POST",
+    headers: {
+      "Authorization": bearer,
+    },
+    body: formData,
+  };
+
+  const response = await fetch(`${api_url}/seller/shopify`, requestOptions)
+  if (!response.ok) {
+    throw new Error(`HTTP Error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  return data;
+}
+
 export interface LoginResponse {
   token: string;
-  user: {
-    account_status: string;
-    age: number;
-    avatar: string;
-    billing_addresses: {
-      address_line1: string;
-      address_line2: string;
-      address_type: string;
-      city: string;
-      country: string;
-      id: string;
-      instructions: string;
-      is_default: boolean;
-      latitude: number;
-      longitude: number;
-      name: string;
-      phone_number: string;
-      postal_code: string;
-      province: string;
-    }[];
-    cart_id: string;
-    created_at: string;
-    date_of_birth: string;
-    device_info: {
-      app_version: string;
-      device_id: string;
-      device_name: string;
-      device_type: string;
-      ip_address: string;
-      last_used: string;
-      os_version: string;
-      user_agent: string;
-    }[];
-    email: string;
-    email_verified: boolean;
-    gender: string;
-    id: string;
-    last_login: string;
-    location: {
-      city: string;
-      country: string;
-      latitude: number;
-      longitude: number;
-      province: string;
-    };
-    login_count: number;
-    measurement_profile: {
-      bust: number;
-      height: number;
-      hip: number;
-      inseam_length: number;
-      preferred_fit: string;
-      shoe_size: number;
-      shoe_size_system: string;
-      shoulder: number;
-      updated_at: string;
-      waist: number;
-      weight: number;
-    };
-    name: string;
-    notification_prefs: {
-      back_in_stock: boolean;
-      email: boolean;
-      new_arrivals: boolean;
-      order_updates: boolean;
-      price_drops: boolean;
-      promotions: boolean;
-      push_notification: boolean;
-      reviews: boolean;
-      sms: boolean;
-    };
-    password_reset_token: string;
-    phone_number: string;
-    phone_verified: boolean;
-    preferences: {
-      color_preferences: string[];
-      currency_preference: string;
-      favorite_brands: string[];
-      favorite_categories: string[];
-      language_preference: string;
-      preferred_sizes: {
-        [key: string]: string;
-      };
-      price_range_max: number;
-      price_range_min: number;
-      style_preferences: string[];
-    };
-    profile_completion: number;
-    recently_viewed: {
-      product_id: string;
-      view_count: number;
-      viewed_at: string;
-    }[];
-    referral_code: string;
-    referred_by: string;
-    registration_source: string;
-    role: string;
-    shipping_addresses: {
-      address_line1: string;
-      address_line2: string;
-      address_type: string;
-      city: string;
-      country: string;
-      id: string;
-      instructions: string;
-      is_default: boolean;
-      latitude: number;
-      longitude: number;
-      name: string;
-      phone_number: string;
-      postal_code: string;
-      province: string;
-    }[];
-    updated_at: string;
-    verification_status: string;
-    wishlist_ids: string[];
-  };
+  user: any;
 }
 
 interface LoginRequest {

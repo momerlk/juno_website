@@ -1,19 +1,28 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
-import { BarChart, Upload, CreditCard, LogOut, Store } from 'lucide-react';
+import { Loader, Upload, CreditCard, LogOut, Store } from 'lucide-react';
 import JunoStudioAccounts from './JunoStudioAccounts';
 import SubscriptionModal from './SubscriptionModal';
+import * as api from '../../api';
 
 const SellerDashboard: React.FC = () => {
   const { seller, logout } = useSellerAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      // TODO: Implement actual file upload logic
+      try{
+        setUploading(true);
+        await api.uploadProductCatalogue(seller!.token, file);
+        setUploading(false);
+      }catch(error){
+        alert("failed to upload product catalogue, error = " + error);
+      }
+
       console.log('File selected:', file.name);
     }
   };
@@ -25,7 +34,7 @@ const SellerDashboard: React.FC = () => {
     setIsSubscriptionModalOpen(true);
   };
 
-  const handleSubscriptionUpdate = async (plan, paymentDetails) => {
+  const handleSubscriptionUpdate = async (plan : any, paymentDetails : any) => {
     try {
       // TODO: Implement actual subscription API call with payment processing
       console.log('Processing subscription:', {
@@ -65,10 +74,10 @@ const SellerDashboard: React.FC = () => {
               <h2 className="text-xl font-semibold">Business Info</h2>
             </div>
             <div className="space-y-2">
-              <p className="text-neutral-400">Business Name: <span className="text-white">{seller?.user.name}</span></p>
+              <p className="text-neutral-400">Business Name: <span className="text-white">{seller?.user.business_name}</span></p>
               <p className="text-neutral-400">Email: <span className="text-white">{seller?.user.email}</span></p>
-              <p className="text-neutral-400">Subscription: <span className={`${seller?.user.account_status === 'active' ? 'text-green-500' : 'text-yellow-500'}`}>
-                {/* {seller?.subscriptionStatus.charAt(0).toUpperCase() + seller?.subscriptionStatus.slice(1)} */}
+              <p className="text-neutral-400">Subscription: <span className={`${seller?.user.status === 'active' ? 'text-green-500' : 'text-yellow-500'}`}>
+                {seller?.user.status}
               </span></p>
             </div>
           </motion.div>
@@ -84,18 +93,29 @@ const SellerDashboard: React.FC = () => {
               <h2 className="text-xl font-semibold">Upload Data</h2>
             </div>
             <div className="space-y-4">
-              <p className="text-neutral-400">Upload your product catalog data in CSV format</p>
+              <p className="text-neutral-400">Upload your shopify product catalog in JSON format</p>
               <div className="flex items-center justify-center w-full">
                 <label className="w-full flex flex-col items-center px-4 py-6 bg-background-light rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary">
-                  <Upload size={24} className="text-neutral-400 mb-2" />
+                  {uploading ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="text-primary"
+                    >
+                      <Loader size={24} className="mb-2" />
+                    </motion.div>
+                  ) : (
+                    <Upload size={24} className="text-neutral-400 mb-2" />
+                  )}
                   <span className="text-sm text-neutral-400">
-                    {selectedFile ? selectedFile.name : 'Choose a file'}
+                    {uploading ? 'Uploading...' : selectedFile ? selectedFile.name : 'Choose a file'}
                   </span>
                   <input
                     type="file"
                     className="hidden"
-                    accept=".csv"
+                    accept=".json"
                     onChange={handleFileUpload}
+                    disabled={uploading}
                   />
                 </label>
               </div>
@@ -114,7 +134,7 @@ const SellerDashboard: React.FC = () => {
             </div>
             <div className="space-y-4">
               <p className="text-neutral-400">
-                {seller?.subscriptionStatus === 'active'
+                {seller?.user.status === 'active'
                   ? 'Your subscription is active'
                   : 'Activate your subscription to start selling'}
               </p>
@@ -122,7 +142,7 @@ const SellerDashboard: React.FC = () => {
                 onClick={handleSubscription}
                 className="w-full py-2 px-4 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               >
-                {seller?.subscriptionStatus === 'active' ? 'Manage Subscription' : 'Subscribe Now'}
+                {seller?.user.status === 'active' ? 'Manage Subscription' : 'Subscribe Now'}
               </button>
             </div>
           </motion.div>
@@ -149,7 +169,7 @@ const SellerDashboard: React.FC = () => {
           isOpen={isSubscriptionModalOpen}
           onClose={() => setIsSubscriptionModalOpen(false)}
           onSubscribe={handleSubscriptionUpdate}
-          currentPlan={seller?.subscriptionStatus === 'active' ? {
+          currentPlan={seller?.user.status === 'active' ? {
             id: 'standard',
             name: 'Standard',
             price: 4999,
