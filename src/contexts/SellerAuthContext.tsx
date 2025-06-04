@@ -68,6 +68,7 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
 
 
+
       localStorage.setItem('seller', JSON.stringify(response));
       setSeller(response);
     } catch (error) {

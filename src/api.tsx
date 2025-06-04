@@ -1,6 +1,6 @@
-const urls = {
+export const urls = {
   testing : "http://localhost:8080/api/v1",
-  production : "https://junoapi-151943543811.asia-south2.run.app//api/v1"
+  production : "https://junoapi-151943543811.asia-south2.run.app/api/v1"
 }
 const api_url = urls.production;
 
@@ -62,6 +62,9 @@ export async function sellerLogin(request: LoginRequest): Promise<LoginResponse>
       },
       body: JSON.stringify(request),
     });
+
+    console.log(`response = ${JSON.stringify(response)}`)
+
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

@@ -963,9 +963,11 @@ const validateSubcategory = (subcategory: string): string => {
 
   const handleSubmit = async () => {
     try {
+
+      
       
       console.log(formData);
-      const resp = await fetch('http://localhost:8080/api/v1/seller/auth/register', {
+      const resp = await fetch(`${api.urls.production}/seller/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -974,6 +976,8 @@ const validateSubcategory = (subcategory: string): string => {
       });
 
       const respJSON = resp.text();
+
+      console.log(respJSON)
 
       if (!resp.ok) {
         console.log(respJSON)
