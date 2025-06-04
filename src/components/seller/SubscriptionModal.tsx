@@ -111,7 +111,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                   <div className="bg-background-light rounded-lg p-6 border-2 border-primary">
                     <h4 className="text-xl font-semibold text-white mb-2">{plan.name} Plan</h4>
                     <div className="flex items-baseline mb-4">
-                      <span className="text-3xl font-bold text-white">₹{plan.price}</span>
+                      <span className="text-3xl font-bold text-white">Rs. {plan.price}</span>
                       <span className="text-neutral-400 ml-2">/{plan.billingPeriod}</span>
                     </div>
                     <ul className="space-y-3">
@@ -197,7 +197,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     disabled={isProcessing || !paymentDetails.cardNumber || !paymentDetails.expiryDate || !paymentDetails.cvv || !paymentDetails.name}
                     className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isProcessing ? 'Processing...' : (currentPlan ? 'Update Payment Method' : 'Subscribe Now - ₹4999/month')}
+                    {isProcessing ? 'Processing...' : (currentPlan ? 'Update Payment Method' : 'Subscribe Now - Rs. 4999/month')}
                   </button>
                 </div>
               </div>
