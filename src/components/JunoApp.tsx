@@ -100,7 +100,7 @@ const JunoApp: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.6 }}
           className="mt-16 text-center"
         >
-          <a href="#download" className="btn btn-primary inline-flex">
+          <a href="https://drive.google.com/file/d/1CpY1F7SO8wC1dimIPTLqBUDuC_rhX42v/view?usp=sharing" className="btn btn-primary inline-flex">
             <Smartphone size={20} className="mr-2" />
             Download Juno App
           </a>

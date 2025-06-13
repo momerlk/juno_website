@@ -19,32 +19,11 @@ const Footer: React.FC = () => {
             </p>
             <div className="flex space-x-4">
               <a
-                href="#"
+                href="https://instagram.com/junopakistan"
                 aria-label="Instagram"
                 className="text-neutral-400 hover:text-primary transition-colors duration-300"
               >
                 <Instagram size={20} />
-              </a>
-              <a
-                href="#"
-                aria-label="Twitter"
-                className="text-neutral-400 hover:text-primary transition-colors duration-300"
-              >
-                <Twitter size={20} />
-              </a>
-              <a
-                href="#"
-                aria-label="LinkedIn"
-                className="text-neutral-400 hover:text-primary transition-colors duration-300"
-              >
-                <Linkedin size={20} />
-              </a>
-              <a
-                href="#"
-                aria-label="GitHub"
-                className="text-neutral-400 hover:text-primary transition-colors duration-300"
-              >
-                <Github size={20} />
               </a>
             </div>
           </div>

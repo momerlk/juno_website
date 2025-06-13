@@ -26,7 +26,7 @@ const Hero: React.FC = () => {
               <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                href="#download"
+                href="https://drive.google.com/file/d/1CpY1F7SO8wC1dimIPTLqBUDuC_rhX42v/view?usp=sharing"
                 className="btn btn-primary"
               >
                 <Smartphone size={20} className="mr-2" />
@@ -35,7 +35,7 @@ const Hero: React.FC = () => {
               <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                href="#juno-studio"
+                href="/seller"
                 className="btn btn-outline group"
               >
                 Explore Juno Studio

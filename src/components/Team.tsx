@@ -51,7 +51,7 @@ const TeamMemberCard: React.FC<{ member: TeamMember; index: number }> = ({ membe
               <Linkedin size={20} />
             </a>
           )}
-          {member.social.twitter && (
+          {/* {member.social.twitter && (
             <a 
               href={member.social.twitter} 
               target="_blank" 
@@ -60,8 +60,8 @@ const TeamMemberCard: React.FC<{ member: TeamMember; index: number }> = ({ membe
             >
               <Twitter size={20} />
             </a>
-          )}
-          {member.social.github && (
+          )} */}
+          {/* {member.social.github && (
             <a 
               href={member.social.github} 
               target="_blank" 
@@ -70,7 +70,7 @@ const TeamMemberCard: React.FC<{ member: TeamMember; index: number }> = ({ membe
             >
               <Github size={20} />
             </a>
-          )}
+          )} */}
         </div>
       </div>
     </motion.div>
@@ -87,7 +87,7 @@ const Team: React.FC = () => {
     {
       name: "Omer Ali Malik",
       role: "Founder & CEO",
-      image: "",
+      image: "https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png",
       bio: "Handling Product and Operations",
       social: {
         linkedin: "https://linkedin.com/in/omer-malik-395a2a2a5",
@@ -97,7 +97,7 @@ const Team: React.FC = () => {
     {
       name: "Amr Nazir",
       role: "COO",
-      image: "",
+      image: "https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png",
       bio: "Handling sales and business operations",
       social: {
         linkedin: "#",
@@ -107,7 +107,7 @@ const Team: React.FC = () => {
     {
       name: "Ali Mukarram",
       role: "CMO",
-      image: "",
+      image: "https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png",
       bio: "Handling marketing and sales",
       social: {
         linkedin: "#",
@@ -117,7 +117,7 @@ const Team: React.FC = () => {
     {
       name: "Shahzaib Abid",
       role: "Developer",
-      image: "",
+      image: "https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png",
       bio: "Handling Product",
       social: {
         linkedin: "#",
