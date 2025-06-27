@@ -1,6 +1,6 @@
 const urls = {
   testing : "http://localhost:8080/api/v1",
-  production : "https://junoapi-151943543811.asia-south2.run.app/api/v1"
+  production : "https://junoapi-710509977105.asia-south2.run.app/api/v1"
 }
 export const api_url = urls.production;
 
