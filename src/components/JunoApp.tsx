@@ -1,9 +1,25 @@
 import React from 'react';
-import { Smartphone, Heart, ShoppingBag, Zap, Search } from 'lucide-react';
+import { Smartphone, Heart, ShoppingBag, Zap, Search, Users, Building, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
-const FeatureCard: React.FC<{
+import pmyp from "../assets/partners/pmyp.png"
+import impactx from "../assets/partners/impactx.png"
+import khantastic from "../assets/partners/khantastic.png"
+import tajarba from "../assets/partners/tajarba.png"
+import creare from "../assets/partners/creare.png"
+import sparktank from "../assets/partners/sparktank.png"
+
+const partners = [
+  pmyp,
+  impactx,
+  khantastic,
+  tajarba,
+  creare,
+  sparktank
+];
+
+const ImpactCard: React.FC<{
   icon: React.ReactNode;
   title: string;
   description: string;
@@ -20,13 +36,32 @@ const FeatureCard: React.FC<{
       initial={{ opacity: 0, y: 20 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.5, delay }}
-      className="card card-hover"
+      className="card  text-center"
     >
-      <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-3 rounded-xl w-12 h-12 flex items-center justify-center mb-4">
-        {icon}
-      </div>
-      <h3 className="text-xl font-semibold mb-2">{title}</h3>
+      <h3 className="text-4xl font-bold mb-2">{title}</h3>
       <p className="text-neutral-400">{description}</p>
+    </motion.div>
+  );
+};
+
+const PartnerLogo: React.FC<{
+  name: string;
+  delay: number;
+}> = ({ name, delay }) => {
+  const [ref, inView] = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+  });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={inView ? { opacity: 1, scale: 1 } : {}}
+      transition={{ duration: 0.5, delay }}
+      className="backdrop-blur-sm rounded-lg p-6 flex items-center justify-center hover:bg-white/10 transition-colors"
+    >
+      <img src={name}/>
     </motion.div>
   );
 };
@@ -37,74 +72,90 @@ const JunoApp: React.FC = () => {
     threshold: 0.1,
   });
 
-  const features = [
+  const [partnersRef, partnersInView] = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+  });
+
+  const impactStats = [
     {
-      icon: <Heart className="text-secondary" size={24} />,
-      title: "Swipe to Like",
-      description: "Effortlessly browse through fashion items with a simple swipe interface, liking what catches your eye.",
+      icon: <Building className="text-secondary" size={24} />,
+      title: "200+",
+      description: "Microbusinesses helped through impactX",
       delay: 0.2,
     },
     {
-      icon: <ShoppingBag className="text-accent" size={24} />,
-      title: "Instant Checkout",
-      description: "Add items to your cart and checkout in seconds with our streamlined purchase process.",
+      icon: <Users className="text-accent" size={24} />,
+      title: "15+",
+      description: "Universities with ambassadors",
       delay: 0.3,
     },
     {
-      icon: <Zap className="text-primary" size={24} />,
-      title: "Personalized Feed",
-      description: "Discover fashion that matches your style with our AI-powered recommendation engine.",
+      icon: <Award className="text-primary" size={24} />,
+      title: "1000+",
+      description: "Users discovering fashion",
       delay: 0.4,
     },
-    {
-      icon: <Search className="text-success" size={24} />,
-      title: "Brand Discovery",
-      description: "Find new and trending fashion brands through our curated collections and spotlights.",
-      delay: 0.5,
-    },
   ];
+
+  
 
   return (
     <section id="juno-app" className="section bg-background-light">
       <div className="container mx-auto">
-        <motion.div
-          ref={ref}
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
-        >
-          <h2 className="mb-4">
-            juno
-          </h2>
-          <p className="text-neutral-400 max-w-2xl mx-auto text-lg">
-            Revolutionize your shopping experience with our innovative swipe-to-shop mobile application.
-          </p>
-        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
-            <FeatureCard
-              key={index}
-              icon={feature.icon}
-              title={feature.title}
-              description={feature.description}
-              delay={feature.delay}
-            />
-          ))}
+        {/* Impact Section */}
+        <div className="mb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-center mb-12"
+          >
+            <h3 className="text-3xl font-bold mb-4">Our Impact</h3>
+            
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {impactStats.map((stat, index) => (
+              <ImpactCard
+                key={index}
+                icon={stat.icon}
+                title={stat.title}
+                description={stat.description}
+                delay={stat.delay}
+              />
+            ))}
+          </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          className="mt-16 text-center"
-        >
-          <a href="https://drive.google.com/file/d/1CpY1F7SO8wC1dimIPTLqBUDuC_rhX42v/view?usp=sharing" className="btn btn-primary inline-flex">
-            <Smartphone size={20} className="mr-2" />
-            Download Juno App
-          </a>
-        </motion.div>
+        {/* Partners Section */}
+        <div className="mb-16">
+          <motion.div
+            ref={partnersRef}
+            initial={{ opacity: 0, y: 20 }}
+            animate={partnersInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
+          >
+            <h3 className="text-3xl font-bold mb-4">Our Partners</h3>
+            <p className="text-neutral-400 max-w-xl mx-auto">
+              Backed by leading investors and accelerators
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+            {partners.map((partner, index) => (
+              <PartnerLogo
+                key={index}
+                name={partner}
+                delay={index * 0.1}
+              />
+            ))}
+          </div>
+        </div>
+
+       
       </div>
     </section>
   );

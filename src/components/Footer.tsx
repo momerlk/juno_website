@@ -19,7 +19,7 @@ const Footer: React.FC = () => {
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://instagram.com/junopakistan"
+                href="https://instagram.com/junonow"
                 aria-label="Instagram"
                 className="text-neutral-400 hover:text-primary transition-colors duration-300"
               >

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Smartphone, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import splashImage from "../assets/screenshots/splash.png"
+import splashImage from "../assets/screenshots/swipe.png"
 
 
 const Hero: React.FC = () => {
@@ -20,17 +20,17 @@ const Hero: React.FC = () => {
               <span className="gradient-text">With a Swipe™</span>
             </h1>
             <p className="text-lg md:text-xl text-neutral-300 mb-8 max-w-xl mx-auto lg:mx-0">
-              Discover Juno, the revolutionary fashion app that lets you swipe to shop, and Juno Studio, the platform where brands create stunning collections.
+              Discover Juno, the revolutionary fashion app for indie brands that lets you swipe to shop, and Juno Studio, the platform for sellers.
             </p>
             <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
               <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                href="https://drive.google.com/file/d/1CpY1F7SO8wC1dimIPTLqBUDuC_rhX42v/view?usp=sharing"
+                href="https://testflight.apple.com/join/Pzt9wnBm"
                 className="btn btn-primary"
               >
                 <Smartphone size={20} className="mr-2" />
-                Download Juno App
+                Download App
               </motion.a>
               <motion.a
                 whileHover={{ scale: 1.05 }}
@@ -51,12 +51,16 @@ const Hero: React.FC = () => {
             className="relative"
           >
             <div className="relative z-10 flex justify-center lg:justify-end">
-              <div className="relative w-[280px] md:w-[320px] animate-float">
+              <div className="relative w-[480px] md:w-[500px] animate-float">
                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-secondary/20 blur-xl rounded-full"></div>
                 <img
                   src={splashImage}
                   alt="Juno App Preview"
-                  className="relative z-10 rounded-3xl  border-background-light shadow-xl"
+                  className="relative"
+                  style={{
+                    height : 600,
+                    width : 485,
+                  }}
                 />
                 
               </div>

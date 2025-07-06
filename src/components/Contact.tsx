@@ -41,7 +41,7 @@ const Contact: React.FC = () => {
   };
 
   const socialLinks = [
-    { icon: <Instagram size={24} />, url: 'https://instagram.com/junopakistan', label: 'Instagram' },
+    { icon: <Instagram size={24} />, url: 'https://instagram.com/junonow', label: 'Instagram' },
   ];
 
   return (
@@ -95,10 +95,10 @@ const Contact: React.FC = () => {
               <div>
                 <h4 className="text-xl mb-4">Download Juno App</h4>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <a href="https://drive.google.com/file/d/1CpY1F7SO8wC1dimIPTLqBUDuC_rhX42v/view?usp=sharing" className="btn btn-outline flex-1 justify-center">
+                  <a href="https://testflight.apple.com/join/Pzt9wnBm" className="btn btn-outline flex-1 justify-center">
                     App Store
                   </a>
-                  <a href="https://drive.google.com/file/d/1CpY1F7SO8wC1dimIPTLqBUDuC_rhX42v/view?usp=sharing" className="btn btn-outline flex-1 justify-center">
+                  <a href="https://testflight.apple.com/join/Pzt9wnBm" className="btn btn-outline flex-1 justify-center">
                     Google Play
                   </a>
                 </div>

@@ -16,35 +16,40 @@ const ScreenshotsSection: React.FC = () => {
         title: 'Swipe to Shop',
         description: 'Discover new styles with a simple swipe. Shop fashion like never before—interactive, fast, and fun.',
         // Corrected path: Assumes juno_screenshots folder is directly in the public directory
-        image: '/juno_screenshots/3.png'
+        image: '/juno_screenshots/1.png'
       },
       {
         title: 'Build Outfits',
         description: 'Mix and match pieces to create your own looks. Get AI-powered outfit suggestions tailored to your style.',
-        image: '/juno_screenshots/4.png'
-      },
-      {
-        title: 'Win prizes in Fashion Tournaments',
-        description: 'Compete in weekly styling challenges, showcase your fashion sense, and win exclusive rewards.',
-        image: '/juno_screenshots/5.png'
-      }
-    ],
-    studio: [
-      {
-        title: 'Inventory Management',
-        description: 'Track stock levels, update products in real-time, and never miss a sale. Built for growing fashion brands.',
         image: '/juno_screenshots/2.png'
       },
       {
-        title: 'Analytics Platform',
-        description: 'Gain deep insights into customer behavior, sales trends, and product performance with real-time analytics.',
-        image: '/juno_screenshots/6.png'
+        title: 'Exclusive Brands',
+        description: 'Discover exclusive indie fahsion brands that you won\'t find anywhere else but juno. Built by designers from the leading art universities in Pakistan you won\'t be disappointed.',
+        image: '/juno_screenshots/3.png'
       },
-      {
-        title: 'Order fulfillment',
-        description: 'Streamline order processing, shipping, and delivery to offer a smooth experience from cart to closet.',
-        image: '/juno_screenshots/7.png'
-      }
+      // {
+      //   title: 'Win prizes in Fashion Tournaments',
+      //   description: 'Compete in weekly styling challenges, showcase your fashion sense, and win exclusive rewards.',
+      //   image: '/juno_screenshots/3.png'
+      // }
+    ],
+    studio: [
+      // {
+      //   title: 'Inventory Management',
+      //   description: 'Track stock levels, update products in real-time, and never miss a sale. Built for growing fashion brands.',
+      //   image: '/juno_screenshots/2.png'
+      // },
+      // {
+      //   title: 'Analytics Platform',
+      //   description: 'Gain deep insights into customer behavior, sales trends, and product performance with real-time analytics.',
+      //   image: '/juno_screenshots/6.png'
+      // },
+      // {
+      //   title: 'Order fulfillment',
+      //   description: 'Streamline order processing, shipping, and delivery to offer a smooth experience from cart to closet.',
+      //   image: '/juno_screenshots/7.png'
+      // }
     ]
   };
 
@@ -62,7 +67,7 @@ const ScreenshotsSection: React.FC = () => {
       transition={{ duration: 0.8 }} // Smooth transition for appearance
       className="min-h-screen flex items-center" // Ensure section takes full viewport height and centers content
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-2  items-center">
         {/* Alternate image and text layout based on index for visual variety */}
         {index % 2 === 0 ? (
           <>
@@ -73,14 +78,14 @@ const ScreenshotsSection: React.FC = () => {
             </div>
             {/* Image content on the right */}
             {/* Added flex utilities to ensure image is centered within its container */}
-            <div className="relative h-[80vh] w-full p-4 flex justify-center items-center">
+            <div className="relative h-[80vh] w-full  flex justify-center items-center">
               <img
                 src={image}
                 alt={title}
                 // Fallback for image loading errors
                 onError={(e) => { e.currentTarget.src = `https://placehold.co/600x800/282c34/a0a0a0?text=Image+Not+Found`; }}
                 // Changed object-contain to object-cover to fill the container
-                className="w-full h-full object-cover rounded-3xl shadow-2xl"
+                className="w-full h-full object-cover"
               />
             </div>
           </>
@@ -88,14 +93,14 @@ const ScreenshotsSection: React.FC = () => {
           <>
             {/* Image content on the left */}
             {/* Added flex utilities to ensure image is centered within its container */}
-            <div className="relative h-[80vh] w-full p-4 flex justify-center items-center">
+            <div className="relative h-[80vh] w-full flex justify-center items-center">
               <img
                 src={image}
                 alt={title}
                 // Fallback for image loading errors
                 onError={(e) => { e.currentTarget.src = `https://placehold.co/600x800/282c34/a0a0a0?text=Image+Not+Found`; }}
                 // Changed object-contain to object-cover to fill the container
-                className="w-full h-full object-cover rounded-3xl shadow-2xl"
+                className="w-full h-full object-cover"
               />
             </div>
             {/* Text content on the right */}
@@ -111,7 +116,7 @@ const ScreenshotsSection: React.FC = () => {
 
   return (
     <section className="bg-background text-white min-h-screen py-16" id="screenshots">
-      <div className="container mx-auto px-4">
+      <div className=" mx-auto ">
         {/* Ref for the whole section to trigger animation */}
         <div ref={ref}>
           <motion.div
@@ -136,9 +141,9 @@ const ScreenshotsSection: React.FC = () => {
             ))}
 
             {/* Juno Studio Screenshots */}
-            {screenshots.studio.map((screenshot, index) => (
+            {/* {screenshots.studio.map((screenshot, index) => (
               <FeatureSection key={`studio-${index}`} {...screenshot} index={screenshots.app.length + index} />
-            ))}
+            ))} */}
           </div>
         </div>
       </div>
