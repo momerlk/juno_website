@@ -3,7 +3,6 @@ import { Smartphone, ArrowRight, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 import splashImage from "../assets/screenshots/swipe.png"
 
-
 const Hero: React.FC = () => {
   return (
     <section id="home" className="pt-24 pb-20 md:pt-32 md:pb-28 lg:min-h-screen lg:flex lg:items-center relative overflow-hidden bg-gradient-to-br from-background via-background-light/50 to-background">
@@ -84,29 +83,6 @@ const Hero: React.FC = () => {
                 <div className="text-sm text-neutral-400">Universities</div>
               </div>
             </motion.div>
-            <p className="text-lg md:text-xl text-neutral-300 mb-8 max-w-xl mx-auto lg:mx-0">
-              Discover Juno, the revolutionary fashion app for indie brands that lets you swipe to shop, and Juno Studio, the platform for sellers.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
-              <motion.a
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                href="https://testflight.apple.com/join/Pzt9wnBm"
-                className="btn btn-primary"
-              >
-                <Smartphone size={20} className="mr-2" />
-                Download App
-              </motion.a>
-              <motion.a
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                href="/seller"
-                className="btn btn-outline group"
-              >
-                Explore Juno Studio
-                <ArrowRight size={20} className="ml-2 transition-transform group-hover:translate-x-1" />
-              </motion.a>
-            </div>
           </motion.div>
 
           <motion.div
