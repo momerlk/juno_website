@@ -70,95 +70,96 @@ const ScreenshotsSection: React.FC = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 rounded-3xl"></div>
       
       <motion.div
-      // Animate opacity based on inView status
-      initial={{ opacity: 0 }}
-      animate={inView ? { opacity: 1 } : {}}
-      transition={{ duration: 0.8 }} // Smooth transition for appearance
-      className="min-h-screen flex items-center relative z-10" // Ensure section takes full viewport height and centers content
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-20">
-        {/* Alternate image and text layout based on index for visual variety */}
-        {index % 2 === 0 ? (
-          <>
-            {/* Text content on the left */}
-            <motion.div 
-              initial={{ opacity: 0, x: -50 }}
-              animate={inView ? { opacity: 1, x: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="space-y-8 p-8 lg:p-16 text-white"
-            >
-              {icon && (
-                <div className="inline-flex p-4 bg-gradient-to-br from-background-light/50 to-background/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50">
-                  {icon}
+        // Animate opacity based on inView status
+        initial={{ opacity: 0 }}
+        animate={inView ? { opacity: 1 } : {}}
+        transition={{ duration: 0.8 }} // Smooth transition for appearance
+        className="min-h-screen flex items-center relative z-10" // Ensure section takes full viewport height and centers content
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-20">
+          {/* Alternate image and text layout based on index for visual variety */}
+          {index % 2 === 0 ? (
+            <>
+              {/* Text content on the left */}
+              <motion.div 
+                initial={{ opacity: 0, x: -50 }}
+                animate={inView ? { opacity: 1, x: 0 } : {}}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="space-y-8 p-8 lg:p-16 text-white"
+              >
+                {icon && (
+                  <div className="inline-flex p-4 bg-gradient-to-br from-background-light/50 to-background/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50">
+                    {icon}
+                  </div>
+                )}
+                <h3 className="text-4xl lg:text-6xl font-bold leading-tight bg-gradient-to-r from-white via-neutral-200 to-neutral-300 bg-clip-text text-transparent">{title}</h3>
+                <p className="text-xl lg:text-2xl text-neutral-400 leading-relaxed">{description}</p>
+                <div className="flex items-center space-x-4 pt-4">
+                  <div className="w-12 h-1 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
+                  <span className="text-sm text-neutral-500 uppercase tracking-wider">Feature Highlight</span>
                 </div>
-              )}
-              <h3 className="text-4xl lg:text-6xl font-bold leading-tight bg-gradient-to-r from-white via-neutral-200 to-neutral-300 bg-clip-text text-transparent">{title}</h3>
-              <p className="text-xl lg:text-2xl text-neutral-400 leading-relaxed">{description}</p>
-              <div className="flex items-center space-x-4 pt-4">
-                <div className="w-12 h-1 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
-                <span className="text-sm text-neutral-500 uppercase tracking-wider">Feature Highlight</span>
-              </div>
-            {/* Image content on the right */}
-            {/* Added flex utilities to ensure image is centered within its container */}
-            <motion.div 
-              initial={{ opacity: 0, x: 50 }}
-              animate={inView ? { opacity: 1, x: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="relative h-[80vh] w-full flex justify-center items-center"
-            >
-              <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-secondary/10 blur-3xl rounded-full"></div>
-              <img
-                src={image}
-                alt={title}
-                // Fallback for image loading errors
-                onError={(e) => { e.currentTarget.src = `https://placehold.co/600x800/282c34/a0a0a0?text=Image+Not+Found`; }}
-                // Changed object-contain to object-cover to fill the container
-                className="relative z-10 w-full h-full object-cover rounded-2xl shadow-2xl shadow-primary/20 border border-neutral-800/50"
-              />
-            </motion.div>
-          </>
-        ) : (
-          <>
-            {/* Image content on the left */}
-            {/* Added flex utilities to ensure image is centered within its container */}
-            <motion.div 
-              initial={{ opacity: 0, x: -50 }}
-              animate={inView ? { opacity: 1, x: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="relative h-[80vh] w-full flex justify-center items-center"
-            >
-              <div className="absolute inset-0 bg-gradient-to-tr from-secondary/10 to-accent/10 blur-3xl rounded-full"></div>
-              <img
-                src={image}
-                alt={title}
-                // Fallback for image loading errors
-                onError={(e) => { e.currentTarget.src = `https://placehold.co/600x800/282c34/a0a0a0?text=Image+Not+Found`; }}
-                // Changed object-contain to object-cover to fill the container
-                className="relative z-10 w-full h-full object-cover rounded-2xl shadow-2xl shadow-secondary/20 border border-neutral-800/50"
-              />
-            </motion.div>
-            {/* Text content on the right */}
-            <motion.div 
-              initial={{ opacity: 0, x: 50 }}
-              animate={inView ? { opacity: 1, x: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="space-y-8 p-8 lg:p-16 text-white"
-            >
-              {icon && (
-                <div className="inline-flex p-4 bg-gradient-to-br from-background-light/50 to-background/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50">
-                  {icon}
+              </motion.div>
+              {/* Image content on the right */}
+              {/* Added flex utilities to ensure image is centered within its container */}
+              <motion.div 
+                initial={{ opacity: 0, x: 50 }}
+                animate={inView ? { opacity: 1, x: 0 } : {}}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="relative h-[80vh] w-full flex justify-center items-center"
+              >
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-secondary/10 blur-3xl rounded-full"></div>
+                <img
+                  src={image}
+                  alt={title}
+                  // Fallback for image loading errors
+                  onError={(e) => { e.currentTarget.src = `https://placehold.co/600x800/282c34/a0a0a0?text=Image+Not+Found`; }}
+                  // Changed object-contain to object-cover to fill the container
+                  className="relative z-10 w-full h-full object-cover rounded-2xl shadow-2xl shadow-primary/20 border border-neutral-800/50"
+                />
+              </motion.div>
+            </>
+          ) : (
+            <>
+              {/* Image content on the left */}
+              {/* Added flex utilities to ensure image is centered within its container */}
+              <motion.div 
+                initial={{ opacity: 0, x: -50 }}
+                animate={inView ? { opacity: 1, x: 0 } : {}}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="relative h-[80vh] w-full flex justify-center items-center"
+              >
+                <div className="absolute inset-0 bg-gradient-to-tr from-secondary/10 to-accent/10 blur-3xl rounded-full"></div>
+                <img
+                  src={image}
+                  alt={title}
+                  // Fallback for image loading errors
+                  onError={(e) => { e.currentTarget.src = `https://placehold.co/600x800/282c34/a0a0a0?text=Image+Not+Found`; }}
+                  // Changed object-contain to object-cover to fill the container
+                  className="relative z-10 w-full h-full object-cover rounded-2xl shadow-2xl shadow-secondary/20 border border-neutral-800/50"
+                />
+              </motion.div>
+              {/* Text content on the right */}
+              <motion.div 
+                initial={{ opacity: 0, x: 50 }}
+                animate={inView ? { opacity: 1, x: 0 } : {}}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="space-y-8 p-8 lg:p-16 text-white"
+              >
+                {icon && (
+                  <div className="inline-flex p-4 bg-gradient-to-br from-background-light/50 to-background/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50">
+                    {icon}
+                  </div>
+                )}
+                <h3 className="text-4xl lg:text-6xl font-bold leading-tight bg-gradient-to-r from-white via-neutral-200 to-neutral-300 bg-clip-text text-transparent">{title}</h3>
+                <p className="text-xl lg:text-2xl text-neutral-400 leading-relaxed">{description}</p>
+                <div className="flex items-center space-x-4 pt-4">
+                  <div className="w-12 h-1 bg-gradient-to-r from-secondary to-accent rounded-full"></div>
+                  <span className="text-sm text-neutral-500 uppercase tracking-wider">Feature Highlight</span>
                 </div>
-              )}
-              <h3 className="text-4xl lg:text-6xl font-bold leading-tight bg-gradient-to-r from-white via-neutral-200 to-neutral-300 bg-clip-text text-transparent">{title}</h3>
-              <p className="text-xl lg:text-2xl text-neutral-400 leading-relaxed">{description}</p>
-              <div className="flex items-center space-x-4 pt-4">
-                <div className="w-12 h-1 bg-gradient-to-r from-secondary to-accent rounded-full"></div>
-                <span className="text-sm text-neutral-500 uppercase tracking-wider">Feature Highlight</span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+              </motion.div>
+            </>
+          )}
+        </div>
       </motion.div>
     </div>
   );
