@@ -67,9 +67,9 @@ const PartnerLogo: React.FC<{
       initial={{ opacity: 0, scale: 0.8 }}
       animate={inView ? { opacity: 1, scale: 1 } : {}}
       transition={{ duration: 0.5, delay }}
-      className="group bg-background-light/30 backdrop-blur-sm rounded-xl p-6 flex items-center justify-center hover:bg-white/10 transition-all duration-300 border border-neutral-800/50 hover:border-neutral-600/50 hover:shadow-lg hover:shadow-primary/5 hover:scale-105"
+      className="group bg-background-light/40 backdrop-blur-sm rounded-xl p-8 flex items-center justify-center hover:bg-white/15 transition-all duration-300 border border-neutral-700/60 hover:border-neutral-500/70 hover:shadow-xl hover:shadow-primary/10 hover:scale-110 min-h-[120px]"
     >
-      <img src={name} className="max-h-12 w-auto filter grayscale group-hover:grayscale-0 transition-all duration-300 opacity-70 group-hover:opacity-100"/>
+      <img src={name} className="max-h-16 w-auto filter grayscale-0 transition-all duration-300 opacity-90 group-hover:opacity-100 group-hover:scale-105"/>
     </motion.div>
   );
 };
