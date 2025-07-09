@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, Heart, ShoppingBag, Zap, Search, Users, Building, Award } from 'lucide-react';
+import { Users, Building, Award, TrendingUp, Star, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
@@ -36,10 +36,18 @@ const ImpactCard: React.FC<{
       initial={{ opacity: 0, y: 20 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.5, delay }}
-      className="card  text-center"
+      className="group relative bg-gradient-to-br from-background-light/50 to-background/50 backdrop-blur-sm rounded-2xl p-8 text-center hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 border border-neutral-800/50 hover:border-primary/20"
     >
-      <h3 className="text-4xl font-bold mb-2">{title}</h3>
-      <p className="text-neutral-400">{description}</p>
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      <div className="relative z-10">
+        <div className="mb-4 flex justify-center">
+          <div className="p-3 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full group-hover:scale-110 transition-transform duration-300">
+            {icon}
+          </div>
+        </div>
+        <h3 className="text-4xl font-bold mb-3 bg-gradient-to-r from-white to-neutral-300 bg-clip-text text-transparent group-hover:from-primary group-hover:to-secondary transition-all duration-300">{title}</h3>
+        <p className="text-neutral-400 group-hover:text-neutral-300 transition-colors duration-300">{description}</p>
+      </div>
     </motion.div>
   );
 };
@@ -59,9 +67,9 @@ const PartnerLogo: React.FC<{
       initial={{ opacity: 0, scale: 0.8 }}
       animate={inView ? { opacity: 1, scale: 1 } : {}}
       transition={{ duration: 0.5, delay }}
-      className="backdrop-blur-sm rounded-lg p-6 flex items-center justify-center hover:bg-white/10 transition-colors"
+      className="group bg-background-light/30 backdrop-blur-sm rounded-xl p-6 flex items-center justify-center hover:bg-white/10 transition-all duration-300 border border-neutral-800/50 hover:border-neutral-600/50 hover:shadow-lg hover:shadow-primary/5 hover:scale-105"
     >
-      <img src={name}/>
+      <img src={name} className="max-h-12 w-auto filter grayscale group-hover:grayscale-0 transition-all duration-300 opacity-70 group-hover:opacity-100"/>
     </motion.div>
   );
 };
@@ -79,19 +87,19 @@ const JunoApp: React.FC = () => {
 
   const impactStats = [
     {
-      icon: <Building className="text-secondary" size={24} />,
+      icon: <Building className="text-secondary" size={28} />,
       title: "200+",
       description: "Microbusinesses helped through impactX",
       delay: 0.2,
     },
     {
-      icon: <Users className="text-accent" size={24} />,
+      icon: <Users className="text-accent" size={28} />,
       title: "15+",
       description: "Universities with ambassadors",
       delay: 0.3,
     },
     {
-      icon: <Award className="text-primary" size={24} />,
+      icon: <TrendingUp className="text-primary" size={28} />,
       title: "1000+",
       description: "Users discovering fashion",
       delay: 0.4,
@@ -101,22 +109,33 @@ const JunoApp: React.FC = () => {
   
 
   return (
-    <section id="juno-app" className="section bg-background-light">
+    <section id="juno-app" className="section bg-gradient-to-b from-background to-background-light relative overflow-hidden">
       <div className="container mx-auto">
+        {/* Background decoration */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl"></div>
 
         {/* Impact Section */}
-        <div className="mb-20">
+        <div className="mb-24 relative z-10">
           <motion.div
+            ref={ref}
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-center mb-12"
+            className="text-center mb-16"
           >
-            <h3 className="text-3xl font-bold mb-4">Our Impact</h3>
-            
+            <div className="inline-block px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-primary text-sm font-medium mb-6">
+              🚀 Making a Difference
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Our <span className="gradient-text">Impact</span>
+            </h2>
+            <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
+              Empowering fashion entrepreneurs and connecting communities across Pakistan
+            </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {impactStats.map((stat, index) => (
               <ImpactCard
                 key={index}
@@ -130,21 +149,26 @@ const JunoApp: React.FC = () => {
         </div>
 
         {/* Partners Section */}
-        <div className="mb-16">
+        <div className="relative z-10">
           <motion.div
             ref={partnersRef}
             initial={{ opacity: 0, y: 20 }}
             animate={partnersInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5 }}
-            className="text-center mb-12"
+            className="text-center mb-16"
           >
-            <h3 className="text-3xl font-bold mb-4">Our Partners</h3>
-            <p className="text-neutral-400 max-w-xl mx-auto">
-              Backed by leading investors and accelerators
+            <div className="inline-block px-4 py-2 bg-secondary/10 border border-secondary/20 rounded-full text-secondary text-sm font-medium mb-6">
+              🤝 Trusted Partners
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Backed by <span className="gradient-text">Industry Leaders</span>
+            </h2>
+            <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
+              Supported by Pakistan's leading investors, accelerators, and innovation hubs
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-6xl mx-auto">
             {partners.map((partner, index) => (
               <PartnerLogo
                 key={index}
@@ -154,8 +178,6 @@ const JunoApp: React.FC = () => {
             ))}
           </div>
         </div>
-
-       
       </div>
     </section>
   );
