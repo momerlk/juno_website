@@ -74,7 +74,7 @@ const Contact: React.FC = () => {
               <div className="mb-8">
                 <div className="flex items-center mb-4">
                   <Mail className="text-primary mr-3" size={20} />
-                  <span className="text-neutral-300">hello@junoapp.com</span>
+                  <span className="text-neutral-300">junonoww@gmail.com</span>
                 </div>
                 
                 <h4 className="text-xl mb-4">Follow Us</h4>
