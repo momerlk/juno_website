@@ -98,7 +98,6 @@ const ScreenshotsSection: React.FC = () => {
                 <div className="w-12 h-1 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
                 <span className="text-sm text-neutral-500 uppercase tracking-wider">Feature Highlight</span>
               </div>
-            </div>
             {/* Image content on the right */}
             {/* Added flex utilities to ensure image is centered within its container */}
             <motion.div 

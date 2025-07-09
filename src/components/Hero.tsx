@@ -84,7 +84,6 @@ const Hero: React.FC = () => {
                 <div className="text-sm text-neutral-400">Universities</div>
               </div>
             </motion.div>
-            </h1>
             <p className="text-lg md:text-xl text-neutral-300 mb-8 max-w-xl mx-auto lg:mx-0">
               Discover Juno, the revolutionary fashion app for indie brands that lets you swipe to shop, and Juno Studio, the platform for sellers.
             </p>
