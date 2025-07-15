@@ -45,7 +45,7 @@ const Hero: React.FC = () => {
               <motion.a
                 whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(255, 24, 24, 0.3)" }}
                 whileTap={{ scale: 0.95 }}
-                href="https:// apple.com/join/Pzt9wnBm"
+                href=" https://testflight.apple.com/join/Pzt9wnBm"
                 className="btn btn-primary text-lg px-8 py-4 shadow-lg"
               >
                 <Smartphone size={20} className="mr-2" />
