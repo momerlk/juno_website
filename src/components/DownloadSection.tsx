@@ -47,7 +47,7 @@ const DownloadSection: React.FC = () => {
               </div>
             </a>
             <a
-              href=" https://testflight.apple.com/join/Pzt9wnBm"
+              href="https://expo.dev/artifacts/eas/obnKmUixtHAMDne8akt1iV.apk"
               className="btn bg-neutral-800 hover:bg-neutral-700 text-white flex-1 flex items-center justify-center group"
             >
               <div className="mr-3">
@@ -55,7 +55,7 @@ const DownloadSection: React.FC = () => {
               </div>
               <div className="text-left">
                 <div className="text-sm">Get it on</div>
-                <div className="text-lg font-semibold">Google Play</div>
+                <div className="text-lg font-semibold">Android</div>
               </div>
             </a>
           </motion.div>

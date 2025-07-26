@@ -45,7 +45,7 @@ const Hero: React.FC = () => {
               <motion.a
                 whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(255, 24, 24, 0.3)" }}
                 whileTap={{ scale: 0.95 }}
-                href=" https://testflight.apple.com/join/Pzt9wnBm"
+                href="#download"
                 className="btn btn-primary text-lg px-8 py-4 shadow-lg"
               >
                 <Smartphone size={20} className="mr-2" />
@@ -79,7 +79,7 @@ const Hero: React.FC = () => {
                 <div className="text-sm text-neutral-400">Brands</div>
               </div>
               <div className="text-center lg:text-left">
-                <div className="text-2xl font-bold text-white">15+</div>
+                <div className="text-2xl font-bold text-white">20+</div>
                 <div className="text-sm text-neutral-400">Universities</div>
               </div>
             </motion.div>

@@ -96,10 +96,10 @@ const Contact: React.FC = () => {
                 <h4 className="text-xl mb-4">Download Juno App</h4>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <a href=" https://testflight.apple.com/join/Pzt9wnBm" className="btn btn-outline flex-1 justify-center">
-                    App Store
+                    iOS
                   </a>
-                  <a href=" https://testflight.apple.com/join/Pzt9wnBm" className="btn btn-outline flex-1 justify-center">
-                    Google Play
+                  <a href=" https://expo.dev/artifacts/eas/obnKmUixtHAMDne8akt1iV.apk" className="btn btn-outline flex-1 justify-center">
+                    Android
                   </a>
                 </div>
               </div>
