@@ -98,7 +98,7 @@ const Contact: React.FC = () => {
                   <a href=" https://testflight.apple.com/join/Pzt9wnBm" className="btn btn-outline flex-1 justify-center">
                     iOS
                   </a>
-                  <a href=" https://expo.dev/artifacts/eas/obnKmUixtHAMDne8akt1iV.apk" className="btn btn-outline flex-1 justify-center">
+                  <a href="https://storage.googleapis.com/juno_media/constants/juno_0.5.0.apk" className="btn btn-outline flex-1 justify-center">
                     Android
                   </a>
                 </div>
