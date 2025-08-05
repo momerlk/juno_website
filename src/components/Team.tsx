@@ -87,7 +87,7 @@ const Team: React.FC = () => {
     {
       name: "Omer Ali Malik",
       role: "Founder & CEO",
-      image: "https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png",
+      image: "/team/omer.png",
       bio: "Handling Product and Operations",
       social: {
         linkedin: "https://linkedin.com/in/omer-malik-395a2a2a5",
@@ -95,32 +95,22 @@ const Team: React.FC = () => {
       }
     },
     {
-      name: "Amr Nazir",
-      role: "COO",
-      image: "https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png",
-      bio: "Handling sales and business operations",
+      name: "Ali Mukarram",
+      role: "Founder & COO",
+      image: "/team/ali.png",
+      bio: "Handling Growth and business operations",
       social: {
-        linkedin: "#",
+        linkedin: "https://www.linkedin.com/in/ali-mukarram-257979209/",
         github: "#",
       }
     },
     {
-      name: "Ali Mukarram",
-      role: "CMO",
-      image: "https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png",
-      bio: "Handling marketing and sales",
-      social: {
-        linkedin: "#",
-        twitter: "#",
-      }
-    },
-    {
-      name: "Shahzaib Abid",
-      role: "Developer",
+      name: "Asmar Shahid",
+      role: "CTO",
       image: "https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png",
       bio: "Handling Product",
       social: {
-        linkedin: "#",
+        linkedin: "https://www.linkedin.com/in/asmar-shahid/",
         twitter: "#",
       }
     },
