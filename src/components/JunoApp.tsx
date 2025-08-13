@@ -94,7 +94,7 @@ const JunoApp: React.FC = () => {
     },
     {
       icon: <Users className="text-accent" size={28} />,
-      title: "25+",
+      title: "35+",
       description: "Institutes with ambassadors",
       delay: 0.3,
     },
