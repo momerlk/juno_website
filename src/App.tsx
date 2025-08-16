@@ -33,6 +33,7 @@ import AmbassadorDashboard from "./components/ambassador/AmbassadorDashboard";
 import AmbassadorProtectedRoute from "./components/ambassador/ProtectedRoute";
 
 import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
+import BrandPage from './components/BrandPage';
 
 function App() {
   useEffect(() => {
@@ -120,6 +121,8 @@ function App() {
                     </AmbassadorProtectedRoute>
                   }
                 />
+                
+                <Route path="/:brandName" element={<BrandPage />} />
               </Routes>
               {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && <Footer />}
               </div>
