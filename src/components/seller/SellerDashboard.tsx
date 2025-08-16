@@ -5,6 +5,7 @@ import { Loader, Upload, CreditCard, LogOut, Store } from 'lucide-react';
 import JunoStudioAccounts from './JunoStudioAccounts';
 import SubscriptionModal from './SubscriptionModal';
 import * as api from '../../api';
+import JunoStudioDownloads from './JunoStudioDownloads';
 
 const SellerDashboard: React.FC = () => {
   const { seller, logout } = useSellerAuth();
@@ -162,8 +163,7 @@ const SellerDashboard: React.FC = () => {
             <p className="text-neutral-400">Analytics dashboard coming soon</p>
           </div>
         </motion.div> */}
-
-        <JunoStudioAccounts />
+        <JunoStudioDownloads />
 
         <SubscriptionModal
           isOpen={isSubscriptionModalOpen}

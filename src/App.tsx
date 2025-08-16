@@ -17,10 +17,22 @@ import SellerOnboarding from './components/seller/SellerOnboarding';
 import ProtectedRoute from './components/seller/ProtectedRoute';
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
 import { JunoStudioProvider } from './contexts/JunoStudioContext';
+import { AdminAuthProvider } from './contexts/AdminAuthContext';
 import PrivacyPolicy from './components/policies/PrivacyPolicy';
 import RefundPolicy from './components/policies/RefundPolicy';
 import ShippingServicePolicy from './components/policies/ShippingServicePolicy';
 import TermsConditions from './components/policies/TermsConditions';
+
+import AdminAuth from "./components/admin/AdminAuth";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import AdminProtectedRoute from "./components/admin/ProtectedRoute";
+
+
+import AmbassadorAuth from "./components/ambassador/AmbassadorAuth";
+import AmbassadorDashboard from "./components/ambassador/AmbassadorDashboard";
+import AmbassadorProtectedRoute from "./components/ambassador/ProtectedRoute";
+
+import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
 
 function App() {
   useEffect(() => {
@@ -36,49 +48,85 @@ function App() {
 
   return (
     <Router>
-      <SellerAuthProvider>
-        <JunoStudioProvider>
-          <div className="min-h-screen bg-background text-white">
-          {!window.location.pathname.startsWith('/seller') && <Navbar />}
-          <Routes>
-            <Route path="/" element={
-              <main>
-                <Hero />
-                <JunoApp />
-                <ScreenshotsSection />
-                <Mission />
-                <JunoStudio />
-                <Pricing />
-                <Team />
-                <DownloadSection />
-                <Contact />
-              </main>
-            } />
+      <AdminAuthProvider>
+        <SellerAuthProvider>
+          <AmbassadorAuthProvider>
+            <JunoStudioProvider>
+              <div className="min-h-screen bg-background text-white">
+              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && <Navbar />}
+              <Routes>
+                <Route path="/" element={
+                  <main>
+                    <Hero />
+                    <JunoApp />
+                    <ScreenshotsSection />
+                    <Mission />
+                    <JunoStudio />
+                    <Pricing />
+                    <Team />
+                    <DownloadSection />
+                    <Contact />
+                  </main>
+                } />
 
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/refund-policy" element={<RefundPolicy />} />
-            <Route path="/service-policy" element={<ShippingServicePolicy />} />
-            <Route path="/terms-and-conditions" element={<TermsConditions />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/refund-policy" element={<RefundPolicy />} />
+                <Route path="/service-policy" element={<ShippingServicePolicy />} />
+                <Route path="/terms-and-conditions" element={<TermsConditions />} />
 
-            <Route path="/seller" element={
-              <ProtectedRoute>
-                <Navigate to="/seller/dashboard" replace />
-              </ProtectedRoute>
-            } />
-            <Route path="/seller/auth" element={<SellerAuth />} />
-            <Route path="/seller/dashboard" element={
-              <ProtectedRoute>
-                <SellerDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/seller/onboarding" element={
-                <SellerOnboarding />
-            } />
-          </Routes>
-          <Footer />
-          </div>
-        </JunoStudioProvider>
-      </SellerAuthProvider>
+                <Route path="/seller" element={
+                  <ProtectedRoute>
+                    <Navigate to="/seller/dashboard" replace />
+                  </ProtectedRoute>
+                } />
+                <Route path="/seller/auth" element={<SellerAuth />} />
+                <Route path="/seller/dashboard" element={
+                  <ProtectedRoute>
+                    <SellerDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/seller/onboarding" element={
+                    <SellerOnboarding />
+                } />
+
+
+                <Route path="/admin" element={
+                  <AdminProtectedRoute>
+                    <Navigate to="/admin/dashboard" replace />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="/admin/login" element={<AdminAuth />} />
+                <Route
+                  path="/admin/dashboard"
+                  element={
+                    <AdminProtectedRoute>
+                      <AdminDashboard />
+                    </AdminProtectedRoute>
+                  }
+                />
+
+
+                <Route path="/ambassador" element={
+                  <AmbassadorProtectedRoute>
+                    <Navigate to="/ambassador/dashboard" replace />
+                  </AmbassadorProtectedRoute>
+                } />
+                <Route path="/ambassador/login" element={<AmbassadorAuth />} />
+                <Route
+                  path="/ambassador/dashboard"
+                  element={
+                    <AmbassadorProtectedRoute>
+                      <AmbassadorDashboard />
+                    </AmbassadorProtectedRoute>
+                  }
+                />
+              </Routes>
+              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && <Footer />}
+              </div>
+            </JunoStudioProvider>
+          </AmbassadorAuthProvider>
+        </SellerAuthProvider>
+      </AdminAuthProvider>
     </Router>
   );
 }
