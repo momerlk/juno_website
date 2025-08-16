@@ -1,0 +1,5408 @@
+basePath: /api/v1
+definitions:
+  handlers.AddItemToCartRequest:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+      variant_id:
+        description: Added field
+        type: string
+    type: object
+  handlers.AddOutfitToTournamentPayload:
+    properties:
+      outfit_id:
+        type: string
+    type: object
+  handlers.CheckReceiptsRequest:
+    properties:
+      ticket_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - ticket_ids
+    type: object
+  handlers.Color:
+    properties:
+      b:
+        type: integer
+      g:
+        type: integer
+      r:
+        type: integer
+    type: object
+  handlers.CreateAddressRequest:
+    properties:
+      address_line1:
+        type: string
+      address_line2:
+        type: string
+      address_type:
+        description: home, office, other
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      instructions:
+        type: string
+      is_default:
+        type: boolean
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone_number:
+        type: string
+      postal_code:
+        type: string
+      province:
+        type: string
+    type: object
+  handlers.CreateOrderRequest:
+    properties:
+      address:
+        $ref: '#/definitions/models.Address'
+      items:
+        items:
+          $ref: '#/definitions/models.CartItemWithSeller'
+        type: array
+      user_id:
+        type: string
+    type: object
+  handlers.ImageRequest:
+    properties:
+      images:
+        items:
+          type: string
+        type: array
+    type: object
+  handlers.RegisterForTournamentPayload:
+    properties:
+      user_id:
+        description: Fallback if not in auth context (not recommended)
+        type: string
+    type: object
+  handlers.RegisterTokenRequest:
+    properties:
+      expo_push_token:
+        type: string
+    required:
+    - expo_push_token
+    type: object
+  handlers.RenameOutfitRequestBody:
+    properties:
+      name:
+        type: string
+    type: object
+  handlers.Result:
+    properties:
+      backgroundColor:
+        $ref: '#/definitions/handlers.Color'
+      image:
+        type: string
+      score:
+        type: number
+    type: object
+  handlers.SendNotificationRequest:
+    properties:
+      body:
+        type: string
+      data:
+        additionalProperties: {}
+        type: object
+      title:
+        type: string
+    required:
+    - body
+    - title
+    type: object
+  handlers.SendRawNotificationRequest:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/models.ExpoSendRequest'
+        type: array
+    required:
+    - messages
+    type: object
+  handlers.UpdateAddressRequest:
+    properties:
+      address_line_1:
+        type: string
+      address_line_2:
+        type: string
+      address_type:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      instructions:
+        type: string
+      is_default:
+        type: boolean
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone_number:
+        type: string
+      postal_code:
+        type: string
+      province:
+        type: string
+    type: object
+  handlers.UpdateCartItemRequest:
+    properties:
+      quantity:
+        type: integer
+    type: object
+  handlers.UpdateOrderStatusRequest:
+    properties:
+      changed_by_id:
+        description: User ID of who is making the change
+        type: string
+      changed_by_name:
+        description: Name of the user/system making the change
+        type: string
+      status:
+        type: string
+    type: object
+  handlers.VoteInTournamentPayload:
+    properties:
+      comment:
+        type: string
+      outfit_id:
+        description: UserID   string           `json:"user_id"` // UserID should always
+          come from auth context
+        type: string
+      vote_type:
+        allOf:
+        - $ref: '#/definitions/models.VoteType'
+        description: '"upvote", "downvote", "cart"'
+    type: object
+  models.Address:
+    properties:
+      address_line1:
+        type: string
+      address_line2:
+        type: string
+      address_type:
+        description: home, office, other
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      instructions:
+        type: string
+      is_default:
+        type: boolean
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone_number:
+        type: string
+      postal_code:
+        type: string
+      province:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.AnalyticsSummary:
+    properties:
+      activeCustomers:
+        type: integer
+      conversionRate:
+        type: number
+      popularProducts:
+        items:
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            purchases:
+              type: integer
+            views:
+              type: integer
+          type: object
+        type: array
+      totalRevenue:
+        type: number
+    type: object
+  models.Attribute:
+    properties:
+      name:
+        type: string
+      value:
+        type: string
+      variant:
+        description: Whether this attribute can be used to create variants
+        type: boolean
+      visible:
+        type: boolean
+    type: object
+  models.BankDetails:
+    properties:
+      account_number:
+        type: string
+      account_title:
+        type: string
+      bank_name:
+        type: string
+      branch_address:
+        type: string
+      branch_code:
+        type: string
+      iban:
+        type: string
+      payment_method:
+        description: bank_transfer, jazzcash, easypaisa, etc.
+        type: string
+      payment_schedule:
+        description: weekly, biweekly, monthly
+        type: string
+      payment_threshold:
+        type: number
+      swift_code:
+        type: string
+    type: object
+  models.Brand:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  models.BusinessDetails:
+    properties:
+      business_category:
+        type: string
+      business_subcategory:
+        type: string
+      business_type:
+        description: sole_proprietorship, partnership, corporation
+        type: string
+      founded_year:
+        description: |-
+          RegistrationNumber  string    `json:"registration_number" bson:"registration_number"`
+          NTNNumber          string    `json:"ntn_number" bson:"ntn_number"` // National Tax Number in Pakistan
+          SalesTaxNumber     string    `json:"sales_tax_number,omitempty" bson:"sales_tax_number,omitempty"`
+        type: integer
+      number_of_employees:
+        type: string
+    type: object
+  models.Cart:
+    properties:
+      created_at:
+        description: Changed to time.Time
+        type: string
+      id:
+        description: Changed to string
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/models.CartItem'
+        type: array
+      updated_at:
+        description: Changed to time.Time
+        type: string
+      user_id:
+        description: Changed to string
+        type: string
+    type: object
+  models.CartItem:
+    properties:
+      price:
+        description: Price at the time of adding to cart
+        type: number
+      product_id:
+        description: Changed to string
+        type: string
+      quantity:
+        type: integer
+      variant_id:
+        description: Added field
+        type: string
+    type: object
+  models.CartItemWithSeller:
+    properties:
+      price:
+        description: Price at the time of adding to cart
+        type: number
+      product_id:
+        type: string
+      quantity:
+        type: integer
+      seller_id:
+        description: ID of the brand/seller
+        type: string
+      variant_id:
+        description: Added field
+        type: string
+    type: object
+  models.Category:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      slug:
+        type: string
+    type: object
+  models.CommissionSettings:
+    properties:
+      commission_rate:
+        type: number
+      commission_type:
+        description: percentage, fixed
+        type: string
+    type: object
+  models.CustomerBehavior:
+    properties:
+      averageSpend:
+        type: number
+      customerId:
+        type: string
+      favoriteCategory:
+        type: string
+      lastPurchaseDate:
+        type: string
+      purchaseCount:
+        type: integer
+    type: object
+  models.CustomizationOption:
+    properties:
+      additional_price:
+        type: number
+      name:
+        type: string
+      options:
+        items:
+          type: string
+        type: array
+      required:
+        type: boolean
+    type: object
+  models.DeliveryMethod:
+    enum:
+    - standard
+    - express
+    - same_day
+    type: string
+    x-enum-varnames:
+    - DeliveryMethodStandard
+    - DeliveryMethodExpress
+    - DeliveryMethodSameDay
+  models.DeviceInfo:
+    properties:
+      app_version:
+        type: string
+      device_id:
+        type: string
+      device_name:
+        type: string
+      device_type:
+        description: ios, android, web
+        type: string
+      ip_address:
+        type: string
+      last_used:
+        type: string
+      os_version:
+        type: string
+      user_agent:
+        type: string
+    type: object
+  models.Dimensions:
+    properties:
+      height:
+        type: number
+      length:
+        type: number
+      unit:
+        description: cm, inch
+        type: string
+      width:
+        type: number
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.ExpoPushReceipt:
+    properties:
+      details:
+        $ref: '#/definitions/models.ReceiptDetails'
+      message:
+        type: string
+      status:
+        description: e.g., "ok" or "error"
+        type: string
+    type: object
+  models.ExpoPushTicket:
+    properties:
+      details:
+        description: Error details if status is "error"
+      id:
+        description: Ticket ID
+        type: string
+      message:
+        description: Error message if status is "error"
+        type: string
+      status:
+        description: e.g., "ok" or "error"
+        type: string
+    type: object
+  models.ExpoSendRequest:
+    properties:
+      _contentAvailable:
+        description: iOS only
+        type: boolean
+      badge:
+        description: Pointer to allow sending 0
+        type: integer
+      body:
+        type: string
+      channelId:
+        description: Android only
+        type: string
+      data: {}
+      mutableContent:
+        description: iOS only
+        type: boolean
+      priority:
+        description: '''default'', ''normal'', ''high'''
+        type: string
+      sound:
+        description: '"default" or null'
+        type: string
+      subtitle:
+        description: iOS only
+        type: string
+      title:
+        type: string
+      to:
+        items:
+          type: string
+        type: array
+      ttl:
+        description: Pointer to allow sending 0
+        type: integer
+    type: object
+  models.GraphDataPoint:
+    properties:
+      x_value:
+        type: string
+      y_value:
+        type: number
+    type: object
+  models.Interaction:
+    properties:
+      action_type:
+        type: string
+      id:
+        type: string
+      product_id:
+        type: string
+      rating:
+        type: number
+      timestamp:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.Inventory:
+    properties:
+      allow_out_of_stock:
+        type: boolean
+      available_quantity:
+        type: integer
+      barcode:
+        type: string
+      committed_quantity:
+        type: integer
+      in_stock:
+        type: boolean
+      inventory_management:
+        description: shopify, manual
+        type: string
+      inventory_policy:
+        description: deny, continue
+        type: string
+      location_id:
+        type: string
+      low_stock_threshold:
+        type: integer
+      quantity:
+        type: integer
+      reserved_quantity:
+        type: integer
+      restock_date:
+        type: string
+      sku:
+        type: string
+      track_inventory:
+        type: boolean
+    type: object
+  models.InventoryAnalyticsResponse:
+    properties:
+      days_of_inventory:
+        description: Days of Inventory Outstanding
+        type: number
+      days_of_inventory_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      dead_inventory_percentage:
+        type: number
+      dead_inventory_percentage_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      gmroii:
+        description: Gross Margin Return on Inventory Investment
+        type: number
+      gmroii_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      sell_through_rate:
+        type: number
+      sell_through_rate_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      stock_turnover_ratio:
+        type: number
+      stock_turnover_ratio_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+    type: object
+  models.InventoryBulkUpdate:
+    properties:
+      product_id:
+        type: string
+      quantity_change:
+        type: integer
+      reason:
+        description: restock, sale, damage, other
+        type: string
+      variant_id:
+        type: string
+    type: object
+  models.InviteCode:
+    properties:
+      code:
+        type: string
+      owner:
+        type: string
+      signups:
+        type: integer
+    type: object
+  models.KYCDocuments:
+    properties:
+      cnic_back:
+        description: Pakistan ID card back
+        type: string
+      cnic_front:
+        description: Pakistan ID card front
+        type: string
+      verification_notes:
+        type: string
+      verification_status:
+        description: |-
+          BusinessCertificate string    `json:"business_certificate,omitempty" bson:"business_certificate,omitempty"`
+          TaxCertificate     string     `json:"tax_certificate,omitempty" bson:"tax_certificate,omitempty"`
+          UtilityBill        string     `json:"utility_bill,omitempty" bson:"utility_bill,omitempty"`
+          StoreImages        []string   `json:"store_images,omitempty" bson:"store_images,omitempty"`
+        type: string
+      verified_at:
+        type: string
+    type: object
+  models.Leaderboard:
+    properties:
+      id:
+        type: string
+      last_calculated:
+        type: string
+      rankings:
+        items:
+          $ref: '#/definitions/models.RankingEntry'
+        type: array
+      tournament_id:
+        type: string
+      version:
+        description: For optimistic locking or versioning
+        type: integer
+    type: object
+  models.Location:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      province:
+        type: string
+    type: object
+  models.LoginRequest:
+    properties:
+      device_info:
+        $ref: '#/definitions/models.DeviceInfo'
+      password:
+        type: string
+      phone_number:
+        type: string
+    required:
+    - password
+    - phone_number
+    type: object
+  models.LoginResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  models.LowStockAlert:
+    properties:
+      current_quantity:
+        type: integer
+      product_id:
+        type: string
+      product_name:
+        type: string
+      threshold:
+        type: integer
+    type: object
+  models.MeasurementProfile:
+    properties:
+      bust:
+        description: in inches
+        type: number
+      height:
+        description: in inches
+        type: number
+      hip:
+        description: in inches
+        type: number
+      inseam_length:
+        description: in inches
+        type: number
+      preferred_fit:
+        description: loose, regular, slim
+        type: string
+      shoe_size:
+        type: number
+      shoe_size_system:
+        description: EU, US, UK
+        type: string
+      shoulder:
+        description: in inches
+        type: number
+      updated_at:
+        type: string
+      waist:
+        description: in inches
+        type: number
+      weight:
+        description: in kg
+        type: number
+    type: object
+  models.NotificationPrefs:
+    properties:
+      back_in_stock:
+        type: boolean
+      email:
+        type: boolean
+      new_arrivals:
+        type: boolean
+      order_updates:
+        type: boolean
+      price_drops:
+        type: boolean
+      promotions:
+        type: boolean
+      push_notification:
+        type: boolean
+      reviews:
+        type: boolean
+      sms:
+        type: boolean
+    type: object
+  models.NotificationToken:
+    properties:
+      created_at:
+        type: string
+      expo_token:
+        type: string
+      id:
+        description: Using string for UUID
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.Option:
+    properties:
+      name:
+        type: string
+      required:
+        type: boolean
+      values:
+        items:
+          type: string
+        type: array
+    type: object
+  models.Order:
+    properties:
+      billing_address:
+        $ref: '#/definitions/models.Address'
+      billing_address_id:
+        type: string
+      coupon_code:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      delivery_method:
+        $ref: '#/definitions/models.DeliveryMethod'
+      discount:
+        type: number
+      gift_message:
+        type: string
+      id:
+        type: string
+      is_gift:
+        type: boolean
+      notes:
+        type: string
+      order_items:
+        items:
+          $ref: '#/definitions/models.OrderItem'
+        type: array
+      order_number:
+        type: string
+      payment_method:
+        $ref: '#/definitions/models.PaymentMethod'
+      payment_status:
+        $ref: '#/definitions/models.PaymentStatus'
+      require_signature:
+        type: boolean
+      seller_id:
+        description: ID of the seller/brand for this order
+        type: string
+      shipping_address:
+        $ref: '#/definitions/models.Address'
+      shipping_address_id:
+        type: string
+      shipping_cost:
+        type: number
+      status:
+        $ref: '#/definitions/models.OrderStatus'
+      subtotal:
+        type: number
+      tax:
+        type: number
+      total:
+        type: number
+      tracking_info:
+        items:
+          $ref: '#/definitions/models.TrackingInfo'
+        type: array
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.OrderAnalyticsResponse:
+    properties:
+      average_order_value:
+        type: number
+      average_order_value_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      order_status_counts:
+        additionalProperties:
+          type: integer
+        type: object
+      top_selling_products:
+        items:
+          $ref: '#/definitions/models.ProductSaleInfo'
+        type: array
+      total_orders:
+        type: integer
+      total_orders_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+    type: object
+  models.OrderItem:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      discount:
+        type: number
+      id:
+        type: string
+      is_returned:
+        type: boolean
+      order_id:
+        type: string
+      product_id:
+        type: string
+      quantity:
+        type: integer
+      return_reason:
+        type: string
+      seller_id:
+        type: string
+      size:
+        type: string
+      sku:
+        type: string
+      status:
+        type: string
+      total_price:
+        type: number
+      unit_price:
+        type: number
+      updated_at:
+        type: string
+      variant_id:
+        description: Added field
+        type: string
+    type: object
+  models.OrderStatus:
+    enum:
+    - pending
+    - processing
+    - packed
+    - shipped
+    - delivered
+    - cancelled
+    - returned
+    - refunded
+    - fulfilled
+    type: string
+    x-enum-varnames:
+    - OrderStatusPending
+    - OrderStatusProcessing
+    - OrderStatusPacked
+    - OrderStatusShipped
+    - OrderStatusDelivered
+    - OrderStatusCancelled
+    - OrderStatusReturned
+    - OrderStatusRefunded
+    - OrderStatusFulfilled
+  models.Outfit:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      image_url:
+        description: Added ImageURL
+        type: string
+      name:
+        type: string
+      product_ids:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.PaymentMethod:
+    enum:
+    - cash_on_delivery
+    - credit_card
+    - easypaisa
+    - jazzcash
+    - bank_transfer
+    type: string
+    x-enum-varnames:
+    - PaymentMethodCOD
+    - PaymentMethodCreditCard
+    - PaymentMethodEasyPaisa
+    - PaymentMethodJazzCash
+    - PaymentMethodBankTransfer
+  models.PaymentStatus:
+    enum:
+    - pending
+    - paid
+    - failed
+    - refunded
+    type: string
+    x-enum-varnames:
+    - PaymentStatusPending
+    - PaymentStatusPaid
+    - PaymentStatusFailed
+    - PaymentStatusRefunded
+  models.Pricing:
+    properties:
+      compare_at_price:
+        type: number
+      currency:
+        type: string
+      discount_type:
+        description: percentage, fixed
+        type: string
+      discount_value:
+        type: number
+      discounted:
+        type: boolean
+      discounted_price:
+        type: number
+      price:
+        type: number
+    type: object
+  models.Product:
+    properties:
+      attributes:
+        items:
+          $ref: '#/definitions/models.Attribute'
+        type: array
+      care_instructions:
+        type: string
+      categories:
+        items:
+          $ref: '#/definitions/models.Category'
+        type: array
+      collections:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      customization_options:
+        items:
+          $ref: '#/definitions/models.CustomizationOption'
+        type: array
+      description:
+        type: string
+      handle:
+        type: string
+      id:
+        type: string
+      images:
+        items:
+          type: string
+        type: array
+      inventory:
+        $ref: '#/definitions/models.Inventory'
+      is_customizable:
+        type: boolean
+      is_featured:
+        type: boolean
+      is_ready_to_wear:
+        type: boolean
+      is_trending:
+        type: boolean
+      occasion:
+        description: Casual, Formal, Party, Wedding, Eid, etc.
+        items:
+          type: string
+        type: array
+      options:
+        items:
+          $ref: '#/definitions/models.Option'
+        type: array
+      pricing:
+        $ref: '#/definitions/models.Pricing'
+      product_type:
+        description: Western, Eastern, Fusion, etc.
+        type: string
+      published_at:
+        type: string
+      purchase_count:
+        type: integer
+      rating:
+        type: number
+      return_eligibility:
+        type: boolean
+      review_count:
+        type: integer
+      reviews:
+        description: References to review IDs
+        items:
+          type: string
+        type: array
+      season:
+        description: Summer, Winter, Spring, Fall, All-Season
+        type: string
+      seller_id:
+        type: string
+      seller_logo:
+        type: string
+      seller_name:
+        type: string
+      shipping_details:
+        $ref: '#/definitions/models.Shipping'
+      short_description:
+        type: string
+      sizing_guide:
+        $ref: '#/definitions/models.SizingGuide'
+      status:
+        description: active, draft, archived
+        type: string
+      style_tags:
+        description: Boho, Classic, Elegant, Modern, Traditional
+        items:
+          type: string
+        type: array
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      variants:
+        items:
+          $ref: '#/definitions/models.Variant'
+        type: array
+      video_url:
+        type: string
+      view_count:
+        type: integer
+      wash_care:
+        type: string
+    type: object
+  models.ProductAnalyticsResponse:
+    properties:
+      added_to_cart:
+        type: integer
+      added_to_cart_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      dislikes:
+        type: integer
+      dislikes_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      impressions:
+        type: integer
+      impressions_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      likes:
+        type: integer
+      likes_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      product_id:
+        type: string
+      purchases:
+        type: integer
+      purchases_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+    type: object
+  models.ProductFilter:
+    properties:
+      brands:
+        items:
+          $ref: '#/definitions/models.Brand'
+        type: array
+      categories:
+        items:
+          $ref: '#/definitions/models.Category'
+        type: array
+      category_id:
+        type: string
+      colors:
+        items:
+          type: string
+        type: array
+      keyword:
+        description: Keyword search
+        type: string
+      limit:
+        description: items per page
+        type: string
+      materials:
+        items:
+          type: string
+        type: array
+      max_price:
+        type: string
+      min_price:
+        type: string
+      occasions:
+        items:
+          type: string
+        type: array
+      order:
+        description: asc, desc
+        type: string
+      page:
+        description: page number
+        type: string
+      product_types:
+        items:
+          type: string
+        type: array
+      seller_id:
+        type: string
+      sizes:
+        description: Multi-select filters
+        items:
+          type: string
+        type: array
+      sort:
+        description: price, created_at
+        type: string
+      status:
+        description: active, draft, archived
+        type: string
+    type: object
+  models.ProductFilters:
+    properties:
+      brands:
+        items:
+          $ref: '#/definitions/models.Brand'
+        type: array
+      categories:
+        items:
+          $ref: '#/definitions/models.Category'
+        type: array
+      colors:
+        items:
+          type: string
+        type: array
+      materials:
+        items:
+          type: string
+        type: array
+      occasions:
+        items:
+          type: string
+        type: array
+      price_ranges:
+        items:
+          properties:
+            max:
+              type: number
+            min:
+              type: number
+          type: object
+        type: array
+      product_types:
+        items:
+          type: string
+        type: array
+      sizes:
+        items:
+          type: string
+        type: array
+    type: object
+  models.ProductSaleInfo:
+    properties:
+      product_id:
+        type: string
+      product_name:
+        type: string
+      revenue:
+        type: number
+      units_sold:
+        type: integer
+    type: object
+  models.RankingEntry:
+    properties:
+      last_vote_at:
+        description: Timestamp of the last vote received
+        type: string
+      outfit_details:
+        allOf:
+        - $ref: '#/definitions/models.Outfit'
+        description: 'Optional: Embed outfit details'
+      outfit_id:
+        type: string
+      rank:
+        type: integer
+      score:
+        description: Overall calculated score
+        type: number
+      user_id:
+        description: User who submitted the outfit
+        type: string
+      votes_cart:
+        description: Number of times added to cart
+        type: integer
+      votes_down:
+        type: integer
+      votes_up:
+        type: integer
+    type: object
+  models.ReceiptDetails:
+    properties:
+      error:
+        description: e.g., "DeviceNotRegistered", "MessageTooBig"
+        type: string
+      expoPushToken:
+        description: The specific token that had an issue (for batch requests)
+        type: string
+    type: object
+  models.RecentlyViewed:
+    properties:
+      product_id:
+        type: string
+      view_count:
+        type: integer
+      viewed_at:
+        type: string
+    type: object
+  models.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  models.RegisterRequest:
+    properties:
+      password:
+        minLength: 8
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    required:
+    - password
+    - user
+    type: object
+  models.RegisterResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  models.RequestPasswordResetRequest:
+    properties:
+      phone_number:
+        type: string
+    required:
+    - phone_number
+    type: object
+  models.ResetPasswordRequest:
+    properties:
+      new_password:
+        minLength: 8
+        type: string
+      otp:
+        type: string
+      phone_number:
+        type: string
+    required:
+    - new_password
+    - otp
+    - phone_number
+    type: object
+  models.SalesAnalyticsResponse:
+    properties:
+      average_order_value:
+        type: number
+      average_order_value_sales_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      cart_abandonment_rate:
+        description: ((Carts Created - Orders Completed) / Carts Created) * 100
+        type: number
+      cart_abandonment_rate_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      conversion_rate:
+        description: (Orders / Unique Product Views) * 100
+        type: number
+      conversion_rate_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      new_customers:
+        type: integer
+      new_customers_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      repeat_purchase_rate:
+        description: (Repeat Customers / Total Customers) * 100
+        type: number
+      repeat_purchase_rate_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      returning_customers:
+        type: integer
+      returning_customers_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      revenue_per_customer:
+        type: number
+      revenue_per_customer_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      total_orders:
+        type: integer
+      total_sales:
+        type: number
+      total_sales_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+      units_sold:
+        type: integer
+      units_sold_graph_data:
+        items:
+          $ref: '#/definitions/models.GraphDataPoint'
+        type: array
+    type: object
+  models.SalesDataPoint:
+    properties:
+      averageOrderValue:
+        type: number
+      date:
+        type: string
+      revenue:
+        type: number
+      unitsSold:
+        type: integer
+    type: object
+  models.Seller:
+    properties:
+      approved_at:
+        type: string
+      bank_details:
+        $ref: '#/definitions/models.BankDetails'
+      banner_mobile_url:
+        type: string
+      banner_url:
+        type: string
+      business_details:
+        $ref: '#/definitions/models.BusinessDetails'
+      business_name:
+        type: string
+      categories:
+        items:
+          type: string
+        type: array
+      commission_settings:
+        $ref: '#/definitions/models.CommissionSettings'
+      contact:
+        $ref: '#/definitions/models.SellerContact'
+      created_at:
+        type: string
+      description:
+        type: string
+      email:
+        description: |-
+          OwnerUserID         string              `json:"owner_user_id" bson:"owner_user_id"`
+          StaffIDs            []string            `json:"staff_ids,omitempty" bson:"staff_ids,omitempty"`
+        type: string
+      featured:
+        type: boolean
+      id:
+        type: string
+      kyc_documents:
+        $ref: '#/definitions/models.KYCDocuments'
+      last_login:
+        type: string
+      last_login_device:
+        $ref: '#/definitions/models.DeviceInfo'
+      legal_name:
+        type: string
+      location:
+        $ref: '#/definitions/models.SellerLocation'
+      logo_url:
+        type: string
+      password:
+        type: string
+      return_policy:
+        type: string
+      seller_metrics:
+        $ref: '#/definitions/models.SellerMetrics'
+      shipping_settings:
+        $ref: '#/definitions/models.ShippingSettings'
+      short_description:
+        type: string
+      status:
+        description: active, pending, suspended, inactive
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  models.SellerContact:
+    properties:
+      alternate_phone_number:
+        type: string
+      business_hours:
+        type: string
+      contact_person_name:
+        type: string
+      email:
+        type: string
+      phone_number:
+        description: Must be Pakistan format (+92)
+        type: string
+      support_email:
+        type: string
+      whatsapp:
+        type: string
+    type: object
+  models.SellerLocation:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      neighborhood:
+        type: string
+      pickup_available:
+        type: boolean
+      pickup_hours:
+        type: string
+      postal_code:
+        type: string
+      state:
+        description: Province in Pakistan context
+        type: string
+      store_directions:
+        type: string
+    type: object
+  models.SellerLoginRequest:
+    properties:
+      device_info:
+        $ref: '#/definitions/models.DeviceInfo'
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.SellerMetrics:
+    properties:
+      average_rating:
+        type: number
+      average_response_time:
+        description: in minutes
+        type: integer
+      cancellation_rate:
+        type: number
+      cancelled_orders:
+        type: integer
+      completed_orders:
+        type: integer
+      fulfillment_rate:
+        type: number
+      joined_since:
+        type: string
+      order_count:
+        type: integer
+      product_count:
+        type: integer
+      rating:
+        type: number
+      return_rate:
+        type: number
+      revenue_generated:
+        type: number
+      review_count:
+        type: integer
+      total_orders:
+        type: integer
+      total_reviews:
+        type: integer
+      total_sales:
+        type: number
+    type: object
+  models.SendPhoneOTPRequest:
+    properties:
+      phone_number:
+        type: string
+    required:
+    - phone_number
+    type: object
+  models.Shipping:
+    properties:
+      dimensions:
+        $ref: '#/definitions/models.Dimensions'
+      free_shipping:
+        type: boolean
+      handling_time:
+        description: in days
+        type: integer
+      requires_shipping:
+        type: boolean
+      shipping_class:
+        description: Standard, Express, Free
+        type: string
+      shipping_methods:
+        items:
+          type: string
+        type: array
+      shipping_rates:
+        additionalProperties:
+          type: number
+        type: object
+      shipping_zones:
+        items:
+          type: string
+        type: array
+      weight:
+        type: number
+      weight_unit:
+        description: kg, grams, lb
+        type: string
+    type: object
+  models.ShippingProfile:
+    properties:
+      profile_name:
+        type: string
+      regions:
+        items:
+          type: string
+        type: array
+      shipping_rates:
+        items:
+          $ref: '#/definitions/models.ShippingRate'
+        type: array
+    type: object
+  models.ShippingRate:
+    properties:
+      delivery_method:
+        type: string
+      estimated_days:
+        type: integer
+      rate:
+        type: number
+    type: object
+  models.ShippingSettings:
+    properties:
+      default_handling_time:
+        description: in days
+        type: integer
+      free_shipping_threshold:
+        type: number
+      platform_shipping:
+        type: boolean
+      self_shipping:
+        type: boolean
+      shipping_profiles:
+        items:
+          $ref: '#/definitions/models.ShippingProfile'
+        type: array
+    type: object
+  models.SizingGuide:
+    properties:
+      measurement_unit:
+        description: cm, inch
+        type: string
+      size_chart:
+        additionalProperties:
+          additionalProperties:
+            type: number
+          type: object
+        description: 'Size: {measurement_name: value}'
+        type: object
+      size_conversion:
+        additionalProperties:
+          type: string
+        description: UK/US/EU size conversions
+        type: object
+      size_fit:
+        description: Regular, Slim, Oversized
+        type: string
+    type: object
+  models.SuccessResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  models.Tournament:
+    properties:
+      banner_image_url:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      end_date:
+        type: string
+      featured_outfits:
+        description: Stores Outfit IDs
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      max_participants:
+        type: integer
+      name:
+        type: string
+      organizer:
+        description: Could be a User ID or a brand name
+        type: string
+      participant_count:
+        type: integer
+      prize:
+        type: string
+      registered_users:
+        description: Stores User IDs
+        items:
+          type: string
+        type: array
+      registration_fee:
+        type: number
+      rules:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/models.TournamentStatus'
+      tags:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
+  models.TournamentOutfit:
+    properties:
+      cart_adds:
+        description: Specifically for cart action
+        type: integer
+      outfit_id:
+        type: string
+      overall_score:
+        description: Calculated score
+        type: number
+      submission_date:
+        type: string
+      submitted_by:
+        description: UserID of the outfit creator/submitter
+        type: string
+      total_votes:
+        description: Sum of Up and Down
+        type: integer
+      votes_cart:
+        type: integer
+      votes_down:
+        type: integer
+      votes_up:
+        type: integer
+    type: object
+  models.TournamentStats:
+    properties:
+      highest_rated_outfit:
+        description: OutfitID
+        type: string
+      last_updated:
+        type: string
+      most_active_user:
+        description: UserID
+        type: string
+      total_cart_adds:
+        type: integer
+      total_downvotes:
+        type: integer
+      total_outfits:
+        type: integer
+      total_participants:
+        type: integer
+      total_upvotes:
+        type: integer
+      total_votes:
+        type: integer
+      tournament_id:
+        type: string
+    type: object
+  models.TournamentStatus:
+    enum:
+    - upcoming
+    - active
+    - completed
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - TournamentStatusUpcoming
+    - TournamentStatusActive
+    - TournamentStatusCompleted
+    - TournamentStatusCancelled
+  models.TrackingEvent:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      location:
+        type: string
+      status:
+        type: string
+      timestamp:
+        type: string
+      tracking_info_id:
+        type: string
+    type: object
+  models.TrackingInfo:
+    properties:
+      actual_delivery:
+        type: string
+      courier_name:
+        type: string
+      courier_phone:
+        type: string
+      courier_website:
+        type: string
+      created_at:
+        type: string
+      current_location:
+        description: Text description of location
+        type: string
+      current_status:
+        type: string
+      estimated_delivery:
+        type: string
+      id:
+        type: string
+      latitude:
+        description: Added
+        type: number
+      longitude:
+        description: Added
+        type: number
+      order_id:
+        description: Belongs to which order
+        type: string
+      order_item_id:
+        description: 'Optional: if tracking is per item'
+        type: string
+      shipped_at:
+        type: string
+      tracking_events:
+        items:
+          $ref: '#/definitions/models.TrackingEvent'
+        type: array
+      tracking_number:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.User:
+    properties:
+      account_status:
+        description: active, inactive, suspended
+        type: string
+      age:
+        type: integer
+      avatar:
+        type: string
+      billing_address:
+        items:
+          $ref: '#/definitions/models.Address'
+        type: array
+      created_at:
+        type: string
+      date_of_birth:
+        type: string
+      device_info:
+        items:
+          $ref: '#/definitions/models.DeviceInfo'
+        type: array
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      gender:
+        type: string
+      id:
+        type: string
+      last_login:
+        type: string
+      location:
+        $ref: '#/definitions/models.Location'
+      login_count:
+        type: integer
+      measurement_profile:
+        $ref: '#/definitions/models.MeasurementProfile'
+      name:
+        type: string
+      notification_prefs:
+        $ref: '#/definitions/models.NotificationPrefs'
+      password_reset_token:
+        type: string
+      phone_number:
+        description: Only +92 format
+        type: string
+      phone_verified:
+        type: boolean
+      preferences:
+        $ref: '#/definitions/models.UserPreferences'
+      profile_completion:
+        description: percentage
+        type: integer
+      recently_viewed:
+        items:
+          $ref: '#/definitions/models.RecentlyViewed'
+        type: array
+      referral_code:
+        type: string
+      referred_by:
+        type: string
+      registration_source:
+        description: app, web, facebook, google
+        type: string
+      role:
+        description: customer, admin, staff
+        type: string
+      shipping_addresses:
+        items:
+          $ref: '#/definitions/models.Address'
+        type: array
+      updated_at:
+        type: string
+      verification_status:
+        description: verified, unverified
+        type: string
+      wishlist_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  models.UserPreferences:
+    properties:
+      color_preferences:
+        items:
+          type: string
+        type: array
+      currency_preference:
+        type: string
+      favorite_brands:
+        items:
+          type: string
+        type: array
+      favorite_categories:
+        items:
+          type: string
+        type: array
+      language_preference:
+        type: string
+      preferred_sizes:
+        additionalProperties:
+          type: string
+        description: category:size
+        type: object
+      price_range_max:
+        type: number
+      price_range_min:
+        type: number
+      style_preferences:
+        items:
+          type: string
+        type: array
+    type: object
+  models.Variant:
+    properties:
+      available:
+        type: boolean
+      compare_at_price:
+        type: number
+      dimensions:
+        $ref: '#/definitions/models.Dimensions'
+      id:
+        type: string
+      images:
+        description: References to Image URLs
+        items:
+          type: string
+        type: array
+      inventory:
+        $ref: '#/definitions/models.Inventory'
+      is_default:
+        type: boolean
+      options:
+        additionalProperties:
+          type: string
+        description: 'e.g., {"Size": "M", "Color": "Red"}'
+        type: object
+      position:
+        type: integer
+      price:
+        type: number
+      sku:
+        type: string
+      title:
+        type: string
+      weight:
+        type: number
+    type: object
+  models.VerifyPhoneRequest:
+    properties:
+      otp:
+        type: string
+      phone_number:
+        type: string
+    required:
+    - otp
+    - phone_number
+    type: object
+  models.VoteType:
+    enum:
+    - upvote
+    - downvote
+    - cart
+    type: string
+    x-enum-comments:
+      VoteTypeCart: Added to cart
+    x-enum-varnames:
+    - VoteTypeUp
+    - VoteTypeDown
+    - VoteTypeCart
+host: localhost:8080
+info:
+  contact:
+    email: support@juno.com.pk
+    name: API Support
+  description: A microservices-based API with MongoDB and JWT authentication
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Juno API
+  version: "1.0"
+paths:
+  /addresses:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of all addresses associated with the authenticated
+        user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved addresses
+          schema:
+            items:
+              $ref: '#/definitions/models.Address'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all user addresses
+      tags:
+      - addresses
+    post:
+      consumes:
+      - application/json
+      description: Adds a new address to the authenticated user's profile.
+      parameters:
+      - description: Address details
+        in: body
+        name: address
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Address created successfully
+          schema:
+            $ref: '#/definitions/models.Address'
+        "400":
+          description: Invalid request payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new address
+      tags:
+      - addresses
+  /addresses/{addressID}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an existing address by its ID for the authenticated user.
+      parameters:
+      - description: ID of the address to delete
+        in: path
+        name: addressID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message confirming address deletion
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid address ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Address not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an address
+      tags:
+      - addresses
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a specific address by its ID, belonging to
+        the authenticated user.
+      parameters:
+      - description: ID of the address to retrieve
+        in: path
+        name: addressID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved address
+          schema:
+            $ref: '#/definitions/models.Address'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Address not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a specific address
+      tags:
+      - addresses
+    put:
+      consumes:
+      - application/json
+      description: Updates details of an existing address by its ID for the authenticated
+        user.
+      parameters:
+      - description: ID of the address to update
+        in: path
+        name: addressID
+        required: true
+        type: string
+      - description: Updated address details
+        in: body
+        name: address
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Address updated successfully
+          schema:
+            $ref: '#/definitions/models.Address'
+        "400":
+          description: Invalid request payload or address ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Address not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an existing address
+      tags:
+      - addresses
+  /addresses/{addressID}/default:
+    put:
+      consumes:
+      - application/json
+      description: Marks a specific address as the default for the authenticated user.
+      parameters:
+      - description: ID of the address to set as default
+        in: path
+        name: addressID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message confirming default address change
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid address ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Address not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set default address
+      tags:
+      - addresses
+  /addresses/default:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the default shipping/billing address for the authenticated
+        user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved default address
+          schema:
+            $ref: '#/definitions/models.Address'
+        "204":
+          description: No default address set (returns nil body)
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get default address
+      tags:
+      - addresses
+  /admin/notifications/broadcast:
+    post:
+      consumes:
+      - application/json
+      description: Sends a push notification to all registered users. Requires admin
+        privileges.
+      parameters:
+      - description: Notification Content
+        in: body
+        name: notification_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SendNotificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Broadcast request processed, check tickets
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ExpoPushTicket'
+                  type: array
+              type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden (not admin)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Broadcast notification to all users
+      tags:
+      - Notifications (Admin)
+  /admin/notifications/receipts/check:
+    post:
+      consumes:
+      - application/json
+      description: Retrieves the status of push notifications using previously obtained
+        ticket IDs. Requires admin privileges.
+      parameters:
+      - description: Ticket IDs to check
+        in: body
+        name: receipts_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CheckReceiptsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Receipts retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.SuccessResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    $ref: '#/definitions/models.ExpoPushReceipt'
+                  type: object
+              type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden (not admin)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Check status of push notification receipts
+      tags:
+      - Notifications (Admin)
+  /admin/notifications/send-raw:
+    post:
+      consumes:
+      - application/json
+      description: Allows sending one or more fully customized Expo push notification
+        messages. Requires admin privileges.
+      parameters:
+      - description: Raw Expo Notification Messages
+        in: body
+        name: raw_notification_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SendRawNotificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Raw notifications request processed, check tickets
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ExpoPushTicket'
+                  type: array
+              type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden (not admin)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Send raw Expo push notifications
+      tags:
+      - Notifications (Admin)
+  /admin/notifications/tokens/{expo_token}/delete:
+    delete:
+      description: Deletes a specific Expo push token from the system. Requires admin
+        privileges.
+      parameters:
+      - description: Expo Push Token
+        in: path
+        name: expo_token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted token
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Invalid Expo Push Token in path
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden (not admin)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a specific push token
+      tags:
+      - Notifications (Admin)
+  /admin/notifications/tokens/user/{user_id}/delete:
+    delete:
+      description: Deletes all registered Expo push tokens for a given user ID. Requires
+        admin privileges.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted user tokens
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Invalid User ID
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden (not admin)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete all push tokens for a user
+      tags:
+      - Notifications (Admin)
+  /admin/notifications/users/{user_id}/send:
+    post:
+      consumes:
+      - application/json
+      description: Sends a push notification to a user specified by their ID. Requires
+        admin privileges.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Notification Content
+        in: body
+        name: notification_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SendNotificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notification sent, check tickets
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ExpoPushTicket'
+                  type: array
+              type: object
+        "400":
+          description: Invalid request payload or User ID
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden (not admin)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: User not found or no tokens for user
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Send notification to a specific user
+      tags:
+      - Notifications (Admin)
+  /all-sellers:
+    get:
+      consumes:
+      - application/json
+      description: Get all public profile of any seller
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Seller'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all public seller profile
+      tags:
+      - seller
+  /analytics/customer:
+    get:
+      description: Retrieves insights into customer behavior
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.CustomerBehavior'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get customer behavior analytics
+      tags:
+      - Analytics
+  /analytics/sales:
+    get:
+      description: Retrieves sales trends over a specified period
+      parameters:
+      - default: month
+        description: 'Period for sales trends (default: month)'
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.SalesDataPoint'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get sales trends analytics
+      tags:
+      - Analytics
+  /analytics/summary:
+    get:
+      description: Retrieves an overview of business metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AnalyticsSummary'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get business summary analytics
+      tags:
+      - Analytics
+  /auth/admin-login:
+    get:
+      consumes:
+      - application/json
+      description: Login admin with query password
+      parameters:
+      - description: Admin password
+        in: query
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login admin
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login with phone number and password
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Login user
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh JWT access token using a valid refresh token
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with phone number
+      parameters:
+      - description: Registration details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.RegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using OTP
+      parameters:
+      - description: Reset password details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Reset password
+      tags:
+      - auth
+  /auth/reset-password/request:
+    post:
+      consumes:
+      - application/json
+      description: Request password reset using phone number
+      parameters:
+      - description: Reset request details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RequestPasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - auth
+  /auth/send-otp:
+    post:
+      consumes:
+      - application/json
+      description: Sen an SMS to a phone number with OTP
+      parameters:
+      - description: Phone details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.SendPhoneOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Send an OTP to phone number
+      tags:
+      - auth
+  /auth/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verify phone number with OTP
+      parameters:
+      - description: Verification details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.VerifyPhoneRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Verify phone number
+      tags:
+      - auth
+  /cart:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all items currently in the authenticated user's cart.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved cart
+          schema:
+            $ref: '#/definitions/models.Cart'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user's cart
+      tags:
+      - cart
+  /cart/clear:
+    delete:
+      consumes:
+      - application/json
+      description: Removes all items from the authenticated user's cart.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message confirming cart clearance
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Clear cart
+      tags:
+      - cart
+  /cart/items:
+    post:
+      consumes:
+      - application/json
+      description: Adds a specified product with a given quantity to the authenticated
+        user's cart.
+      parameters:
+      - description: Product ID, Variant ID and quantity to add
+        in: body
+        name: cartItem
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AddItemToCartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Item added successfully, returns updated cart
+          schema:
+            $ref: '#/definitions/models.Cart'
+        "400":
+          description: Invalid request payload or item data
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add item to cart
+      tags:
+      - cart
+  /cart/items/{productID}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a specific product from the authenticated user's cart.
+      parameters:
+      - description: ID of the product
+        in: path
+        name: productID
+        required: true
+        type: string
+      - description: ID of the variant to remove
+        in: path
+        name: variantID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Item removed successfully, returns updated cart
+          schema:
+            $ref: '#/definitions/models.Cart'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Item not found in cart
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove item from cart
+      tags:
+      - cart
+    put:
+      consumes:
+      - application/json
+      description: Updates the quantity of a specific product in the authenticated
+        user's cart. If quantity is 0, item is removed.
+      parameters:
+      - description: ID of the product
+        in: path
+        name: productID
+        required: true
+        type: string
+      - description: ID of the variant to update
+        in: path
+        name: variantID
+        required: true
+        type: string
+      - description: New quantity for the item
+        in: body
+        name: quantityUpdate
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Item quantity updated successfully, returns updated cart
+          schema:
+            $ref: '#/definitions/models.Cart'
+        "400":
+          description: Invalid request payload or item data
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Item not found in cart
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update item quantity in cart
+      tags:
+      - cart
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Check if the API is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check endpoint
+      tags:
+      - health
+  /interactions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all product interactions for the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Interaction'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user interactions
+      tags:
+      - interactions
+    post:
+      consumes:
+      - application/json
+      description: Create a new interaction or update existing interaction for the
+        authenticated user.
+      parameters:
+      - description: Interaction details (UserID and timestamp will be set automatically)
+        in: body
+        name: interaction
+        required: true
+        schema:
+          $ref: '#/definitions/models.Interaction'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Interaction'
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create or update interaction
+      tags:
+      - interactions
+  /invites/by-code:
+    get:
+      description: Retrieve invite details using the invite code.
+      parameters:
+      - description: Invite code
+        in: query
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.InviteCode'
+        "400":
+          description: Missing code
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Invite not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get invite by code
+      tags:
+      - invites
+  /invites/by-owner:
+    get:
+      description: Retrieve all invites created by a specific owner.
+      parameters:
+      - description: Owner of the invites
+        in: query
+        name: owner
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.InviteCode'
+            type: array
+        "400":
+          description: Missing owner
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get invites by owner
+      tags:
+      - invites
+  /invites/generate:
+    post:
+      description: Generate a new invite code for the given owner.
+      parameters:
+      - description: Owner of the invite
+        in: query
+        name: owner
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.InviteCode'
+        "400":
+          description: Missing owner
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Generate invite
+      tags:
+      - invites
+  /invites/increment:
+    post:
+      description: Increment the signup count for an invite code.
+      parameters:
+      - description: Invite code
+        in: query
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Signup count incremented
+          schema:
+            type: string
+        "400":
+          description: Missing code
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Invite not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Increment invite signups
+      tags:
+      - invites
+  /neutral-image:
+    post:
+      consumes:
+      - application/json
+      description: This endpoint receives a list of image URLs, downloads them concurrently,
+        removes their backgrounds (conceptual), and returns the image that has the
+        background color closest to a predefined set of neutral colors.
+      parameters:
+      - description: List of image URLs
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ImageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.Result'
+        "400":
+          description: Invalid request or no images provided
+          schema:
+            type: string
+        "500":
+          description: No valid images processed
+          schema:
+            type: string
+      summary: Find image with the most neutral background
+      tags:
+      - images
+  /notifications-seller/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers or updates the Expo push token for the authenticated
+        user.
+      parameters:
+      - description: Expo Push Token
+        in: body
+        name: token_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully registered token
+          schema:
+            $ref: '#/definitions/models.NotificationToken'
+        "400":
+          description: Invalid request payload or token format
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Register Expo push token for juno
+      tags:
+      - Notifications
+  /notifications-seller/unregister:
+    post:
+      consumes:
+      - application/json
+      description: Unregisters a specific Expo push token for the authenticated user.
+        The token to unregister must be provided in the request body.
+      parameters:
+      - description: Expo Push Token to unregister
+        in: body
+        name: token_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully unregistered token
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unregister Expo push token
+      tags:
+      - Notifications
+  /notifications/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers or updates the Expo push token for the authenticated
+        user.
+      parameters:
+      - description: Expo Push Token
+        in: body
+        name: token_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully registered token
+          schema:
+            $ref: '#/definitions/models.NotificationToken'
+        "400":
+          description: Invalid request payload or token format
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Register Expo push token
+      tags:
+      - Notifications
+  /notifications/unregister:
+    post:
+      consumes:
+      - application/json
+      description: Unregisters a specific Expo push token for the authenticated user.
+        The token to unregister must be provided in the request body.
+      parameters:
+      - description: Expo Push Token to unregister
+        in: body
+        name: token_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully unregistered token
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unregister Expo push token
+      tags:
+      - Notifications
+  /notifications/users/me/send:
+    post:
+      consumes:
+      - application/json
+      description: Sends a push notification to the currently authenticated user.
+      parameters:
+      - description: Notification Content
+        in: body
+        name: notification_request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SendNotificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notification sent, check tickets for status
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ExpoPushTicket'
+                  type: array
+              type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error or failed to send notification
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Send notification to authenticated user
+      tags:
+      - Notifications
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: Create new orders from cart items. Orders are automatically split
+        based on the seller ID of the items.
+      parameters:
+      - description: Order Creation Request
+        in: body
+        name: orderRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/models.Order'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create new orders from cart items, split by brand/seller.
+      tags:
+      - Orders
+  /orders/{orderID}/items/{orderItemID}/tracking:
+    get:
+      description: Retrieves detailed tracking information for a given order item.
+      parameters:
+      - description: Order ID (UUID)
+        in: path
+        name: orderID
+        required: true
+        type: string
+      - description: Order Item ID (UUID)
+        in: path
+        name: orderItemID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TrackingInfo'
+        "400":
+          description: Invalid Order ID or Order Item ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Order, Order Item, or Tracking Information not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Track the location and status of a specific item within an order.
+      tags:
+      - Orders
+  /orders/estimated-delivery:
+    get:
+      description: Calculates an estimated delivery date based on a standard processing
+        time.
+      parameters:
+      - description: Product ID
+        in: query
+        name: productID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: contains estimated_date (time.Time) and message (string)
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Missing or invalid Product ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get the estimated delivery date for a product if ordered today.
+      tags:
+      - Orders
+  /outfits:
+    get:
+      description: Get all outfits saved by the authenticated user. Each outfit in
+        the response will include ImageURL if set.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Outfit'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user's outfits
+      tags:
+      - outfits
+    post:
+      consumes:
+      - application/json
+      description: Create a new outfit for the authenticated user.
+      parameters:
+      - description: Outfit details (UserID will be taken from token, ID will be generated
+          if empty, ImageURL is optional)
+        in: body
+        name: outfit
+        required: true
+        schema:
+          $ref: '#/definitions/models.Outfit'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Outfit'
+        "400":
+          description: Invalid request payload or validation error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create outfit
+      tags:
+      - outfits
+  /outfits/{id}:
+    delete:
+      description: Delete an outfit by ID for the authenticated user.
+      parameters:
+      - description: Outfit ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Outfit ID is required
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden - User does not own this outfit
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Outfit not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete outfit
+      tags:
+      - outfits
+    get:
+      description: Get a specific outfit by ID for the authenticated user. The response
+        will include ImageURL if set.
+      parameters:
+      - description: Outfit ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Outfit'
+        "400":
+          description: Outfit ID is required
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden - User does not own this outfit
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Outfit not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get outfit
+      tags:
+      - outfits
+    put:
+      consumes:
+      - application/json
+      description: Update an existing outfit for the authenticated user. The outfit
+        ID is taken from the path.
+      parameters:
+      - description: Outfit ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Outfit details to update (UserID will be taken from token, ImageURL
+          is optional)
+        in: body
+        name: outfit
+        required: true
+        schema:
+          $ref: '#/definitions/models.Outfit'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Outfit'
+        "400":
+          description: Invalid request payload or validation error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden - User does not own this outfit
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Outfit not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update outfit
+      tags:
+      - outfits
+  /outfits/{id}/rename:
+    patch:
+      consumes:
+      - application/json
+      description: Rename an existing outfit for the authenticated user. The response
+        will include ImageURL if set.
+      parameters:
+      - description: Outfit ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New name for the outfit
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RenameOutfitRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Outfit'
+        "400":
+          description: Invalid request payload, outfit ID, or new name
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden - User does not own this outfit
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Outfit not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rename outfit
+      tags:
+      - outfits
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: List all products with optional filters
+      parameters:
+      - description: Category ID
+        in: query
+        name: category
+        type: string
+      - description: Seller ID
+        in: query
+        name: seller_id
+        type: string
+      - description: Minimum price
+        in: query
+        name: min_price
+        type: number
+      - description: Maximum price
+        in: query
+        name: max_price
+        type: number
+      - description: Sort field (price, created_at)
+        in: query
+        name: sort
+        type: string
+      - description: Sort order (asc, desc)
+        in: query
+        name: order
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: List products
+      tags:
+      - products
+  /products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a product by ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get product
+      tags:
+      - products
+  /products/filter:
+    post:
+      consumes:
+      - application/json
+      description: Get products based on a JSON filter object
+      parameters:
+      - description: Product Filter Payload
+        in: body
+        name: filter
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProductFilter'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to retrieve products
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: List products by filters
+      tags:
+      - products
+  /products/filters/available:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all distinct filter options (like sizes, colors,
+        categories, price ranges) available for products.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ProductFilters'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get available product filters
+      tags:
+      - products
+  /products/search:
+    get:
+      consumes:
+      - application/json
+      description: Search for products by a keyword. Supports pagination.
+      parameters:
+      - description: Keyword to search for
+        in: query
+        name: keyword
+        required: true
+        type: string
+      - description: 'Product status (active, draft, archived) default: active'
+        in: query
+        name: status
+        type: string
+      - description: Page number (e.g., '1')
+        in: query
+        name: page
+        type: string
+      - description: Items per page (e.g., '20')
+        in: query
+        name: limit
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Search products
+      tags:
+      - products
+  /seller-profile:
+    get:
+      consumes:
+      - application/json
+      description: Get public profile of any seller
+      parameters:
+      - description: Seller ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Seller'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get public seller profile
+      tags:
+      - seller
+  /seller/analytics/inventory:
+    get:
+      description: Retrieves inventory analytics for the authenticated seller (sell-through
+        rate, stock turnover, GMROII, dead inventory, DOI).
+      parameters:
+      - description: Start time for the analytics period (RFC3339 format, e.g., 2023-01-01T00:00:00Z)
+        in: query
+        name: startTime
+        type: string
+      - description: End time for the analytics period (RFC3339 format, e.g., 2023-01-30T23:59:59Z)
+        in: query
+        name: endTime
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.InventoryAnalyticsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get inventory analytics for a seller
+      tags:
+      - Seller Analytics
+  /seller/analytics/orders:
+    get:
+      description: Retrieves order analytics for the authenticated seller (number
+        of orders, AOV, order status breakdown, top products).
+      parameters:
+      - description: Start time for the analytics period (RFC3339 format, e.g., 2023-01-01T00:00:00Z)
+        in: query
+        name: startTime
+        type: string
+      - description: End time for the analytics period (RFC3339 format, e.g., 2023-01-30T23:59:59Z)
+        in: query
+        name: endTime
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.OrderAnalyticsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get order analytics for a seller
+      tags:
+      - Seller Analytics
+  /seller/analytics/product/{productID}:
+    get:
+      description: Retrieves analytics for a specific product of the authenticated
+        seller (impressions, added to cart, likes, dislikes, purchases).
+      parameters:
+      - description: Product ID
+        in: path
+        name: productID
+        required: true
+        type: string
+      - description: Start time for the analytics period (RFC3339 format, e.g., 2023-01-01T00:00:00Z)
+        in: query
+        name: startTime
+        type: string
+      - description: End time for the analytics period (RFC3339 format, e.g., 2023-01-30T23:59:59Z)
+        in: query
+        name: endTime
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ProductAnalyticsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get product analytics for a seller
+      tags:
+      - Seller Analytics
+  /seller/analytics/sales:
+    get:
+      description: Retrieves sales analytics for the authenticated seller (sales,
+        AOV, units sold, conversion rate, cart abandonment, repeat purchase rate,
+        RPC).
+      parameters:
+      - description: Start time for the analytics period (RFC3339 format, e.g., 2023-01-01T00:00:00Z)
+        in: query
+        name: startTime
+        type: string
+      - description: End time for the analytics period (RFC3339 format, e.g., 2023-01-30T23:59:59Z)
+        in: query
+        name: endTime
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SalesAnalyticsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get sales analytics for a seller
+      tags:
+      - Seller Analytics
+  /seller/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login with seller credentials
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.SellerLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Login seller
+      tags:
+      - seller-auth
+  /seller/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new seller with business details
+      parameters:
+      - description: Seller registration details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.Seller'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Seller'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Register a new seller
+      tags:
+      - seller-auth
+  /seller/inventory/bulk-update:
+    post:
+      consumes:
+      - application/json
+      description: Perform bulk updates to inventory items for a seller
+      parameters:
+      - description: Inventory updates
+        in: body
+        name: updates
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/models.InventoryBulkUpdate'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Bulk update inventory
+      tags:
+      - Inventory
+  /seller/inventory/categories:
+    get:
+      description: Retrieve inventory categories for a seller
+      parameters:
+      - description: Seller ID
+        in: query
+        name: sellerId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Category'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get inventory categories
+      tags:
+      - Inventory
+  /seller/inventory/low-stock:
+    get:
+      description: Retrieve inventory items with stock below a specified threshold
+      parameters:
+      - description: Seller ID
+        in: query
+        name: sellerId
+        required: true
+        type: string
+      - default: 10
+        description: 'Stock threshold (default: 10)'
+        in: query
+        name: threshold
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.LowStockAlert'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get low stock items
+      tags:
+      - Inventory
+  /seller/orders:
+    get:
+      description: Retrieve orders associated with a specific seller
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Order'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get orders for the authenticated seller.
+      tags:
+      - Orders
+  /seller/orders/{id}/fulfill:
+    post:
+      description: Mark a specific order as fulfilled
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Fulfill an order
+      tags:
+      - Orders
+  /seller/orders/{orderID}/status:
+    put:
+      consumes:
+      - application/json
+      description: Allows updating the status of an order and records the change in
+        an audit history.
+      parameters:
+      - description: Order ID (UUID)
+        in: path
+        name: orderID
+        required: true
+        type: string
+      - description: Status Update Payload
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Message: Order status updated successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request payload, ID format, or status value
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Invalid status transition or order already in target status
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update the status of an order.
+      tags:
+      - Orders
+  /seller/products:
+    get:
+      consumes:
+      - application/json
+      description: List all products for the authenticated seller
+      parameters:
+      - description: Product status (active, draft, archived)
+        in: query
+        name: status
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List seller products
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Create a new product for the authenticated seller
+      parameters:
+      - description: Product details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create product
+      tags:
+      - products
+  /seller/products/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing product for the authenticated seller
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete product
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: Update an existing product for the authenticated seller
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Product details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.Product'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update product
+      tags:
+      - products
+  /seller/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get the profile of the authenticated seller
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Seller'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get seller profile
+      tags:
+      - seller
+    put:
+      consumes:
+      - application/json
+      description: Update the profile of the authenticated seller
+      parameters:
+      - description: Seller profile
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.Seller'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Seller'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update seller profile
+      tags:
+      - seller
+  /seller/shopify:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Upload all products for the authenticated seller from shopify
+        List all products for the authenticated seller
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Upload products from shopify
+      tags:
+      - products
+  /tournaments:
+    get:
+      description: Get a list of all tournaments.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Tournament'
+            type: array
+        "500":
+          description: Failed to fetch tournaments
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Fetch all tournaments
+      tags:
+      - tournaments
+    post:
+      consumes:
+      - application/json
+      description: Adds a new tournament to the system. Requires admin privileges.
+      parameters:
+      - description: Tournament object to be created
+        in: body
+        name: tournament
+        required: true
+        schema:
+          $ref: '#/definitions/models.Tournament'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Tournament'
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to create tournament
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new tournament
+      tags:
+      - tournaments
+  /tournaments/{id}:
+    get:
+      description: Get detailed information about a specific tournament, including
+        its leaderboard.
+      parameters:
+      - description: Tournament ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Includes 'tournament' and 'leaderboard'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Tournament ID is required
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Tournament not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to fetch tournament details
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get tournament details with rankings
+      tags:
+      - tournaments
+  /tournaments/{id}/add-outfit:
+    post:
+      consumes:
+      - application/json
+      description: Adds an existing outfit to a tournament's list of featured outfits.
+        Requires appropriate permissions.
+      parameters:
+      - description: Tournament ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Outfit ID to add
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AddOutfitToTournamentPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.SuccessResponse'
+            - properties:
+                message:
+                  type: string
+              type: object
+        "400":
+          description: Invalid payload or missing Outfit ID
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: User ID not found in token
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden (e.g., not allowed to add outfits)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Tournament or Outfit not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict (e.g., outfit already featured)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to add outfit
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add an outfit to a tournament
+      tags:
+      - tournaments
+  /tournaments/{id}/leaderboard:
+    get:
+      description: Get the leaderboard for a specific tournament.
+      parameters:
+      - description: Tournament ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Leaderboard'
+        "400":
+          description: Tournament ID is required
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Leaderboard not found or not yet calculated
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to fetch leaderboard
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get tournament leaderboard
+      tags:
+      - tournaments
+  /tournaments/{id}/outfits:
+    get:
+      description: Get a list of outfits participating in a tournament, along with
+        their vote counts.
+      parameters:
+      - description: Tournament ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.TournamentOutfit'
+            type: array
+        "400":
+          description: Tournament ID is required
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Tournament not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to fetch tournament outfits
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Fetch participating outfits with vote counts
+      tags:
+      - tournaments
+  /tournaments/{id}/outfits/{outfitId}/votes:
+    get:
+      description: Get the vote breakdown for a specific outfit in a tournament.
+      parameters:
+      - description: Tournament ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Outfit ID
+        in: path
+        name: outfitId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "400":
+          description: Tournament ID and Outfit ID are required
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Tournament or Outfit not found, or outfit not in tournament
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to get outfit vote breakdown
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get individual outfit vote breakdown
+      tags:
+      - tournaments
+  /tournaments/{id}/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers the authenticated user for a specific tournament. UserID
+        is primarily taken from auth token.
+      parameters:
+      - description: Tournament ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Optional: User ID (only as fallback, not for production)'
+        in: body
+        name: payload
+        schema:
+          $ref: '#/definitions/handlers.RegisterForTournamentPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.SuccessResponse'
+            - properties:
+                message:
+                  type: string
+              type: object
+        "400":
+          description: Tournament ID is required
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: User ID not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden (e.g., tournament not open)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Tournament or User not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict (e.g., already registered, tournament full)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to register
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Register user for tournament
+      tags:
+      - tournaments
+  /tournaments/{id}/stats:
+    get:
+      description: Get statistics for a specific tournament.
+      parameters:
+      - description: Tournament ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TournamentStats'
+        "400":
+          description: Tournament ID is required
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Tournament not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to get tournament statistics
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Tournament statistics and metrics
+      tags:
+      - tournaments
+  /tournaments/{id}/vote:
+    post:
+      consumes:
+      - application/json
+      description: Records the authenticated user's vote for an outfit in a tournament.
+      parameters:
+      - description: Tournament ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Vote details (OutfitID, VoteType, Comment)
+        in: body
+        name: vote
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.VoteInTournamentPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.SuccessResponse'
+            - properties:
+                message:
+                  type: string
+              type: object
+        "400":
+          description: Invalid payload or missing fields
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: User ID not found in token
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden (e.g., tournament not active, outfit not part of
+            tournament)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Tournament not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Failed to record vote
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Record swipe (vote)
+      tags:
+      - tournaments
+  /users/{userID}/orders:
+    get:
+      description: Retrieve all orders for a specific user, structured in a map where
+        keys are seller IDs, and values are maps of order status to lists of orders.
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              additionalProperties:
+                items:
+                  $ref: '#/definitions/models.Order'
+                type: array
+              type: object
+            type: object
+        "400":
+          description: Invalid User ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Orders not found for user (can be an empty map/object if user
+            exists but has no orders)
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all orders for a user, grouped by brand/seller and then by delivery
+        status.
+      tags:
+      - Orders
+  /users/addresses:
+    post:
+      consumes:
+      - application/json
+      description: Add a new address for the authenticated user
+      parameters:
+      - description: Address details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.Address'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add address
+      tags:
+      - users
+  /users/addresses/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing address for the authenticated user
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete address
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update an existing address for the authenticated user
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Address details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.Address'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update address
+      tags:
+      - users
+  /users/measurements:
+    put:
+      consumes:
+      - application/json
+      description: Update the measurement profile of the authenticated user
+      parameters:
+      - description: Measurement profile
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.MeasurementProfile'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update measurements
+      tags:
+      - users
+  /users/notifications:
+    put:
+      consumes:
+      - application/json
+      description: Update the notification preferences of the authenticated user
+      parameters:
+      - description: Notification preferences
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.NotificationPrefs'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update notification preferences
+      tags:
+      - users
+  /users/preferences:
+    put:
+      consumes:
+      - application/json
+      description: Update the preferences of the authenticated user
+      parameters:
+      - description: User preferences
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserPreferences'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update preferences
+      tags:
+      - users
+  /users/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get the profile of the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - users
+  /users/profiles:
+    get:
+      consumes:
+      - application/json
+      description: Get the profile of multiple users
+      parameters:
+      - description: Number of users to return
+        in: query
+        name: limit
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get multiple user profiles
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

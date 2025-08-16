@@ -4,6 +4,7 @@ import { LogOut, UserCircle } from 'lucide-react';
 import PlatformStats from './PlatformStats';
 import ManageSellers from './ManageSellers';
 import ManageInvites from './ManageInvites';
+import ManageNotifications from './ManageNotifications';
 
 const AdminDashboard: React.FC = () => {
   const { admin, logout } = useAdminAuth();
@@ -35,6 +36,7 @@ const AdminDashboard: React.FC = () => {
           <PlatformStats />
           <ManageSellers />
           <ManageInvites />
+          <ManageNotifications />
         </main>
       </div>
     </div>

@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Search, Gift, CheckCircle, XCircle } from 'lucide-react';
 import FormInput from '../seller/FormInput';
-
-const API_BASE_URL = 'https://junoapi-710509977105.asia-south2.run.app/api/v1';
+import { getInvitesByOwner, generateInviteForOwner } from '../../api/adminApi';
 
 interface InviteData {
   owner: string;
@@ -25,15 +24,11 @@ const ManageInvites: React.FC = () => {
     setInviteData(null);
     setSearchedEmail(email);
     try {
-      // Assuming this endpoint exists from the ambassador panel implementation
-      const response = await fetch(`${API_BASE_URL}/invites/by-owner?owner=${encodeURIComponent(email)}`);
-      if (response.ok) {
-        const data = await response.json();
-        setInviteData(data);
-      } else if (response.status === 404) {
-        setInviteData(null);
+      const invites = await getInvitesByOwner(email);
+      if (invites && invites.length > 0) {
+        setInviteData(invites[0]);
       } else {
-        throw new Error('Failed to check for invite.');
+        setInviteData(null);
       }
     } catch (err) {
       setError('An error occurred while checking the email.');
@@ -47,15 +42,8 @@ const ManageInvites: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/invites/generate?owner=${encodeURIComponent(searchedEmail)}`, {
-        method: 'POST',
-      });
-      if (response.ok) {
-        const newInvite = await response.json();
-        setInviteData(newInvite);
-      } else {
-        throw new Error('Failed to generate invite.');
-      }
+      const newInvite = await generateInviteForOwner(searchedEmail);
+      setInviteData(newInvite);
     } catch (err) {
       setError('An error occurred while generating the invite.');
     } finally {

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, CheckCircle, XCircle, MoreVertical } from 'lucide-react';
+import { getAllSellers } from '../../api/adminApi';
 
 interface Seller {
   id: string;
   business_name: string;
   email: string;
-  status: 'active' | 'pending' | 'rejected';
-  createdAt: string;
+  status: 'active' | 'pending' | 'suspended' | 'inactive';
+  created_at: string;
 }
 
 const ManageSellers: React.FC = () => {
@@ -19,13 +20,7 @@ const ManageSellers: React.FC = () => {
     const fetchSellers = async () => {
       setIsLoading(true);
       try {
-        // In a real app: const fetchedSellers = await api.getAllSellers();
-        const fetchedSellers: Seller[] = [
-          { id: '1', business_name: 'Fashion Forward', email: 'contact@fashionfwd.com', status: 'active', createdAt: '2023-10-26T10:00:00Z' },
-          { id: '2', business_name: 'Urban Threads', email: 'support@urbanthreads.com', status: 'pending', createdAt: '2023-10-25T12:30:00Z' },
-          { id: '3', business_name: 'Classic Couture', email: 'info@classiccouture.com', status: 'active', createdAt: '2023-10-24T15:00:00Z' },
-          { id: '4', business_name: 'Rejected Store', email: 'hey@rejected.com', status: 'rejected', createdAt: '2023-10-23T11:00:00Z' },
-        ];
+        const fetchedSellers = await getAllSellers();
         setSellers(fetchedSellers);
       } catch (error) {
         console.error('Failed to fetch sellers:', error);
@@ -41,8 +36,8 @@ const ManageSellers: React.FC = () => {
     seller.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleApprove = (id: string) => alert(`Approving seller ${id}`);
-  const handleReject = (id: string) => alert(`Rejecting seller ${id}`);
+  const handleApprove = (id: string) => alert(`Action not available: No endpoint found to approve seller ${id}.`);
+  const handleReject = (id: string) => alert(`Action not available: No endpoint found to reject seller ${id}.`);
 
   return (
     <motion.div
@@ -95,7 +90,7 @@ const ManageSellers: React.FC = () => {
                       {seller.status}
                     </span>
                   </td>
-                  <td className="p-4 text-neutral-300">{new Date(seller.createdAt).toLocaleDateString()}</td>
+                  <td className="p-4 text-neutral-300">{new Date(seller.created_at).toLocaleDateString()}</td>
                   <td className="p-4">
                     {seller.status === 'pending' ? (
                       <div className="flex space-x-2">
