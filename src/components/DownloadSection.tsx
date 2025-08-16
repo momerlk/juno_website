@@ -47,7 +47,7 @@ const DownloadSection: React.FC = () => {
               </div>
             </a>
             <a
-              href="https://storage.googleapis.com/juno_media/constants/juno_0.5.0.apk"
+              href="https://storage.googleapis.com/juno_media/constants/juno_0.6.0.apk"
               className="btn bg-neutral-800 hover:bg-neutral-700 text-white flex-1 flex items-center justify-center group"
             >
               <div className="mr-3">
