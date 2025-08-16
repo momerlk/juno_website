@@ -90,3 +90,21 @@
     @apply bg-background/95 backdrop-blur-md border-b border-neutral-800;
   }
 }
+
+.logo-scroller {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, white 20%, white 80%, transparent);
+  mask-image: linear-gradient(to right, transparent, white 20%, white 80%, transparent);
+}
+
+.logo-scroller-inner {
+  display: flex;
+  width: fit-content;
+  animation: scroll 40s linear infinite;
+}
+
+@keyframes scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}

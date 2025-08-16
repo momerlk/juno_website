@@ -34,6 +34,7 @@ import AmbassadorProtectedRoute from "./components/ambassador/ProtectedRoute";
 
 import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
 import BrandPage from './components/BrandPage';
+import BrandsSection from './components/BrandsSection';
 
 function App() {
   useEffect(() => {
@@ -59,10 +60,13 @@ function App() {
                 <Route path="/" element={
                   <main>
                     <Hero />
+                    <BrandsSection />
                     <JunoApp />
                     <ScreenshotsSection />
                     <Mission />
                     <JunoStudio />
+                    
+                    
                     <Pricing />
                     <Team />
                     <DownloadSection />
