@@ -113,16 +113,16 @@ interface FormData {
 
   // Bank Account Details
   bank_details: {
-    bankName: string;
-    accountTitle: string;
-    accountNumber: string;
+    bank_name: string;
+    account_title: string;
+    account_number: string;
     iban: string;
-    branchCode: string;
-    branchAddress: string;
-    swiftCode: string;
-    paymentMethod: string;
-    paymentSchedule: string;
-    paymentThreshold: number;
+    branch_code: string;
+    branch_address: string;
+    swift_code: string;
+    payment_method: string;
+    payment_schedule: string;
+    payment_threshold: number;
   };
 
   // Shipping Settings
@@ -212,16 +212,16 @@ const SellerOnboarding: React.FC = () => {
       cnic_back: null,
     },
     bank_details: {
-      bankName: '',
-      accountTitle: '',
-      accountNumber: '',
+      bank_name: '',
+      account_title: '',
+      account_number: '',
       iban: '',
-      branchCode: '',
-      branchAddress: '',
-      swiftCode: '',
-      paymentMethod: 'Bank Transfer',
-      paymentSchedule: 'Weekly',
-      paymentThreshold: 1000
+      branch_code: '',
+      branch_address: '',
+      swift_code: '',
+      payment_method: 'Bank Transfer',
+      payment_schedule: 'Weekly',
+      payment_threshold: 1000
     },
     shipping_settings: {
       default_handling_time: 1,
@@ -327,8 +327,8 @@ const SellerOnboarding: React.FC = () => {
       case 3:
         return !!(formData.logo_url && formData.kyc_documents.cnic_front);
       case 4:
-        return !!(formData.bank_details.bankName && formData.bank_details.accountTitle && 
-                 formData.bank_details.accountNumber);
+        return !!(formData.bank_details.bank_name && formData.bank_details.account_title && 
+                 formData.bank_details.account_number);
       default:
         return true;
     }
@@ -781,7 +781,7 @@ const SellerOnboarding: React.FC = () => {
             <FormInput
               id="bankName"
               label="Bank Name"
-              value={formData.bank_details.bankName}
+              value={formData.bank_details.bank_name}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
                 bank_details: { ...prev.bank_details, bankName: value }
@@ -793,7 +793,7 @@ const SellerOnboarding: React.FC = () => {
             <FormInput
               id="accountTitle"
               label="Account Title"
-              value={formData.bank_details.accountTitle}
+              value={formData.bank_details.account_title}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
                 bank_details: { ...prev.bank_details, accountTitle: value }
@@ -807,7 +807,7 @@ const SellerOnboarding: React.FC = () => {
             <FormInput
               id="accountNumber"
               label="Account Number"
-              value={formData.bank_details.accountNumber}
+              value={formData.bank_details.account_number}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
                 bank_details: { ...prev.bank_details, accountNumber: value }
@@ -832,7 +832,7 @@ const SellerOnboarding: React.FC = () => {
             <FormInput
               id="branchCode"
               label="Branch Code"
-              value={formData.bank_details.branchCode}
+              value={formData.bank_details.branch_code}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
                 bank_details: { ...prev.bank_details, branchCode: value }
@@ -843,7 +843,7 @@ const SellerOnboarding: React.FC = () => {
             <FormInput
               id="branchAddress"
               label="Branch Address"
-              value={formData.bank_details.branchAddress}
+              value={formData.bank_details.branch_address}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
                 bank_details: { ...prev.bank_details, branchAddress: value }
@@ -856,7 +856,7 @@ const SellerOnboarding: React.FC = () => {
             <div className="space-y-1">
               <label className="block text-sm font-medium text-neutral-400">Payment Method</label>
               <select
-                value={formData.bank_details.paymentMethod}
+                value={formData.bank_details.payment_method}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
                   bank_details: { ...prev.bank_details, paymentMethod: e.target.value }
@@ -872,7 +872,7 @@ const SellerOnboarding: React.FC = () => {
             <div className="space-y-1">
               <label className="block text-sm font-medium text-neutral-400">Payment Schedule</label>
               <select
-                value={formData.bank_details.paymentSchedule}
+                value={formData.bank_details.payment_schedule}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
                   bank_details: { ...prev.bank_details, paymentSchedule: e.target.value }
@@ -974,11 +974,11 @@ const SellerOnboarding: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-neutral-400">Bank:</span>
-                <p className="text-white">{formData.bank_details.bankName}</p>
+                <p className="text-white">{formData.bank_details.bank_name}</p>
               </div>
               <div>
                 <span className="text-neutral-400">Account Title:</span>
-                <p className="text-white">{formData.bank_details.accountTitle}</p>
+                <p className="text-white">{formData.bank_details.account_title}</p>
               </div>
             </div>
           </div>
