@@ -113,7 +113,7 @@ const BrandPage: React.FC = () => {
           <img 
             src={seller.banner_url} 
             alt={`${seller.business_name} banner`} 
-            className="w-full h-64 object-cover" 
+            className="w-full h-96 object-cover" 
           />
           <div className="absolute inset-0 bg-black bg-opacity-50" />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">

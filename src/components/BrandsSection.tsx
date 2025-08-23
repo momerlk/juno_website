@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
 const logoFiles = [
-  'acid.jpg',
-  'kainaat.jpg', 'masha.jpg',
-  'rakh.jpg', 'zeerosh.jpg'
+  'enthenio.jpg',
+  'kainaat.jpg', 'mugho.jpg',
+  'rakh.jpg', 'zeerosh.jpg',
+  "zarukee.jpg", "egnar.jpg", 
+  "ukiyo.jpeg", 
 ];
 
 const logos = logoFiles.map(file => ({
@@ -25,7 +27,7 @@ const BrandsSection: React.FC = () => {
         <motion.h2 
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.3 }}
           className="text-center mb-12"
         >
           Featured Brands on <span className="gradient-text">Juno</span>
