@@ -779,24 +779,24 @@ const SellerOnboarding: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput
-              id="bankName"
+              id="bank_name"
               label="Bank Name"
               value={formData.bank_details.bank_name}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
-                bank_details: { ...prev.bank_details, bankName: value }
+                bank_details: { ...prev.bank_details, bank_name: value }
               }))}
               required
               placeholder="e.g., HBL, UBL, MCB"
             />
 
             <FormInput
-              id="accountTitle"
+              id="account_title"
               label="Account Title"
               value={formData.bank_details.account_title}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
-                bank_details: { ...prev.bank_details, accountTitle: value }
+                bank_details: { ...prev.bank_details, account_title: value }
               }))}
               required
               placeholder="Account holder name"
@@ -805,12 +805,12 @@ const SellerOnboarding: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput
-              id="accountNumber"
+              id="account_number"
               label="Account Number"
               value={formData.bank_details.account_number}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
-                bank_details: { ...prev.bank_details, accountNumber: value }
+                bank_details: { ...prev.bank_details, account_number: value }
               }))}
               required
               placeholder="Bank account number"
@@ -830,23 +830,23 @@ const SellerOnboarding: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput
-              id="branchCode"
+              id="branch_code"
               label="Branch Code"
               value={formData.bank_details.branch_code}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
-                bank_details: { ...prev.bank_details, branchCode: value }
+                bank_details: { ...prev.bank_details, branch_code: value }
               }))}
               placeholder="Branch code"
             />
 
             <FormInput
-              id="branchAddress"
+              id="branch_address"
               label="Branch Address"
               value={formData.bank_details.branch_address}
               onChange={(value) => setFormData(prev => ({
                 ...prev,
-                bank_details: { ...prev.bank_details, branchAddress: value }
+                bank_details: { ...prev.bank_details, branch_address: value }
               }))}
               placeholder="Branch address"
             />
@@ -859,7 +859,7 @@ const SellerOnboarding: React.FC = () => {
                 value={formData.bank_details.payment_method}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
-                  bank_details: { ...prev.bank_details, paymentMethod: e.target.value }
+                  bank_details: { ...prev.bank_details, payment_method: e.target.value }
                 }))}
                 className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
@@ -875,11 +875,10 @@ const SellerOnboarding: React.FC = () => {
                 value={formData.bank_details.payment_schedule}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
-                  bank_details: { ...prev.bank_details, paymentSchedule: e.target.value }
+                  bank_details: { ...prev.bank_details, payment_schedule: e.target.value }
                 }))}
                 className="w-full px-3 py-2 bg-background border border-neutral-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
-                <option value="Weekly">Weekly</option>
                 <option value="Bi-weekly">Bi-weekly</option>
                 <option value="Monthly">Monthly</option>
               </select>
