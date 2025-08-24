@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAmbassadorAuth } from '../../contexts/AmbassadorAuthContext';
 import { motion } from 'framer-motion';
-import { Gift, Users, LogOut, Copy, Check, Trophy } from 'lucide-react';
+import { Gift, Users, LogOut, Copy, Check, Trophy, DollarSign } from 'lucide-react';
 
 
 
@@ -231,6 +231,20 @@ const AmbassadorDashboard: React.FC = () => {
                         {rank === 1 && (
                             <p className="text-xs text-green-400 mt-1">You are #1! 🎉</p>
                         )}
+                      </div>
+                    </div>
+                    <div className="bg-background-light p-6 rounded-lg flex items-start">
+                      <DollarSign size={32} className="text-green-500 mr-4 flex-shrink-0" />
+                      <div className="w-full">
+                        <p className="text-neutral-400 text-sm">Revenue Generated for Juno</p>
+                        <p className="text-2xl font-bold text-white">Rs. 0</p>
+                      </div>
+                    </div>
+                    <div className="bg-background-light p-6 rounded-lg flex items-start">
+                      <DollarSign size={32} className="text-blue-500 mr-4 flex-shrink-0" />
+                      <div className="w-full">
+                        <p className="text-neutral-400 text-sm">Your Income (15% Commission)</p>
+                        <p className="text-2xl font-bold text-white">Rs. 0</p>
                       </div>
                     </div>
                   </div>
