@@ -76,6 +76,7 @@ const AmbassadorDashboard: React.FC = () => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showAllSignups, setShowAllSignups] = useState(false);
 
   const SIGNUP_KPI = 100;
 
@@ -266,6 +267,64 @@ const AmbassadorDashboard: React.FC = () => {
                   </button>
                 </motion.div>
               )}
+
+              {inviteData && inviteData.length > 0 && inviteData[0].users.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-8 bg-background rounded-lg p-8"
+                >
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="flex items-center text-2xl font-semibold text-white">
+                      <Users size={24} className="mr-3 text-accent" />
+                      Recent Signups
+                    </h2>
+                    {signedUpUsers.length > 2 && (
+                        <button 
+                            onClick={() => setShowAllSignups(!showAllSignups)} 
+                            className="text-sm text-primary hover:underline"
+                        >
+                            {showAllSignups ? 'Show Less' : `Show All (${signedUpUsers.length})`}
+                        </button>
+                    )}
+                  </div>
+                  {isLoadingUsers ? (
+                    <div className="flex justify-center items-center p-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="border-b border-neutral-700">
+                            <th className="p-4 text-neutral-400 font-semibold">User</th>
+                            <th className="p-4 text-neutral-400 font-semibold">Phone Number</th>
+                            <th className="p-4 text-neutral-400 font-semibold">Joined At</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(showAllSignups ? signedUpUsers : signedUpUsers.slice(0, 2)).map((user) => (
+                            <tr key={user.id} className="border-b border-neutral-800 hover:bg-white/5">
+                              <td className="p-4 text-white">
+                                <div className="flex items-center">
+                                  <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full mr-4 object-cover" />
+                                  <div>
+                                    <p className="font-semibold">{user.name}</p>
+                                    <p className="text-sm text-neutral-400">{user.id}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4 text-white">{user.phone_number}</td>
+                              <td className="p-4 text-white">{new Date(user.created_at).toLocaleDateString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </motion.div>
+              )}
               
               {leaderboard.length > 0 && (
                 <motion.div
@@ -308,54 +367,6 @@ const AmbassadorDashboard: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                </motion.div>
-              )}
-
-              {inviteData && inviteData.length > 0 && inviteData[0].users.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="mt-8 bg-background rounded-lg p-8"
-                >
-                  <h2 className="flex items-center text-2xl font-semibold text-white mb-4">
-                    <Users size={24} className="mr-3 text-accent" />
-                    Recent Signups
-                  </h2>
-                  {isLoadingUsers ? (
-                    <div className="flex justify-center items-center p-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="border-b border-neutral-700">
-                            <th className="p-4 text-neutral-400 font-semibold">User</th>
-                            <th className="p-4 text-neutral-400 font-semibold">Phone Number</th>
-                            <th className="p-4 text-neutral-400 font-semibold">Joined At</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {signedUpUsers.map((user) => (
-                            <tr key={user.id} className="border-b border-neutral-800 hover:bg-white/5">
-                              <td className="p-4 text-white">
-                                <div className="flex items-center">
-                                  <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full mr-4 object-cover" />
-                                  <div>
-                                    <p className="font-semibold">{user.name}</p>
-                                    <p className="text-sm text-neutral-400">{user.id}</p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="p-4 text-white">{user.phone_number}</td>
-                              <td className="p-4 text-white">{new Date(user.created_at).toLocaleDateString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
                 </motion.div>
               )}
             </>
