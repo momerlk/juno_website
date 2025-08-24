@@ -3,6 +3,9 @@ import { useAmbassadorAuth } from '../../contexts/AmbassadorAuthContext';
 import { motion } from 'framer-motion';
 import { Gift, Users, LogOut, Copy, Check, Trophy } from 'lucide-react';
 
+
+
+
 interface InviteData {
   owner: string;
   code: string;
@@ -74,6 +77,8 @@ const AmbassadorDashboard: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const SIGNUP_KPI = 100;
+
   useEffect(() => {
     const getData = async () => {
       if (ambassador) {
@@ -139,7 +144,20 @@ const AmbassadorDashboard: React.FC = () => {
     }
   };
 
+  const formatAmbassadorName = (email: string) => {
+    if (!email) return '';
+    return email.split('@')[0];
+  };
+
   const rank = leaderboard.findIndex(i => i.owner === ambassador?.email) + 1;
+  const signupProgress = inviteData ? (inviteData[0].signups / SIGNUP_KPI) * 100 : 0;
+
+  let signupsToNextRank = null;
+  if (rank > 1 && inviteData && leaderboard[rank - 2]) {
+      const currentUserSignups = inviteData[0].signups;
+      const nextRankSignups = leaderboard[rank - 2].signups;
+      signupsToNextRank = nextRankSignups - currentUserSignups + 1;
+  }
 
   return (
     <div className="min-h-screen bg-background-light py-8 px-4 sm:px-6 lg:px-8">
@@ -171,8 +189,8 @@ const AmbassadorDashboard: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-background rounded-lg p-8"
                 >
-                  <h2 className="text-2xl font-semibold text-white mb-2">Your Invite Code</h2>
-                  <p className="text-neutral-400 mb-6">Share your code to earn rewards!</p>
+                  <h2 className="text-2xl font-semibold text-white mb-2">Your Stats</h2>
+                  <p className="text-neutral-400 mb-6">Track your progress and rewards.</p>
                   
                   <div className="flex items-center justify-center bg-background-light p-4 rounded-lg border-2 border-dashed border-primary mb-6">
                     <span className="text-3xl font-bold text-primary tracking-widest mr-4">{inviteData[0].code}</span>
@@ -182,18 +200,37 @@ const AmbassadorDashboard: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-background-light p-6 rounded-lg flex items-center">
-                      <Gift size={32} className="text-secondary mr-4" />
-                      <div>
+                    <div className="bg-background-light p-6 rounded-lg flex items-start">
+                      <Gift size={32} className="text-secondary mr-4 flex-shrink-0" />
+                      <div className="w-full">
                         <p className="text-neutral-400 text-sm">Total Signups</p>
-                        <p className="text-2xl font-bold text-white">{inviteData[0].signups}</p>
+                        <p className="text-2xl font-bold text-white">
+                          {inviteData[0].signups}
+                          <span className="text-lg text-neutral-400"> / {SIGNUP_KPI}</span>
+                        </p>
+                        <div className="w-full bg-neutral-700 mt-2 h-2 rounded-full">
+                          <motion.div
+                            className="bg-secondary h-2 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${signupProgress > 100 ? 100 : signupProgress}%` }}
+                            transition={{ duration: 1 }}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-background-light p-6 rounded-lg flex items-center">
-                      <Users size={32} className="text-accent mr-4" />
-                      <div>
+                    <div className="bg-background-light p-6 rounded-lg flex items-start">
+                      <Users size={32} className="text-accent mr-4 flex-shrink-0" />
+                      <div className="w-full">
                         <p className="text-neutral-400 text-sm">Your Rank</p>
                         <p className="text-2xl font-bold text-white">{rank > 0 ? rank : 'N/A'}</p>
+                        {rank > 1 && signupsToNextRank !== null && (
+                            <p className="text-xs text-neutral-400 mt-1">
+                                <span className="font-bold text-white">{signupsToNextRank}</span> more to rank #{rank - 1}
+                            </p>
+                        )}
+                        {rank === 1 && (
+                            <p className="text-xs text-green-400 mt-1">You are #1! 🎉</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -250,7 +287,7 @@ const AmbassadorDashboard: React.FC = () => {
                                     {index === 2 && <Trophy size={16} className="ml-2 text-yellow-600" />}
                                 </div>
                             </td>
-                            <td className="p-4 text-white">{entry.owner}</td>
+                            <td className="p-4 text-white">{formatAmbassadorName(entry.owner)}</td>
                             <td className="p-4 text-white font-semibold text-right">{entry.signups}</td>
                           </tr>
                         ))}
@@ -316,3 +353,5 @@ const AmbassadorDashboard: React.FC = () => {
 };
 
 export default AmbassadorDashboard;
+
+
