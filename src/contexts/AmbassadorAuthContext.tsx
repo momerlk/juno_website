@@ -6,6 +6,7 @@ interface InviteData {
   owner: string;
   code: string;
   signups: number;
+  users : string[];
 }
 
 interface Ambassador {
@@ -19,6 +20,7 @@ interface AmbassadorAuthContextType {
   login: (email: string) => void;
   logout: () => void;
   fetchInviteData: () => Promise<Array<InviteData> | null>;
+  fetchAllInvites: () => Promise<Array<InviteData> | null>;
   generateInviteCode: () => Promise<InviteData | null>;
 }
 
@@ -63,6 +65,24 @@ export const AmbassadorAuthProvider: React.FC<{ children: React.ReactNode }> = (
     }
   };
 
+
+  const fetchAllInvites = async (): Promise<Array<InviteData> | null> => {
+    if (!ambassador) return null;
+    try {
+      const response = await fetch(`${API_BASE_URL}/invites/all`);
+      if (response.ok) {
+        return await response.json();
+      }
+      if (response.status === 404) {
+        return null; // No code exists yet
+      }
+      throw new Error('Failed to fetch invite data');
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  };
+
   const generateInviteCode = async (): Promise<InviteData | null> => {
     if (!ambassador) return null;
     try {
@@ -87,6 +107,7 @@ export const AmbassadorAuthProvider: React.FC<{ children: React.ReactNode }> = (
       login,
       logout,
       fetchInviteData,
+      fetchAllInvites,
       generateInviteCode
     }}>
       {children}
