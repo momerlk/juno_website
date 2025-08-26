@@ -11,7 +11,7 @@ import { BarChart3, CheckSquare, FileText, TrendingUp, Settings, Users, Bell, Lo
 import MyPerformance from './MyPerformance';
 import CEOOverview from './CEOOverview';
 
-const Header = ({ employee, onLogout }) => (
+const Header = ({ employee, onLogout } : any ) => (
     <header className="bg-background-light text-white p-4 flex justify-between items-center shadow-md border-b border-neutral-800">
         <div className="text-xl font-bold">Juno Work Management</div>
         <div className="flex items-center">
@@ -24,9 +24,9 @@ const Header = ({ employee, onLogout }) => (
     </header>
 );
 
-const TabNavigation = ({ tabs, activeTab, onTabChange }) => (
+const TabNavigation = ({ tabs, activeTab, onTabChange } : any) => (
     <nav className="flex border-b border-neutral-700">
-        {tabs.map(tab => (
+        {tabs.map((tab : any) => (
             <button 
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
@@ -38,7 +38,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => (
     </nav>
 );
 
-const getTabsForRole = (role) => {
+const getTabsForRole = (role : any) => {
     const baseTabs = [
         { id: 'tasks', label: 'My Tasks', icon: CheckSquare },
         { id: 'reports', label: 'Reports', icon: FileText },

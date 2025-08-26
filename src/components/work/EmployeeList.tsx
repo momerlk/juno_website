@@ -75,3 +75,5 @@ const EmployeeList: React.FC = () => {
         </div>
     );
 };
+
+export default EmployeeList;

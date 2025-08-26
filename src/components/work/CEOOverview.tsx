@@ -14,6 +14,35 @@ interface PerformanceStatsData {
   last_report_date?: string;
 }
 
+
+const PerformanceTable = ({ data }) => (
+    <div className="overflow-x-auto">
+        <table className="min-w-full text-sm text-left text-neutral-300">
+            <thead className="text-xs text-neutral-400 uppercase bg-neutral-800">
+                <tr>
+                    <th scope="col" className="px-6 py-3">Employee</th>
+                    <th scope="col" className="px-6 py-3 text-center">Completed</th>
+                    <th scope="col" className="px-6 py-3 text-center">In Progress</th>
+                    <th scope="col" className="px-6 py-3 text-center">Pending</th>
+                    <th scope="col" className="px-6 py-3 text-center">Avg. Rating</th>
+                </tr>
+            </thead>
+            <tbody>
+                {data.map(emp => (
+                    <tr key={emp.employee_id} className="bg-background-light border-b border-neutral-800 hover:bg-neutral-800/50">
+                        <td className="px-6 py-4 font-medium text-white whitespace-nowrap">{emp.employee_name}</td>
+                        <td className="px-6 py-4 text-center text-success">{emp.tasks_completed}</td>
+                        <td className="px-6 py-4 text-center text-secondary">{emp.tasks_processing}</td>
+                        <td className="px-6 py-4 text-center text-warning">{emp.tasks_pending}</td>
+                        <td className="px-6 py-4 text-center">{emp.average_rating.toFixed(1)}%</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </div>
+);
+
+
 const CEOOverview: React.FC = () => {
   const [performanceData, setPerformanceData] = useState<PerformanceStatsData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,29 +139,4 @@ const CEOOverview: React.FC = () => {
   );
 };
 
-const PerformanceTable = ({ data }) => (
-    <div className="overflow-x-auto">
-        <table className="min-w-full text-sm text-left text-neutral-300">
-            <thead className="text-xs text-neutral-400 uppercase bg-neutral-800">
-                <tr>
-                    <th scope="col" className="px-6 py-3">Employee</th>
-                    <th scope="col" className="px-6 py-3 text-center">Completed</th>
-                    <th scope="col" className="px-6 py-3 text-center">In Progress</th>
-                    <th scope="col" className="px-6 py-3 text-center">Pending</th>
-                    <th scope="col" className="px-6 py-3 text-center">Avg. Rating</th>
-                </tr>
-            </thead>
-            <tbody>
-                {data.map(emp => (
-                    <tr key={emp.employee_id} className="bg-background-light border-b border-neutral-800 hover:bg-neutral-800/50">
-                        <td className="px-6 py-4 font-medium text-white whitespace-nowrap">{emp.employee_name}</td>
-                        <td className="px-6 py-4 text-center text-success">{emp.tasks_completed}</td>
-                        <td className="px-6 py-4 text-center text-secondary">{emp.tasks_processing}</td>
-                        <td className="px-6 py-4 text-center text-warning">{emp.tasks_pending}</td>
-                        <td className="px-6 py-4 text-center">{emp.average_rating.toFixed(1)}%</td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+export default CEOOverview;

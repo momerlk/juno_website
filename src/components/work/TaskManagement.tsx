@@ -20,6 +20,36 @@ interface Employee {
     name: string;
 }
 
+const CreateTaskForm = ({ employees, onCreate }) => {
+    const [formData, setFormData] = useState({ title: '', description: '', assigned_to: '', priority: 'medium', due_date: '' });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onCreate(formData);
+        setFormData({ title: '', description: '', assigned_to: '', priority: 'medium', due_date: '' });
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="p-4 bg-background-light rounded-md mb-4 space-y-4 border border-neutral-700">
+            <input type="text" placeholder="Title" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required/>
+            <textarea placeholder="Description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required/>
+            <div className="flex space-x-4">
+                <select value={formData.assigned_to} onChange={e => setFormData({...formData, assigned_to: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required>
+                    <option value="">Assign to...</option>
+                    {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)} 
+                </select>
+                <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+                <input type="date" value={formData.due_date} onChange={e => setFormData({...formData, due_date: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required/>
+            </div>
+            <button type="submit" className="w-full bg-success text-white p-2 rounded hover:bg-success/90">Create Task</button>
+        </form>
+    );
+}
+
 const TaskManagement: React.FC = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -118,32 +148,4 @@ const TaskManagement: React.FC = () => {
     );
 };
 
-const CreateTaskForm = ({ employees, onCreate }) => {
-    const [formData, setFormData] = useState({ title: '', description: '', assigned_to: '', priority: 'medium', due_date: '' });
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onCreate(formData);
-        setFormData({ title: '', description: '', assigned_to: '', priority: 'medium', due_date: '' });
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="p-4 bg-background-light rounded-md mb-4 space-y-4 border border-neutral-700">
-            <input type="text" placeholder="Title" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required/>
-            <textarea placeholder="Description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required/>
-            <div className="flex space-x-4">
-                <select value={formData.assigned_to} onChange={e => setFormData({...formData, assigned_to: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required>
-                    <option value="">Assign to...</option>
-                    {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)} 
-                </select>
-                <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                </select>
-                <input type="date" value={formData.due_date} onChange={e => setFormData({...formData, due_date: e.target.value})} className="w-full p-2 rounded bg-background border-neutral-600 text-white focus:ring-primary focus:border-primary" required/>
-            </div>
-            <button type="submit" className="w-full bg-success text-white p-2 rounded hover:bg-success/90">Create Task</button>
-        </form>
-    );
-}
+export default TaskManagement;
