@@ -152,9 +152,13 @@ export const WorkAuthProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const createTask = async (task: CreateTaskRequest) => {
     try {
+      const formattedTask = {
+        ...task,
+        due_date: new Date(task.due_date).toISOString().slice(0, 19) + "Z",
+      };
       const data = await apiRequest('/work/tasks', {
         method: 'POST',
-        body: JSON.stringify(task),
+        body: JSON.stringify(formattedTask),
       });
       return data;
     } catch (error) {
