@@ -35,7 +35,7 @@ const DownloadSection: React.FC = () => {
             className="flex flex-col sm:flex-row gap-6 justify-center max-w-lg mx-auto"
           >
             <a
-              href=" https://testflight.apple.com/join/Pzt9wnBm"
+              href=" https://testflight.apple.com/join/JwJEGyUP"
               className="btn bg-neutral-800 hover:bg-neutral-700 text-white flex-1 flex items-center justify-center group"
             >
               <div className="mr-3">
@@ -47,7 +47,7 @@ const DownloadSection: React.FC = () => {
               </div>
             </a>
             <a
-              href="https://storage.googleapis.com/juno_media/constants/juno_0.6.0.apk"
+              href="https://storage.googleapis.com/juno_media/constants/juno_0.8.0.apk"
               className="btn bg-neutral-800 hover:bg-neutral-700 text-white flex-1 flex items-center justify-center group"
             >
               <div className="mr-3">
