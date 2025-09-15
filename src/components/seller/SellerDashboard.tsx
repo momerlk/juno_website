@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import { Loader, Upload, CreditCard, LogOut, Store, ShoppingCart, Package, Home, User, BarChart } from 'lucide-react';
 import SubscriptionModal from './SubscriptionModal';
-import * as api from '../../api/sellerApi';
+import * as api from "../../api";
+
+
 import ManageOrders from './ManageOrders';
 import ManageInventory from './ManageInventory';
 import Profile from './Profile';
@@ -17,20 +19,20 @@ const HomeTabContent: React.FC = () => {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && seller?.token) {
+    if (file) {
       setSelectedFile(file);
-      try {
+      try{
         setUploading(true);
-        // Assuming a function like this exists in the api namespace
-        // await api.Seller.uploadProductCatalogue(seller.token, file);
-        alert('File upload functionality is not yet implemented.');
+        await api.uploadProductCatalogue(seller!.token, file);
         setUploading(false);
-      } catch (error) {
-        alert("Failed to upload product catalogue, error = " + error);
-        setUploading(false);
+      }catch(error){
+        alert("failed to upload product catalogue, error = " + error);
       }
+
+      console.log('File selected:', file.name);
     }
   };
+
 
   const handleSubscriptionUpdate = async (plan: any, paymentDetails: any) => {
     // TODO: Implement actual subscription API call
