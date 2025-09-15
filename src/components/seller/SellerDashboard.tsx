@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
-import { Loader, Upload, CreditCard, LogOut, Store, ShoppingCart, Package, Home, User } from 'lucide-react';
+import { Loader, Upload, CreditCard, LogOut, Store, ShoppingCart, Package, Home, User, BarChart } from 'lucide-react';
 import SubscriptionModal from './SubscriptionModal';
 import * as api from '../../api/sellerApi';
 import ManageOrders from './ManageOrders';
 import ManageInventory from './ManageInventory';
 import Profile from './Profile';
+import Analytics from './Analytics';
 
 const HomeTabContent: React.FC = () => {
   const { seller } = useSellerAuth();
@@ -136,6 +137,8 @@ const SellerDashboard: React.FC = () => {
         return <ManageInventory />;
       case 'profile':
         return <Profile />;
+      case 'analytics':
+        return <Analytics />;
       default:
         return <HomeTabContent />;
     }
@@ -172,6 +175,10 @@ const SellerDashboard: React.FC = () => {
                 <button onClick={() => setActiveTab('profile')} className={`flex items-center space-x-2 pb-4 border-b-2 ${activeTab === 'profile' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-white'}`}>
                     <User size={20} />
                     <span>Profile</span>
+                </button>
+                 <button onClick={() => setActiveTab('analytics')} className={`flex items-center space-x-2 pb-4 border-b-2 ${activeTab === 'analytics' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-white'}`}>
+                    <BarChart size={20} />
+                    <span>Analytics</span>
                 </button>
             </div>
         </div>
