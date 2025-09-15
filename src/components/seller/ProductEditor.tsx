@@ -38,8 +38,8 @@ const Section: React.FC<{title: string, icon: React.ReactNode, children: React.R
     </div>
 );
 
-const productTypes = ["T-Shirt", "Kurta", "Shalwar", "Dupatta", "Jeans", "Jacket", "Hoodie", "Bag", "Shoe", "Belt", "Watch", "Accessory"];
-const apparelTypes = ["T-Shirt", "Kurta", "Shalwar", "Dupatta", "Jeans", "Jacket", "Hoodie"];
+const productTypes = ["T-Shirt", "Polo Shirt", "Shirt", "Kurta", "Shalwar Kameez", "Trousers", "Jeans", "Shorts", "Jacket", "Zipper", "Hoodie", "Sweatshirt", "Dupatta", "Scarf", "Bag", "Shoe", "Sandal", "Belt", "Watch", "Accessory"];
+const apparelTypes = ["T-Shirt", "Polo Shirt", "Shirt", "Kurta", "Shalwar Kameez", "Trousers", "Jeans", "Shorts", "Jacket", "Zipper", "Hoodie", "Sweatshirt", "Dupatta", "Scarf"];
 
 const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
     const { seller } = useSellerAuth();

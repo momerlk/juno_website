@@ -24,7 +24,7 @@ const getShopifyThumbnail = (url: string, size: string = '200x200') => {
     }
 };
 
-const productTypes = ["T-Shirt", "Kurta", "Shalwar", "Dupatta", "Jeans", "Jacket", "Hoodie", "Bag", "Shoe", "Belt", "Watch", "Accessory"];
+const productTypes = ["T-Shirt", "Polo Shirt", "Shirt", "Kurta", "Shalwar Kameez", "Trousers", "Jeans", "Shorts", "Jacket", "Zipper", "Hoodie", "Sweatshirt", "Dupatta", "Scarf", "Bag", "Shoe", "Sandal", "Belt", "Watch", "Accessory"];
 
 const ProductListItem: React.FC<{
   product: Product;
