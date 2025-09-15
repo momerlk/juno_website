@@ -6,6 +6,7 @@ import JunoStudioAccounts from './JunoStudioAccounts';
 import SubscriptionModal from './SubscriptionModal';
 import * as api from '../../api';
 import JunoStudioDownloads from './JunoStudioDownloads';
+import ManageOrders from './ManageOrders';
 
 const SellerDashboard: React.FC = () => {
   const { seller, logout } = useSellerAuth();
@@ -61,7 +62,13 @@ const SellerDashboard: React.FC = () => {
             <LogOut size={20} className="mr-2" />
             Sign Out
           </button>
-        </div>
+        </div>        
+        
+        <ManageOrders />
+
+
+        <div style={{marginBottom : 100, marginTop : 100}}></div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <motion.div
@@ -163,6 +170,7 @@ const SellerDashboard: React.FC = () => {
             <p className="text-neutral-400">Analytics dashboard coming soon</p>
           </div>
         </motion.div> */}
+        
         <JunoStudioDownloads />
 
         <SubscriptionModal
