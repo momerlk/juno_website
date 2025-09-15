@@ -24,17 +24,22 @@ const getShopifyThumbnail = (url: string, size: string = '200x200') => {
     }
 };
 
-const ProductListItem: React.FC<{ 
+const productTypes = ["T-Shirt", "Kurta", "Shalwar", "Dupatta", "Jeans", "Jacket", "Hoodie", "Bag", "Shoe", "Belt", "Watch", "Accessory"];
+
+const ProductListItem: React.FC<{
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
   onUpdateVariant: (productId: string, variantId: string, data: Partial<Variant>) => void;
-}> = React.memo(({ product, onEdit, onDelete, onUpdateVariant }) => {
+  onUpdateProduct: (productId: string, data: Partial<Product>) => void;
+}> = React.memo(({ product, onEdit, onDelete, onUpdateVariant, onUpdateProduct }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const totalInventory = useMemo(() => {
     return product.variants.reduce((total, v) => total + (v.inventory?.quantity || 0), 0);
   }, [product.variants]);
+
+  const currentGender = useMemo(() => product.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase())) || '', [product.tags]);
 
   const handleVariantChange = (variantId: string, field: 'price' | 'quantity', value: string) => {
     const numericValue = parseFloat(value);
@@ -45,6 +50,20 @@ const ProductListItem: React.FC<{
         } else {
             onUpdateVariant(product.id, variantId, { [field]: numericValue });
         }
+    }
+  };
+
+  const handleProductTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onUpdateProduct(product.id, { product_type: e.target.value });
+  };
+
+  const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newGender = e.target.value;
+    const otherTags = product.tags?.filter(t => !['male', 'female', 'unisex'].includes(t.toLowerCase())) || [];
+    if (newGender) {
+        onUpdateProduct(product.id, { tags: [...otherTags, newGender] });
+    } else {
+        onUpdateProduct(product.id, { tags: otherTags });
     }
   };
 
@@ -60,6 +79,32 @@ const ProductListItem: React.FC<{
           <p className={`text-sm font-semibold ${totalInventory > 0 ? 'text-green-500' : 'text-red-500'}`}>
             {totalInventory} units in stock
           </p>
+        </div>
+        <div className="flex flex-col space-y-2 w-48">
+            <div>
+                <label className="text-xs text-neutral-500">Product Type</label>
+                <select
+                    value={product.product_type || ''}
+                    onChange={handleProductTypeChange}
+                    className="w-full bg-neutral-800 text-white rounded-md p-1 text-sm border border-neutral-700"
+                >
+                    <option value="">Select Type</option>
+                    {productTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                </select>
+            </div>
+            <div>
+                <label className="text-xs text-neutral-500">Gender</label>
+                <select
+                    value={currentGender}
+                    onChange={handleGenderChange}
+                    className="w-full bg-neutral-800 text-white rounded-md p-1 text-sm border border-neutral-700"
+                >
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="unisex">Unisex</option>
+                </select>
+            </div>
         </div>
         <div className="flex items-center space-x-2">
           <button onClick={() => setIsExpanded(!isExpanded)} className="p-2 text-neutral-400 hover:text-white">
@@ -83,8 +128,8 @@ const ProductListItem: React.FC<{
                   <p className="text-sm text-neutral-300 col-span-1">{variant.title}</p>
                   <div className="col-span-1">
                     <label className="text-xs text-neutral-500">Price</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       defaultValue={variant.price}
                       onBlur={(e) => handleVariantChange(variant.id, 'price', e.target.value)}
                       className="w-full bg-neutral-800 text-white rounded-md p-1 text-sm border border-neutral-700"
@@ -92,8 +137,8 @@ const ProductListItem: React.FC<{
                   </div>
                   <div className="col-span-1">
                     <label className="text-xs text-neutral-500">Stock</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       defaultValue={variant.inventory?.quantity || 0}
                       onBlur={(e) => handleVariantChange(variant.id, 'quantity', e.target.value)}
                       className="w-full bg-neutral-800 text-white rounded-md p-1 text-sm border border-neutral-700"
@@ -201,6 +246,24 @@ const ManageInventory: React.FC = () => {
         }
     };
 
+    const handleUpdateProduct = async (productId: string, data: Partial<Product>) => {
+        if (!seller?.token) return;
+
+        const originalProducts = products;
+        const product = originalProducts.find(p => p.id === productId);
+        if (!product) return;
+
+        const updatedProduct = { ...product, ...data };
+
+        setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
+
+        const response = await api.Seller.UpdateProduct(seller.token, updatedProduct);
+        if (!response.ok) {
+            alert('Failed to update product.');
+            setProducts(originalProducts);
+        }
+    };
+
     const filteredProducts = useMemo(() => 
         products.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()))
     , [products, searchQuery]);
@@ -239,6 +302,7 @@ const ManageInventory: React.FC = () => {
                         onEdit={handleOpenEditorForUpdate}
                         onDelete={handleDeleteProduct}
                         onUpdateVariant={handleUpdateVariant}
+                        onUpdateProduct={handleUpdateProduct}
                     />
                 ))}
             </div>
