@@ -10,6 +10,24 @@ interface ProductEditorProps {
     onClose: () => void;
 }
 
+const getShopifyThumbnail = (url: string, size: string = '100x100') => {
+    if (!url) return 'https://via.placeholder.com/100';
+    try {
+        const parts = url.split('?');
+        const path = parts[0];
+        const query = parts[1] ? `?${parts[1]}` : '';
+        const lastDotIndex = path.lastIndexOf('.');
+        if (lastDotIndex === -1) return url;
+        
+        const pathWithoutExt = path.substring(0, lastDotIndex);
+        const ext = path.substring(lastDotIndex);
+        
+        return `${pathWithoutExt}_${size}${ext}${query}`;
+    } catch (e) {
+        return url;
+    }
+};
+
 const Section: React.FC<{title: string, icon: React.ReactNode, children: React.ReactNode}> = ({ title, icon, children }) => (
     <div className="bg-background p-6 rounded-lg border border-neutral-700">
         <div className="flex items-center mb-4">
@@ -179,8 +197,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
         }
 
         if (issues.length > 0) {
-            alert(`Please resolve the following issues:
-- ${issues.join("\n- ")}`);
+            alert(`Please resolve the following issues:\n- ${issues.join("\n- ")}`);
             return;
         }
 
@@ -280,7 +297,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                         <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                             {formData.images?.map((url, index) => (
                                 <div key={index} className="relative group">
-                                    <img src={url} alt={`Product image ${index + 1}`} className="w-full h-24 object-cover rounded-md" />
+                                    <img src={getShopifyThumbnail(url)} loading="lazy" alt={`Product image ${index + 1}`} className="w-full h-24 object-cover rounded-md" />
                                     <button type="button" onClick={() => handleRemoveImage(index)} className="absolute top-1 right-1 bg-red-500/80 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button>
                                 </div>
                             ))}
@@ -296,7 +313,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                         {formData.options?.map((opt, index) => (
                             <div key={index} className="p-4 bg-background rounded-md border border-neutral-700">
                                 <div className="flex justify-between items-center">
-                                    <input type="text" placeholder="Option name (e.g. Size)" value={opt.name} onChange={e => handleOptionChange(index, e.target.value)} className="bg-neutral-800 text-white p-1 rounded-md border border-neutral-600" />
+                                    <input type="text" placeholder="Option name (e.g. Size)" defaultValue={opt.name} onBlur={e => handleOptionChange(index, e.target.value)} className="bg-neutral-800 text-white p-1 rounded-md border border-neutral-600" />
                                     <button type="button" onClick={() => removeOption(index)}><Trash2 size={16} className="text-red-500" /></button>
                                 </div>
                                 <div className="mt-2">
@@ -348,4 +365,5 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
 };
 
 export default ProductEditor;
+
 

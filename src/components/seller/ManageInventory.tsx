@@ -2,16 +2,34 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 import { Product, Variant } from '../../constants/types';
-import { Plus, Edit, Trash2, Search, ChevronDown, ChevronUp, MoreVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductEditor from './ProductEditor';
+
+const getShopifyThumbnail = (url: string, size: string = '200x200') => {
+    if (!url) return 'https://via.placeholder.com/200'; // Return a placeholder if no URL
+    try {
+        const parts = url.split('?');
+        const path = parts[0];
+        const query = parts[1] ? `?${parts[1]}` : '';
+        const lastDotIndex = path.lastIndexOf('.');
+        if (lastDotIndex === -1) return url;
+        
+        const pathWithoutExt = path.substring(0, lastDotIndex);
+        const ext = path.substring(lastDotIndex);
+        
+        return `${pathWithoutExt}_${size}${ext}${query}`;
+    } catch (e) {
+        return url; // Return original url if parsing fails
+    }
+};
 
 const ProductListItem: React.FC<{ 
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
   onUpdateVariant: (productId: string, variantId: string, data: Partial<Variant>) => void;
-}> = ({ product, onEdit, onDelete, onUpdateVariant }) => {
+}> = React.memo(({ product, onEdit, onDelete, onUpdateVariant }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const totalInventory = useMemo(() => {
@@ -22,17 +40,20 @@ const ProductListItem: React.FC<{
     const numericValue = parseFloat(value);
     if (!isNaN(numericValue)) {
         if (field === 'quantity') {
-            onUpdateVariant(product.id, variantId, { inventory: { ...product.variants.find(v=>v.id === variantId)?.inventory, quantity: numericValue } });
+            const variant = product.variants.find(v => v.id === variantId);
+            onUpdateVariant(product.id, variantId, { inventory: { ...variant?.inventory, quantity: numericValue } });
         } else {
             onUpdateVariant(product.id, variantId, { [field]: numericValue });
         }
     }
   };
 
+  const thumbnailUrl = getShopifyThumbnail(product.images[0]);
+
   return (
     <motion.div layout className="bg-background-light rounded-lg border border-neutral-700 overflow-hidden">
       <div className="p-4 flex items-center space-x-4">
-        <img src={product.images[0]} alt={product.title} className="w-20 h-20 rounded-md object-cover bg-neutral-800" />
+        <img src={thumbnailUrl} alt={product.title} loading="lazy" className="w-20 h-20 rounded-md object-cover bg-neutral-800" />
         <div className="flex-grow">
           <p className="font-bold text-white">{product.title}</p>
           <p className="text-sm text-neutral-400">{product.variants.length} variant(s)</p>
@@ -86,7 +107,7 @@ const ProductListItem: React.FC<{
       </AnimatePresence>
     </motion.div>
   );
-};
+});
 
 const ManageInventory: React.FC = () => {
     const { seller } = useSellerAuth();
@@ -103,7 +124,6 @@ const ManageInventory: React.FC = () => {
         if (!seller?.token) return;
         setIsLoading(true);
         try {
-            // Note: The API does not support search, so filtering is done client-side.
             const response = await api.Seller.GetProducts(seller.token, pageNum);
             if (response.ok) {
                 const newProducts = response.body || [];
@@ -144,8 +164,8 @@ const ManageInventory: React.FC = () => {
     const handleCloseEditor = () => {
         setIsEditorOpen(false);
         setEditingProduct(null);
-        setPage(1); // Reset page
-        fetchProducts(1, searchQuery); // Refresh products
+        setPage(1);
+        fetchProducts(1, searchQuery);
     };
 
     const handleDeleteProduct = async (productId: string) => {
@@ -175,7 +195,6 @@ const ManageInventory: React.FC = () => {
 
         const response = await api.Seller.UpdateProduct(seller.token, updatedProduct);
         if (response.ok) {
-            // alert('Variant updated!');
             setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
         } else {
             alert('Failed to update variant.');
@@ -246,3 +265,4 @@ const ManageInventory: React.FC = () => {
 };
 
 export default ManageInventory;
+
