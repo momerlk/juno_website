@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 import { motion } from 'framer-motion';
-import { Truck, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { Truck, ArrowRight, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
 import { Order, OrderStatus } from '../../constants/orders';
 import { Product } from '../../constants/types';
 
@@ -67,6 +67,28 @@ const ManageOrders: React.FC = () => {
       }
     } catch (error) {
       alert('An error occurred while updating status.');
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!seller?.token || !seller.user) return;
+
+    if (window.confirm('Are you sure you want to cancel this order?')) {
+        try {
+            const payload: api.Seller.StatusUpdatePayload = {
+                status: 'cancelled',
+                changed_by_id: seller.user.id,
+                changed_by_name: seller.user.business_name,
+            };
+            const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, payload);
+            if (response.ok) {
+                fetchOrders();
+            } else {
+                alert('Failed to cancel order.');
+            }
+        } catch (error) {
+            alert('An error occurred while cancelling the order.');
+        }
     }
   };
 
@@ -196,7 +218,7 @@ const ManageOrders: React.FC = () => {
                     {isPacked && canUpdate && (
                       <button
                         onClick={() => handleBookDelivery(order.id!)}
-                        className="flex items-center justify-center px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors whitespace-nowrap"
+                        className="flex items-center justify-center px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors whitespace-nowrap"
                       >
                         Book Delivery <Truck size={16} className="ml-2" />
                       </button>
@@ -204,10 +226,18 @@ const ManageOrders: React.FC = () => {
                     {!isPacked && canUpdate && nextStatus && (
                       <button
                         onClick={() => handleUpdateStatus(order.id!, order.status)}
-                        className="flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
+                        className="flex items-center justify-center px-3 py-2 text-sm bg-neutral-800 text-white rounded-md hover:bg-neutral-700 transition-colors whitespace-nowrap"
                       >
                         Mark as {nextStatus} <ArrowRight size={16} className="ml-2" />
                       </button>
+                    )}
+                    {canUpdate && (
+                        <button
+                            onClick={() => handleCancelOrder(order.id!)}
+                            className="flex items-center justify-center px-3 py-2 text-sm bg-neutral-800 text-white rounded-md hover:bg-red-700 transition-colors whitespace-nowrap"
+                        >
+                            Cancel Order <XCircle size={16} className="ml-2" />
+                        </button>
                     )}
                     {!canUpdate && order.status !== 'delivered' && (
                        <p className="text-sm text-green-500 text-right">Order in transit.</p>
