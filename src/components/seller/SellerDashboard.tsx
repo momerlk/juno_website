@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
-import { Loader, Upload, CreditCard, LogOut, Store, ShoppingCart, Package, Home } from 'lucide-react';
+import { Loader, Upload, CreditCard, LogOut, Store, ShoppingCart, Package, Home, User } from 'lucide-react';
 import SubscriptionModal from './SubscriptionModal';
 import * as api from '../../api/sellerApi';
 import ManageOrders from './ManageOrders';
 import ManageInventory from './ManageInventory';
+import Profile from './Profile';
 
 const HomeTabContent: React.FC = () => {
   const { seller } = useSellerAuth();
@@ -133,6 +134,8 @@ const SellerDashboard: React.FC = () => {
         return <ManageOrders />;
       case 'inventory':
         return <ManageInventory />;
+      case 'profile':
+        return <Profile />;
       default:
         return <HomeTabContent />;
     }
@@ -165,6 +168,10 @@ const SellerDashboard: React.FC = () => {
                 <button onClick={() => setActiveTab('inventory')} className={`flex items-center space-x-2 pb-4 border-b-2 ${activeTab === 'inventory' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-white'}`}>
                     <Package size={20} />
                     <span>Inventory</span>
+                </button>
+                <button onClick={() => setActiveTab('profile')} className={`flex items-center space-x-2 pb-4 border-b-2 ${activeTab === 'profile' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-white'}`}>
+                    <User size={20} />
+                    <span>Profile</span>
                 </button>
             </div>
         </div>
