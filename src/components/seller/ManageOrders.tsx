@@ -270,6 +270,14 @@ const ManageOrders: React.FC = () => {
                       <p className="text-md font-semibold text-white mb-2">Order Items ({order.order_items?.length})</p>
                       {order.order_items?.map((item) => {
                         const product = productDetails[item.product_id];
+                        const variant = product && (item as any).variant_id
+                          ? product.variants.find(v => v.id === (item as any).variant_id)
+                          : null;
+                        
+                        const optionsDisplay = variant
+                          ? Object.entries(variant.options).map(([key, value]) => `${key}: ${value}`).join(', ')
+                          : (item.size || item.color) ? `${item.size || ''}${item.size && item.color ? ', ' : ''}${item.color || ''}` : null;
+
                         return (
                           <div key={item.id} className="flex items-center mb-3 pb-3 border-b border-neutral-700 last:border-b-0 last:pb-0 last:mb-0">
                             {loadingProducts.has(item.product_id) && <div className="w-16 h-16 rounded-md bg-neutral-800 animate-pulse mr-4"/>}
@@ -277,7 +285,7 @@ const ManageOrders: React.FC = () => {
                             <div className="flex-grow">
                               <p className="text-sm font-semibold text-white">{product?.title || 'Loading...'}</p>
                               <p className="text-xs text-neutral-400">Qty: {item.quantity} | Price: Rs. {item.unit_price}</p>
-                              {(item.size || item.color) && <p className="text-xs text-neutral-400">{item.size}{item.size && item.color && ', '}{item.color}</p>}
+                              {optionsDisplay && <p className="text-xs text-neutral-400">{optionsDisplay}</p>}
                             </div>
                           </div>
                         )
