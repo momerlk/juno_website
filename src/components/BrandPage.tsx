@@ -76,7 +76,7 @@ const BrandPage: React.FC = () => {
   };
 
   const iosUrl = 'https://testflight.apple.com/join/JwJEGyUP';
-  const androidUrl = 'https://storage.googleapis.com/juno_media/constants/juno_0.8.0.apk';
+  const androidUrl = 'https://storage.googleapis.com/juno_media/constants/juno_0.9.0.apk';
   const qrCodeApiBase = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&bgcolor=1c1c1c&color=ffffff&data=';
 
   if (isLoading) {
