@@ -34,6 +34,9 @@ import AmbassadorProtectedRoute from "./components/ambassador/ProtectedRoute";
 import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
 import BrandPage from './components/BrandPage';
 import BrandsSection from './components/BrandsSection';
+import BlogIndexPage from './components/blog/BlogIndexPage';
+import BlogPostPage from './components/blog/BlogPostPage';
+import WritePage from './components/blog/WritePage';
 import ProductPage from './components/ProductPage';
 import DownloadRedirect from './components/DownloadRedirect';
 
@@ -79,6 +82,10 @@ function App() {
                       <DownloadSection />
                     </main>
                   } />
+
+                  <Route path="/blog" element={<BlogIndexPage />} />
+                  <Route path="/blog/:slug" element={<BlogPostPage />} />
+                  <Route path="/write" element={<WritePage />} />
 
                   <Route path="/download" element={<DownloadRedirect />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />

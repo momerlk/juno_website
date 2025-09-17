@@ -20,6 +20,7 @@ const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: 'Home', href: '#home' },
+    { name: 'Blog', href: '/blog' },
     { name: 'Features', href: '#screenshots' },
     { name: 'Studio', href: '#juno-studio' },
     { name: 'Pricing', href: '#pricing' },
