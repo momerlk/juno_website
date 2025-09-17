@@ -34,6 +34,7 @@ import AmbassadorProtectedRoute from "./components/ambassador/ProtectedRoute";
 import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
 import BrandPage from './components/BrandPage';
 import BrandsSection from './components/BrandsSection';
+import ProductPage from './components/ProductPage';
 import DownloadRedirect from './components/DownloadRedirect';
 
 import WorkAuth from "./components/work/WorkAuth";
@@ -147,6 +148,7 @@ function App() {
                     }
                   />
                   
+                  <Route path="/product/:productId" element={<ProductPage />} />
                   <Route path="/:brandName" element={<BrandPage />} />
                 </Routes>
                 {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && <Footer />}
