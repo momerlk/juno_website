@@ -71,7 +71,7 @@ const Hero: React.FC = () => {
               className="mt-12 grid grid-cols-3 gap-6 max-w-md mx-auto lg:mx-0"
             >
               <div className="text-center lg:text-left">
-                <div className="text-2xl font-bold text-white">400+</div>
+                <div className="text-2xl font-bold text-white">500+</div>
                 <div className="text-sm text-neutral-400">Active Users</div>
               </div>
               <div className="text-center lg:text-left">
