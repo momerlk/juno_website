@@ -1,88 +1,86 @@
 import React from 'react';
-import { Smartphone, Download } from 'lucide-react';
+import { Smartphone, Download, Send, Mail, Instagram } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
 const DownloadSection: React.FC = () => {
-  const [ref, inView] = useInView({
-    triggerOnce: true,
-    threshold: 0.1,
-  });
+  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
   return (
-    <section id="download" className="py-24 bg-gradient-to-br from-background via-background-light to-background relative overflow-hidden">
+    <section id="download" className="section bg-background-dark section-glow">
       <div className="container mx-auto">
-        <div className="relative z-10">
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            Get <span className="gradient-text">Started</span> with Juno
+          </h2>
+          <p className="text-lg text-neutral-400 max-w-3xl mx-auto">
+            Whether you're a fashion lover ready to discover, or a brand ready to be discovered, your journey starts here.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+          {/* Left Side: Download App */}
           <motion.div
-            ref={ref}
-            initial={{ opacity: 0, y: 20 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-10"
+            initial={{ opacity: 0, x: -40 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="card p-8 h-full flex flex-col justify-between"
           >
-            <h2 className="mb-4">
-              Ready to <span className="gradient-text">Transform</span> Your Fashion Experience?
-            </h2>
-            <p className="text-neutral-400 max-w-2xl mx-auto text-lg">
-              Download the Juno app today and start discovering fashion that matches your unique style.
-            </p>
+            <div>
+              <h3 className="text-3xl font-bold text-white mb-4">For Fashion Lovers</h3>
+              <p className="text-neutral-400 mb-8">Download the Juno app and start your personalized fashion discovery journey today.</p>
+            </div>
+            <div className="space-y-4">
+              <a
+                href="https://testflight.apple.com/join/JwJEGyUP"
+                className="btn bg-neutral-800 hover:bg-neutral-700 text-white w-full text-lg py-4 group"
+              >
+                <Smartphone size={24} className="mr-3 text-primary" />
+                <div className="text-left">
+                  <div className="text-sm">Download on the</div>
+                  <div className="text-lg font-semibold">App Store</div>
+                </div>
+              </a>
+              <a
+                href="https://storage.googleapis.com/juno_media/constants/juno_0.9.0.apk"
+                className="btn bg-neutral-800 hover:bg-neutral-700 text-white w-full text-lg py-4 group"
+              >
+                <Download size={24} className="mr-3 text-accent" />
+                <div className="text-left">
+                  <div className="text-sm">Get it on</div>
+                  <div className="text-lg font-semibold">Android</div>
+                </div>
+              </a>
+            </div>
           </motion.div>
 
+          {/* Right Side: Contact Form */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-6 justify-center max-w-lg mx-auto"
+            initial={{ opacity: 0, x: 40 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.4 }}
+            className="card p-8"
           >
-            <a
-              href=" https://testflight.apple.com/join/JwJEGyUP"
-              className="btn bg-neutral-800 hover:bg-neutral-700 text-white flex-1 flex items-center justify-center group"
-            >
-              <div className="mr-3">
-                <Smartphone size={24} className="text-primary" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm">Download on the</div>
-                <div className="text-lg font-semibold">App Store</div>
-              </div>
-            </a>
-            <a
-              href="https://storage.googleapis.com/juno_media/constants/juno_0.9.0.apk"
-              className="btn bg-neutral-800 hover:bg-neutral-700 text-white flex-1 flex items-center justify-center group"
-            >
-              <div className="mr-3">
-                <Download size={24} className="text-accent" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm">Get it on</div>
-                <div className="text-lg font-semibold">Android</div>
-              </div>
-            </a>
-          </motion.div>
+            <h3 className="text-3xl font-bold text-white mb-4">For Brands & Investors</h3>
+            <p className="text-neutral-400 mb-6">Have questions or want to partner with us? We'd love to hear from you.</p>
+            
+            <div className="flex items-center mb-6">
+              <Mail className="text-primary mr-3" size={20} />
+              <a href="mailto:junonoww@gmail.com" className="text-neutral-300 hover:text-white">junonoww@gmail.com</a>
+            </div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={inView ? { opacity: 1, scale: 1 } : {}}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-16 flex justify-center"
-          >
-            <div className="relative max-w-xs">
-              <div className="absolute inset-0 bg-gradient-to-tr from-primary/30 to-secondary/30 blur-3xl rounded-full"></div>
-              {/* <img
-                src="https://images.pexels.com/photos/4050388/pexels-photo-4050388.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
-                alt="Juno App Preview"
-                className="relative z-10 rounded-3xl border-4 border-background-light shadow-xl"
-              /> */}
-              <div className="absolute -top-4 -left-4 z-20 bg-primary rounded-full px-4 py-2 shadow-lg shadow-primary/20">
-                <span className="text-white font-medium text-sm">Try Juno</span>
-              </div>
+            <div className="flex items-center">
+              <Instagram className="text-primary mr-3" size={20} />
+              <a href="https://instagram.com/junonow" target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-white">@junonow</a>
             </div>
           </motion.div>
         </div>
-
-        {/* Background elements */}
-        <div className="absolute top-1/3 left-1/4 w-72 h-72 bg-primary/10 rounded-full filter blur-3xl"></div>
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-secondary/10 rounded-full filter blur-3xl"></div>
       </div>
     </section>
   );

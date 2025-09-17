@@ -7,7 +7,6 @@ import JunoStudio from './components/JunoStudio';
 import Pricing from './components/Pricing';
 import Team from './components/Team';
 import Mission from './components/Mission';
-import Contact from './components/Contact';
 import DownloadSection from './components/DownloadSection';
 import Footer from './components/Footer';
 import ScreenshotsSection from './components/ScreenshotsSection';
@@ -76,7 +75,6 @@ function App() {
                       <Pricing />
                       <Team />
                       <DownloadSection />
-                      <Contact />
                     </main>
                   } />
 
