@@ -59,7 +59,7 @@ const Navbar: React.FC = () => {
               For Brands
             </a>
             <a
-              href="#download"
+              href="/download"
               className="btn btn-primary text-sm px-5 py-2.5 group"
             >
               Download App
@@ -103,7 +103,7 @@ const Navbar: React.FC = () => {
               </div>
               <div className="mt-auto pt-8 flex flex-col space-y-4">
                 <a
-                  href="#download"
+                  href="/download"
                   className="btn btn-primary w-full text-lg"
                   onClick={closeMenu}
                 >

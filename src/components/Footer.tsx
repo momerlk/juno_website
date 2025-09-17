@@ -46,9 +46,9 @@ const Footer: React.FC = () => {
               <h4 className="text-lg font-semibold text-white mb-4">Juno App</h4>
               <ul className="space-y-3">
                 <li><a href="#screenshots" className="text-neutral-400 hover:text-white transition-colors">Features</a></li>
-                <li><a href="#download" className="text-neutral-400 hover:text-white transition-colors">Download</a></li>
-                <li><a href="https://testflight.apple.com/join/JwJEGyUP" className="text-neutral-400 hover:text-white transition-colors">App Store</a></li>
-                <li><a href="https://storage.googleapis.com/juno_media/constants/juno_0.9.0.apk" className="text-neutral-400 hover:text-white transition-colors">Android APK</a></li>
+                <li><a href="/download" className="text-neutral-400 hover:text-white transition-colors">Download</a></li>
+                <li><a href="/download" className="text-neutral-400 hover:text-white transition-colors">iOS App</a></li>
+                <li><a href="/download" className="text-neutral-400 hover:text-white transition-colors">Android App</a></li>
               </ul>
             </div>
 

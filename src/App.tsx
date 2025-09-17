@@ -34,6 +34,7 @@ import AmbassadorProtectedRoute from "./components/ambassador/ProtectedRoute";
 import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
 import BrandPage from './components/BrandPage';
 import BrandsSection from './components/BrandsSection';
+import DownloadRedirect from './components/DownloadRedirect';
 
 import WorkAuth from "./components/work/WorkAuth";
 import WorkDashboard from "./components/work/WorkDashboard";
@@ -78,6 +79,7 @@ function App() {
                     </main>
                   } />
 
+                  <Route path="/download" element={<DownloadRedirect />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/refund-policy" element={<RefundPolicy />} />
                   <Route path="/service-policy" element={<ShippingServicePolicy />} />

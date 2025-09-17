@@ -38,7 +38,7 @@ const DownloadSection: React.FC = () => {
             </div>
             <div className="space-y-4">
               <a
-                href="https://testflight.apple.com/join/JwJEGyUP"
+                href="/download"
                 className="btn bg-neutral-800 hover:bg-neutral-700 text-white w-full text-lg py-4 group"
               >
                 <Smartphone size={24} className="mr-3 text-primary" />
@@ -48,7 +48,7 @@ const DownloadSection: React.FC = () => {
                 </div>
               </a>
               <a
-                href="https://storage.googleapis.com/juno_media/constants/juno_0.9.0.apk"
+                href="/download"
                 className="btn bg-neutral-800 hover:bg-neutral-700 text-white w-full text-lg py-4 group"
               >
                 <Download size={24} className="mr-3 text-accent" />

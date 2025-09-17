@@ -75,8 +75,7 @@ const BrandPage: React.FC = () => {
     }
   };
 
-  const iosUrl = 'https://testflight.apple.com/join/JwJEGyUP';
-  const androidUrl = 'https://storage.googleapis.com/juno_media/constants/juno_0.9.0.apk';
+  const downloadUrl = 'https://juno.com.pk/download';
   const qrCodeApiBase = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&bgcolor=1c1c1c&color=ffffff&data=';
 
   if (isLoading) {
@@ -156,23 +155,14 @@ const BrandPage: React.FC = () => {
             <Smartphone size={24} className="text-primary mr-3" />
             <h2 className="text-xl font-semibold text-white">Download the Juno App</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col items-center bg-background-light p-6 rounded-lg">
-              <div className="flex items-center text-white mb-4">
-                <Apple size={28} className="mr-2" />
-                <h3 className="text-2xl font-semibold">iOS</h3>
-              </div>
-              <div className="p-2 bg-white rounded-lg">
-                <img src={`${qrCodeApiBase}${encodeURIComponent(iosUrl)}`} alt="Juno iOS App QR Code" width="200" height="200" />
-              </div>
-            </div>
+          <div className="grid grid-cols-1 gap-8">
             <div className="flex flex-col items-center bg-background-light p-6 rounded-lg">
               <div className="flex items-center text-white mb-4">
                 <Download size={28} className="mr-2" />
-                <h3 className="text-2xl font-semibold">Android</h3>
+                <h3 className="text-2xl font-semibold">Scan to Download</h3>
               </div>
               <div className="p-2 bg-white rounded-lg">
-                <img src={`${qrCodeApiBase}${encodeURIComponent(androidUrl)}`} alt="Juno Android App QR Code" width="200" height="200" />
+                <img src={`${qrCodeApiBase}${encodeURIComponent(downloadUrl)}`} alt="Juno App QR Code" width="200" height="200" />
               </div>
             </div>
           </div>

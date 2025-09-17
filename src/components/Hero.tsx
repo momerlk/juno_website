@@ -48,7 +48,7 @@ const Hero: React.FC = () => {
               <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                href="#download"
+                href="/download"
                 className="btn btn-primary text-lg px-8 py-4 shadow-lg"
               >
                 <Smartphone size={22} className="mr-3" />
