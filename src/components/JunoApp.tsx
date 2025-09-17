@@ -101,7 +101,7 @@ const JunoApp: React.FC = () => {
     {
       icon: <TrendingUp className="text-primary" size={28} />,
       title: "400+",
-      description: "Beta testers discovering fashion",
+      description: "Beta Users discovering fashion",
       delay: 0.4,
     },
   ];

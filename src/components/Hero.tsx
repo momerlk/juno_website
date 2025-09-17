@@ -72,7 +72,7 @@ const Hero: React.FC = () => {
             >
               <div className="text-center lg:text-left">
                 <div className="text-2xl font-bold text-white">400+</div>
-                <div className="text-sm text-neutral-400">Active Testers</div>
+                <div className="text-sm text-neutral-400">Active Users</div>
               </div>
               <div className="text-center lg:text-left">
                 <div className="text-2xl font-bold text-white">50+</div>
