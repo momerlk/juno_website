@@ -6,14 +6,13 @@ const DownloadRedirect: React.FC = () => {
 
     const iosUrl = 'https://apps.apple.com/pk/app/juno-swipe-to-shop/id6751541492';
     const androidUrl = 'https://storage.googleapis.com/juno_media/constants/juno_1.0.0.apk';
-    const fallbackUrl = '/download';
 
     if (/android/i.test(userAgent)) {
       window.location.href = androidUrl;
     } else if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
       window.location.href = iosUrl;
     } else {
-      window.location.href = fallbackUrl;
+      alert("No compatible app found for your device. Please select from the links provided.");
     }
   }, []);
 
