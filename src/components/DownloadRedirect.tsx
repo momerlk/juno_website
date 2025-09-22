@@ -4,7 +4,7 @@ const DownloadRedirect: React.FC = () => {
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
 
-    const iosUrl = 'https://testflight.apple.com/join/JwJEGyUP';
+    const iosUrl = 'https://apps.apple.com/pk/app/juno-swipe-to-shop/id6751541492';
     const androidUrl = 'https://storage.googleapis.com/juno_media/constants/juno_1.0.0.apk';
     const fallbackUrl = '/download'; // Redirect to homepage if OS is not detected
 
@@ -22,7 +22,7 @@ const DownloadRedirect: React.FC = () => {
       <h1 >Redirecting to the app store...</h1>
       <p style={{marginTop : "50px"}}>If you are not redirected automatically, please use the links below:</p>
       <div style={{ marginTop: '20px' }}>
-        <a href="https://testflight.apple.com/join/JwJEGyUP" style={{ color: '#FF1818', marginRight: '20px' }}>iOS App</a>
+        <a href="https://apps.apple.com/pk/app/juno-swipe-to-shop/id6751541492" style={{ color: '#FF1818', marginRight: '20px' }}>iOS App</a>
         <a href="https://storage.googleapis.com/juno_media/constants/juno_1.0.0.apk" style={{ color: '#FF1818' }}>Android App</a>
       </div>
     </div>
