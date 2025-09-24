@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 import { Product, Variant } from '../../constants/types';
-import { Plus, Edit, Trash2, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, ChevronDown, ChevronUp, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductEditor from './ProductEditor';
 
 const getShopifyThumbnail = (url: string, size: string = '200x200') => {
+    if (url.includes("shopify.com") === false) {return url}
+
     if (!url) return 'https://via.placeholder.com/200'; // Return a placeholder if no URL
     try {
         const parts = url.split('?');
@@ -30,9 +32,10 @@ const ProductListItem: React.FC<{
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
+  onDuplicate: (product: Product) => void;
   onUpdateVariant: (productId: string, variantId: string, data: Partial<Variant>) => void;
   onUpdateProduct: (productId: string, data: Partial<Product>) => void;
-}> = React.memo(({ product, onEdit, onDelete, onUpdateVariant, onUpdateProduct }) => {
+}> = React.memo(({ product, onEdit, onDelete, onDuplicate, onUpdateVariant, onUpdateProduct }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const totalInventory = useMemo(() => {
@@ -110,6 +113,7 @@ const ProductListItem: React.FC<{
           <button onClick={() => setIsExpanded(!isExpanded)} className="p-2 text-neutral-400 hover:text-white">
             {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
+          <button onClick={() => onDuplicate(product)} className="p-2 text-green-500 hover:text-green-400"><Copy size={18} /></button>
           <button onClick={() => onEdit(product)} className="p-2 text-blue-500 hover:text-blue-400"><Edit size={18} /></button>
           <button onClick={() => onDelete(product.id)} className="p-2 text-red-500 hover:text-red-400"><Trash2 size={18} /></button>
         </div>
@@ -226,6 +230,25 @@ const ManageInventory: React.FC = () => {
         }
     };
 
+    const handleDuplicateProduct = async (productToDuplicate: Product) => {
+        if (!seller?.token) return;
+        if (!window.confirm(`Are you sure you want to duplicate "${productToDuplicate.title}"?`)) return;
+
+        const createPayload = { ...productToDuplicate };
+        createPayload.id = "";
+        createPayload.title = `Copy of ${createPayload.title}`;
+
+        const response = await api.Seller.CreateProduct(seller.token, createPayload as Product);
+
+        if (response.ok) {
+            alert('Product duplicated successfully!');
+            setPage(1);
+            fetchProducts(1, searchQuery);
+        } else {
+            alert(`Failed to duplicate product: ${response.body?.message || 'Unknown error'}`);
+        }
+    };
+
     const handleUpdateVariant = async (productId: string, variantId: string, data: Partial<Variant>) => {
         if (!seller?.token) return;
         const product = products.find(p => p.id === productId);
@@ -301,6 +324,7 @@ const ManageInventory: React.FC = () => {
                         product={product} 
                         onEdit={handleOpenEditorForUpdate}
                         onDelete={handleDeleteProduct}
+                        onDuplicate={handleDuplicateProduct}
                         onUpdateVariant={handleUpdateVariant}
                         onUpdateProduct={handleUpdateProduct}
                     />

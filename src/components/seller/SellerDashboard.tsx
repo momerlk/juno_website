@@ -19,6 +19,7 @@ const HomeTabContent: React.FC = () => {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    
     if (file) {
       setSelectedFile(file);
       try{
