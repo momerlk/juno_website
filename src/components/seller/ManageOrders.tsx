@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 import { motion } from 'framer-motion';
-import { Truck, ArrowRight, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
+import { Truck, ArrowRight, ChevronDown, ChevronUp, XCircle, Download } from 'lucide-react';
 import { Order, OrderStatus } from '../../constants/orders';
 import { Product } from '../../constants/types';
 
@@ -110,6 +110,28 @@ const ManageOrders: React.FC = () => {
       }
     } catch (error) {
       alert('An error occurred while booking delivery.');
+    }
+  };
+
+  const handleDownloadBill = async (orderId: string) => {
+    try {
+      const response = await api.Seller.GetAirwayBill(orderId);
+      if (response.ok && response.body) {
+        const blob = response.body as Blob;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `airway-bill-${orderId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      } else {
+        alert(`Try again in a few minutes: ${response.body || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert('An error occurred while downloading the bill.');
+      console.error(error);
     }
   };
 
@@ -237,6 +259,14 @@ const ManageOrders: React.FC = () => {
                             className="flex items-center justify-center px-3 py-2 text-sm bg-neutral-800 text-white rounded-md hover:bg-red-700 transition-colors whitespace-nowrap"
                         >
                             Cancel Order <XCircle size={16} className="ml-2" />
+                        </button>
+                    )}
+                    {['confirmed', 'packed', 'booked'].includes(order.status.toLowerCase()) && (
+                        <button
+                            onClick={() => handleDownloadBill(order.id!)}
+                            className="flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-500 transition-colors whitespace-nowrap"
+                        >
+                            Download Bill <Download size={16} className="ml-2" />
                         </button>
                     )}
                     {!canUpdate && order.status !== 'delivered' && (

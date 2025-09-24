@@ -369,6 +369,26 @@ export namespace Seller {
     return await requestWithBody(`/seller/orders/${order_id}/status`, "PUT", token, payload);
   }
 
+  export async function GetAirwayBill(order_id: string): Promise<APIResponse<Blob>> {
+    const response = await fetch(`${api_url}/orders/${order_id}/airway-bill`);
+
+    if (!response.ok) {
+      const errorBody = await parseBody(response);
+      return {
+        status: response.status,
+        ok: false,
+        body: errorBody.error,
+      };
+    }
+
+    const blob = await response.blob();
+    return {
+      status: response.status,
+      ok: true,
+      body: blob,
+    };
+  }
+
   
   export async function UpdateProfile(token: string, seller: TSeller): Promise<APIResponse<any>> {
     return await requestWithBody(`/seller/profile`, "PUT", token, seller);
