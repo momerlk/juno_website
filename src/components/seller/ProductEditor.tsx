@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Product, Variant, Option, Pricing, SizingGuide, Inventory } from '../../constants/types';
 import * as api from '../../api/sellerApi';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
-import { X, Plus, Trash2, Upload, DollarSign, Type, Tag, Image as ImageIcon, Paperclip, Settings2, Ruler, AlertTriangle, ArrowLeft, ArrowRight, Copy, Video, Loader } from 'lucide-react';
+import { X, Plus, Trash2, Upload, DollarSign, Type, Tag, Image as ImageIcon, Paperclip, Settings2, Ruler, AlertTriangle, ArrowLeft, ArrowRight, Video, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ProductEditorProps {
@@ -11,8 +11,7 @@ interface ProductEditorProps {
 }
 
 const getShopifyThumbnail = (url: string, size: string = '100x100') => {
-    if (url.includes("shopify.com") === false) {return url}
-    if (!url || typeof url !== 'string') return 'https://via.placeholder.com/100';
+    if (!url || typeof url !== 'string' || !url.includes("shopify.com")) return url || 'https://via.placeholder.com/100';
     try {
         const parts = url.split('?');
         const path = parts[0];
@@ -40,19 +39,46 @@ const Section: React.FC<{title: string, icon: React.ReactNode, children: React.R
 );
 
 const productTypes = ["T-Shirt", "Polo Shirt", "Shirt", "Kurta", "Shalwar Kameez", "Trousers", "Jeans", "Shorts", "Jacket", "Zipper", "Hoodie", "Sweatshirt", "Dupatta", "Scarf", "Bag", "Shoe", "Sandal", "Belt", "Watch", "Accessory"];
-const apparelTypes = ["T-Shirt", "Polo Shirt", "Shirt", "Kurta", "Shalwar Kameez", "Trousers", "Jeans", "Shorts", "Jacket", "Zipper", "Hoodie", "Sweatshirt", "Dupatta", "Scarf"];
+const apparelTypes = ["T-Shirt", "Polo Shirt", "Shirt", "Kurta", "Shalwar Kameez", "Trousers", "Jeans", "Shorts", "Jacket", "Zipper", "Hoodie", "Sweatshirt", "Shoe", "Sandal"];
 
 const dummySizingGuides: Record<string, SizingGuide> = {
   'top_wear': {
-    size_chart: { 'dummy_row': { 'Chest': 0, 'Shoulder': 0, 'Length': 0, 'Sleeve Length': 0 } },
+    size_chart: { 'dummy_row': { 'Chest': -1, 'Shoulder': -1, 'Length': -1, 'Sleeve Length': -1 } },
     size_fit: 'Regular fit for tops.',
     measurement_unit: 'inch',
   },
   'bottom_wear': {
-    size_chart: { 'dummy_row': { 'Waist': 0, 'Hips': 0, 'Inseam': 0, 'Length': 0 } },
+    size_chart: { 'dummy_row': { 'Waist': -1, 'Hips': -1, 'Inseam': -1, 'Length': -1 } },
     size_fit: 'Comfort fit for bottoms.',
     measurement_unit: 'inch',
   },
+  'shalwar_kameez': {
+    size_chart: { 'dummy_row': { 'Chest': -1, 'Shoulder': -1, 'Kameez Length': -1, 'Sleeve Length': -1, 'Waist': -1, 'Hips': -1, 'Shalwar Length': -1 } },
+    size_fit: 'Traditional fit.',
+    measurement_unit: 'inch',
+  },
+  'footwear': {
+    size_chart: { 'dummy_row': { 'Foot Length': -1 } },
+    size_fit: 'Standard shoe sizing. Please provide measurements in CM.',
+    measurement_unit: 'cm',
+  },
+};
+
+const productTypeToSizingGuide: Record<string, string> = {
+    "T-Shirt": "top_wear",
+    "Polo Shirt": "top_wear",
+    "Shirt": "top_wear",
+    "Kurta": "top_wear",
+    "Jacket": "top_wear",
+    "Zipper": "top_wear",
+    "Hoodie": "top_wear",
+    "Sweatshirt": "top_wear",
+    "Trousers": "bottom_wear",
+    "Jeans": "bottom_wear",
+    "Shorts": "bottom_wear",
+    "Shalwar Kameez": "shalwar_kameez",
+    "Shoe": "footwear",
+    "Sandal": "footwear",
 };
 
 
@@ -84,16 +110,19 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
 
         setFormData(initialState);
 
-        if (product?.sizing_guide?.size_chart) {
-            const sizeKeys = Object.keys(Object.values(product.sizing_guide.size_chart)[0] || {});
-            if (sizeKeys.includes('Chest') || sizeKeys.includes('Shoulder')) {
-                setSelectedSizingGuideType('top_wear');
-            } else if (sizeKeys.includes('Waist') || sizeKeys.includes('Inseam')) {
-                setSelectedSizingGuideType('bottom_wear');
-            }
+        const guideType = productTypeToSizingGuide[initialState.product_type || ''];
+        if (guideType) {
+            setSelectedSizingGuideType(guideType);
         }
 
     }, [product]);
+
+    useEffect(() => {
+        const guideType = productTypeToSizingGuide[formData.product_type || ''];
+        if (guideType && guideType !== selectedSizingGuideType) {
+            setSelectedSizingGuideType(guideType);
+        }
+    }, [formData.product_type]);
 
     const generateVariantCombinations = useCallback((options: Option[] = []) => {
         if (options.length === 0 || options.every(o => o.values.length === 0)) return [];
@@ -170,9 +199,8 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
         if (file) {
             setUploadingMedia(mediaType);
             try {
-                console.log(`Uploading ${file.name} of size ${file.size}`);
                 const url = await api.uploadFileAndGetUrl(file, "high_quality");
-                    if (mediaType === 'image') {
+                if (mediaType === 'image') {
                     setFormData(prev => ({ ...prev, images: [...(prev.images || []), url] }));
                 } else {
                     setFormData(prev => ({ ...prev, video_url: url }));
@@ -254,9 +282,15 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
     };
 
     const handleSizingGuideChartChange = (rowKey: string, colKey: string, value: string) => {
-        const numericValue = parseFloat(value) || 0;
         const newChart = { ...formData.sizing_guide?.size_chart };
-        newChart[rowKey] = { ...(newChart[rowKey] || {}), [colKey]: numericValue };
+        let finalValue: number;
+        if (value.trim() === '') {
+            finalValue = -1;
+        } else {
+            const numericValue = parseFloat(value);
+            finalValue = isNaN(numericValue) ? -1 : numericValue;
+        }
+        newChart[rowKey] = { ...(newChart[rowKey] || {}), [colKey]: finalValue };
         handleSizingGuideChange('size_chart', newChart);
     };
 
@@ -275,7 +309,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
             sizeOptionValues.forEach(size => {
                 newChart[size] = {};
                 measurementKeys.forEach(key => {
-                    newChart[size][key] = formData.sizing_guide?.size_chart?.[size]?.[key] || 0;
+                    newChart[size][key] = formData.sizing_guide?.size_chart?.[size]?.[key] ?? -1;
                 });
             });
             handleSizingGuideChange('size_chart', newChart);
@@ -320,7 +354,6 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
     const prepareSubmitData = (): Product => {
         const finalData = { ...formData };
         
-        // Ensure inventory is correctly summed up
         const totalInventory = (finalData.variants || []).reduce((sum, variant) => sum + (variant.inventory?.quantity || 0), 0);
         finalData.inventory = {
             ...finalData.inventory,
@@ -328,7 +361,6 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
             in_stock: totalInventory > 0,
         };
 
-        // Clean up sizing guide if not apparel
         if (!apparelTypes.includes(finalData.product_type || '')) {
             finalData.sizing_guide = undefined;
         }
@@ -351,8 +383,8 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
             } else {
                 const createPayload = {
                     ...payload,
-                    seller_name: seller.user.business_name,
-                    seller_logo: seller.user.logo_url,
+                    seller_name: seller?.user?.business_name,
+                    seller_logo: seller?.user?.logo_url,
                 };
                 response = await api.Seller.CreateProduct(seller.token, createPayload as Product);
             }
@@ -387,7 +419,6 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                     <button onClick={onClose} className="text-neutral-400 hover:text-white"><X /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto p-6 space-y-6">
-                    {/* Basic Info */}
                     <Section title="Basic Information" icon={<Paperclip className="text-primary" />}>
                         <div>
                             <label htmlFor="title" className="block text-sm font-medium text-neutral-300">Title</label>
@@ -417,7 +448,6 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                         </div>
                     </Section>
 
-                    {/* Media */}
                     <Section title="Media" icon={<ImageIcon className="text-blue-500" />}>
                         <div className="space-y-4">
                             <div>
@@ -427,10 +457,10 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                                         {formData.images?.map((url, index) => (
                                             <motion.div layout key={url} className="relative group">
                                                 <img src={getShopifyThumbnail(url)} loading="lazy" alt={`Product image ${index + 1}`} className="w-full h-24 object-cover rounded-md" />
-                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex justify-center items-center gap-1">
-                                                    <button type="button" onClick={() => handleReorderImage(index, 'left')} className="text-white p-1 rounded-full bg-black/50 hover:bg-black/80 disabled:opacity-50" disabled={index === 0}><ArrowLeft size={14} /></button>
-                                                    <button type="button" onClick={() => handleRemoveImage(index)} className="text-white p-1 rounded-full bg-red-500/80 hover:bg-red-500"><Trash2 size={14} /></button>
-                                                    <button type="button" onClick={() => handleReorderImage(index, 'right')} className="text-white p-1 rounded-full bg-black/50 hover:bg-black/80 disabled:opacity-50" disabled={index === (formData.images?.length || 0) - 1}><ArrowRight size={14} /></button>
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex justify-center items-center gap-1">
+                                                    <button type="button" onClick={() => handleReorderImage(index, 'left')} className="text-white p-1 rounded-full bg-black/50 hover:bg-black/80 disabled:opacity-50" disabled={index === 0}><ArrowLeft size={14} className="drop-shadow-lg" /></button>
+                                                    <button type="button" onClick={() => handleRemoveImage(index)} className="text-white p-1 rounded-full bg-red-500/80 hover:bg-red-500"><Trash2 size={14} className="drop-shadow-lg" /></button>
+                                                    <button type="button" onClick={() => handleReorderImage(index, 'right')} className="text-white p-1 rounded-full bg-black/50 hover:bg-black/80 disabled:opacity-50" disabled={index === (formData.images?.length || 0) - 1}><ArrowRight size={14} className="drop-shadow-lg" /></button>
                                                 </div>
                                             </motion.div>
                                         ))}
@@ -456,8 +486,8 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                                 {formData.video_url ? (
                                     <div className="relative group w-48">
                                         <video src={formData.video_url} className="w-full h-24 object-cover rounded-md bg-black" />
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex justify-center items-center">
-                                            <button type="button" onClick={() => setFormData(p => ({...p, video_url: ''}))} className="text-white p-1 rounded-full bg-red-500/80 hover:bg-red-500"><Trash2 size={14} /></button>
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex justify-center items-center">
+                                            <button type="button" onClick={() => setFormData(p => ({...p, video_url: ''}))} className="text-white p-1 rounded-full bg-red-500/80 hover:bg-red-500"><Trash2 size={14} className="drop-shadow-lg" /></button>
                                         </div>
                                     </div>
                                 ) : (
@@ -480,59 +510,64 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                         </div>
                     </Section>
 
-                    {/* Sizing Guide */}
-                    {isApparel && (
-                        <Section title="Sizing Guide" icon={<Ruler className="text-teal-500" />}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label htmlFor="sizing_guide_type" className="block text-sm font-medium text-neutral-300">Sizing Guide Type</label>
-                                    <select id="sizing_guide_type" value={selectedSizingGuideType} onChange={e => setSelectedSizingGuideType(e.target.value)} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" required>
-                                        <option value="">Select Type</option>
-                                        <option value="top_wear">Top Wear</option>
-                                        <option value="bottom_wear">Bottom Wear</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label htmlFor="measurement_unit" className="block text-sm font-medium text-neutral-300">Measurement Unit</label>
-                                    <select id="measurement_unit" value={formData.sizing_guide?.measurement_unit || 'inch'} onChange={e => handleSizingGuideChange('measurement_unit', e.target.value)} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1">
-                                        <option value="inch">Inch</option>
-                                        <option value="cm">CM</option>
-                                    </select>
-                                </div>
+                    <Section title="Sizing Guide" icon={<Ruler className="text-teal-500" />}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label htmlFor="sizing_guide_type" className="block text-sm font-medium text-neutral-300">Sizing Guide Type</label>
+                                <select id="sizing_guide_type" value={selectedSizingGuideType} onChange={e => setSelectedSizingGuideType(e.target.value)} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" required={isApparel}>
+                                    <option value="">Select Type</option>
+                                    {Object.keys(dummySizingGuides).map(key => (
+                                        <option key={key} value={key}>
+                                            {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
-                                <label htmlFor="size_fit" className="block text-sm font-medium text-neutral-300">Sizing & Fit Details</label>
-                                <textarea id="size_fit" value={formData.sizing_guide?.size_fit || ''} onChange={e => handleSizingGuideChange('size_fit', e.target.value)} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1 h-20" placeholder="e.g., Regular fit, true to size. Model is 6ft and wears a size M." required/>
+                                <label htmlFor="measurement_unit" className="block text-sm font-medium text-neutral-300">Measurement Unit</label>
+                                <select id="measurement_unit" value={formData.sizing_guide?.measurement_unit || 'inch'} onChange={e => handleSizingGuideChange('measurement_unit', e.target.value)} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1">
+                                    <option value="inch">Inch</option>
+                                    <option value="cm">CM</option>
+                                </select>
                             </div>
-                            {sizeOptionValues.length > 0 && selectedSizingGuideType && (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left text-neutral-300">
-                                        <thead className="text-xs text-neutral-400 uppercase bg-background">
-                                            <tr>
-                                                <th scope="col" className="px-4 py-3">Size</th>
-                                                {sizingGuideColumns.map(col => <th key={col} scope="col" className="px-4 py-3">{col} ({formData.sizing_guide?.measurement_unit})</th>)}
+                        </div>
+                        <div>
+                            <label htmlFor="size_fit" className="block text-sm font-medium text-neutral-300">Sizing & Fit Details</label>
+                            <textarea id="size_fit" value={formData.sizing_guide?.size_fit || ''} onChange={e => handleSizingGuideChange('size_fit', e.target.value)} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1 h-20" placeholder="e.g., Regular fit, true to size. Model is 6ft and wears a size M." required={isApparel}/>
+                        </div>
+                        {isApparel && sizeOptionValues.length > 0 && selectedSizingGuideType && (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left text-neutral-300">
+                                    <thead className="text-xs text-neutral-400 uppercase bg-background">
+                                        <tr>
+                                            <th scope="col" className="px-4 py-3">Size</th>
+                                            {sizingGuideColumns.map(col => <th key={col} scope="col" className="px-4 py-3">{col} ({formData.sizing_guide?.measurement_unit})</th>)}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sizeOptionValues.map(size => (
+                                            <tr key={size} className="border-b border-neutral-700">
+                                                <th scope="row" className="px-4 py-2 font-medium whitespace-nowrap">{size}</th>
+                                                {sizingGuideColumns.map(col => (
+                                                    <td key={col} className="px-4 py-2">
+                                                        <input 
+                                                            type="number" 
+                                                            placeholder="N/A"
+                                                            value={(formData.sizing_guide?.size_chart?.[size]?.[col] ?? -1) === -1 ? '' : formData.sizing_guide?.size_chart?.[size]?.[col]}
+                                                            onChange={e => handleSizingGuideChartChange(size, col, e.target.value)} 
+                                                            className="w-20 bg-neutral-800 text-white rounded-md p-1 border border-neutral-600" 
+                                                        />
+                                                    </td>
+                                                ))}
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {sizeOptionValues.map(size => (
-                                                <tr key={size} className="border-b border-neutral-700">
-                                                    <th scope="row" className="px-4 py-2 font-medium whitespace-nowrap">{size}</th>
-                                                    {sizingGuideColumns.map(col => (
-                                                        <td key={col} className="px-4 py-2">
-                                                            <input type="number" value={formData.sizing_guide?.size_chart?.[size]?.[col] || ''} onChange={e => handleSizingGuideChartChange(size, col, e.target.value)} className="w-20 bg-neutral-800 text-white rounded-md p-1 border border-neutral-600" />
-                                                        </td>
-                                                    ))}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                            {sizeOptionValues.length === 0 && <p className='text-xs text-yellow-500 flex items-center mt-1'><AlertTriangle size={14} className='mr-1'/> Add a 'Size' option to create a size chart.</p>}
-                        </Section>
-                    )}
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        {isApparel && sizeOptionValues.length === 0 && <p className='text-xs text-yellow-500 flex items-center mt-1'><AlertTriangle size={14} className='mr-1'/> Add a 'Size' option to create a size chart.</p>}
+                    </Section>
 
-                    {/* Pricing */}
                     <Section title="Pricing" icon={<DollarSign className="text-green-500" />}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -546,7 +581,6 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                         </div>
                     </Section>
 
-                    {/* Options & Variants */}
                     <Section title="Options & Variants" icon={<Settings2 className="text-purple-500" />}>
                         {formData.options?.map((opt, index) => (
                             <div key={index} className="p-4 bg-background rounded-md border border-neutral-700">
@@ -583,7 +617,6 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                         )}
                     </Section>
 
-                    {/* Organization */}
                     <Section title="Organization" icon={<Tag className="text-orange-500" />}>
                         <div>
                             <label htmlFor="tags" className="block text-sm font-medium text-neutral-300">Tags</label>
