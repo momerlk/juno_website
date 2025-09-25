@@ -5,7 +5,7 @@ const DownloadRedirect: React.FC = () => {
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
 
     const iosUrl = 'https://apps.apple.com/pk/app/juno-swipe-to-shop/id6751541492';
-    const androidUrl = 'https://storage.googleapis.com/juno_media/constants/juno_1.0.0.apk';
+    const androidUrl = 'https://storage.googleapis.com/juno_media/constants/juno_1.0.1.apk';
 
     if (/android/i.test(userAgent)) {
       window.location.href = androidUrl;
@@ -45,7 +45,7 @@ const DownloadRedirect: React.FC = () => {
           iOS App
         </a>
         <a
-          href="https://storage.googleapis.com/juno_media/constants/juno_1.0.0.apk"
+          href="https://storage.googleapis.com/juno_media/constants/juno_1.0.1.apk"
           style={{ color: '#FF1818', fontSize: '1rem' }}
         >
           Android App
