@@ -21,7 +21,7 @@ const ManageSellers: React.FC = () => {
       setIsLoading(true);
       try {
         const fetchedSellers = await getAllSellers();
-        setSellers(fetchedSellers);
+        setSellers(fetchedSellers.body);
       } catch (error) {
         console.error('Failed to fetch sellers:', error);
       } finally {

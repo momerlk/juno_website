@@ -1,13 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { LogOut, UserCircle } from 'lucide-react';
 import PlatformStats from './PlatformStats';
 import ManageSellers from './ManageSellers';
 import ManageInvites from './ManageInvites';
 import ManageNotifications from './ManageNotifications';
+import ManageOrders from './ManageOrders';
 
 const AdminDashboard: React.FC = () => {
   const { admin, logout } = useAdminAuth();
+  const [activeTab, setActiveTab] = useState('orders');
+
+  const tabs = [
+    { id: 'orders', label: 'Manage Orders' },
+    { id: 'sellers', label: 'Manage Sellers' },
+    { id: 'invites', label: 'Manage Invites' },
+    { id: 'notifications', label: 'Broadcast Notifications' },
+  ];
 
   return (
     <div className="min-h-screen bg-background-light py-8 px-4 sm:px-6 lg:px-8">
@@ -34,9 +43,33 @@ const AdminDashboard: React.FC = () => {
 
         <main>
           <PlatformStats />
-          <ManageSellers />
-          <ManageInvites />
-          <ManageNotifications />
+          
+          <div className="mt-8">
+            <div className="border-b border-neutral-700">
+              <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === tab.id
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-neutral-400 hover:text-neutral-200 hover:border-neutral-500'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+
+          <div className="mt-2">
+            {activeTab === 'orders' && <ManageOrders />}
+            {activeTab === 'sellers' && <ManageSellers />}
+            {activeTab === 'invites' && <ManageInvites />}
+            {activeTab === 'notifications' && <ManageNotifications />}
+          </div>
         </main>
       </div>
     </div>
