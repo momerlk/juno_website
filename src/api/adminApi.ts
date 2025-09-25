@@ -184,7 +184,7 @@ export async function GetOrderById(orderId: string): Promise<APIResponse<Order>>
 }
 
 export async function GetProductById(productId: string): Promise<APIResponse<Product>> {
-  return requestWithoutBody(`/api/v1/products/${productId}`, 'GET');
+  return requestWithoutBody(`/products/${productId}`, 'GET');
 }
 
 
@@ -192,12 +192,12 @@ export async function GetProductById(productId: string): Promise<APIResponse<Pro
 export const getAnalyticsSummary = () => requestWithoutBody('/api/v1/analytics/summary', 'GET');
 
 // --- Sellers ---
-export const getAllSellers = () => requestWithoutBody('/api/v1/all-sellers', 'GET');
+export const getAllSellers = () => publicRequestWithoutBody('/api/v1/all-sellers', 'GET');
 // NOTE: No endpoints found for approving/rejecting sellers in the swagger file.
 
 // --- Invites ---
-export const getInvitesByOwner = (ownerEmail: string) => requestWithoutBody(`/invites/by-owner?owner=${encodeURIComponent(ownerEmail)}`, 'GET');
-export const generateInviteForOwner = (ownerEmail: string) => requestWithBody(`/invites/generate?owner=${encodeURIComponent(ownerEmail)}`, 'POST', {});
+export const getInvitesByOwner = (ownerEmail: string) => requestWithoutBody(`/api/v1/invites/by-owner?owner=${encodeURIComponent(ownerEmail)}`, 'GET');
+export const generateInviteForOwner = (ownerEmail: string) => requestWithBody(`/api/v1/invites/generate?owner=${encodeURIComponent(ownerEmail)}`, 'POST', {});
 
 // --- Notifications ---
 export const broadcastNotification = (title: string, body: string, data?: object) => {

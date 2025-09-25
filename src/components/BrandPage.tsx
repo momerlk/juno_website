@@ -60,9 +60,10 @@ const BrandPage: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const allSellers: Seller[] = await getAllSellers();
+        const allSellersResp = await getAllSellers();
+        const allSellers = allSellersResp.ok ? allSellersResp.body : [];
         const uBrandName = brandName.toLowerCase().replace(/-/g, ' ');
-        const foundSeller = allSellers.find(s => s.business_name.toLowerCase() === uBrandName);
+        const foundSeller = allSellers.find((s : Seller) => s.business_name.toLowerCase() === uBrandName);
         
         if (!foundSeller) {
           setError('Brand not found.');
@@ -72,16 +73,18 @@ const BrandPage: React.FC = () => {
         setSeller(foundSeller);
         setError(null);
 
-        const invitePromise = getInvitesByOwner(foundSeller.business_name).catch(() => null);
-        const productsPromise = sellerApi.Products.GetProducts(100).catch(() => null);
+        const invitePromise = await getInvitesByOwner(foundSeller.business_name).catch(() => null);
+        const productsPromise = await sellerApi.Products.GetProducts(100).catch(() => null);
 
-        const [inviteResult, productResponse] = await Promise.all([invitePromise, productsPromise]);
+        const inviteResult = invitePromise?.ok ? invitePromise.body : null;
+        const productResponse = productsPromise;
+
 
         if (inviteResult && inviteResult.length > 0) {
           setInvite(inviteResult[0]);
         } else {
           const newInvite = await generateInviteForOwner(foundSeller.business_name).catch(() => null);
-          if (newInvite) setInvite(newInvite);
+          if (newInvite) setInvite(newInvite.body);
         }
 
         if (productResponse && productResponse.ok && Array.isArray(productResponse.body)) {
