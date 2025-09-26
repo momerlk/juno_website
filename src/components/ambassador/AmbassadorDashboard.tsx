@@ -66,7 +66,7 @@ export async function fetchUserPublicProfile(userId: string): Promise<UserPublic
   return data;
 }
 
-const StatCard = ({ icon, title, value, subtitle, colorClass } : any) => (
+const StatCard: React.FC<{ icon: React.ReactNode, title: string, value: string | number, subtitle?: string, colorClass: string }> = ({ icon, title, value, subtitle, colorClass }) => (
     <div className="bg-neutral-900/50 p-6 rounded-2xl border border-neutral-800 flex items-center space-x-4">
         <div className={`p-3 rounded-xl bg-gradient-to-br ${colorClass}`}>
             {icon}
@@ -79,7 +79,7 @@ const StatCard = ({ icon, title, value, subtitle, colorClass } : any) => (
     </div>
 );
 
-const ProgressBar = ({ value, kpi } : any) => {
+const ProgressBar: React.FC<{ value: number, kpi: number }> = ({ value, kpi }) => {
     const percentage = Math.min((value / kpi) * 100, 100);
     return (
         <div>
@@ -309,12 +309,12 @@ const AmbassadorDashboard: React.FC = () => {
 
                                 {inviteData && inviteData.length > 0 && inviteData[0].users.length > 0 && (
                                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="lg:col-span-3 bg-neutral-900/50 p-6 rounded-2xl border border-neutral-800">
-                                        <div className="flex justify-between items-center mb-4">
+                                        <div className="flex justify-between items-center mb-6">
                                             <h2 className="flex items-center text-2xl font-bold text-white">
                                                 <Users size={24} className="mr-3 text-accent" />
                                                 Recent Signups
                                             </h2>
-                                            {signedUpUsers.length > 5 && (
+                                            {signedUpUsers.length > 4 && (
                                                 <button onClick={() => setShowAllSignups(!showAllSignups)} className="text-sm text-primary hover:underline">
                                                     {showAllSignups ? 'Show Less' : `Show All (${signedUpUsers.length})`}
                                                 </button>
@@ -325,33 +325,20 @@ const AmbassadorDashboard: React.FC = () => {
                                                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                                             </div>
                                         ) : (
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-left">
-                                                    <thead>
-                                                        <tr className="border-b border-neutral-700">
-                                                            <th className="p-4 text-neutral-400 font-semibold text-sm">User</th>
-                                                            <th className="p-4 text-neutral-400 font-semibold text-sm">Phone Number</th>
-                                                            <th className="p-4 text-neutral-400 font-semibold text-sm">Joined At</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {(showAllSignups ? signedUpUsers : signedUpUsers.slice(0, 5)).map((user) => (
-                                                            <tr key={user.id} className="border-b border-neutral-800 hover:bg-white/5">
-                                                                <td className="p-4 text-white">
-                                                                    <div className="flex items-center">
-                                                                        <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full mr-4 object-cover" />
-                                                                        <div>
-                                                                            <p className="font-semibold">{user.name}</p>
-                                                                            <p className="text-xs text-neutral-500 font-mono">{user.id}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="p-4 text-white">{user.phone_number}</td>
-                                                                <td className="p-4 text-white">{new Date(user.created_at).toLocaleDateString()}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                                {(showAllSignups ? signedUpUsers : signedUpUsers.slice(0, 4)).map((user, index) => (
+                                                    <motion.div 
+                                                        key={user.id}
+                                                        initial={{ opacity: 0, y: 20 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: index * 0.05 }}
+                                                        className="bg-neutral-800/50 p-4 rounded-xl text-center border border-neutral-700 hover:bg-neutral-700/50 transition-colors hover:border-accent/50"
+                                                    >
+                                                        <img src={user.avatar} alt={user.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover border-2 border-neutral-600" />
+                                                        <p className="font-bold text-white truncate">{user.name}</p>
+                                                        <p className="text-xs text-neutral-400">Joined: {new Date(user.created_at).toLocaleDateString()}</p>
+                                                    </motion.div>
+                                                ))}
                                             </div>
                                         )}
                                     </motion.div>
