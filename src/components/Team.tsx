@@ -19,35 +19,35 @@ const TeamMemberCard: React.FC<{ member: TeamMember; index: number }> = ({ membe
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 40 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.7, delay: 0.1 * index }}
-      className="card card-hover group text-center p-6"
+      initial={{ opacity: 0, y: 50, scale: 0.9 }}
+      animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
+      className="relative group overflow-hidden rounded-2xl bg-neutral-900 border border-neutral-800 transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10"
     >
-      <div className="relative mb-6">
-        <img 
-          src={member.image} 
-          alt={member.name} 
-          className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-neutral-800 group-hover:border-primary transition-all duration-300"
-        />
-      </div>
-      <div>
-        <h3 className="text-xl font-bold text-white mb-1">{member.name}</h3>
-        <p className="text-primary font-semibold mb-3">{member.role}</p>
-        <p className="text-neutral-400 mb-5 text-sm">{member.bio}</p>
-        <div className="flex justify-center">
-          {member.social.linkedin && (
-            <a 
-              href={member.social.linkedin} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-neutral-500 hover:text-primary transition-colors duration-300"
-              aria-label={`${member.name}'s LinkedIn`}
-            >
-              <Linkedin size={24} />
-            </a>
-          )}
-        </div>
+      <img 
+        src={member.image} 
+        alt={member.name} 
+        className="w-full h-[480px] object-cover object-center group-hover:scale-110 transition-transform duration-500 ease-in-out"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent"></div>
+      
+      <div className="absolute bottom-0 left-0 right-0 p-6">
+        <h3 className="text-2xl font-bold text-white">{member.name}</h3>
+        <p className="text-primary font-semibold">{member.role}</p>
+        <div className="h-0.5 bg-primary w-1/4 my-2"></div>
+        <p className="text-neutral-300 text-sm mb-4">{member.bio}</p>
+        
+        {member.social.linkedin && (
+          <a 
+            href={member.social.linkedin} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block bg-white/10 p-2 rounded-full hover:bg-primary hover:text-white text-neutral-300 transition-all"
+            aria-label={`${member.name}'s LinkedIn`}
+          >
+            <Linkedin size={20} />
+          </a>
+        )}
       </div>
     </motion.div>
   );
@@ -84,15 +84,6 @@ const Team: React.FC = () => {
         linkedin: "https://www.linkedin.com/in/hooria-wasif-136637315",
       }
     },
-    {
-      name: "Asmar Shahid",
-      role: "Chief Technology Officer",
-      image: "https://media.licdn.com/dms/image/D4D03AQH-pL8y3CgZpA/profile-displayphoto-shrink_400_400/0/1716830199593?e=1728518400&v=beta&t=5j_aV-pGf1Z-jY8b8qG8c8Z8Y8J8j8H8j8Y8J8j8Y8",
-      bio: "Backend Engineering & Systems",
-      social: {
-        linkedin: "https://www.linkedin.com/in/asmar-shahid",
-      }
-    },
   ];
 
   return (
@@ -113,7 +104,7 @@ const Team: React.FC = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {teamMembers.map((member, index) => (
             <TeamMemberCard key={index} member={member} index={index} />
           ))}
