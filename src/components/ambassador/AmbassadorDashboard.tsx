@@ -284,6 +284,7 @@ const AmbassadorDashboard: React.FC = () => {
                                                 <tr className="border-b border-neutral-700 sticky top-0 bg-neutral-900/50 backdrop-blur-sm">
                                                     <th className="p-4 text-neutral-400 font-semibold text-sm">Rank</th>
                                                     <th className="p-4 text-neutral-400 font-semibold text-sm">Ambassador</th>
+                                                    <th className="p-4 text-neutral-400 font-semibold text-sm">Invite Code</th>
                                                     <th className="p-4 text-neutral-400 font-semibold text-sm text-right">Signups</th>
                                                 </tr>
                                             </thead>
@@ -299,6 +300,7 @@ const AmbassadorDashboard: React.FC = () => {
                                                             </div>
                                                         </td>
                                                         <td className="p-4 text-white">{formatAmbassadorName(entry.owner)}</td>
+                                                        <td className="p-4 text-primary font-mono">{entry.code}</td>
                                                         <td className="p-4 text-white font-semibold text-right">{entry.signups}</td>
                                                     </tr>
                                                 ))}
