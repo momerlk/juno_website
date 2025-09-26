@@ -92,7 +92,10 @@ const DownloadRedirect: React.FC = () => {
 
   switch (step) {
     case 'InviteVerification':
-      return <InviteVerification onVerified={(code) => handleNextStep('InviteVerification', { code })} />;
+      return <InviteVerification 
+        onVerified={(code) => handleNextStep('InviteVerification', { code })}
+        onAlreadyHaveAccount={() => setStep('Completed')}
+      />;
     case 'PhoneNumberEntry':
       return <PhoneNumberEntry onNext={(data) => handleNextStep('PhoneNumberEntry', data)} />;
     case 'PasswordSetup':

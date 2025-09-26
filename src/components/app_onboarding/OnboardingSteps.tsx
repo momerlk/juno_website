@@ -54,7 +54,7 @@ export const OnboardingButton = ({ onClick, children, disabled }: { onClick: (e:
 
 // --- Step Components ---
 
-export const InviteVerification = ({ onVerified }: { onVerified: (code: string) => void }) => {
+export const InviteVerification = ({ onVerified, onAlreadyHaveAccount }: { onVerified: (code: string) => void, onAlreadyHaveAccount: () => void }) => {
   const [code, setCode] = useState<string[]>(['', '', '', '', '']);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -127,6 +127,9 @@ export const InviteVerification = ({ onVerified }: { onVerified: (code: string) 
           {loading ? 'Verifying...' : 'Continue'}
         </OnboardingButton>
       </div>
+      <button onClick={onAlreadyHaveAccount} className="mt-6 text-[#AEAEB2] hover:text-white">
+        Already have an account?
+      </button>
     </OnboardingStep>
   );
 };
@@ -328,19 +331,10 @@ export const LocationRequest = ({ user, password, inviteCode, onRegistrationSucc
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleAllowAndRegister = () => {
+  const registerWithLocation = async (locationData: { latitude: number, longitude: number }) => {
     setLoading(true);
-    setError('');
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const locationData = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        };
 
-        alert("Registering your account...");
-
-        const finUser = {
+    const finUser = {
             phone_number: user.phone_number,
             gender: user.gender,
             age: user.age,
@@ -375,22 +369,41 @@ export const LocationRequest = ({ user, password, inviteCode, onRegistrationSucc
         } finally {
           setLoading(false);
         }
+  };
+
+  const handleAllow = () => {
+    setLoading(true);
+    setError('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        registerWithLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
       },
       (err) => {
-        setLoading(false);
-        setError('Location is required for our instant delivery feature. Please enable location permissions in your browser settings to continue.');
         console.error(err);
+        setError('Could not get location. You can enable it later in your profile for instant delivery.');
+        // Proceed with default location if permission is denied
+        registerWithLocation({ latitude: 0, longitude: 0 });
       }
     );
   };
 
+  const handleSkip = () => {
+    registerWithLocation({ latitude: 0, longitude: 0 });
+  };
+
   return (
-    <OnboardingStep title="Enable location" subtitle="We need your location to enable our instant delivery feature.">
+    <OnboardingStep title="Enable location" subtitle="Enable location for our instant delivery feature. You can also skip this for now.">
         <div className="space-y-4 w-full max-w-xs">
-            {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
-            <OnboardingButton onClick={handleAllowAndRegister} disabled={loading}>
+            {error && <p className="text-yellow-500 text-sm text-center mb-4">{error}</p>}
+            <OnboardingButton onClick={handleAllow} disabled={loading}>
                 {loading ? 'Please wait...' : 'Allow Location & Register'}
             </OnboardingButton>
+            <button onClick={handleSkip} className="w-full text-[#AEAEB2] hover:text-white" disabled={loading}>
+                Skip for now
+            </button>
         </div>
     </OnboardingStep>
   );
