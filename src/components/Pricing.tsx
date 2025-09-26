@@ -79,7 +79,7 @@ const Pricing: React.FC = () => {
               <a href="/seller" className="btn btn-primary flex-1 text-lg py-4">
                 Get Started Now
               </a>
-              <a href="#contact" className="btn btn-outline flex-1 text-lg py-4 group">
+              <a href="/#download" className="btn btn-outline flex-1 text-lg py-4 group">
                 Request a Demo
                 <ArrowRight size={20} className="ml-2 transition-transform group-hover:translate-x-1" />
               </a>

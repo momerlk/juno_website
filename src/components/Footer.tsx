@@ -15,7 +15,7 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           {/* Logo and Company Info */}
           <div className="lg:col-span-4">
-            <a href="#home" className="flex items-center space-x-2 mb-4">
+            <a href="/#home" className="flex items-center space-x-2 mb-4">
               <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
                 <span className="font-black text-2xl text-white">J</span>
               </div>
@@ -45,7 +45,7 @@ const Footer: React.FC = () => {
             <div>
               <h4 className="text-lg font-semibold text-white mb-4">Juno App</h4>
               <ul className="space-y-3">
-                <li><a href="#screenshots" className="text-neutral-400 hover:text-white transition-colors">Features</a></li>
+                <li><a href="/#screenshots" className="text-neutral-400 hover:text-white transition-colors">Features</a></li>
                 <li><a href="/download" className="text-neutral-400 hover:text-white transition-colors">Download</a></li>
                 <li><a href="/download" className="text-neutral-400 hover:text-white transition-colors">iOS App</a></li>
                 <li><a href="/download" className="text-neutral-400 hover:text-white transition-colors">Android App</a></li>
@@ -55,8 +55,8 @@ const Footer: React.FC = () => {
             <div>
               <h4 className="text-lg font-semibold text-white mb-4">Juno Studio</h4>
               <ul className="space-y-3">
-                <li><a href="#juno-studio" className="text-neutral-400 hover:text-white transition-colors">Features</a></li>
-                <li><a href="#pricing" className="text-neutral-400 hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="/#juno-studio" className="text-neutral-400 hover:text-white transition-colors">Features</a></li>
+                <li><a href="/#pricing" className="text-neutral-400 hover:text-white transition-colors">Pricing</a></li>
                 <li><a href="/seller" className="text-neutral-400 hover:text-white transition-colors">Seller Login</a></li>
               </ul>
             </div>
@@ -64,8 +64,8 @@ const Footer: React.FC = () => {
             <div>
               <h4 className="text-lg font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-3">
-                <li><a href="#team" className="text-neutral-400 hover:text-white transition-colors">Team</a></li>
-                <li><a href="#contact" className="text-neutral-400 hover:text-white transition-colors">Contact</a></li>
+                <li><a href="/#team" className="text-neutral-400 hover:text-white transition-colors">Team</a></li>
+                <li><a href="/#download" className="text-neutral-400 hover:text-white transition-colors">Contact</a></li>
               </ul>
             </div>
 

@@ -19,20 +19,20 @@ const Navbar: React.FC = () => {
   const closeMenu = () => setIsOpen(false);
 
   const navLinks = [
-    { name: 'Home', href: '#home' },
+    { name: 'Home', href: '/#home' },
     { name: 'Blog', href: '/blog' },
-    { name: 'Features', href: '#screenshots' },
-    { name: 'Studio', href: '#juno-studio' },
-    { name: 'Pricing', href: '#pricing' },
-    { name: 'Team', href: '#team' },
-    { name: 'Contact', href: '#contact' },
+    { name: 'Features', href: '/#screenshots' },
+    { name: 'Studio', href: '/#juno-studio' },
+    { name: 'Pricing', href: '/#pricing' },
+    { name: 'Team', href: '/#team' },
+    { name: 'Contact', href: '/#download' },
   ];
 
   return (
     <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
       <div className="container mx-auto py-3 px-4 md:px-6">
         <div className="flex justify-between items-center">
-          <a href="#home" className="flex items-center space-x-2" onClick={closeMenu}>
+          <a href="/#home" className="flex items-center space-x-2" onClick={closeMenu}>
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <span className="font-black text-2xl text-white">J</span>
             </div>
