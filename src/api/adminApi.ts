@@ -184,7 +184,7 @@ export async function GetOrderById(orderId: string): Promise<APIResponse<Order>>
 }
 
 export async function GetProductById(productId: string): Promise<APIResponse<Product>> {
-  return requestWithoutBody(`/products/${productId}`, 'GET');
+  return requestWithoutBody(`/api/v1/products/${productId}`, 'GET');
 }
 
 
