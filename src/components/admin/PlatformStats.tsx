@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, ShoppingBag, DollarSign, Truck } from 'lucide-react';
-import { GetAllOrders, getAllUsers, getAllSellers, getAllDeliveryBookings } from '../../api/adminApi';
+import { GetAllOrders, getAllUsers, getAllSellers, getAllInvites, getAllDeliveryBookings } from '../../api/adminApi';
 import { Order } from '../../constants/orders';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface StatsData {
   totalRevenue: number;
@@ -16,20 +17,26 @@ interface StatsData {
 
 const PlatformStats: React.FC = () => {
   const [stats, setStats] = useState<StatsData | null>(null);
+  const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [ordersResponse, usersResponse, sellersResponse, bookingsResponse] = await Promise.all([
+        const [ordersResponse, usersResponse, sellersResponse, bookingsResponse, invitesResponse] = await Promise.all([
           GetAllOrders(),
           getAllUsers(),
           getAllSellers(),
           getAllDeliveryBookings(),
+          getAllInvites(),
         ]);
 
-        if (ordersResponse.ok && usersResponse.ok && sellersResponse.ok && bookingsResponse.ok) {
+        if (ordersResponse.ok && usersResponse.ok && sellersResponse.ok && bookingsResponse.ok && invitesResponse.ok) {
           const orders: Order[] = ordersResponse.body;
+          const users = usersResponse.body;
+          const sellers = sellersResponse.body;
+          const invites = invitesResponse.body;
+
           const totalRevenue = orders.reduce((acc, order) => acc + (order.subtotal * 0.125) + order.shipping_cost, 0);
           const gmv = orders.reduce((acc, order) => acc + order.total, 0);
           const ambassadorPayout = totalRevenue * 0.15;
@@ -40,10 +47,36 @@ const PlatformStats: React.FC = () => {
             gmv,
             ambassadorPayout,
             brandPayout,
-            totalUsers: usersResponse.body.length,
-            totalSellers: sellersResponse.body.length,
+            totalUsers: users.length,
+            totalSellers: sellers.length,
             totalDeliveryBookings: bookingsResponse.body.length,
           });
+
+          const processDataForChart = (data: any[], dateKey: string) => {
+            const countsByDay = data.reduce((acc, item) => {
+              const date = new Date(item[dateKey]).toLocaleDateString();
+              acc[date] = (acc[date] || 0) + 1;
+              return acc;
+            }, {} as Record<string, number>);
+            return Object.entries(countsByDay).map(([date, count]) => ({ date, count }));
+          };
+
+          const ordersByDay = processDataForChart(orders, 'created_at');
+          const usersByDay = processDataForChart(users, 'created_at');
+          const sellersByDay = processDataForChart(sellers, 'created_at');
+          const invitesByDay = processDataForChart(invites, 'created_at');
+
+          const allDates = [...new Set([...ordersByDay.map(d => d.date), ...usersByDay.map(d => d.date), ...sellersByDay.map(d => d.date), ...invitesByDay.map(d => d.date)])];
+
+          const combinedData = allDates.map(date => ({
+            date,
+            orders: ordersByDay.find(d => d.date === date)?.count || 0,
+            users: usersByDay.find(d => d.date === date)?.count || 0,
+            sellers: sellersByDay.find(d => d.date === date)?.count || 0,
+            invites: invitesByDay.find(d => d.date === date)?.count || 0,
+          }));
+
+          setChartData(combinedData);
         }
       } catch (error) {
         console.error("Failed to fetch platform stats:", error);
@@ -88,6 +121,22 @@ const PlatformStats: React.FC = () => {
             </div>
           </div>
         ))}
+      </div>
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4 text-white">Daily Performance</h2>
+        <ResponsiveContainer width="100%" height={400}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
+            <XAxis dataKey="date" stroke="#a3a3a3" />
+            <YAxis stroke="#a3a3a3" />
+            <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #404040' }} />
+            <Legend />
+            <Line type="monotone" dataKey="orders" stroke="#8884d8" name="Orders" />
+            <Line type="monotone" dataKey="users" stroke="#82ca9d" name="Users" />
+            <Line type="monotone" dataKey="sellers" stroke="#ffc658" name="Sellers" />
+            <Line type="monotone" dataKey="invites" stroke="#ff7300" name="Invites" />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
     </motion.div>
   );

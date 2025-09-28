@@ -25,6 +25,16 @@ import TermsConditions from './components/policies/TermsConditions';
 import AdminAuth from "./components/admin/AdminAuth";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import AdminProtectedRoute from "./components/admin/ProtectedRoute";
+import ManageOrders from './components/admin/ManageOrders';
+import ManageSellers from './components/admin/ManageSellers';
+import ManageUsers from './components/admin/ManageUsers';
+import ManageInvites from './components/admin/ManageInvites';
+import LocationMap from './components/admin/LocationMap';
+import DeliveryCoverage from './components/admin/DeliveryCoverage';
+import InteractionAnalytics from './components/admin/InteractionAnalytics';
+import ProductPerformance from './components/admin/ProductPerformance';
+import ManageNotifications from './components/admin/ManageNotifications';
+import PlatformStats from './components/admin/PlatformStats';
 
 
 import AmbassadorAuth from "./components/ambassador/AmbassadorAuth";
@@ -109,20 +119,19 @@ function App() {
                   } />
 
 
-                  <Route path="/admin" element={
-                    <AdminProtectedRoute>
-                      <Navigate to="/admin/dashboard" replace />
-                    </AdminProtectedRoute>
-                  } />
+                  <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}>
+                    <Route index element={<PlatformStats />} />
+                    <Route path="orders" element={<ManageOrders />} />
+                    <Route path="sellers" element={<ManageSellers />} />
+                    <Route path="users" element={<ManageUsers />} />
+                    <Route path="invites" element={<ManageInvites />} />
+                    <Route path="locations" element={<LocationMap />} />
+                    <Route path="delivery" element={<DeliveryCoverage />} />
+                    <Route path="interactions" element={<InteractionAnalytics />} />
+                    <Route path="product-performance" element={<ProductPerformance />} />
+                    <Route path="notifications" element={<ManageNotifications />} />
+                  </Route>
                   <Route path="/admin/login" element={<AdminAuth />} />
-                  <Route
-                    path="/admin/dashboard"
-                    element={
-                      <AdminProtectedRoute>
-                        <AdminDashboard />
-                      </AdminProtectedRoute>
-                    }
-                  />
 
 
                   <Route path="/ambassador" element={

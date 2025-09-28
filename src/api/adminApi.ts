@@ -194,6 +194,7 @@ export const getAnalyticsSummary = () => requestWithoutBody('/api/v1/analytics/s
 // --- Sellers ---
 export const getAllSellers = () => publicRequestWithoutBody('/api/v1/all-sellers', 'GET');
 export const adminGetAllSellers = () => requestWithoutBody('/admin/sellers', 'GET');
+export const adminGetAllInteractions = () => requestWithoutBody('/admin/interactions', 'GET');
 
 export const getSellerDetails = (sellerId: string) => requestWithoutBody(`/admin/sellers/${sellerId}`, 'GET');
 export const getAllUsers = () => requestWithoutBody('/admin/users', 'GET');
