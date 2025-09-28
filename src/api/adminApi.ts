@@ -193,6 +193,13 @@ export const getAnalyticsSummary = () => requestWithoutBody('/api/v1/analytics/s
 
 // --- Sellers ---
 export const getAllSellers = () => publicRequestWithoutBody('/api/v1/all-sellers', 'GET');
+export const adminGetAllSellers = () => requestWithoutBody('/admin/sellers', 'GET');
+
+export const getSellerDetails = (sellerId: string) => requestWithoutBody(`/admin/sellers/${sellerId}`, 'GET');
+export const getAllUsers = () => requestWithoutBody('/admin/users', 'GET');
+export const getUserDetails = (userId: string) => requestWithoutBody(`/admin/users/${userId}`, 'GET');
+export const getAllDeliveryBookings = () => requestWithoutBody('/admin/delivery-bookings', 'GET');
+export const getAllInvites = () => requestWithoutBody('/admin/invites', 'GET');
 // NOTE: No endpoints found for approving/rejecting sellers in the swagger file.
 
 // --- Invites ---

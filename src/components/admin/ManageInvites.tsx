@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Search, Gift, CheckCircle, XCircle } from 'lucide-react';
-import FormInput from '../seller/FormInput';
-import { getInvitesByOwner, generateInviteForOwner } from '../../api/adminApi';
+import { Gift } from 'lucide-react';
+import { getAllInvites } from '../../api/adminApi';
 
 interface InviteData {
   owner: string;
@@ -11,45 +10,28 @@ interface InviteData {
 }
 
 const ManageInvites: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [inviteData, setInviteData] = useState<InviteData | null>(null);
-  const [searchedEmail, setSearchedEmail] = useState<string | null>(null);
+  const [invites, setInvites] = useState<InviteData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCheckEmail = async () => {
-    if (!email) return;
-    setIsLoading(true);
-    setError(null);
-    setInviteData(null);
-    setSearchedEmail(email);
-    try {
-      const invites = await getInvitesByOwner(email);
-      if (invites && invites.length > 0) {
-        setInviteData(invites[0]);
-      } else {
-        setInviteData(null);
+  useEffect(() => {
+    const fetchInvites = async () => {
+      setIsLoading(true);
+      try {
+        const response = await getAllInvites();
+        if (response.ok) {
+          setInvites(response.body);
+        } else {
+          setError('Failed to fetch invites.');
+        }
+      } catch (err) {
+        setError('An error occurred while fetching invites.');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError('An error occurred while checking the email.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGenerateInvite = async () => {
-    if (!searchedEmail) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const newInvite = await generateInviteForOwner(searchedEmail);
-      setInviteData(newInvite);
-    } catch (err) {
-      setError('An error occurred while generating the invite.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+    fetchInvites();
+  }, []);
 
   return (
     <motion.div
@@ -58,59 +40,35 @@ const ManageInvites: React.FC = () => {
       transition={{ duration: 0.5, delay: 0.3 }}
       className="bg-background rounded-lg p-6 mt-6"
     >
-      <h2 className="text-xl font-semibold text-white mb-4">Manage Ambassador Invites</h2>
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-grow">
-          <FormInput
-            id="ambassador-email"
-            label="Ambassador Email"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            icon={<Mail size={20} />}
-            placeholder="Enter email to check for invite code"
-          />
-        </div>
-        <button
-          onClick={handleCheckEmail}
-          disabled={isLoading || !email}
-          className="flex items-center justify-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
-        >
-          <Search size={20} className="mr-2" />
-          {isLoading ? 'Checking...' : 'Check Email'}
-        </button>
+      <div className="flex items-center mb-4">
+        <Gift size={24} className="mr-3 text-primary" />
+        <h2 className="text-xl font-semibold text-white">All Ambassador Invites</h2>
       </div>
 
-      {searchedEmail && !isLoading && (
-        <div className="bg-background-light p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">Result for: <span className="font-mono text-primary">{searchedEmail}</span></h3>
-          {error && <p className="text-red-500">{error}</p>}
-          
-          {inviteData ? (
-            <div className="space-y-3">
-              <div className="flex items-center text-green-400">
-                <CheckCircle size={20} className="mr-2" />
-                <span>An invite code already exists for this email.</span>
-              </div>
-              <p><span className="font-semibold text-neutral-400">Invite Code:</span> <span className="font-mono text-secondary">{inviteData.code}</span></p>
-              <p><span className="font-semibold text-neutral-400">Signups:</span> <span className="font-mono">{inviteData.signups}</span></p>
-            </div>
-          ) : !error && (
-            <div className="space-y-4">
-               <div className="flex items-center text-yellow-400">
-                <XCircle size={20} className="mr-2" />
-                <span>No invite code found for this email.</span>
-              </div>
-              <button
-                onClick={handleGenerateInvite}
-                disabled={isLoading}
-                className="flex items-center px-4 py-2 bg-secondary text-white rounded-md hover:bg-secondary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary disabled:opacity-50"
-              >
-                <Gift size={20} className="mr-2" />
-                {isLoading ? 'Generating...' : 'Generate Invite Code'}
-              </button>
-            </div>
-          )}
+      {isLoading ? (
+        <div className="text-center text-neutral-400">Loading invites...</div>
+      ) : error ? (
+        <div className="text-center text-red-500">{error}</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-neutral-700">
+                <th className="p-4 text-sm font-semibold text-neutral-400">Owner</th>
+                <th className="p-4 text-sm font-semibold text-neutral-400">Invite Code</th>
+                <th className="p-4 text-sm font-semibold text-neutral-400">Signups</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invites.map((invite) => (
+                <tr key={invite.code} className="border-b border-neutral-800 hover:bg-background-light">
+                  <td className="p-4 text-white font-medium">{invite.owner}</td>
+                  <td className="p-4 text-secondary font-mono">{invite.code}</td>
+                  <td className="p-4 text-white">{invite.signups}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </motion.div>

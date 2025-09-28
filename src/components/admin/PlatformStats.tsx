@@ -1,17 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, ShoppingBag, DollarSign, BarChart } from 'lucide-react';
-import { getAnalyticsSummary } from '../../api/adminApi';
+import { Users, ShoppingBag, DollarSign, Truck } from 'lucide-react';
+import { GetAllOrders, getAllUsers, getAllSellers, getAllDeliveryBookings } from '../../api/adminApi';
+import { Order } from '../../constants/orders';
+
+interface StatsData {
+  totalRevenue: number;
+  gmv: number;
+  ambassadorPayout: number;
+  brandPayout: number;
+  totalUsers: number;
+  totalSellers: number;
+  totalDeliveryBookings: number;
+}
 
 const PlatformStats: React.FC = () => {
-  const [stats, setStats] = useState<any | null>(null);
+  const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const summary = await getAnalyticsSummary();
-        setStats(summary);
+        const [ordersResponse, usersResponse, sellersResponse, bookingsResponse] = await Promise.all([
+          GetAllOrders(),
+          getAllUsers(),
+          getAllSellers(),
+          getAllDeliveryBookings(),
+        ]);
+
+        if (ordersResponse.ok && usersResponse.ok && sellersResponse.ok && bookingsResponse.ok) {
+          const orders: Order[] = ordersResponse.body;
+          const totalRevenue = orders.reduce((acc, order) => acc + (order.subtotal * 0.125) + order.shipping_cost, 0);
+          const gmv = orders.reduce((acc, order) => acc + order.total, 0);
+          const ambassadorPayout = totalRevenue * 0.15;
+          const brandPayout = orders.reduce((acc, order) => acc + (order.subtotal * 0.875), 0);
+          
+          setStats({
+            totalRevenue,
+            gmv,
+            ambassadorPayout,
+            brandPayout,
+            totalUsers: usersResponse.body.length,
+            totalSellers: sellersResponse.body.length,
+            totalDeliveryBookings: bookingsResponse.body.length,
+          });
+        }
       } catch (error) {
         console.error("Failed to fetch platform stats:", error);
       } finally {
@@ -22,10 +55,13 @@ const PlatformStats: React.FC = () => {
   }, []);
 
   const displayStats = [
-    { name: 'Total Revenue', value: stats ? `${stats.totalRevenue?.toFixed(2)}` : 'N/A', icon: DollarSign, color: 'text-accent' },
-    { name: 'Active Customers', value: stats ? stats.activeCustomers : 'N/A', icon: Users, color: 'text-primary' },
-    { name: 'Total Sellers', value: 'N/A', icon: ShoppingBag, color: 'text-secondary' },
-    { name: 'Pending Approvals', value: 'N/A', icon: BarChart, color: 'text-yellow-500' },
+    { name: 'Gross Merchandise Value', value: stats ? `Rs ${stats.gmv?.toFixed(2)}` : 'N/A', icon: DollarSign, color: 'text-accent' },
+    { name: 'Total Revenue', value: stats ? `Rs ${stats.totalRevenue?.toFixed(2)}` : 'N/A', icon: DollarSign, color: 'text-accent' },
+    { name: 'Campus Ambassador Payout', value: stats ? `Rs ${stats.ambassadorPayout?.toFixed(2)}` : 'N/A', icon: Users, color: 'text-primary' },
+    { name: 'Brand Payout', value: stats ? `Rs ${stats.brandPayout?.toFixed(2)}` : 'N/A', icon: ShoppingBag, color: 'text-secondary' },
+    { name: 'Total Users', value: stats ? stats.totalUsers : 'N/A', icon: Users, color: 'text-primary' },
+    { name: 'Total Sellers', value: stats ? stats.totalSellers : 'N/A', icon: ShoppingBag, color: 'text-secondary' },
+    { name: 'Total Delivery Bookings', value: stats ? stats.totalDeliveryBookings : 'N/A', icon: Truck, color: 'text-yellow-500' },
   ];
 
   if (isLoading) {

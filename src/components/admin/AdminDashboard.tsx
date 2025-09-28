@@ -6,6 +6,9 @@ import ManageSellers from './ManageSellers';
 import ManageInvites from './ManageInvites';
 import ManageNotifications from './ManageNotifications';
 import ManageOrders from './ManageOrders';
+import ManageUsers from './ManageUsers';
+import LocationMap from './LocationMap';
+import DeliveryCoverage from './DeliveryCoverage';
 
 const AdminDashboard: React.FC = () => {
   const { admin, logout } = useAdminAuth();
@@ -14,7 +17,10 @@ const AdminDashboard: React.FC = () => {
   const tabs = [
     { id: 'orders', label: 'Manage Orders' },
     { id: 'sellers', label: 'Manage Sellers' },
+    { id: 'users', label: 'Manage Users' },
     { id: 'invites', label: 'Manage Invites' },
+    { id: 'locations', label: 'Location Map' },
+    { id: 'delivery-coverage', label: 'Delivery Coverage' },
     { id: 'notifications', label: 'Broadcast Notifications' },
   ];
 
@@ -67,7 +73,10 @@ const AdminDashboard: React.FC = () => {
           <div className="mt-2">
             {activeTab === 'orders' && <ManageOrders />}
             {activeTab === 'sellers' && <ManageSellers />}
+            {activeTab === 'users' && <ManageUsers />}
             {activeTab === 'invites' && <ManageInvites />}
+            {activeTab === 'locations' && <LocationMap />}
+            {activeTab === 'delivery-coverage' && <DeliveryCoverage />}
             {activeTab === 'notifications' && <ManageNotifications />}
           </div>
         </main>
