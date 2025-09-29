@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Users, ShoppingBag, DollarSign, Truck } from 'lucide-react';
 import { GetAllOrders, getAllUsers, getAllSellers, getAllInvites, getAllDeliveryBookings } from '../../api/adminApi';
 import { Order } from '../../constants/orders';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface StatsData {
   totalRevenue: number;
@@ -14,6 +14,24 @@ interface StatsData {
   totalSellers: number;
   totalDeliveryBookings: number;
 }
+
+const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const formattedLabel = new Date(label).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    return (
+      <div className="bg-background-light/80 backdrop-blur-sm p-4 rounded-lg border border-neutral-700 shadow-lg">
+        <p className="label text-base text-white font-bold mb-2">{formattedLabel}</p>
+        {payload.map((pld: any) => (
+          <div key={pld.dataKey} className="flex items-center justify-between text-sm">
+            <p style={{ color: pld.stroke }}>{`${pld.name}:`}</p>
+            <p className="ml-4 font-mono font-bold" style={{ color: pld.stroke }}>{pld.value}</p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 const PlatformStats: React.FC = () => {
   const [stats, setStats] = useState<StatsData | null>(null);
@@ -35,7 +53,6 @@ const PlatformStats: React.FC = () => {
           const orders: Order[] = ordersResponse.body;
           const users = usersResponse.body;
           const sellers = sellersResponse.body;
-          const invites = invitesResponse.body;
 
           const totalRevenue = orders.reduce((acc, order) => acc + (order.subtotal * 0.125) + order.shipping_cost, 0);
           const gmv = orders.reduce((acc, order) => acc + order.total, 0);
@@ -53,27 +70,23 @@ const PlatformStats: React.FC = () => {
           });
 
           const processDataForChart = (data: any[], dateKey: string) => {
-            const countsByDay = data.reduce((acc, item) => {
-              const date = new Date(item[dateKey]).toLocaleDateString();
+            return data.reduce((acc, item) => {
+              const date = new Date(item[dateKey]).toISOString().split('T')[0];
               acc[date] = (acc[date] || 0) + 1;
               return acc;
             }, {} as Record<string, number>);
-            return Object.entries(countsByDay).map(([date, count]) => ({ date, count }));
           };
 
           const ordersByDay = processDataForChart(orders, 'created_at');
           const usersByDay = processDataForChart(users, 'created_at');
-          const sellersByDay = processDataForChart(sellers, 'created_at');
-          const invitesByDay = processDataForChart(invites, 'created_at');
 
-          const allDates = [...new Set([...ordersByDay.map(d => d.date), ...usersByDay.map(d => d.date), ...sellersByDay.map(d => d.date), ...invitesByDay.map(d => d.date)])];
+          const allDates = [...new Set([...Object.keys(ordersByDay), ...Object.keys(usersByDay)])];
+          allDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
           const combinedData = allDates.map(date => ({
             date,
-            orders: ordersByDay.find(d => d.date === date)?.count || 0,
-            users: usersByDay.find(d => d.date === date)?.count || 0,
-            sellers: sellersByDay.find(d => d.date === date)?.count || 0,
-            invites: invitesByDay.find(d => d.date === date)?.count || 0,
+            orders: ordersByDay[date] || 0,
+            users: usersByDay[date] || 0,
           }));
 
           setChartData(combinedData);
@@ -125,17 +138,32 @@ const PlatformStats: React.FC = () => {
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-4 text-white">Daily Performance</h2>
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
-            <XAxis dataKey="date" stroke="#a3a3a3" />
+          <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#404040" vertical={false} />
+            <XAxis 
+              dataKey="date"
+              stroke="#a3a3a3"
+              tickFormatter={(dateStr) => {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              }}
+            />
             <YAxis stroke="#a3a3a3" />
-            <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #404040' }} />
+            <Tooltip content={<CustomTooltip />} />
             <Legend />
-            <Line type="monotone" dataKey="orders" stroke="#8884d8" name="Orders" />
-            <Line type="monotone" dataKey="users" stroke="#82ca9d" name="Users" />
-            <Line type="monotone" dataKey="sellers" stroke="#ffc658" name="Sellers" />
-            <Line type="monotone" dataKey="invites" stroke="#ff7300" name="Invites" />
-          </LineChart>
+            <Area type="monotone" dataKey="orders" name="Orders" stroke="#82ca9d" fillOpacity={1} fill="url(#colorOrders)" />
+            <Area type="monotone" dataKey="users" name="Users" stroke="#8884d8" fillOpacity={1} fill="url(#colorUsers)" />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </motion.div>
