@@ -134,7 +134,7 @@ const Mission: React.FC = () => {
             </p>
             <div className="flex items-center justify-center">
               <img 
-                src="/team/omer.jpg" 
+                src="/team/omer.png" 
                 alt="Omer Malik, Founder"
                 className="w-16 h-16 rounded-full mr-4 border-2 border-primary/50"
               />

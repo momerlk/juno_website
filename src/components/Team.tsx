@@ -60,7 +60,7 @@ const Team: React.FC = () => {
     {
       name: "Omer Ali Malik",
       role: "Chief Executive Officer",
-      image: "/team/omer.jpg",
+      image: "/team/omer.png",
       bio: "Product, Operations & Engineering",
       social: {
         linkedin: "https://linkedin.com/in/omer-malik-395a2a2a5",
