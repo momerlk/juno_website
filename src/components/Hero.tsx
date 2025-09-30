@@ -1,7 +1,8 @@
 import React from 'react';
 import { Smartphone, ArrowRight, Play, Users, ShoppingBag, Briefcase } from 'lucide-react';
 import { motion } from 'framer-motion';
-import splashImage from "../assets/screenshots/swipe.png"
+import appLandscapeImage from "../assets/screenshots/app_landscape.png";
+import appPortraitImage from "../assets/screenshots/app_portrait.png";
 
 const Hero: React.FC = () => {
   return (
@@ -73,15 +74,26 @@ const Hero: React.FC = () => {
             transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.4 }}
             className="lg:col-span-5 relative flex justify-center"
           >
-            <div className="relative w-[480px] md:w-[500px] animate-float">
+            <div className="relative w-[480px] md:w-[500px] animate-float flex items-center justify-center">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-secondary/20 blur-3xl rounded-full animate-pulse"></div>
+              {/* Portrait Image */}
               <img
-                src={splashImage}
+                src={appPortraitImage}
                 alt="Juno App Preview"
-                className="relative"
+                className="relative block landscape:hidden"
                 style={{
                   height : 600,
-                  width : 485,
+                  width : 333,
+                }}
+              />
+              {/* Landscape Image */}
+              <img
+                src={appLandscapeImage}
+                alt="Juno App Preview"
+                className="relative hidden landscape:block"
+                style={{
+                  height : 612,
+                  width : 480,
                 }}
               />
             </div>
