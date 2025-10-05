@@ -140,7 +140,8 @@ const AmbassadorDashboard: React.FC = () => {
         try {
           const userPromises = inviteData[0].users.map(userId => fetchUserPublicProfile(userId));
           const userProfiles = await Promise.all(userPromises);
-          setSignedUpUsers(userProfiles);
+          const sortedUsers = userProfiles.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          setSignedUpUsers(sortedUsers);
         } catch (error) {
           console.error("Failed to fetch signed up users:", error);
         } finally {
@@ -329,16 +330,44 @@ const AmbassadorDashboard: React.FC = () => {
                                         ) : (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                                 {(showAllSignups ? signedUpUsers : signedUpUsers.slice(0, 4)).map((user, index) => (
-                                                    <motion.div 
+                                                    <motion.div
                                                         key={user.id}
                                                         initial={{ opacity: 0, y: 20 }}
                                                         animate={{ opacity: 1, y: 0 }}
                                                         transition={{ delay: index * 0.05 }}
-                                                        className="bg-neutral-800/50 p-4 rounded-xl text-center border border-neutral-700 hover:bg-neutral-700/50 transition-colors hover:border-accent/50"
+                                                        className="bg-neutral-800/50 p-4 rounded-xl border border-neutral-700 hover:bg-neutral-700/50 transition-colors flex flex-col justify-between text-center"
                                                     >
-                                                        <img src={user.avatar} alt={user.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover border-2 border-neutral-600" />
-                                                        <p className="font-bold text-white truncate">{user.name}</p>
-                                                        <p className="text-xs text-neutral-400">Joined: {new Date(user.created_at).toLocaleDateString()}</p>
+                                                        <div>
+                                                            <img src={user.avatar} alt={user.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover border-2 border-neutral-600" />
+                                                            <p className="font-bold text-white truncate">{user.name}</p>
+                                                            <p className="text-sm text-neutral-400">{user.phone_number}</p>
+                                                            <p className="text-xs text-neutral-500 mt-1">Joined: {new Date(user.created_at).toLocaleDateString()}</p>
+                                                        </div>
+                                                        <div className="mt-4 space-y-3">
+                                                            <div>
+                                                                {user.verification_status === 'verified' ? (
+                                                                    <span className="text-xs font-semibold inline-block py-1 px-3 uppercase rounded-full text-white" style={{ backgroundColor: '#0082fb' }}>
+                                                                        Verified
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-xs font-semibold inline-block py-1 px-3 uppercase rounded-full text-red-100 bg-red-800">
+                                                                        Unverified
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="w-full">
+                                                                <div className="flex justify-between items-center text-xs text-neutral-500 mb-1">
+                                                                    <span>Profile</span>
+                                                                    <span>{user.verification_status === 'verified' ? 100 : 70}%</span>
+                                                                </div>
+                                                                <div className="w-full bg-neutral-700 rounded-full h-1.5">
+                                                                    <div 
+                                                                        className={`h-1.5 rounded-full ${user.verification_status === 'verified' ? 'bg-blue-800' : 'bg-yellow-400'}`}
+                                                                        style={{ width: `${user.verification_status === 'verified' ? 100 : 70}%` }}
+                                                                    ></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </motion.div>
                                                 ))}
                                             </div>
