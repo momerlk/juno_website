@@ -81,6 +81,18 @@ const productTypeToSizingGuide: Record<string, string> = {
     "Sandal": "footwear",
 };
 
+const generateHandle = (title: string, brand: string): string => {
+  if (!title || !brand) return '';
+  const combined = `${brand} ${title}`;
+  return combined
+    .toLowerCase()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')        // Remove all non-word chars
+    .replace(/--+/g, '-')           // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start of text
+    .replace(/-+$/, '');            // Trim - from end of text
+};
+
 
 const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
     const { seller } = useSellerAuth();
@@ -383,6 +395,8 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
             } else {
                 const createPayload = {
                     ...payload,
+                    handle: generateHandle(payload.title || '', seller?.user?.business_name || ''),
+                    status: 'active',
                     seller_name: seller?.user?.business_name,
                     seller_logo: seller?.user?.logo_url,
                 };

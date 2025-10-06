@@ -14,6 +14,11 @@ import SellerAuth from './components/seller/SellerAuth';
 import SellerDashboard from './components/seller/SellerDashboard';
 import SellerOnboarding from './components/seller/SellerOnboarding';
 import ProtectedRoute from './components/seller/ProtectedRoute';
+import SellerHome from './components/seller/SellerHome';
+import ManageInventory from './components/seller/ManageInventory';
+import AdminManageOrders from './components/seller/ManageOrders';
+import Analytics from './components/seller/Analytics';
+import Profile from './components/seller/Profile';
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
 import { JunoStudioProvider } from './contexts/JunoStudioContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
@@ -25,7 +30,7 @@ import TermsConditions from './components/policies/TermsConditions';
 import AdminAuth from "./components/admin/AdminAuth";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import AdminProtectedRoute from "./components/admin/ProtectedRoute";
-import ManageOrders from './components/admin/ManageOrders';
+import SellerManageOrders from './components/seller/ManageOrders';
 import ManageSellers from './components/admin/ManageSellers';
 import ManageUsers from './components/admin/ManageUsers';
 import ManageInvites from './components/admin/ManageInvites';
@@ -109,11 +114,13 @@ function App() {
                     </ProtectedRoute>
                   } />
                   <Route path="/seller/auth" element={<SellerAuth />} />
-                  <Route path="/seller/dashboard" element={
-                    <ProtectedRoute>
-                      <SellerDashboard />
-                    </ProtectedRoute>
-                  } />
+                  <Route path="/seller/dashboard" element={<ProtectedRoute><SellerDashboard /></ProtectedRoute>}>
+                    <Route index element={<SellerHome />} />
+                    <Route path="inventory" element={<ManageInventory />} />
+                    <Route path="orders" element={<SellerManageOrders />} />
+                    <Route path="analytics" element={<Analytics />} />
+                    <Route path="profile" element={<Profile />} />
+                  </Route>
                   <Route path="/seller/onboarding" element={
                       <SellerOnboarding />
                   } />
@@ -121,7 +128,7 @@ function App() {
 
                   <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}>
                     <Route index element={<PlatformStats />} />
-                    <Route path="orders" element={<ManageOrders />} />
+                    <Route path="orders" element={<AdminManageOrders />} />
                     <Route path="sellers" element={<ManageSellers />} />
                     <Route path="users" element={<ManageUsers />} />
                     <Route path="invites" element={<ManageInvites />} />

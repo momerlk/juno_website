@@ -1,209 +1,226 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
-import { motion } from 'framer-motion';
-import { Truck, ArrowRight, ChevronDown, ChevronUp, XCircle, Download } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Truck, ArrowRight, ChevronDown, ChevronUp, XCircle, Download, MoreVertical, Package, Calendar, User, DollarSign } from 'lucide-react';
 import { Order, OrderStatus } from '../../constants/orders';
 import { Product } from '../../constants/types';
+
+import { OrderStatusBadge } from './OrderStatusBadge';
+
+const OrderCard: React.FC<{
+    order: Order;
+    productDetails: Record<string, Product>;
+    loadingProducts: Set<string>;
+    onUpdateStatus: (orderId: string, currentStatus: OrderStatus) => void;
+    onCancelOrder: (orderId: string) => void;
+    onBookDelivery: (orderId: string) => void;
+    onDownloadBill: (orderId: string) => void;
+}> = ({ order, productDetails, loadingProducts, onUpdateStatus, onCancelOrder, onBookDelivery, onDownloadBill }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    const manualOrderStatusFlow: OrderStatus[] = ['pending', 'confirmed', 'packed'];
+    const nextStatus = useMemo(() => {
+        const currentIndex = manualOrderStatusFlow.indexOf(order.status.toLowerCase() as OrderStatus);
+        if (currentIndex !== -1 && currentIndex < manualOrderStatusFlow.length - 1) {
+            return manualOrderStatusFlow[currentIndex + 1];
+        }
+        return null;
+    }, [order.status]);
+
+    const isPacked = order.status.toLowerCase() === 'packed';
+    const canUpdate = !['booked', 'shipped', 'delivered', 'cancelled', 'returned'].includes(order.status.toLowerCase());
+
+    const primaryAction = () => {
+        if (isPacked && canUpdate) return <button onClick={() => onBookDelivery(order.id!)} className="btn-primary btn-sm"><Truck size={16} className="mr-2"/> Book Delivery</button>;
+        if (!isPacked && canUpdate && nextStatus) return <button onClick={() => onUpdateStatus(order.id!, order.status)} className="btn-secondary btn-sm"><ArrowRight size={16} className="mr-2"/> Mark as {nextStatus}</button>;
+        return null;
+    };
+
+    return (
+        <motion.div layout className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-lg overflow-hidden">
+            <div className="p-4 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div className="flex-grow">
+                        <div className="flex items-center gap-4 mb-2">
+                            <p className="font-bold text-white text-lg">{order.order_number}</p>
+                            <OrderStatusBadge status={order.status} />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-400">
+                            <span className="flex items-center"><Calendar size={14} className="mr-1.5"/>{new Date(order.created_at).toLocaleDateString()}</span>
+                            <span className="flex items-center"><User size={14} className="mr-1.5"/>{order.shipping_address?.name}</span>
+                            <span className="flex items-center">Rs. {order.total.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        {primaryAction()}
+                        <div className="relative">
+                            <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(p => !p); }} className="p-2 rounded-md hover:bg-neutral-700/50"><MoreVertical size={20}/></button>
+                            <AnimatePresence>
+                                {isMenuOpen && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                                        className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-700 rounded-md shadow-lg z-10"
+                                    >
+                                        {canUpdate && <button onClick={() => onCancelOrder(order.id!)} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-neutral-800"><XCircle size={14} className="mr-2"/> Cancel Order</button>}
+                                        {['confirmed', 'packed', 'booked'].includes(order.status.toLowerCase()) && <button onClick={() => onDownloadBill(order.id!)} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800"><Download size={14} className="mr-2"/> Download Bill</button>}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                        <button className="p-2 rounded-md hover:bg-neutral-700/50"><ChevronDown size={20} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}/></button>
+                    </div>
+                </div>
+            </div>
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="border-t border-neutral-800">
+                        <div className="p-4 bg-black/20">
+                            <p className="text-md font-semibold text-white mb-2">Order Items ({order.order_items?.length})</p>
+                            <div className="space-y-3">
+                            {order.order_items?.map((item) => {
+                                const product = productDetails[item.product_id];
+                                return (
+                                <div key={item.id} className="flex items-center">
+                                    {loadingProducts.has(item.product_id) ? <div className="w-16 h-16 rounded-md bg-neutral-800 animate-pulse mr-4"/> : <img src={product?.images[0]} alt={product?.title} className="w-16 h-16 rounded-md object-cover mr-4" />}
+                                    <div className="flex-grow">
+                                        <p className="text-sm font-semibold text-white">{product?.title || 'Loading...'}</p>
+                                        <p className="text-xs text-neutral-400">Qty: {item.quantity} | Price: Rs. {item.unit_price}</p>
+                                    </div>
+                                </div>
+                                )
+                            })}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+};
 
 const ManageOrders: React.FC = () => {
   const { seller } = useSellerAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [productDetails, setProductDetails] = useState<Record<string, Product>>({});
   const [loadingProducts, setLoadingProducts] = useState<Set<string>>(new Set());
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'all'>('all');
 
-  const fetchOrders = async () => {
-    if (seller?.token) {
-      try {
-        setIsLoading(true);
-        const response = await api.Seller.GetOrders(seller.token);
-        if (response.ok && response.body) {
-          setOrders(response.body as Order[]);
-        } else {
-          setError('Failed to fetch orders.');
-        }
-      } catch (err) {
-        setError('An error occurred while fetching orders.');
-      } finally {
-        setIsLoading(false);
+  const fetchOrders = useCallback(async () => {
+    if (!seller?.token) return;
+    setIsLoading(true);
+    try {
+      const response = await api.Seller.GetOrders(seller.token);
+      if (response.ok && response.body) {
+        const fetchedOrders = (response.body as Order[]).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setOrders(fetchedOrders);
+        const productIds = new Set<string>();
+        fetchedOrders.forEach(order => order.order_items?.forEach(item => productIds.add(item.product_id)));
+        fetchProductDetails(Array.from(productIds));
+      } else {
+        setError('Failed to fetch orders.');
       }
+    } catch (err) {
+      setError('An error occurred while fetching orders.');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [seller?.token]);
 
   useEffect(() => {
     fetchOrders();
-  }, [seller]);
+  }, [fetchOrders]);
 
-  const manualOrderStatusFlow: OrderStatus[] = ['pending', 'confirmed', 'packed'];
   const allOrderStatuses: (OrderStatus | 'all')[] = ['all', 'pending', 'confirmed', 'packed', 'booked', 'shipped', 'delivered', 'cancelled', 'returned'];
 
-  const getNextStatus = (currentStatus: string): OrderStatus | null => {
-    const currentIndex = manualOrderStatusFlow.indexOf(currentStatus.toLowerCase() as OrderStatus);
-    if (currentIndex !== -1 && currentIndex < manualOrderStatusFlow.length - 1) {
-      return manualOrderStatusFlow[currentIndex + 1];
-    }
-    return null;
-  };
-
   const handleUpdateStatus = async (orderId: string, currentStatus: OrderStatus) => {
-    const nextStatus = getNextStatus(currentStatus);
+    const manualOrderStatusFlow: OrderStatus[] = ['pending', 'confirmed', 'packed'];
+    const currentIndex = manualOrderStatusFlow.indexOf(currentStatus.toLowerCase() as OrderStatus);
+    const nextStatus = (currentIndex !== -1 && currentIndex < manualOrderStatusFlow.length - 1) ? manualOrderStatusFlow[currentIndex + 1] : null;
+
     if (!nextStatus || !seller?.token || !seller.user) return;
 
-    try {
-      const payload: api.Seller.StatusUpdatePayload = {
-        status: nextStatus,
-        changed_by_id: seller.user.id,
-        changed_by_name: seller.user.business_name,
-      };
-      const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, payload);
-      if (response.ok) {
-        fetchOrders();
-      } else {
-        alert('Failed to update order status.');
-      }
-    } catch (error) {
-      alert('An error occurred while updating status.');
-    }
+    const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, { status: nextStatus, changed_by_id: seller.user.id, changed_by_name: seller.user.business_name });
+    if (response.ok) fetchOrders(); else alert('Failed to update order status.');
   };
 
   const handleCancelOrder = async (orderId: string) => {
-    if (!seller?.token || !seller.user) return;
-
-    if (window.confirm('Are you sure you want to cancel this order?')) {
-        try {
-            const payload: api.Seller.StatusUpdatePayload = {
-                status: 'cancelled',
-                changed_by_id: seller.user.id,
-                changed_by_name: seller.user.business_name,
-            };
-            const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, payload);
-            if (response.ok) {
-                fetchOrders();
-            } else {
-                alert('Failed to cancel order.');
-            }
-        } catch (error) {
-            alert('An error occurred while cancelling the order.');
-        }
-    }
+    if (!seller?.token || !seller.user || !window.confirm('Are you sure you want to cancel this order?')) return;
+    const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, { status: 'cancelled', changed_by_id: seller.user.id, changed_by_name: seller.user.business_name });
+    if (response.ok) fetchOrders(); else alert('Failed to cancel order.');
   };
 
- const handleBookDelivery = async (orderId: string) => {
+  const handleBookDelivery = async (orderId: string) => {
     if (!seller?.token || !seller.user) return;
-    try {
-      const bookResponse = await api.Seller.bookDelivery(seller.token, orderId);
-      if (bookResponse.ok) {
-        alert('Delivery booked successfully!');
-        const payload: api.Seller.StatusUpdatePayload = {
-          status: 'booked',
-          changed_by_id: seller.user.id,
-          changed_by_name: seller.user.business_name,
-        };
-        await api.Seller.UpdateOrderStatus(seller.token, orderId, payload);
-        fetchOrders();
-      } else {
-        alert(`Failed to book delivery: ${bookResponse.body?.message || 'Unknown error'}`);
-      }
-    } catch (error) {
-      alert('An error occurred while booking delivery.');
+    const bookResponse = await api.Seller.bookDelivery(seller.token, orderId);
+    if (bookResponse.ok) {
+      alert('Delivery booked successfully!');
+      await api.Seller.UpdateOrderStatus(seller.token, orderId, { status: 'booked', changed_by_id: seller.user.id, changed_by_name: seller.user.business_name });
+      fetchOrders();
+    } else {
+      alert(`Failed to book delivery: ${bookResponse.body?.message || 'Unknown error'}`);
     }
   };
 
   const handleDownloadBill = async (orderId: string) => {
-    try {
-      const response = await api.Seller.GetAirwayBill(orderId);
-      if (response.ok && response.body) {
-        const blob = response.body as Blob;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `airway-bill-${orderId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-      } else {
-        alert(`Try again in a few minutes: ${response.body || 'Unknown error'}`);
-      }
-    } catch (error) {
-      alert('An error occurred while downloading the bill.');
-      console.error(error);
+    const response = await api.Seller.GetAirwayBill(orderId);
+    if (response.ok && response.body) {
+      const url = window.URL.createObjectURL(response.body as Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `airway-bill-${orderId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } else {
+      alert(`Try again in a few minutes: ${response.body || 'Unknown error'}`);
     }
   };
 
-  const fetchProductDetails = async (productId: string) => {
-    if (productDetails[productId] || loadingProducts.has(productId)) return;
+  const fetchProductDetails = useCallback(async (productIds: string[]) => {
+    const idsToFetch = productIds.filter(id => !productDetails[id] && !loadingProducts.has(id));
+    if (idsToFetch.length === 0) return;
 
-    setLoadingProducts(prev => new Set(prev).add(productId));
-    try {
-      const response = await api.Products.GetProductByID(productId);
-      if (response.ok && response.body) {
-        setProductDetails(prev => ({ ...prev, [productId]: response.body }));
-      }
-    } catch (err) {
-      console.error(`Failed to fetch product ${productId}`, err);
-    } finally {
-      setLoadingProducts(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(productId);
-        return newSet;
-      });
-    }
-  };
-
-  const toggleOrderExpansion = (order: Order) => {
-    const newExpandedOrderId = expandedOrderId === order.id ? null : order.id;
-    setExpandedOrderId(newExpandedOrderId as string | null);
-
-    if (newExpandedOrderId && order.order_items) {
-      order.order_items.forEach(item => {
-        fetchProductDetails(item.product_id);
-      });
-    }
-  };
-
-  const filteredAndSortedOrders = useMemo(() => {
-    const filtered = selectedStatus === 'all'
-      ? orders
-      : orders.filter(order => order.status === selectedStatus);
-
-    return filtered.sort((a, b) => {
-      const aIsBykea = a.delivery_partner === 'Bykea';
-      const bIsBykea = b.delivery_partner === 'Bykea';
-      if (aIsBykea && !bIsBykea) return -1;
-      if (!aIsBykea && bIsBykea) return 1;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    setLoadingProducts(prev => new Set([...prev, ...idsToFetch]));
+    const responses = await Promise.all(idsToFetch.map(id => api.Products.GetProductByID(id)));
+    
+    const newProductDetails: Record<string, Product> = {};
+    responses.forEach((response, index) => {
+        if (response.ok && response.body) {
+            newProductDetails[idsToFetch[index]] = response.body;
+        }
     });
-  }, [orders, selectedStatus]);
 
-  if (isLoading) {
-    return <div className="text-center p-8 text-white">Loading orders...</div>;
-  }
+    setProductDetails(prev => ({ ...prev, ...newProductDetails }));
+    setLoadingProducts(prev => {
+        const newSet = new Set(prev);
+        idsToFetch.forEach(id => newSet.delete(id));
+        return newSet;
+    });
+  }, [productDetails, loadingProducts]);
 
-  if (error) {
-    return <div className="text-red-500 text-center p-8">{error}</div>;
-  }
+  const filteredOrders = useMemo(() => selectedStatus === 'all' ? orders : orders.filter(order => order.status === selectedStatus), [orders, selectedStatus]);
+
+  if (isLoading && !orders.length) return <div className="text-center p-8 text-white">Loading orders...</div>;
+  if (error) return <div className="text-red-500 text-center p-8">{error}</div>;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.4 }}
-      className="bg-background rounded-lg p-6 mt-6"
-    >
-      <h2 className="text-2xl font-bold text-white mb-6">Manage Orders</h2>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-white">Manage Orders</h2>
+      </div>
       
       <div className="mb-6 border-b border-neutral-700">
-        <div className="flex space-x-4 overflow-x-auto pb-2">
+        <div className="flex space-x-1 sm:space-x-4 overflow-x-auto pb-2">
           {allOrderStatuses.map(status => (
             <button
               key={status}
               onClick={() => setSelectedStatus(status)}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${selectedStatus === status ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-800'}`}>
+              className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${selectedStatus === status ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-700/50'}`}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
           ))}
@@ -211,121 +228,25 @@ const ManageOrders: React.FC = () => {
       </div>
 
       <div className="space-y-4">
-        {filteredAndSortedOrders.length === 0 ? (
-          <p className="text-neutral-400 text-center py-8">No orders with status "{selectedStatus}".</p>
+        {isLoading && <p className="text-center text-neutral-400">Refreshing orders...</p>}
+        {!isLoading && filteredOrders.length === 0 ? (
+          <div className="text-center py-12 bg-neutral-900/50 backdrop-blur-sm border border-dashed border-neutral-700 rounded-lg">
+            <Package size={48} className="mx-auto text-neutral-600"/>
+            <h3 className="mt-4 text-xl font-semibold text-white">No orders with status "{selectedStatus}"</h3>
+          </div>
         ) : (
-          filteredAndSortedOrders.map(order => {
-            const isExpanded = expandedOrderId === order.id;
-            const nextStatus = getNextStatus(order.status);
-            const isPacked = order.status.toLowerCase() === 'packed';
-            const canUpdate = !['booked', 'shipped', 'delivered', 'cancelled', 'returned'].includes(order.status.toLowerCase());
-
-            return (
-              <motion.div 
+          filteredOrders.map(order => (
+            <OrderCard 
                 key={order.id} 
-                layout
-                className="bg-background-light p-4 rounded-lg border border-neutral-700 overflow-hidden"
-              >
-                <motion.div layout className="flex justify-between items-start">
-                  <div className="flex-grow cursor-pointer" onClick={() => toggleOrderExpansion(order)}>
-                    <div className="flex items-center">
-                      <p className="font-bold text-white mr-4">Order #{order.id?.substring(0, 8)}</p>
-                      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </div>
-                    <p className="text-sm text-neutral-400">Customer: {order.shipping_address?.name}</p>
-                    <p className="text-sm text-neutral-400">Status: <span className="font-semibold text-primary capitalize">{order.status}</span></p>
-                    {order.delivery_partner && <p className="text-sm text-neutral-400">Delivery Partner: <span className="font-semibold">{order.delivery_partner}</span></p>}
-                  </div>
-                  <div className="flex flex-col items-end space-y-2 flex-shrink-0 ml-4">
-                    {isPacked && canUpdate && (
-                      <button
-                        onClick={() => handleBookDelivery(order.id!)}
-                        className="flex items-center justify-center px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors whitespace-nowrap"
-                      >
-                        Book Delivery <Truck size={16} className="ml-2" />
-                      </button>
-                    )}
-                    {!isPacked && canUpdate && nextStatus && (
-                      <button
-                        onClick={() => handleUpdateStatus(order.id!, order.status)}
-                        className="flex items-center justify-center px-3 py-2 text-sm bg-neutral-800 text-white rounded-md hover:bg-neutral-700 transition-colors whitespace-nowrap"
-                      >
-                        Mark as {nextStatus} <ArrowRight size={16} className="ml-2" />
-                      </button>
-                    )}
-                    {canUpdate && (
-                        <button
-                            onClick={() => handleCancelOrder(order.id!)}
-                            className="flex items-center justify-center px-3 py-2 text-sm bg-neutral-800 text-white rounded-md hover:bg-red-700 transition-colors whitespace-nowrap"
-                        >
-                            Cancel Order <XCircle size={16} className="ml-2" />
-                        </button>
-                    )}
-                    {['confirmed', 'packed', 'booked'].includes(order.status.toLowerCase()) && (
-                        <button
-                            onClick={() => handleDownloadBill(order.id!)}
-                            className="flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-500 transition-colors whitespace-nowrap"
-                        >
-                            Download Bill <Download size={16} className="ml-2" />
-                        </button>
-                    )}
-                    {!canUpdate && order.status !== 'delivered' && (
-                       <p className="text-sm text-green-500 text-right">Order in transit.</p>
-                    )}
-                  </div>
-                </motion.div>
-
-                {isExpanded && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }} 
-                    animate={{ opacity: 1, height: 'auto' }} 
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 pt-4 border-t border-neutral-600"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-md font-semibold text-white mb-2">Customer Details</p>
-                        <p className="text-sm text-neutral-400">{order.shipping_address?.name}</p>
-                        <p className="text-sm text-neutral-400">{order.shipping_address?.phone_number}</p>
-                        <p className="text-sm text-neutral-400">{order.shipping_address?.address_line1}, {order.shipping_address?.city}</p>
-                      </div>
-                      <div>
-                        <p className="text-md font-semibold text-white mb-2">Financials</p>
-                        <p className="text-sm text-neutral-400">Subtotal: Rs. {order.subtotal}</p>
-                        <p className="text-sm text-neutral-400">Shipping: Rs. {order.shipping_cost}</p>
-                        <p className="text-sm font-bold text-white">Total: Rs. {order.total}</p>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <p className="text-md font-semibold text-white mb-2">Order Items ({order.order_items?.length})</p>
-                      {order.order_items?.map((item) => {
-                        const product = productDetails[item.product_id];
-                        const variant = product && (item as any).variant_id
-                          ? product.variants.find(v => v.id === (item as any).variant_id)
-                          : null;
-                        
-                        const optionsDisplay = variant
-                          ? Object.entries(variant.options).map(([key, value]) => `${key}: ${value}`).join(', ')
-                          : (item.size || item.color) ? `${item.size || ''}${item.size && item.color ? ', ' : ''}${item.color || ''}` : null;
-
-                        return (
-                          <div key={item.id} className="flex items-center mb-3 pb-3 border-b border-neutral-700 last:border-b-0 last:pb-0 last:mb-0">
-                            {loadingProducts.has(item.product_id) && <div className="w-16 h-16 rounded-md bg-neutral-800 animate-pulse mr-4"/>}
-                            {product && <img src={product.images[0]} alt={product.title} className="w-16 h-16 rounded-md object-cover mr-4" />}
-                            <div className="flex-grow">
-                              <p className="text-sm font-semibold text-white">{product?.title || 'Loading...'}</p>
-                              <p className="text-xs text-neutral-400">Qty: {item.quantity} | Price: Rs. {item.unit_price}</p>
-                              {optionsDisplay && <p className="text-xs text-neutral-400">{optionsDisplay}</p>}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
-            );
-          })
+                order={order} 
+                productDetails={productDetails}
+                loadingProducts={loadingProducts}
+                onUpdateStatus={handleUpdateStatus}
+                onCancelOrder={handleCancelOrder}
+                onBookDelivery={handleBookDelivery}
+                onDownloadBill={handleDownloadBill}
+            />
+          ))
         )}
       </div>
     </motion.div>
