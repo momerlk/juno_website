@@ -54,6 +54,7 @@ import BlogPostPage from './components/blog/BlogPostPage';
 import WritePage from './components/blog/WritePage';
 import ProductPage from './components/ProductPage';
 import DownloadRedirect from './components/DownloadRedirect';
+import ChapterFormPage from './components/chapter/ChapterFormPage';
 
 import WorkAuth from "./components/work/WorkAuth";
 import WorkDashboard from "./components/work/WorkDashboard";
@@ -107,6 +108,9 @@ function App() {
                   <Route path="/refund-policy" element={<RefundPolicy />} />
                   <Route path="/service-policy" element={<ShippingServicePolicy />} />
                   <Route path="/terms-and-conditions" element={<TermsConditions />} />
+
+                  <Route path="/chapters" element={<ChapterFormPage />} />
+                  <Route path="/chapters/:university" element={<ChapterFormPage />} />
 
                   <Route path="/seller" element={
                     <ProtectedRoute>
