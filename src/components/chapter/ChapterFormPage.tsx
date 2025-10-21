@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roles } from './roles';
-import { submitChapterApplication } from '../../api/chapterApi';
 import { ArrowRight, Check, User, Phone, BookOpen, Clock, Link, Send } from 'lucide-react';
+import { api_url } from '../../api';
 
 const ChapterFormPage = () => {
   const { university } = useParams<{ university?: string }>();
@@ -15,12 +15,12 @@ const ChapterFormPage = () => {
     year: '',
     gender: '',
     role: '',
-    techInterest: 5,
-    fashionInterest: 5,
-    commitmentHours: '',
+    tech_interest: 5,
+    fashion_interest: 5,
+    commitment_hours: '',
     motivation: 5,
-    experienceLink: '',
-    finalAnswer: '',
+    experience_link: '',
+    final_answer: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,7 +44,25 @@ const ChapterFormPage = () => {
         ...formData,
         phone: formData.phone.startsWith('03') ? `+92${formData.phone.substring(1)}` : formData.phone
       };
-      // await submitChapterApplication(submissionData);
+
+      const myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
+
+      const raw = JSON.stringify(submissionData);
+
+      const requestOptions = {
+        method: "POST",
+        headers: myHeaders,
+        body: raw,
+        redirect: "follow"
+      };
+
+      
+
+      const resp = await fetch(`${api_url}/chapter-forms`, requestOptions as any)
+      if(resp.ok === false){
+        alert("Failed to submit application. Please try again.");
+      }
       handleNext();
     } catch (error) {
       console.error(error);
@@ -216,8 +234,8 @@ const RoleStep = ({ onNext, onBack, onUpdate, formData }: any) => {
 const InterestStep = ({ onNext, onBack, onUpdate, formData }: any) => (
   <StepWrapper title="Your Interests" subtitle="Don't pick 10 just for the sake of it :(">
     <div className="space-y-10">
-      <ScaleSelector label="How interested are you in tech startups?" value={formData.techInterest} onSelect={(v) => onUpdate({ techInterest: v })} />
-      <ScaleSelector label="How interested are you in fashion?" value={formData.fashionInterest} onSelect={(v) => onUpdate({ fashionInterest: v })} />
+      <ScaleSelector label="How interested are you in tech startups?" value={formData.tech_interest} onSelect={(v) => onUpdate({ tech_interest: v })} />
+      <ScaleSelector label="How interested are you in fashion?" value={formData.fashion_interest} onSelect={(v) => onUpdate({ fashion_interest: v })} />
     </div>
     <NavigationButtons onBack={onBack} onNext={onNext} />
   </StepWrapper>
@@ -226,7 +244,7 @@ const InterestStep = ({ onNext, onBack, onUpdate, formData }: any) => (
 const CommitmentStep = ({ onNext, onBack, onUpdate, formData }: any) => (
   <StepWrapper title="Your Commitment">
     <div className="space-y-10 text-left">
-      <FormInput icon={<Clock />} placeholder="e.g., 5-10 hours" label="How many hours can you dedicate to Juno per week?" value={formData.commitmentHours} onChange={(v) => onUpdate({ commitmentHours: v })} />
+      <FormInput icon={<Clock />} placeholder="e.g., 5-10 hours" label="How many hours can you dedicate to Juno per week?" value={formData.commitment_hours} onChange={(v) => onUpdate({ commitment_hours: v })} />
       <ScaleSelector label="On a scale of 1-10, how motivated are you to work with proper incentives?" value={formData.motivation} onSelect={(v) => onUpdate({ motivation: v })} />
     </div>
     <NavigationButtons onBack={onBack} onNext={onNext} />
@@ -235,14 +253,14 @@ const CommitmentStep = ({ onNext, onBack, onUpdate, formData }: any) => (
 
 const ExperienceStep = ({ onNext, onBack, onUpdate, formData }: any) => (
   <StepWrapper title="Showcase Your Experience" subtitle="Drop a link to your resume, portfolio, Instagram, or anything that showcases your work. (Optional)">
-    <FormInput icon={<Link />} placeholder="https://..." value={formData.experienceLink} onChange={(v) => onUpdate({ experienceLink: v })} />
+    <FormInput icon={<Link />} placeholder="https://..." value={formData.experience_link} onChange={(v) => onUpdate({ experience_link: v })} />
     <NavigationButtons onBack={onBack} onNext={onNext} />
   </StepWrapper>
 );
 
 const FinalQuestionStep = ({ onSubmit, onBack, onUpdate, isSubmitting }: any) => {
   const handleSubmitClick = () => {
-    onUpdate({ finalAnswer: 'Yes' });
+    onUpdate({ final_answer: 'Yes' });
     onSubmit();
   }
 
