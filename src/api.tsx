@@ -4,6 +4,27 @@ const urls = {
 }
 export const api_url = urls.production;
 
+export async function createEvent(name : string, data : any){
+  const myHeaders = new Headers();
+  myHeaders.append("Content-Type", "application/json");
+
+  const raw = JSON.stringify({
+    "name": name,
+    "data": data
+  });
+
+  const requestOptions = {
+    method: "POST",
+    headers: myHeaders,
+    body: raw,
+    redirect: "follow"
+  };
+
+  const resp = await fetch(`${api_url}/events`, requestOptions as any)
+
+  return resp.ok; 
+}
+
 export async function uploadFileAndGetUrl(
   eventFile: File, 
   url: string = api_url + '/files/upload'

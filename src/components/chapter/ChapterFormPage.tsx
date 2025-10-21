@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roles } from './roles';
 import { ArrowRight, Check, User, Phone, BookOpen, Clock, Link, Send } from 'lucide-react';
-import { api_url } from '../../api';
+import { api_url, createEvent } from '../../api';
 
 const ChapterFormPage = () => {
   const { university } = useParams<{ university?: string }>();
@@ -28,6 +28,36 @@ const ChapterFormPage = () => {
     if (university) {
       setFormData(fd => ({ ...fd, institute: university }));
     }
+  }, [university]);
+
+  useEffect(() => {
+    const trackVisit = async () => {
+      const hasVisited = localStorage.getItem('hasVisitedChapterForm');
+      if (!hasVisited) {
+        try {
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          if (!ipResponse.ok) {
+            console.error('Failed to fetch IP address:', ipResponse.statusText);
+            return;
+          }
+          const ipData = await ipResponse.json();
+          const ip = ipData.ip;
+
+          const eventData = {
+            url: window.location.href,
+            ip: ip,
+            university: university || 'none'
+          };
+
+          await createEvent('chapter_form_visit', eventData);
+          localStorage.setItem('hasVisitedChapterForm', 'true');
+        } catch (error) {
+          console.error('Failed to track visit:', error);
+        }
+      }
+    };
+
+    trackVisit();
   }, [university]);
 
   const handleNext = () => setStep(s => s + 1);
