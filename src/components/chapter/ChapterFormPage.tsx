@@ -235,15 +235,41 @@ const InterestStep = ({ onNext, onBack, onUpdate, formData }: any) => (
   </StepWrapper>
 );
 
-const CommitmentStep = ({ onNext, onBack, onUpdate, formData }: any) => (
-  <StepWrapper title="Your Commitment">
-    <div className="space-y-10 text-left">
-      <FormInput icon={<Clock />} placeholder="e.g., 5-10 hours" label="How many hours can you dedicate to Juno per week?" value={formData.commitment_hours} onChange={(v) => onUpdate({ commitment_hours: v })} />
-      <ScaleSelector label="On a scale of 1-10, how motivated are you to work with proper incentives?" value={formData.motivation} onSelect={(v) => onUpdate({ motivation: v })} />
-    </div>
-    <NavigationButtons onBack={onBack} onNext={onNext} />
-  </StepWrapper>
-);
+const CommitmentStep = ({ onNext, onBack, onUpdate, formData }: any) => {
+  const [errors, setErrors] = useState<any>({});
+
+  const validate = () => {
+    const newErrors: any = {};
+    if (!formData.commitment_hours) {
+      newErrors.commitment_hours = 'Please enter your commitment hours.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validate()) {
+      onNext();
+    }
+  };
+
+  return (
+    <StepWrapper title="Your Commitment">
+      <div className="space-y-10 text-left">
+        <FormInput 
+          icon={<Clock />} 
+          placeholder="e.g., 5-10 hours" 
+          label="How many hours can you dedicate to Juno per week? *" 
+          value={formData.commitment_hours} 
+          onChange={(v: string) => onUpdate({ commitment_hours: v })} 
+          error={errors.commitment_hours}
+        />
+        <ScaleSelector label="On a scale of 1-10, how motivated are you to work with proper incentives? *" value={formData.motivation} onSelect={(v: number) => onUpdate({ motivation: v })} />
+      </div>
+      <NavigationButtons onBack={onBack} onNext={handleNext} disabled={!formData.commitment_hours} />
+    </StepWrapper>
+  );
+};
 
 const ExperienceStep = ({ onNext, onBack, onUpdate, formData }: any) => (
   <StepWrapper title="Showcase Your Experience" subtitle="Drop a link to your resume, portfolio, Instagram, or anything that showcases your work. (Optional)">
