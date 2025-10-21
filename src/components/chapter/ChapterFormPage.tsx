@@ -85,7 +85,7 @@ const ChapterFormPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background-dark text-white flex flex-col justify-center items-center p-4 overflow-hidden">
+    <div className="min-h-screen bg-background-dark text-white flex flex-col justify-center items-center p-4 pt-24 sm:pt-4 overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.div
           key={step}
