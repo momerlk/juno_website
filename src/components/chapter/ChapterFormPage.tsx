@@ -14,7 +14,7 @@ const ChapterFormPage = () => {
     institute: '',
     year: '',
     gender: '',
-    role: '',
+    role: [] as string[],
     tech_interest: 5,
     fashion_interest: 5,
     commitment_hours: '',
@@ -42,6 +42,7 @@ const ChapterFormPage = () => {
     try {
       const submissionData = {
         ...formData,
+        role: formData.role.join(','),
         phone: formData.phone.startsWith('03') ? `+92${formData.phone.substring(1)}` : formData.phone
       };
 
@@ -172,10 +173,10 @@ const PersonalDetailsStep = ({ onNext, onUpdate, formData, university }: any) =>
   );
 };
 
-const RoleCard = ({ role, isSelected, isExpanded, onExpand, onSelect }: any) => (
+const RoleCard = ({ role, isSelected, onSelect }: any) => (
   <motion.div
     layout
-    onClick={onExpand}
+    onClick={onSelect}
     className={`p-6 rounded-2xl cursor-pointer border-2 transition-all duration-300 ${isSelected ? 'border-primary bg-primary/10' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'}`}
   >
     <motion.div layout="position" className="flex justify-between items-center">
@@ -183,50 +184,43 @@ const RoleCard = ({ role, isSelected, isExpanded, onExpand, onSelect }: any) => 
       {isSelected && <Check size={20} className="text-primary flex-shrink-0" />}
     </motion.div>
     <motion.p layout="position" className="text-sm text-neutral-400 mt-1">{role.shortDescription}</motion.p>
-    <AnimatePresence>
-      {isExpanded && (
-        <motion.div
-          initial={{ opacity: 0, height: 0, marginTop: 0 }}
-          animate={{ opacity: 1, height: 'auto', marginTop: '16px' }}
-          exit={{ opacity: 0, height: 0, marginTop: 0 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-        >
-          <p className="text-sm text-neutral-300 mb-4">{role.persona}</p>
-          <motion.button 
-            onClick={(e) => { e.stopPropagation(); onSelect(); }}
-            className="btn btn-primary w-full py-2 text-sm"
-          >
-            Select this Role
-          </motion.button>
-        </motion.div>
-      )}
-    </AnimatePresence>
   </motion.div>
 );
 
 const RoleStep = ({ onNext, onBack, onUpdate, formData }: any) => {
-  const [expandedRole, setExpandedRole] = useState<string | null>(null);
-
   const handleSelect = (roleTitle: string) => {
-    onUpdate({ role: roleTitle });
-    setExpandedRole(null); // Collapse after selection
+    const currentRoles = formData.role as string[];
+    const isSelected = currentRoles.includes(roleTitle);
+
+    let newRoles;
+    if (isSelected) {
+      newRoles = currentRoles.filter(r => r !== roleTitle);
+    } else {
+      if (currentRoles.length < 4) {
+        newRoles = [...currentRoles, roleTitle];
+      } else {
+        newRoles = currentRoles;
+      }
+    }
+    onUpdate({ role: newRoles });
   };
 
+  const selectedRoles = formData.role as string[];
+  const canProceed = selectedRoles.length >= 2 && selectedRoles.length <= 4;
+
   return (
-    <StepWrapper title="Choose Your Role" subtitle="Which hat fits you best? Select one.">
+    <StepWrapper title="Choose Your Roles" subtitle="Select 2 to 4 roles that fit you best.">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {roles.map(role => (
           <RoleCard 
             key={role.title} 
             role={role} 
-            isSelected={formData.role === role.title}
-            isExpanded={expandedRole === role.title}
-            onExpand={() => setExpandedRole(expandedRole === role.title ? null : role.title)}
+            isSelected={selectedRoles.includes(role.title)}
             onSelect={() => handleSelect(role.title)}
           />
         ))}
       </div>
-      <NavigationButtons onBack={onBack} onNext={onNext} disabled={!formData.role} />
+      <NavigationButtons onBack={onBack} onNext={onNext} disabled={!canProceed} />
     </StepWrapper>
   );
 };
