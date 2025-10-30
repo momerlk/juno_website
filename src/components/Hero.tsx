@@ -110,12 +110,12 @@ const Hero: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center max-w-4xl mx-auto">
             <div className="bg-white/5 backdrop-blur-sm p-6 rounded-xl border border-white/10">
               <Users size={32} className="mx-auto text-primary mb-3"/>
-              <div className="text-3xl font-bold text-white">500+</div>
-              <div className="text-sm text-neutral-400">Active Beta Users</div>
+              <div className="text-3xl font-bold text-white">5000+</div>
+              <div className="text-sm text-neutral-400">Active Users</div>
             </div>
             <div className="bg-white/5 backdrop-blur-sm p-6 rounded-xl border border-white/10">
               <ShoppingBag size={32} className="mx-auto text-primary mb-3"/>
-              <div className="text-3xl font-bold text-white">15+</div>
+              <div className="text-3xl font-bold text-white">50+</div>
               <div className="text-sm text-neutral-400">Curated Brands</div>
             </div>
             <div className="bg-white/5 backdrop-blur-sm p-6 rounded-xl border border-white/10">
