@@ -19,7 +19,7 @@ export interface APIResponse<T> {
 
 // --- API Configuration ---
 const api_urls = {
-    testing: "http://192.168.18.6:8080/api/v1",
+    testing: "http://192.168.18.96:8080/api/v1",
     production: "https://junoapi-710509977105.asia-south2.run.app/api/v1",
     recsystem : "https://junorecsys-710509977105.asia-south2.run.app",
 };
@@ -27,7 +27,7 @@ const api_urls = {
 /**
  * The base URL for all API requests.
  */
-export const api_url = api_urls.production;
+export const api_url = api_urls.testing;
 
 
 // --- Reusable Helper Functions (Refactored to top-level) ---
