@@ -31,15 +31,15 @@ const SellerAuth: React.FC = () => {
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-background-light py-12 px-4 sm:px-6 lg:px-8">
+    <section className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8"
+        className="max-w-md w-full space-y-8 glass-panel p-8"
       >
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-white">
+          <h2 className="mt-2 text-3xl font-extrabold text-white">
             {isSignup ? 'Create your seller account' : 'Sign in to your seller account'}
           </h2>
           <p className="mt-2 text-sm text-neutral-400">
@@ -59,7 +59,7 @@ const SellerAuth: React.FC = () => {
                     name="business-name"
                     type="text"
                     required
-                    className="appearance-none rounded-lg relative block w-full pl-10 pr-3 py-2 border border-neutral-700 bg-background text-white placeholder-neutral-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    className="glass-input w-full pl-10"
                     placeholder="Business Name"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
@@ -78,7 +78,7 @@ const SellerAuth: React.FC = () => {
                   type="email"
                   autoComplete="email"
                   required
-                  className="appearance-none rounded-lg relative block w-full pl-10 pr-3 py-2 border border-neutral-700 bg-background text-white placeholder-neutral-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  className="glass-input w-full pl-10"
                   placeholder="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -96,7 +96,7 @@ const SellerAuth: React.FC = () => {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className="appearance-none rounded-lg relative block w-full pl-10 pr-3 py-2 border border-neutral-700 bg-background text-white placeholder-neutral-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  className="glass-input w-full pl-10"
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -113,7 +113,7 @@ const SellerAuth: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full glass-button bg-primary text-white hover:bg-primary-dark shadow-glow-primary border-primary/50"
             >
               {isLoading ? 'Processing...' : (isSignup ? 'Sign up' : 'Sign in')}
             </button>
@@ -123,7 +123,7 @@ const SellerAuth: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate("/seller/onboarding")}  
-              className="text-sm text-neutral-400 hover:text-primary"
+              className="text-sm text-neutral-400 hover:text-primary transition-colors"
             >
               {"Don't have an account? Sign up"}
             </button>

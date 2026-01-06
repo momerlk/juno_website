@@ -29,10 +29,12 @@ const getShopifyThumbnail = (url: string, size: string = '100x100') => {
 };
 
 const Section: React.FC<{title: string, icon: React.ReactNode, children: React.ReactNode}> = ({ title, icon, children }) => (
-    <div className="bg-background p-6 rounded-lg border border-neutral-700">
+    <div className="glass-panel p-6 bg-white/5 border border-white/5">
         <div className="flex items-center mb-4">
-            {icon}
-            <h3 className="text-lg font-semibold text-white ml-3">{title}</h3>
+            <div className="p-2 bg-white/5 rounded-lg mr-3">
+                {icon}
+            </div>
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
         </div>
         <div className="space-y-4">{children}</div>
     </div>
@@ -421,42 +423,42 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
     const sizingGuideColumns = selectedSizingGuideType ? Object.keys(dummySizingGuides[selectedSizingGuideType].size_chart['dummy_row']) : [];
 
     return (
-        <div className="fixed inset-0 bg-black/70 z-50 flex justify-center items-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-center items-center p-4">
             <motion.div 
                 initial={{ y: -50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 50, opacity: 0 }}
-                className="bg-background-light rounded-lg shadow-xl w-full max-w-5xl max-h-[95vh] flex flex-col"
+                className="glass-panel shadow-2xl bg-black/60 w-full max-w-5xl max-h-[95vh] flex flex-col border border-white/10"
             >
-                <div className="flex justify-between items-center p-6 border-b border-neutral-700 flex-shrink-0">
+                <div className="flex justify-between items-center p-6 border-b border-white/10 flex-shrink-0">
                     <h2 className="text-2xl font-bold text-white">{product ? 'Edit Product' : 'Create Product'}</h2>
-                    <button onClick={onClose} className="text-neutral-400 hover:text-white"><X /></button>
+                    <button onClick={onClose} className="text-neutral-400 hover:text-white transition-colors"><X /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto p-6 space-y-6">
                     <Section title="Basic Information" icon={<Paperclip className="text-primary" />}>
                         <div>
                             <label htmlFor="title" className="block text-sm font-medium text-neutral-300">Title</label>
-                            <input type="text" name="title" id="title" value={formData.title || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" required />
+                            <input type="text" name="title" id="title" value={formData.title || ''} onChange={handleChange} className="glass-input w-full mt-1" required />
                         </div>
                         <div>
                             <label htmlFor="description" className="block text-sm font-medium text-neutral-300">Description</label>
-                            <textarea name="description" id="description" value={formData.description || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1 h-24" />
+                            <textarea name="description" id="description" value={formData.description || ''} onChange={handleChange} className="glass-input w-full mt-1 h-24" />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label htmlFor="product_type" className="block text-sm font-medium text-neutral-300">Product Type</label>
-                                <select name="product_type" id="product_type" value={formData.product_type || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" required>
-                                    <option value="">Select a type</option>
-                                    {productTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                                <select name="product_type" id="product_type" value={formData.product_type || ''} onChange={handleChange} className="glass-input w-full mt-1" required>
+                                    <option value="" className="bg-neutral-900">Select a type</option>
+                                    {productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label htmlFor="gender" className="block text-sm font-medium text-neutral-300">Gender</label>
-                                <select id="gender" value={currentGender} onChange={handleGenderChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" required>
-                                    <option value="">Select gender</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                    <option value="unisex">Unisex</option>
+                                <select id="gender" value={currentGender} onChange={handleGenderChange} className="glass-input w-full mt-1" required>
+                                    <option value="" className="bg-neutral-900">Select gender</option>
+                                    <option value="male" className="bg-neutral-900">Male</option>
+                                    <option value="female" className="bg-neutral-900">Female</option>
+                                    <option value="unisex" className="bg-neutral-900">Unisex</option>
                                 </select>
                             </div>
                         </div>
@@ -470,8 +472,8 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                                     <AnimatePresence>
                                         {formData.images?.map((url, index) => (
                                             <motion.div layout key={url} className="relative group">
-                                                <img src={getShopifyThumbnail(url)} loading="lazy" alt={`Product image ${index + 1}`} className="w-full h-24 object-cover rounded-md" />
-                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex justify-center items-center gap-1">
+                                                <img src={getShopifyThumbnail(url)} loading="lazy" alt={`Product image ${index + 1}`} className="w-full h-24 object-cover rounded-xl border border-white/10" />
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex justify-center items-center gap-1 rounded-xl">
                                                     <button type="button" onClick={() => handleReorderImage(index, 'left')} className="text-white p-1 rounded-full bg-black/50 hover:bg-black/80 disabled:opacity-50" disabled={index === 0}><ArrowLeft size={14} className="drop-shadow-lg" /></button>
                                                     <button type="button" onClick={() => handleRemoveImage(index)} className="text-white p-1 rounded-full bg-red-500/80 hover:bg-red-500"><Trash2 size={14} className="drop-shadow-lg" /></button>
                                                     <button type="button" onClick={() => handleReorderImage(index, 'right')} className="text-white p-1 rounded-full bg-black/50 hover:bg-black/80 disabled:opacity-50" disabled={index === (formData.images?.length || 0) - 1}><ArrowRight size={14} className="drop-shadow-lg" /></button>
@@ -479,7 +481,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                                             </motion.div>
                                         ))}
                                     </AnimatePresence>
-                                    <label htmlFor="image-upload" className={`w-full h-24 border-2 border-dashed border-neutral-600 rounded-md flex flex-col justify-center items-center text-neutral-400 ${uploadingMedia ? 'cursor-not-allowed' : 'cursor-pointer hover:border-primary'}`}>
+                                    <label htmlFor="image-upload" className={`w-full h-24 border-2 border-dashed border-white/10 bg-white/5 rounded-xl flex flex-col justify-center items-center text-neutral-400 transition-colors ${uploadingMedia ? 'cursor-not-allowed' : 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 hover:text-primary'}`}>
                                         {uploadingMedia === 'image' ? (
                                             <>
                                                 <Loader className="animate-spin" size={24} />
@@ -499,13 +501,13 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                                 <label className="block text-sm font-medium text-neutral-300 mb-2">Video</label>
                                 {formData.video_url ? (
                                     <div className="relative group w-48">
-                                        <video src={formData.video_url} className="w-full h-24 object-cover rounded-md bg-black" />
-                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex justify-center items-center">
+                                        <video src={formData.video_url} className="w-full h-24 object-cover rounded-xl bg-black border border-white/10" />
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex justify-center items-center rounded-xl">
                                             <button type="button" onClick={() => setFormData(p => ({...p, video_url: ''}))} className="text-white p-1 rounded-full bg-red-500/80 hover:bg-red-500"><Trash2 size={14} className="drop-shadow-lg" /></button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <label htmlFor="video-upload" className={`w-48 h-24 border-2 border-dashed border-neutral-600 rounded-md flex flex-col justify-center items-center text-neutral-400 ${uploadingMedia ? 'cursor-not-allowed' : 'cursor-pointer hover:border-primary'}`}>
+                                    <label htmlFor="video-upload" className={`w-48 h-24 border-2 border-dashed border-white/10 bg-white/5 rounded-xl flex flex-col justify-center items-center text-neutral-400 transition-colors ${uploadingMedia ? 'cursor-not-allowed' : 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 hover:text-primary'}`}>
                                         {uploadingMedia === 'video' ? (
                                             <>
                                                 <Loader className="animate-spin" size={24} />
@@ -528,10 +530,10 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label htmlFor="sizing_guide_type" className="block text-sm font-medium text-neutral-300">Sizing Guide Type</label>
-                                <select id="sizing_guide_type" value={selectedSizingGuideType} onChange={e => setSelectedSizingGuideType(e.target.value)} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" required={isApparel}>
-                                    <option value="">Select Type</option>
+                                <select id="sizing_guide_type" value={selectedSizingGuideType} onChange={e => setSelectedSizingGuideType(e.target.value)} className="glass-input w-full mt-1" required={isApparel}>
+                                    <option value="" className="bg-neutral-900">Select Type</option>
                                     {Object.keys(dummySizingGuides).map(key => (
-                                        <option key={key} value={key}>
+                                        <option key={key} value={key} className="bg-neutral-900">
                                             {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                         </option>
                                     ))}
@@ -539,20 +541,20 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                             </div>
                             <div>
                                 <label htmlFor="measurement_unit" className="block text-sm font-medium text-neutral-300">Measurement Unit</label>
-                                <select id="measurement_unit" value={formData.sizing_guide?.measurement_unit || 'inch'} onChange={e => handleSizingGuideChange('measurement_unit', e.target.value)} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1">
-                                    <option value="inch">Inch</option>
-                                    <option value="cm">CM</option>
+                                <select id="measurement_unit" value={formData.sizing_guide?.measurement_unit || 'inch'} onChange={e => handleSizingGuideChange('measurement_unit', e.target.value)} className="glass-input w-full mt-1">
+                                    <option value="inch" className="bg-neutral-900">Inch</option>
+                                    <option value="cm" className="bg-neutral-900">CM</option>
                                 </select>
                             </div>
                         </div>
                         <div>
                             <label htmlFor="size_fit" className="block text-sm font-medium text-neutral-300">Sizing & Fit Details</label>
-                            <textarea id="size_fit" value={formData.sizing_guide?.size_fit || ''} onChange={e => handleSizingGuideChange('size_fit', e.target.value)} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1 h-20" placeholder="e.g., Regular fit, true to size. Model is 6ft and wears a size M." required={isApparel}/>
+                            <textarea id="size_fit" value={formData.sizing_guide?.size_fit || ''} onChange={e => handleSizingGuideChange('size_fit', e.target.value)} className="glass-input w-full mt-1 h-20" placeholder="e.g., Regular fit, true to size. Model is 6ft and wears a size M." required={isApparel}/>
                         </div>
                         {isApparel && sizeOptionValues.length > 0 && selectedSizingGuideType && (
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto rounded-xl border border-white/10">
                                 <table className="w-full text-sm text-left text-neutral-300">
-                                    <thead className="text-xs text-neutral-400 uppercase bg-background">
+                                    <thead className="text-xs text-neutral-400 uppercase bg-white/5">
                                         <tr>
                                             <th scope="col" className="px-4 py-3">Size</th>
                                             {sizingGuideColumns.map(col => <th key={col} scope="col" className="px-4 py-3">{col} ({formData.sizing_guide?.measurement_unit})</th>)}
@@ -560,7 +562,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                                     </thead>
                                     <tbody>
                                         {sizeOptionValues.map(size => (
-                                            <tr key={size} className="border-b border-neutral-700">
+                                            <tr key={size} className="border-b border-white/5 bg-white/5">
                                                 <th scope="row" className="px-4 py-2 font-medium whitespace-nowrap">{size}</th>
                                                 {sizingGuideColumns.map(col => (
                                                     <td key={col} className="px-4 py-2">
@@ -569,7 +571,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                                                             placeholder="N/A"
                                                             value={(formData.sizing_guide?.size_chart?.[size]?.[col] ?? -1) === -1 ? '' : formData.sizing_guide?.size_chart?.[size]?.[col]}
                                                             onChange={e => handleSizingGuideChartChange(size, col, e.target.value)} 
-                                                            className="w-20 bg-neutral-800 text-white rounded-md p-1 border border-neutral-600" 
+                                                            className="w-20 glass-input py-1 px-2 h-8 text-sm" 
                                                         />
                                                     </td>
                                                 ))}
@@ -586,43 +588,43 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label htmlFor="price" className="block text-sm font-medium text-neutral-300">Price (PKR)</label>
-                                <input type="number" name="price" id="price" value={formData.pricing?.price || ''} onChange={handlePricingChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" required />
+                                <input type="number" name="price" id="price" value={formData.pricing?.price || ''} onChange={handlePricingChange} className="glass-input w-full mt-1" required />
                             </div>
                             <div>
                                 <label htmlFor="compare_at_price" className="block text-sm font-medium text-neutral-300">Compare At Price</label>
-                                <input type="number" name="compare_at_price" id="compare_at_price" value={formData.pricing?.compare_at_price || ''} onChange={handlePricingChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                                <input type="number" name="compare_at_price" id="compare_at_price" value={formData.pricing?.compare_at_price || ''} onChange={handlePricingChange} className="glass-input w-full mt-1" />
                             </div>
                         </div>
                     </Section>
 
                     <Section title="Options & Variants" icon={<Settings2 className="text-purple-500" />}>
                         {formData.options?.map((opt, index) => (
-                            <div key={index} className="p-4 bg-background rounded-md border border-neutral-700">
+                            <div key={index} className="p-4 bg-white/5 rounded-xl border border-white/10">
                                 <div className="flex justify-between items-center">
-                                    <input type="text" placeholder="Option name (e.g. Size)" defaultValue={opt.name} onBlur={e => handleOptionChange(index, e.target.value)} className="bg-neutral-800 text-white p-1 rounded-md border border-neutral-600" />
-                                    <button type="button" onClick={() => removeOption(index)}><Trash2 size={16} className="text-red-500" /></button>
+                                    <input type="text" placeholder="Option name (e.g. Size)" defaultValue={opt.name} onBlur={e => handleOptionChange(index, e.target.value)} className="glass-input py-1 px-2 w-1/2" />
+                                    <button type="button" onClick={() => removeOption(index)}><Trash2 size={16} className="text-red-500 hover:text-red-400" /></button>
                                 </div>
-                                <div className="mt-2">
-                                    <input type="text" placeholder="Option values, comma separated" defaultValue={opt.values.join(', ')} onBlur={e => handleOptionValueChange(index, e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="w-full text-sm bg-neutral-800 text-white p-1 rounded-md border border-neutral-600" />
+                                <div className="mt-3">
+                                    <input type="text" placeholder="Option values, comma separated" defaultValue={opt.values.join(', ')} onBlur={e => handleOptionValueChange(index, e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="glass-input w-full text-sm" />
                                 </div>
                             </div>
                         ))}
-                        <button type="button" onClick={addOption} className="flex items-center space-x-2 text-sm text-primary hover:underline"><Plus size={16} /><span>Add another option</span></button>
+                        <button type="button" onClick={addOption} className="flex items-center space-x-2 text-sm text-primary hover:text-primary-light hover:underline"><Plus size={16} /><span>Add another option</span></button>
                         
                         {formData.variants && formData.variants.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-neutral-700">
+                            <div className="mt-4 pt-4 border-t border-white/10">
                                 <h4 className="font-semibold text-neutral-300 mb-2">Variants ({formData.inventory?.quantity} total stock)</h4>
                                 <div className="space-y-2">
                                     {formData.variants.map(variant => (
-                                        <div key={variant.id} className="grid grid-cols-3 gap-4 items-center bg-background p-2 rounded-md">
-                                            <p className="text-sm text-neutral-300 col-span-1">{variant.title}</p>
+                                        <div key={variant.id} className="grid grid-cols-3 gap-4 items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                            <p className="text-sm text-neutral-300 col-span-1 truncate" title={variant.title}>{variant.title}</p>
                                             <div className="col-span-1">
-                                                <label className="text-xs text-neutral-500">Price</label>
-                                                <input type="number" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} className="w-full bg-neutral-800 text-white rounded-md p-1 text-sm border border-neutral-700" />
+                                                <label className="text-xs text-neutral-500 block mb-1">Price</label>
+                                                <input type="number" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} className="glass-input w-full py-1 px-2 text-sm" />
                                             </div>
                                             <div className="col-span-1">
-                                                <label className="text-xs text-neutral-500">Stock</label>
-                                                <input type="number" value={variant.inventory?.quantity || 0} onChange={e => handleVariantChange(variant.id, 'quantity', e.target.value)} className="w-full bg-neutral-800 text-white rounded-md p-1 text-sm border border-neutral-700" />
+                                                <label className="text-xs text-neutral-500 block mb-1">Stock</label>
+                                                <input type="number" value={variant.inventory?.quantity || 0} onChange={e => handleVariantChange(variant.id, 'quantity', e.target.value)} className="glass-input w-full py-1 px-2 text-sm" />
                                             </div>
                                         </div>
                                     ))}
@@ -634,13 +636,13 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, onClose }) => {
                     <Section title="Organization" icon={<Tag className="text-orange-500" />}>
                         <div>
                             <label htmlFor="tags" className="block text-sm font-medium text-neutral-300">Tags</label>
-                            <input type="text" id="tags" defaultValue={formData.tags?.filter(t => !['male', 'female', 'unisex'].includes(t.toLowerCase())).join(', ')} onBlur={e => handleTagChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" placeholder="e.g. summer, new-arrival, sale" />
+                            <input type="text" id="tags" defaultValue={formData.tags?.filter(t => !['male', 'female', 'unisex'].includes(t.toLowerCase())).join(', ')} onBlur={e => handleTagChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="glass-input w-full mt-1" placeholder="e.g. summer, new-arrival, sale" />
                         </div>
                     </Section>
 
-                    <div className="pt-6 border-t border-neutral-700 flex justify-end items-center space-x-4 flex-shrink-0">
-                        <button type="button" onClick={onClose} className="px-6 py-2 rounded-md text-white bg-neutral-600 hover:bg-neutral-500">Cancel</button>
-                        <button type="submit" disabled={isSaving} className="px-6 py-2 rounded-md text-white bg-primary hover:bg-primary/90 disabled:opacity-50">
+                    <div className="pt-6 border-t border-white/10 flex justify-end items-center space-x-4 flex-shrink-0">
+                        <button type="button" onClick={onClose} className="px-6 py-2 rounded-xl text-neutral-300 hover:text-white hover:bg-white/10 transition-colors">Cancel</button>
+                        <button type="submit" disabled={isSaving} className="glass-button bg-primary text-white hover:bg-primary-dark border-primary/50 shadow-glow-primary disabled:opacity-50">
                             {isSaving ? 'Saving...' : 'Save Product'}
                         </button>
                     </div>

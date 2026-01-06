@@ -53,7 +53,7 @@ export interface UserPublicProfile {
 }
 
 
-const API_BASE = "https://junoapi-710509977105.asia-south2.run.app/api/v1";
+const API_BASE = "https://junoapi-1095577467512.asia-south2.run.app/api/v1";
 
 export async function fetchUserPublicProfile(userId: string): Promise<UserPublicProfile> {
   const response = await fetch(`${API_BASE}/users/public-profile?user_id=${userId}`);

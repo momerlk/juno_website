@@ -4,23 +4,27 @@ import * as api from '../../api/sellerApi';
 import { Loader, DollarSign, ShoppingCart, Package, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const AnalyticsCard: React.FC<{ title: string, value: string | number, change?: string, icon: React.ReactNode }> = ({ title, value, change, icon }) => (
+const AnalyticsCard: React.FC<{ title: string, value: string | number, change?: string, icon: React.ReactNode, colorClass: string }> = ({ title, value, change, icon, colorClass }) => (
     <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-background p-6 rounded-lg border border-neutral-700"
+        className="glass-card"
     >
-        <div className="flex items-center justify-between">
-            <p className="text-sm text-neutral-400">{title}</p>
-            {icon}
+        <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-medium text-neutral-400">{title}</p>
+            <div className={`p-2 rounded-xl ${colorClass} bg-opacity-20`}>
+                {icon}
+            </div>
         </div>
-        <p className="text-3xl font-bold text-white mt-2">{value}</p>
-        {change && (
-            <p className={`text-sm flex items-center mt-1 ${change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-                {change.startsWith('+') ? <TrendingUp size={16} className="mr-1"/> : <TrendingDown size={16} className="mr-1"/>}
-                {change}
-            </p>
-        )}
+        <div className="flex items-end justify-between">
+            <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
+            {change && (
+                <div className={`flex items-center px-2 py-1 rounded-lg text-xs font-medium ${change.startsWith('+') ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                    {change.startsWith('+') ? <TrendingUp size={14} className="mr-1"/> : <TrendingDown size={14} className="mr-1"/>}
+                    {change}
+                </div>
+            )}
+        </div>
     </motion.div>
 );
 
@@ -79,12 +83,12 @@ const Analytics: React.FC = () => {
                 {/* Time range selector can be added here */}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <AnalyticsCard title="Total Revenue" value={`Rs. ${salesData?.total_revenue?.toLocaleString() || 0}`} change={salesData?.revenue_change} icon={<DollarSign className="text-green-500"/>} />
-                <AnalyticsCard title="Total Orders" value={orderData?.total_orders || 0} change={orderData?.orders_change} icon={<ShoppingCart className="text-blue-500"/>} />
-                <AnalyticsCard title="Avg. Order Value" value={`Rs. ${salesData?.average_order_value?.toLocaleString() || 0}`} change={salesData?.aov_change} icon={<DollarSign className="text-yellow-500"/>} />
-                <AnalyticsCard title="Conversion Rate" value={`${orderData?.conversion_rate || 0}%`} change={orderData?.conversion_rate_change} icon={<TrendingUp className="text-indigo-500"/>} />
-                <AnalyticsCard title="Products in Stock" value={inventoryData?.total_stock || 0} icon={<Package className="text-orange-500"/>} />
-                <AnalyticsCard title="Out of Stock Products" value={inventoryData?.out_of_stock_products || 0} icon={<AlertCircle className="text-red-500"/>} />
+                <AnalyticsCard title="Total Revenue" value={`Rs. ${salesData?.total_revenue?.toLocaleString() || 0}`} change={salesData?.revenue_change} icon={<DollarSign className="text-green-500"/>} colorClass="bg-green-500" />
+                <AnalyticsCard title="Total Orders" value={orderData?.total_orders || 0} change={orderData?.orders_change} icon={<ShoppingCart className="text-blue-500"/>} colorClass="bg-blue-500" />
+                <AnalyticsCard title="Avg. Order Value" value={`Rs. ${salesData?.average_order_value?.toLocaleString() || 0}`} change={salesData?.aov_change} icon={<DollarSign className="text-yellow-500"/>} colorClass="bg-yellow-500" />
+                <AnalyticsCard title="Conversion Rate" value={`${orderData?.conversion_rate || 0}%`} change={orderData?.conversion_rate_change} icon={<TrendingUp className="text-indigo-500"/>} colorClass="bg-indigo-500" />
+                <AnalyticsCard title="Products in Stock" value={inventoryData?.total_stock || 0} icon={<Package className="text-orange-500"/>} colorClass="bg-orange-500" />
+                <AnalyticsCard title="Out of Stock Products" value={inventoryData?.out_of_stock_products || 0} icon={<AlertCircle className="text-red-500"/>} colorClass="bg-red-500" />
             </div>
             <div className="mt-8 text-center text-neutral-500">
                 <p>More detailed charts and product-specific analytics coming soon.</p>

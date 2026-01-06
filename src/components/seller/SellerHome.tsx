@@ -60,80 +60,100 @@ const SellerHome: React.FC = () => {
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-lg p-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="glass-card">
             <div className="flex items-center mb-4">
-              <Store size={24} className="text-primary mr-3" />
-              <h2 className="text-xl font-semibold">Business Info</h2>
+              <div className="p-2 bg-primary/20 rounded-lg mr-3">
+                 <Store size={24} className="text-primary" />
+              </div>
+              <h2 className="text-xl font-semibold text-white">Business Info</h2>
             </div>
-            <div className="space-y-2 text-sm">
-              <p className="text-neutral-400">Name: <span className="text-white font-semibold">{seller?.user.business_name}</span></p>
-              <p className="text-neutral-400">Email: <span className="text-white font-semibold">{seller?.user.email}</span></p>
-              <p className="text-neutral-400">Subscription: <span className={`font-semibold ${seller?.user.status === 'active' ? 'text-green-400' : 'text-yellow-400'}`}>
-                {seller?.user.status}
-              </span></p>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center py-2 border-b border-white/5">
+                <span className="text-neutral-400">Name</span>
+                <span className="text-white font-semibold">{seller?.user.business_name}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-white/5">
+                <span className="text-neutral-400">Email</span>
+                <span className="text-white font-semibold">{seller?.user.email}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-neutral-400">Subscription</span>
+                <span className={`font-semibold px-2 py-1 rounded-full text-xs ${seller?.user.status === 'active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'}`}>
+                  {seller?.user.status || 'Inactive'}
+                </span>
+              </div>
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-lg p-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="glass-card">
             <div className="flex items-center mb-4">
-              <Upload size={24} className="text-secondary mr-3" />
-              <h2 className="text-xl font-semibold">Upload Data</h2>
+              <div className="p-2 bg-secondary/20 rounded-lg mr-3">
+                <Upload size={24} className="text-secondary" />
+              </div>
+              <h2 className="text-xl font-semibold text-white">Upload Data</h2>
             </div>
             <p className="text-sm text-neutral-400 mb-4">Upload your Shopify product catalog in JSON format.</p>
-            <label className="w-full flex flex-col items-center px-4 py-6 bg-black/20 rounded-lg border-2 border-dashed border-neutral-700 cursor-pointer hover:border-primary transition-colors">
-              {uploading ? <Loader size={24} className="text-primary mb-2 animate-spin" /> : <Upload size={24} className="text-neutral-400 mb-2" />}
-              <span className="text-sm text-neutral-300">
+            <label className="w-full flex flex-col items-center px-4 py-8 bg-white/5 rounded-xl border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group">
+              {uploading ? <Loader size={32} className="text-primary mb-2 animate-spin" /> : <Upload size={32} className="text-neutral-400 mb-2 group-hover:text-primary transition-colors" />}
+              <span className="text-sm text-neutral-300 group-hover:text-white transition-colors">
                 {uploading ? 'Uploading...' : selectedFile ? selectedFile.name : 'Choose a file'}
               </span>
               <input type="file" className="hidden" accept=".json" onChange={handleFileUpload} disabled={uploading} />
             </label>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-lg p-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="glass-card">
             <div className="flex items-center mb-4">
-              <CreditCard size={24} className="text-accent mr-3" />
-              <h2 className="text-xl font-semibold">Subscription</h2>
+               <div className="p-2 bg-accent/20 rounded-lg mr-3">
+                 <CreditCard size={24} className="text-accent" />
+               </div>
+              <h2 className="text-xl font-semibold text-white">Subscription</h2>
             </div>
-            <p className="text-sm text-neutral-400 mb-4">
-              {seller?.user.status === 'active' ? 'Your subscription is active.' : 'Activate your subscription to start selling.'}
+            <p className="text-sm text-neutral-400 mb-6 min-h-[40px]">
+              {seller?.user.status === 'active' ? 'Your subscription is active and renews automatically.' : 'Activate your subscription to unlock all features and start selling.'}
             </p>
-            <button onClick={() => setIsSubscriptionModalOpen(true)} className="w-full btn-primary">
+            <button onClick={() => setIsSubscriptionModalOpen(true)} className="w-full glass-button bg-primary/20 hover:bg-primary/30 text-primary border-primary/30">
               {seller?.user.status === 'active' ? 'Manage Subscription' : 'Subscribe Now'}
             </button>
           </motion.div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="mt-6 bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="mt-8 glass-card">
+        <div className="flex justify-between items-center mb-6">
             <div className="flex items-center">
-                <ShoppingCart size={24} className="text-primary mr-3" />
-                <h2 className="text-xl font-semibold">Recent Orders</h2>
+                <div className="p-2 bg-primary/20 rounded-lg mr-3">
+                  <ShoppingCart size={24} className="text-primary" />
+                </div>
+                <h2 className="text-xl font-semibold text-white">Recent Orders</h2>
             </div>
-            <Link to="/seller/dashboard/orders" className="flex items-center text-sm text-primary hover:underline">
+            <Link to="/seller/dashboard/orders" className="flex items-center text-sm text-primary hover:text-primary-light transition-colors">
                 View All <ArrowRight size={16} className="ml-1" />
             </Link>
         </div>
         <div className="space-y-3">
             {isLoadingOrders ? (
-                <p className="text-neutral-400 text-center py-8">Loading orders...</p>
+                <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
+                   <Loader className="animate-spin mb-2" />
+                   <p>Loading orders...</p>
+                </div>
             ) : recentOrders.length === 0 ? (
-                <p className="text-neutral-400 text-center py-8">No recent orders found.</p>
+                <p className="text-neutral-400 text-center py-12">No recent orders found.</p>
             ) : (
                 recentOrders.map(order => (
-                    <div key={order.id} className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center p-3 bg-black/20 rounded-md">
+                    <div key={order.id} className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-300">
                         <div>
-                            <p className="font-semibold text-white truncate">#{order.order_number}</p>
+                            <p className="font-semibold text-white truncate text-sm">#{order.order_number}</p>
                             <p className="text-xs text-neutral-400">{order.shipping_address?.name}</p>
                         </div>
                         <div className="hidden sm:block">
                             <OrderStatusBadge status={order.status} />
                         </div>
                         <div className="text-right sm:text-left">
-                            <p className="font-semibold text-white">Rs. {order.total.toLocaleString()}</p>
+                            <p className="font-semibold text-white text-sm">Rs. {order.total.toLocaleString()}</p>
                             <p className="text-xs text-neutral-400">{order.order_items?.length} items</p>
                         </div>
                         <div className="text-right text-xs text-neutral-500 hidden sm:block">
-                            {new Date(order.created_at).toLocaleString()}
+                            {new Date(order.created_at).toLocaleDateString()}
                         </div>
                     </div>
                 ))

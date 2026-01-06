@@ -39,54 +39,57 @@ const OrderCard: React.FC<{
     };
 
     return (
-        <motion.div layout className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-lg overflow-hidden">
-            <div className="p-4 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+        <motion.div layout className="glass-panel overflow-hidden mb-4">
+            <div className="p-6 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setIsExpanded(!isExpanded)}>
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div className="flex-grow">
                         <div className="flex items-center gap-4 mb-2">
-                            <p className="font-bold text-white text-lg">{order.order_number}</p>
+                            <p className="font-bold text-white text-lg">#{order.order_number}</p>
                             <OrderStatusBadge status={order.status} />
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-400">
-                            <span className="flex items-center"><Calendar size={14} className="mr-1.5"/>{new Date(order.created_at).toLocaleDateString()}</span>
-                            <span className="flex items-center"><User size={14} className="mr-1.5"/>{order.shipping_address?.name}</span>
-                            <span className="flex items-center">Rs. {order.total.toLocaleString()}</span>
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-neutral-400">
+                            <span className="flex items-center"><Calendar size={14} className="mr-2 text-primary"/>{new Date(order.created_at).toLocaleDateString()}</span>
+                            <span className="flex items-center"><User size={14} className="mr-2 text-secondary"/>{order.shipping_address?.name}</span>
+                            <span className="flex items-center font-medium text-white bg-white/5 px-2 py-1 rounded"><DollarSign size={14} className="mr-1 text-green-400"/>Rs. {order.total.toLocaleString()}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         {primaryAction()}
                         <div className="relative">
-                            <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(p => !p); }} className="p-2 rounded-md hover:bg-neutral-700/50"><MoreVertical size={20}/></button>
+                            <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(p => !p); }} className="p-2 rounded-xl hover:bg-white/10 transition-colors"><MoreVertical size={20}/></button>
                             <AnimatePresence>
                                 {isMenuOpen && (
                                     <motion.div 
                                         initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                                        className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-700 rounded-md shadow-lg z-10"
+                                        className="absolute right-0 mt-2 w-48 glass p-2 rounded-xl z-10"
                                     >
-                                        {canUpdate && <button onClick={() => onCancelOrder(order.id!)} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-neutral-800"><XCircle size={14} className="mr-2"/> Cancel Order</button>}
-                                        {['confirmed', 'packed', 'booked'].includes(order.status.toLowerCase()) && <button onClick={() => onDownloadBill(order.id!)} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800"><Download size={14} className="mr-2"/> Download Bill</button>}
+                                        {canUpdate && <button onClick={() => onCancelOrder(order.id!)} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg"><XCircle size={14} className="mr-2"/> Cancel Order</button>}
+                                        {['confirmed', 'packed', 'booked'].includes(order.status.toLowerCase()) && <button onClick={() => onDownloadBill(order.id!)} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-white/10 rounded-lg"><Download size={14} className="mr-2"/> Download Bill</button>}
                                     </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
-                        <button className="p-2 rounded-md hover:bg-neutral-700/50"><ChevronDown size={20} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}/></button>
+                        <button className="p-2 rounded-xl hover:bg-white/10 transition-colors"><ChevronDown size={20} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}/></button>
                     </div>
                 </div>
             </div>
             <AnimatePresence>
                 {isExpanded && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="border-t border-neutral-800">
-                        <div className="p-4 bg-black/20">
-                            <p className="text-md font-semibold text-white mb-2">Order Items ({order.order_items?.length})</p>
-                            <div className="space-y-3">
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="border-t border-white/5">
+                        <div className="p-6 bg-black/20">
+                            <p className="text-md font-semibold text-white mb-4">Order Items ({order.order_items?.length})</p>
+                            <div className="space-y-4">
                             {order.order_items?.map((item) => {
                                 const product = productDetails[item.product_id];
                                 return (
-                                <div key={item.id} className="flex items-center">
-                                    {loadingProducts.has(item.product_id) ? <div className="w-16 h-16 rounded-md bg-neutral-800 animate-pulse mr-4"/> : <img src={product?.images[0]} alt={product?.title} className="w-16 h-16 rounded-md object-cover mr-4" />}
+                                <div key={item.id} className="flex items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                    {loadingProducts.has(item.product_id) ? <div className="w-16 h-16 rounded-lg bg-white/10 animate-pulse mr-4"/> : <img src={product?.images[0]} alt={product?.title} className="w-16 h-16 rounded-lg object-cover mr-4" />}
                                     <div className="flex-grow">
-                                        <p className="text-sm font-semibold text-white">{product?.title || 'Loading...'}</p>
-                                        <p className="text-xs text-neutral-400">Qty: {item.quantity} | Price: Rs. {item.unit_price}</p>
+                                        <p className="text-sm font-semibold text-white mb-1">{product?.title || 'Loading...'}</p>
+                                        <div className="flex items-center text-xs text-neutral-400 gap-4">
+                                            <span className="bg-white/5 px-2 py-1 rounded">Qty: {item.quantity}</span>
+                                            <span className="bg-white/5 px-2 py-1 rounded">Price: Rs. {item.unit_price}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 )
@@ -214,13 +217,13 @@ const ManageOrders: React.FC = () => {
         <h2 className="text-2xl font-bold text-white">Manage Orders</h2>
       </div>
       
-      <div className="mb-6 border-b border-neutral-700">
-        <div className="flex space-x-1 sm:space-x-4 overflow-x-auto pb-2">
+      <div className="mb-8">
+        <div className="flex space-x-2 overflow-x-auto pb-4 scrollbar-hide">
           {allOrderStatuses.map(status => (
             <button
               key={status}
               onClick={() => setSelectedStatus(status)}
-              className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${selectedStatus === status ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-700/50'}`}>
+              className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap border ${selectedStatus === status ? 'bg-primary text-white border-primary shadow-glow-primary' : 'bg-white/5 text-neutral-400 border-white/5 hover:bg-white/10 hover:text-white'}`}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
           ))}
@@ -230,9 +233,11 @@ const ManageOrders: React.FC = () => {
       <div className="space-y-4">
         {isLoading && <p className="text-center text-neutral-400">Refreshing orders...</p>}
         {!isLoading && filteredOrders.length === 0 ? (
-          <div className="text-center py-12 bg-neutral-900/50 backdrop-blur-sm border border-dashed border-neutral-700 rounded-lg">
-            <Package size={48} className="mx-auto text-neutral-600"/>
-            <h3 className="mt-4 text-xl font-semibold text-white">No orders with status "{selectedStatus}"</h3>
+          <div className="text-center py-20 glass-panel border-dashed border-white/20">
+            <div className="p-4 bg-white/5 rounded-full inline-block mb-4">
+                <Package size={48} className="text-neutral-500"/>
+            </div>
+            <h3 className="mt-2 text-xl font-semibold text-white">No orders with status "{selectedStatus}"</h3>
           </div>
         ) : (
           filteredOrders.map(order => (

@@ -44,47 +44,47 @@ const ProductCard: React.FC<{ product: Product; onEdit: (product: Product) => vo
   };
 
   return (
-    <motion.div layout className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-lg overflow-hidden flex flex-col group">
+    <motion.div layout className="glass-panel overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-300">
       <div className="relative">
         <img src={getShopifyThumbnail(product.images[0])} alt={product.title} loading="lazy" className="w-full h-56 object-cover bg-neutral-800 group-hover:scale-105 transition-transform duration-300" />
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black/60 to-transparent" />
-        <span className={`absolute top-3 left-3 text-xs font-semibold px-2 py-1 rounded-full ${currentStatus.className}`}>{currentStatus.text}</span>
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-md ${currentStatus.className}`}>{currentStatus.text}</span>
         <div className="absolute top-3 right-3">
           <div className="relative">
-            <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(prev => !prev); }} className="p-2 bg-black/40 rounded-full text-white hover:bg-black/70"><MoreVertical size={18} /></button>
+            <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(prev => !prev); }} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"><MoreVertical size={18} /></button>
             <AnimatePresence>
               {isMenuOpen && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-700 rounded-md shadow-lg z-10">
-                  <button onClick={() => { onEdit(product); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Edit</button>
-                  <button onClick={() => { onDuplicate(product); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Duplicate</button>
-                  <button onClick={() => { onDelete(product.id); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-neutral-800">Delete</button>
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-48 glass-panel z-10 p-1">
+                  <button onClick={() => { onEdit(product); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-white/10 rounded-lg">Edit</button>
+                  <button onClick={() => { onDuplicate(product); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-white/10 rounded-lg">Duplicate</button>
+                  <button onClick={() => { onDelete(product.id); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg">Delete</button>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         </div>
       </div>
-      <div className="p-4 flex-grow flex flex-col">
-        <h3 className="font-bold text-white truncate group-hover:text-primary transition-colors">{product.title}</h3>
-        <div className="flex items-center gap-2 mt-2 text-xs">
-          <select value={product.product_type || ''} onChange={(e) => onUpdateProduct(product.id, { product_type: e.target.value })} onClick={(e) => e.stopPropagation()} className="bg-neutral-800/80 text-white rounded-md p-1 border border-neutral-700 w-full focus:ring-primary focus:border-primary">
-            <option value="">Select Type</option>
-            {productTypes.map(type => <option key={type} value={type}>{type}</option>)}
+      <div className="p-5 flex-grow flex flex-col">
+        <h3 className="font-bold text-white truncate group-hover:text-primary transition-colors text-lg">{product.title}</h3>
+        <div className="flex items-center gap-2 mt-3 text-xs">
+          <select value={product.product_type || ''} onChange={(e) => onUpdateProduct(product.id, { product_type: e.target.value })} onClick={(e) => e.stopPropagation()} className="glass-input py-1 px-2 text-xs w-full bg-white/5 border-white/10">
+            <option value="" className="bg-neutral-900">Type</option>
+            {productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}
           </select>
-          <select value={currentGender} onChange={handleGenderChange} onClick={(e) => e.stopPropagation()} className="bg-neutral-800/80 text-white rounded-md p-1 border border-neutral-700 w-full focus:ring-primary focus:border-primary">
-            <option value="">Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="unisex">Unisex</option>
+          <select value={currentGender} onChange={handleGenderChange} onClick={(e) => e.stopPropagation()} className="glass-input py-1 px-2 text-xs w-full bg-white/5 border-white/10">
+            <option value="" className="bg-neutral-900">Gender</option>
+            <option value="male" className="bg-neutral-900">Male</option>
+            <option value="female" className="bg-neutral-900">Female</option>
+            <option value="unisex" className="bg-neutral-900">Unisex</option>
           </select>
         </div>
-        <div className="mt-4 flex justify-between items-end flex-grow">
+        <div className="mt-4 flex justify-between items-end flex-grow pt-4 border-t border-white/5">
           <div>
-            <p className="text-xs text-neutral-500">Price</p>
+            <p className="text-xs text-neutral-500 mb-1">Price</p>
             <p className="text-lg font-semibold text-white">Rs. {price.toLocaleString()}</p>
           </div>
-          <div>
-            <p className="text-xs text-neutral-500 text-right">Stock</p>
+          <div className="text-right">
+            <p className="text-xs text-neutral-500 mb-1">Stock</p>
             <p className={`text-lg font-semibold ${totalInventory > 0 ? 'text-green-400' : 'text-red-400'}`}>{totalInventory}</p>
           </div>
         </div>
@@ -112,33 +112,36 @@ const ProductListItem: React.FC<{ product: Product; onEdit: (product: Product) =
     };
 
     return (
-        <motion.div layout className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center sm:gap-4">
-            <div className="flex items-center gap-4 flex-grow">
-                <img src={getShopifyThumbnail(product.images[0], '100x100')} alt={product.title} loading="lazy" className="w-16 h-16 rounded-md object-cover bg-neutral-800" />
-                <p className="font-semibold text-white truncate flex-grow">{product.title}</p>
+        <motion.div layout className="glass-panel p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-4 flex-grow min-w-0">
+                <img src={getShopifyThumbnail(product.images[0], '100x100')} alt={product.title} loading="lazy" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
+                <div className="min-w-0">
+                    <p className="font-semibold text-white truncate text-lg">{product.title}</p>
+                    <p className="text-sm text-neutral-400">Rs. {price.toLocaleString()}</p>
+                </div>
             </div>
-            <div className="flex-shrink-0 flex items-center justify-between sm:justify-end gap-2 md:gap-4 mt-4 sm:mt-0">
-                <div className="w-36">
-                    <select value={product.product_type || ''} onChange={(e) => onUpdateProduct(product.id, { product_type: e.target.value })} className="bg-neutral-800/80 text-white rounded-md p-1 border border-neutral-700 w-full text-xs focus:ring-primary focus:border-primary">
-                        <option value="">Select Type</option>
-                        {productTypes.map(type => <option key={type} value={type}>{type}</option>)}
+            <div className="flex-shrink-0 flex items-center justify-between sm:justify-end gap-3 mt-4 sm:mt-0 flex-wrap sm:flex-nowrap">
+                <div className="w-32">
+                    <select value={product.product_type || ''} onChange={(e) => onUpdateProduct(product.id, { product_type: e.target.value })} className="glass-input py-1 px-2 text-xs w-full bg-white/5 border-white/10 h-8">
+                        <option value="" className="bg-neutral-900">Type</option>
+                        {productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}
                     </select>
                 </div>
-                <div className="w-28">
-                    <select value={currentGender} onChange={handleGenderChange} className="bg-neutral-800/80 text-white rounded-md p-1 border border-neutral-700 w-full text-xs focus:ring-primary focus:border-primary">
-                        <option value="">Gender</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="unisex">Unisex</option>
+                <div className="w-24">
+                    <select value={currentGender} onChange={handleGenderChange} className="glass-input py-1 px-2 text-xs w-full bg-white/5 border-white/10 h-8">
+                        <option value="" className="bg-neutral-900">Gender</option>
+                        <option value="male" className="bg-neutral-900">Male</option>
+                        <option value="female" className="bg-neutral-900">Female</option>
+                        <option value="unisex" className="bg-neutral-900">Unisex</option>
                     </select>
                 </div>
-                <div className="w-24 text-center"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${currentStatus.className}`}>{currentStatus.text}</span></div>
-                <div className={`w-28 text-center text-sm font-semibold ${totalInventory > 0 ? 'text-green-400' : 'text-red-400'}`}>{totalInventory} in stock</div>
+                <div className="w-24 text-center"><span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${currentStatus.className}`}>{currentStatus.text}</span></div>
+                <div className={`w-24 text-center text-sm font-semibold ${totalInventory > 0 ? 'text-green-400' : 'text-red-400'}`}>{totalInventory} stock</div>
             </div>
-            <div className="flex items-center gap-2 self-start sm:self-center mt-4 sm:mt-0 sm:border-l sm:border-neutral-700 sm:pl-4">
-                <button onClick={() => onEdit(product)} className="p-2 text-neutral-400 hover:text-primary"><Edit size={16} /></button>
-                <button onClick={() => onDuplicate(product)} className="p-2 text-neutral-400 hover:text-green-500"><Copy size={16} /></button>
-                <button onClick={() => onDelete(product.id)} className="p-2 text-neutral-400 hover:text-red-500"><Trash2 size={16} /></button>
+            <div className="flex items-center gap-1 self-start sm:self-center mt-4 sm:mt-0 sm:border-l sm:border-white/10 sm:pl-4">
+                <button onClick={() => onEdit(product)} className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"><Edit size={18} /></button>
+                <button onClick={() => onDuplicate(product)} className="p-2 text-neutral-400 hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors"><Copy size={18} /></button>
+                <button onClick={() => onDelete(product.id)} className="p-2 text-neutral-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={18} /></button>
             </div>
         </motion.div>
     );
@@ -154,11 +157,11 @@ const Pagination: React.FC<{ currentPage: number; totalPages: number; onPageChan
 
     return (
         <div className="flex justify-center items-center gap-2 mt-8">
-            <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-md hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronLeft size={20}/></button>
-            {startPage > 1 && <span className="p-2">...</span>}
-            {pageNumbers.map(num => <button key={num} onClick={() => onPageChange(num)} className={`px-4 py-2 rounded-md text-sm ${currentPage === num ? 'bg-primary text-white' : 'hover:bg-neutral-800'}`}>{num}</button>)}
-            {endPage < totalPages && <span className="p-2">...</span>}
-            <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-md hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronRight size={20}/></button>
+            <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-white"><ChevronLeft size={20}/></button>
+            {startPage > 1 && <span className="p-2 text-neutral-500">...</span>}
+            {pageNumbers.map(num => <button key={num} onClick={() => onPageChange(num)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${currentPage === num ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-white/10 text-neutral-400 hover:text-white'}`}>{num}</button>)}
+            {endPage < totalPages && <span className="p-2 text-neutral-500">...</span>}
+            <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-white"><ChevronRight size={20}/></button>
         </div>
     );
 };
@@ -268,24 +271,24 @@ const ManageInventory: React.FC = () => {
             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold text-white">Inventory ({filteredProducts.length})</h2>
                 <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
-                    <div className="relative flex-grow"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search products..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-700 rounded-md pl-10 pr-4 py-2 w-full text-white focus:ring-primary focus:border-primary" /></div>
+                    <div className="relative flex-grow"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search products..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="glass-input pl-10 pr-4 py-2 w-full text-white" /></div>
                     <div className="relative">
-                        <button onClick={() => setIsFilterOpen(prev => !prev)} className="flex items-center space-x-2 bg-neutral-900/50 backdrop-blur-sm border border-neutral-700 px-4 py-2 rounded-md hover:bg-neutral-800"><Filter size={16} /><span className="hidden sm:inline">Filters</span></button>
-                        <AnimatePresence>{isFilterOpen && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-72 bg-neutral-900/80 backdrop-blur-md border border-neutral-700 rounded-md shadow-lg z-20 p-4 space-y-4">
+                        <button onClick={() => setIsFilterOpen(prev => !prev)} className="glass-button flex items-center space-x-2 px-4 py-2 hover:bg-white/10"><Filter size={16} /><span className="hidden sm:inline">Filters</span></button>
+                        <AnimatePresence>{isFilterOpen && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-72 glass-panel z-20 p-4 space-y-4">
                             <h4 className="font-semibold text-white">Filter By</h4>
-                            <div><label className="text-sm text-neutral-400">Status</label><select value={filters.status} onChange={e => handleFilterChange('status', e.target.value)} className="w-full bg-neutral-800 text-white rounded-md p-2 text-sm border border-neutral-700 mt-1"><option value="all">All Statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="inactive">Inactive</option></select></div>
-                            <div><label className="text-sm text-neutral-400">Stock</label><select value={filters.stock} onChange={e => handleFilterChange('stock', e.target.value)} className="w-full bg-neutral-800 text-white rounded-md p-2 text-sm border border-neutral-700 mt-1"><option value="all">All Stock</option><option value="inStock">In Stock</option><option value="outOfStock">Out of Stock</option></select></div>
-                            <div><label className="text-sm text-neutral-400">Product Type</label><select value={filters.productType} onChange={e => handleFilterChange('productType', e.target.value)} className="w-full bg-neutral-800 text-white rounded-md p-2 text-sm border border-neutral-700 mt-1"><option value="all">All Types</option>{productTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></div>
-                            <div className="flex justify-end gap-2 pt-2 border-t border-neutral-800"><button onClick={clearFilters} className="text-sm text-neutral-400 hover:text-white px-3 py-1 rounded">Clear</button><button onClick={() => setIsFilterOpen(false)} className="text-sm bg-primary text-white px-4 py-1 rounded-md hover:bg-primary/90">Done</button></div>
+                            <div><label className="text-sm text-neutral-400">Status</label><select value={filters.status} onChange={e => handleFilterChange('status', e.target.value)} className="glass-input w-full p-2 text-sm mt-1"><option value="all" className="bg-neutral-900">All Statuses</option><option value="active" className="bg-neutral-900">Active</option><option value="draft" className="bg-neutral-900">Draft</option><option value="inactive" className="bg-neutral-900">Inactive</option></select></div>
+                            <div><label className="text-sm text-neutral-400">Stock</label><select value={filters.stock} onChange={e => handleFilterChange('stock', e.target.value)} className="glass-input w-full p-2 text-sm mt-1"><option value="all" className="bg-neutral-900">All Stock</option><option value="inStock" className="bg-neutral-900">In Stock</option><option value="outOfStock" className="bg-neutral-900">Out of Stock</option></select></div>
+                            <div><label className="text-sm text-neutral-400">Product Type</label><select value={filters.productType} onChange={e => handleFilterChange('productType', e.target.value)} className="glass-input w-full p-2 text-sm mt-1"><option value="all" className="bg-neutral-900">All Types</option>{productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}</select></div>
+                            <div className="flex justify-end gap-2 pt-2 border-t border-white/10"><button onClick={clearFilters} className="text-sm text-neutral-400 hover:text-white px-3 py-1 rounded">Clear</button><button onClick={() => setIsFilterOpen(false)} className="text-sm bg-primary text-white px-4 py-1 rounded-lg hover:bg-primary/90">Done</button></div>
                         </motion.div>)}</AnimatePresence>
                     </div>
-                    <div className="flex items-center bg-neutral-900/50 backdrop-blur-sm border border-neutral-700 rounded-md"><button onClick={() => setViewMode('grid')} className={`p-2 rounded-l-md ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-neutral-800'}`}><Grid size={16}/></button><button onClick={() => setViewMode('list')} className={`p-2 rounded-r-md ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-neutral-800'}`}><List size={16}/></button></div>
-                    <button onClick={handleOpenEditorForCreate} className="flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 flex-shrink-0"><Plus size={20} /><span className="hidden sm:inline">Create</span></button>
+                    <div className="flex items-center glass rounded-xl border-white/10 overflow-hidden"><button onClick={() => setViewMode('grid')} className={`p-2 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-2 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
+                    <button onClick={handleOpenEditorForCreate} className="glass-button bg-primary text-white px-4 py-2 hover:bg-primary/90 flex-shrink-0 flex items-center gap-2 border-primary/50"><Plus size={20} /><span className="hidden sm:inline">Create</span></button>
                 </div>
             </div>
 
             {isLoading ? (
-                <p className="text-center text-neutral-400 py-12">Loading all products...</p>
+                <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>
             ) : viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
                     {paginatedProducts.map(product => <ProductCard key={product.id} product={product} onEdit={handleOpenEditorForUpdate} onDelete={handleDeleteProduct} onDuplicate={handleDuplicateProduct} onUpdateProduct={handleUpdateProduct} />)}
@@ -297,10 +300,10 @@ const ManageInventory: React.FC = () => {
             )}
 
             {!isLoading && filteredProducts.length === 0 && (
-                <div className="text-center py-12 bg-neutral-900/50 backdrop-blur-sm border border-dashed border-neutral-700 rounded-lg mt-4">
+                <div className="text-center py-20 glass-panel border-dashed border-white/20 mt-4">
                     <h3 className="mt-4 text-xl font-semibold text-white">No products match your filters</h3>
                     <p className="mt-1 text-neutral-400">Try adjusting your search or filters.</p>
-                    <button onClick={clearFilters} className="mt-4 text-sm bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90">Clear Filters</button>
+                    <button onClick={clearFilters} className="mt-6 text-sm bg-primary text-white px-6 py-2 rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20">Clear Filters</button>
                 </div>
             )}
 
@@ -308,7 +311,6 @@ const ManageInventory: React.FC = () => {
 
             <AnimatePresence>{isEditorOpen && <ProductEditor product={editingProduct} onClose={handleCloseEditor} />}</AnimatePresence>
         </motion.div>
-    );
-};
+    );};
 
 export default ManageInventory;

@@ -104,15 +104,9 @@ const FormInput: React.FC<FormInputProps> = ({
           placeholder={placeholder}
           required={required}
           className={`
-            w-full px-3 py-2 
+            glass-input w-full px-3 py-2 
             ${icon ? 'pl-10' : ''}
-            bg-background 
-            border border-neutral-700 
-            rounded-md 
-            text-white 
-            placeholder-neutral-500
-            focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-            ${error ? 'border-red-500' : ''}
+            ${error ? 'border-red-500 ring-1 ring-red-500' : ''}
           `}
           pattern={pattern}
           minLength={minLength}

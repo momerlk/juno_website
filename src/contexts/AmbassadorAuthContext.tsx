@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
-const API_BASE_URL = 'https://junoapi-710509977105.asia-south2.run.app/api/v1';
+const API_BASE_URL = 'https://junoapi-1095577467512.asia-south2.run.app/api/v1';
 
 interface InviteData {
   owner: string;

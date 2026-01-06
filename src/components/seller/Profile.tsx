@@ -6,7 +6,7 @@ import { Loader, Save, Building, User, Mail, Phone, MapPin, Upload } from 'lucid
 import { motion } from 'framer-motion';
 
 const Section: React.FC<{title: string, children: React.ReactNode}> = ({ title, children }) => (
-    <div className="bg-background p-6 rounded-lg border border-neutral-700">
+    <div className="glass-panel p-6">
         <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
         <div className="space-y-4">{children}</div>
     </div>
@@ -86,16 +86,16 @@ const Profile: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="business_name" className="block text-sm font-medium text-neutral-300">Business Name</label>
-                            <input type="text" name="business_name" id="business_name" value={profile.business_name || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                            <input type="text" name="business_name" id="business_name" value={profile.business_name || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                         <div>
                             <label htmlFor="legal_name" className="block text-sm font-medium text-neutral-300">Legal Name</label>
-                            <input type="text" name="legal_name" id="legal_name" value={profile.legal_name || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                            <input type="text" name="legal_name" id="legal_name" value={profile.legal_name || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                     </div>
                     <div>
                         <label htmlFor="description" className="block text-sm font-medium text-neutral-300">Description</label>
-                        <textarea name="description" id="description" value={profile.description || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1 h-24" />
+                        <textarea name="description" id="description" value={profile.description || ''} onChange={handleChange} className="glass-input w-full mt-1 h-24" />
                     </div>
                 </Section>
 
@@ -104,15 +104,15 @@ const Profile: React.FC = () => {
                         <div>
                             <label className="block text-sm font-medium text-neutral-300">Logo</label>
                             <input type="file" id="logo-upload" onChange={e => handleImageUpload(e, 'logo_url')} className="hidden" />
-                            <label htmlFor="logo-upload" className="mt-1 flex justify-center items-center w-32 h-32 rounded-full bg-background border-2 border-dashed border-neutral-600 cursor-pointer hover:border-primary">
-                                {profile.logo_url ? <img src={profile.logo_url} className="w-full h-full rounded-full object-cover" /> : <Upload/>}
+                            <label htmlFor="logo-upload" className="mt-1 flex justify-center items-center w-32 h-32 rounded-full bg-white/5 border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300">
+                                {profile.logo_url ? <img src={profile.logo_url} className="w-full h-full rounded-full object-cover" /> : <Upload className="text-neutral-400"/>}
                             </label>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-neutral-300">Banner</label>
                             <input type="file" id="banner-upload" onChange={e => handleImageUpload(e, 'banner_url')} className="hidden" />
-                            <label htmlFor="banner-upload" className="mt-1 flex justify-center items-center w-full h-full rounded-md bg-background border-2 border-dashed border-neutral-600 cursor-pointer hover:border-primary">
-                                {profile.banner_url ? <img src={profile.banner_url} className="w-full h-full rounded-md object-cover" /> : <Upload/>}
+                            <label htmlFor="banner-upload" className="mt-1 flex justify-center items-center w-full h-full rounded-xl bg-white/5 border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300">
+                                {profile.banner_url ? <img src={profile.banner_url} className="w-full h-full rounded-xl object-cover" /> : <Upload className="text-neutral-400"/>}
                             </label>
                         </div>
                     </div>
@@ -122,19 +122,19 @@ const Profile: React.FC = () => {
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="contact.contact_person_name" className="block text-sm font-medium text-neutral-300">Contact Person</label>
-                            <input type="text" name="contact.contact_person_name" id="contact.contact_person_name" value={profile.contact?.contact_person_name || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                            <input type="text" name="contact.contact_person_name" id="contact.contact_person_name" value={profile.contact?.contact_person_name || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                         <div>
                             <label htmlFor="contact.email" className="block text-sm font-medium text-neutral-300">Contact Email</label>
-                            <input type="email" name="contact.email" id="contact.email" value={profile.contact?.email || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                            <input type="email" name="contact.email" id="contact.email" value={profile.contact?.email || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                         <div>
                             <label htmlFor="contact.phone_number" className="block text-sm font-medium text-neutral-300">Phone Number</label>
-                            <input type="tel" name="contact.phone_number" id="contact.phone_number" value={profile.contact?.phone_number || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                            <input type="tel" name="contact.phone_number" id="contact.phone_number" value={profile.contact?.phone_number || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                         <div>
                             <label htmlFor="contact.whatsapp" className="block text-sm font-medium text-neutral-300">WhatsApp Number</label>
-                            <input type="tel" name="contact.whatsapp" id="contact.whatsapp" value={profile.contact?.whatsapp || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                            <input type="tel" name="contact.whatsapp" id="contact.whatsapp" value={profile.contact?.whatsapp || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                     </div>
                 </Section>
@@ -142,26 +142,26 @@ const Profile: React.FC = () => {
                 <Section title="Store Location">
                     <div>
                         <label htmlFor="location.address" className="block text-sm font-medium text-neutral-300">Address</label>
-                        <input type="text" name="location.address" id="location.address" value={profile.location?.address || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                        <input type="text" name="location.address" id="location.address" value={profile.location?.address || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label htmlFor="location.city" className="block text-sm font-medium text-neutral-300">City</label>
-                            <input type="text" name="location.city" id="location.city" value={profile.location?.city || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                            <input type="text" name="location.city" id="location.city" value={profile.location?.city || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                         <div>
                             <label htmlFor="location.state" className="block text-sm font-medium text-neutral-300">State/Province</label>
-                            <input type="text" name="location.state" id="location.state" value={profile.location?.state || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                            <input type="text" name="location.state" id="location.state" value={profile.location?.state || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                         <div>
                             <label htmlFor="location.postal_code" className="block text-sm font-medium text-neutral-300">Postal Code</label>
-                            <input type="text" name="location.postal_code" id="location.postal_code" value={profile.location?.postal_code || ''} onChange={handleChange} className="w-full bg-background border border-neutral-700 rounded-md p-2 text-white mt-1" />
+                            <input type="text" name="location.postal_code" id="location.postal_code" value={profile.location?.postal_code || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                     </div>
                 </Section>
 
-                <div className="flex justify-end pt-6 border-t border-neutral-700">
-                    <button type="submit" disabled={isSaving} className="flex items-center justify-center px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50">
+                <div className="flex justify-end pt-6 border-t border-white/10">
+                    <button type="submit" disabled={isSaving} className="glass-button bg-primary text-white hover:bg-primary-dark shadow-glow-primary border-primary/50 disabled:opacity-50">
                         {isSaving ? <><Loader className="animate-spin mr-2"/> Saving...</> : <><Save className="mr-2"/> Save Changes</>}
                     </button>
                 </div>

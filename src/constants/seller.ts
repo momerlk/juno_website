@@ -1,5 +1,6 @@
 export interface Seller {
   id?: string;
+  website? : string;
   business_name: string;
   legal_name: string;
   description: string;

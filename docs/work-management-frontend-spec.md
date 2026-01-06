@@ -561,7 +561,7 @@ interface WorkAuthState {
 ### API Integration Patterns
 ```tsx
 // Base API configuration
-const API_BASE = "https://junoapi-710509977105.asia-south2.run.app/api/v1";
+const API_BASE = "https://junoapi-1095577467512.asia-south2.run.app/api/v1";
 
 // Request helper with auth
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
