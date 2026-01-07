@@ -394,6 +394,10 @@ export namespace Seller {
     return await requestWithBody(`/seller/profile`, "PUT", token, seller);
   }
 
+  export async function UpdateProductSizingGuide(token: string, productIds: string[], sizingGuide: any): Promise<APIResponse<any>> {
+    return await requestWithBody("/seller/products/bulk-sizing-guide", "POST", token, { product_ids: productIds, sizing_guide: sizingGuide });
+  }
+
   export async function bookDelivery(token: string, order_id: string): Promise<APIResponse<any>> {
     return await requestWithBody(`/delivery/book/${order_id}`, "POST", token, {});
   }

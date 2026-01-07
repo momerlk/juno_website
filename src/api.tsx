@@ -119,18 +119,16 @@ export async function getSellerProfile(token: string): Promise<any> {
   return data;
 }
 
-export async function uploadProductCatalogue(token : string, file : File){
+export async function uploadProductCatalogue(token : string, websiteUrl : string){
   const bearer = `Bearer ${token}`;
-
-  const formData = new FormData();
-  formData.append("file", file);
 
   const requestOptions = {
     method: "POST",
     headers: {
       "Authorization": bearer,
+      "Content-Type": "application/json",
     },
-    body: formData,
+    body: JSON.stringify({ website: websiteUrl }),
   };
 
   const response = await fetch(`${api_url}/seller/shopify`, requestOptions)

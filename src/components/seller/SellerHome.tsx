@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
-import { Loader, Upload, CreditCard, Store, ShoppingCart, ArrowRight } from 'lucide-react';
+import { Loader, Globe, CreditCard, Store, ShoppingCart, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SubscriptionModal from './SubscriptionModal';
 import * as api from "../../api/sellerApi";
@@ -11,7 +11,7 @@ import { OrderStatusBadge } from './OrderStatusBadge';
 
 const SellerHome: React.FC = () => {
   const { seller } = useSellerAuth();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [websiteUrl, setWebsiteUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -35,20 +35,21 @@ const SellerHome: React.FC = () => {
     fetchRecentOrders();
   }, [seller?.token]);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleSyncCatalogue = async () => {
+    if (!websiteUrl) {
+      alert("Please enter a website URL");
+      return;
+    }
     
-    if (file) {
-      setSelectedFile(file);
-      try{
-        setUploading(true);
-        await uploadProductCatalogue(seller!.token, file);
-        setUploading(false);
-      }catch(error){
-        alert("failed to upload product catalogue, error = " + error);
-      }
-
-      console.log('File selected:', file.name);
+    try {
+      setUploading(true);
+      await uploadProductCatalogue(seller!.token, websiteUrl);
+      setUploading(false);
+      alert("Catalogue sync started successfully!");
+      setWebsiteUrl('');
+    } catch(error) {
+      setUploading(false);
+      alert("Failed to sync catalogue, error = " + error);
     }
   };
 
@@ -88,18 +89,35 @@ const SellerHome: React.FC = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="glass-card">
             <div className="flex items-center mb-4">
               <div className="p-2 bg-secondary/20 rounded-lg mr-3">
-                <Upload size={24} className="text-secondary" />
+                <Globe size={24} className="text-secondary" />
               </div>
-              <h2 className="text-xl font-semibold text-white">Upload Data</h2>
+              <h2 className="text-xl font-semibold text-white">Sync Catalogue</h2>
             </div>
-            <p className="text-sm text-neutral-400 mb-4">Upload your Shopify product catalog in JSON format.</p>
-            <label className="w-full flex flex-col items-center px-4 py-8 bg-white/5 rounded-xl border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group">
-              {uploading ? <Loader size={32} className="text-primary mb-2 animate-spin" /> : <Upload size={32} className="text-neutral-400 mb-2 group-hover:text-primary transition-colors" />}
-              <span className="text-sm text-neutral-300 group-hover:text-white transition-colors">
-                {uploading ? 'Uploading...' : selectedFile ? selectedFile.name : 'Choose a file'}
-              </span>
-              <input type="file" className="hidden" accept=".json" onChange={handleFileUpload} disabled={uploading} />
-            </label>
+            <p className="text-sm text-neutral-400 mb-4">Enter your website URL to automatically sync your product catalogue.</p>
+            <div className="space-y-3">
+              <input
+                type="url"
+                placeholder="https://your-website.com"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-neutral-500 focus:outline-none focus:border-primary/50"
+                disabled={uploading}
+              />
+              <button 
+                onClick={handleSyncCatalogue}
+                disabled={uploading}
+                className="w-full glass-button bg-secondary/20 hover:bg-secondary/30 text-secondary border-secondary/30 flex justify-center items-center"
+              >
+                {uploading ? (
+                  <>
+                    <Loader size={18} className="animate-spin mr-2" />
+                    Syncing...
+                  </>
+                ) : (
+                  'Sync Now'
+                )}
+              </button>
+            </div>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="glass-card">

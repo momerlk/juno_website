@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
-import { Product, Variant } from '../../constants/types';
-import { Plus, Edit, Trash2, Search, MoreVertical, Filter, X, Grid, List, Copy, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Product, Variant, SizingGuide } from '../../constants/types';
+import { productTypes } from '../../constants/sizing';
+import { Plus, Edit, Trash2, Search, MoreVertical, Filter, X, Grid, List, Copy, ChevronLeft, ChevronRight, CheckSquare, Square, Ruler, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductEditor from './ProductEditor';
+import SizingGuideEditor from './SizingGuideEditor';
 
 const getShopifyThumbnail = (url: string, size: string = '400x400') => {
     if (!url || !url.includes("shopify.com")) return url || 'https://via.placeholder.com/400';
@@ -22,9 +24,7 @@ const getShopifyThumbnail = (url: string, size: string = '400x400') => {
     }
 };
 
-const productTypes = ["T-Shirt", "Polo Shirt", "Shirt", "Kurta", "Shalwar Kameez", "Trousers", "Jeans", "Shorts", "Jacket", "Zipper", "Hoodie", "Sweatshirt", "Dupatta", "Scarf", "Bag", "Shoe", "Sandal", "Belt", "Watch", "Accessory"];
-
-const ProductCard: React.FC<{ product: Product; onEdit: (product: Product) => void; onDelete: (productId: string) => void; onDuplicate: (product: Product) => void; onUpdateProduct: (productId: string, data: Partial<Product>) => void; }> = React.memo(({ product, onEdit, onDelete, onDuplicate, onUpdateProduct }) => {
+const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id: string) => void; onEdit: (product: Product) => void; onDelete: (productId: string) => void; onDuplicate: (product: Product) => void; onUpdateProduct: (productId: string, data: Partial<Product>) => void; }> = React.memo(({ product, selected, onSelect, onEdit, onDelete, onDuplicate, onUpdateProduct }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const totalInventory = useMemo(() => product.variants.reduce((total, v) => total + (v.inventory?.quantity || 0), 0), [product.variants]);
   const price = useMemo(() => {
@@ -44,7 +44,12 @@ const ProductCard: React.FC<{ product: Product; onEdit: (product: Product) => vo
   };
 
   return (
-    <motion.div layout className="glass-panel overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-300">
+    <motion.div layout className={`glass-panel overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-300 relative ${selected ? 'ring-2 ring-primary' : ''}`}>
+      <div className="absolute top-3 right-12 z-10">
+          <button onClick={() => onSelect(product.id)} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
+              {selected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
+          </button>
+      </div>
       <div className="relative">
         <img src={getShopifyThumbnail(product.images[0])} alt={product.title} loading="lazy" className="w-full h-56 object-cover bg-neutral-800 group-hover:scale-105 transition-transform duration-300" />
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -93,7 +98,7 @@ const ProductCard: React.FC<{ product: Product; onEdit: (product: Product) => vo
   );
 });
 
-const ProductListItem: React.FC<{ product: Product; onEdit: (product: Product) => void; onDelete: (productId: string) => void; onDuplicate: (product: Product) => void; onUpdateProduct: (productId: string, data: Partial<Product>) => void; }> = React.memo(({ product, onEdit, onDelete, onDuplicate, onUpdateProduct }) => {
+const ProductListItem: React.FC<{ product: Product; selected: boolean; onSelect: (id: string) => void; onEdit: (product: Product) => void; onDelete: (productId: string) => void; onDuplicate: (product: Product) => void; onUpdateProduct: (productId: string, data: Partial<Product>) => void; }> = React.memo(({ product, selected, onSelect, onEdit, onDelete, onDuplicate, onUpdateProduct }) => {
     const totalInventory = useMemo(() => product.variants.reduce((total, v) => total + (v.inventory?.quantity || 0), 0), [product.variants]);
     const price = useMemo(() => {
         const defaultVariant = product.variants.find(v => v.is_default);
@@ -112,8 +117,11 @@ const ProductListItem: React.FC<{ product: Product; onEdit: (product: Product) =
     };
 
     return (
-        <motion.div layout className="glass-panel p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 hover:bg-white/5 transition-colors">
+        <motion.div layout className={`glass-panel p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 hover:bg-white/5 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5' : ''}`}>
             <div className="flex items-center gap-4 flex-grow min-w-0">
+                 <button onClick={() => onSelect(product.id)} className="text-neutral-400 hover:text-white">
+                    {selected ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
+                </button>
                 <img src={getShopifyThumbnail(product.images[0], '100x100')} alt={product.title} loading="lazy" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
                 <div className="min-w-0">
                     <p className="font-semibold text-white truncate text-lg">{product.title}</p>
@@ -166,6 +174,99 @@ const Pagination: React.FC<{ currentPage: number; totalPages: number; onPageChan
     );
 };
 
+const BulkSizingGuideModal: React.FC<{ 
+    isOpen: boolean; 
+    onClose: () => void; 
+    selectedProductIds: string[];
+    allProducts: Product[];
+    onSave: () => void;
+}> = ({ isOpen, onClose, selectedProductIds, allProducts, onSave }) => {
+    const { seller } = useSellerAuth();
+    const [sizingGuide, setSizingGuide] = useState<SizingGuide>({
+        size_chart: {},
+        size_fit: '',
+        measurement_unit: 'inch'
+    });
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Calculate union of sizes
+    const availableSizes = useMemo(() => {
+        const sizes = new Set<string>();
+        const selectedProducts = allProducts.filter(p => selectedProductIds.includes(p.id));
+        selectedProducts.forEach(product => {
+            const sizeOption = product.options.find(o => o.name.toLowerCase() === 'size');
+            sizeOption?.values.forEach(v => sizes.add(v));
+        });
+        return Array.from(sizes);
+    }, [selectedProductIds, allProducts]);
+
+    // Infer product type from selection (first selected)
+    const inferredProductType = useMemo(() => {
+        const selectedProducts = allProducts.filter(p => selectedProductIds.includes(p.id));
+        if (selectedProducts.length > 0) return selectedProducts[0].product_type;
+        return undefined;
+    }, [selectedProductIds, allProducts]);
+
+    const handleSave = async () => {
+        if (!seller?.token) return;
+        setIsSaving(true);
+        try {
+            const response = await api.Seller.UpdateProductSizingGuide(seller.token, selectedProductIds, sizingGuide);
+            if (response.ok) {
+                alert('Sizing guide updated for selected products!');
+                onSave();
+                onClose();
+            } else {
+                alert('Failed to update sizing guide.');
+            }
+        } catch (error) {
+            alert('An error occurred.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="glass-panel w-full max-w-3xl max-h-[90vh] flex flex-col"
+            >
+                <div className="flex justify-between items-center p-6 border-b border-white/10">
+                    <h3 className="text-xl font-bold text-white">Bulk Update Sizing Guide</h3>
+                    <button onClick={onClose} className="text-neutral-400 hover:text-white"><X /></button>
+                </div>
+                <div className="p-6 overflow-y-auto flex-grow">
+                    <p className="text-neutral-400 mb-6">
+                        Updating sizing guide for {selectedProductIds.length} products. 
+                        Detected sizes: {availableSizes.join(', ') || 'None'}
+                    </p>
+                    <SizingGuideEditor 
+                        value={sizingGuide} 
+                        onChange={setSizingGuide} 
+                        productType={inferredProductType}
+                        availableSizes={availableSizes}
+                    />
+                </div>
+                <div className="p-6 border-t border-white/10 flex justify-end gap-4">
+                    <button onClick={onClose} className="px-4 py-2 text-neutral-400 hover:text-white">Cancel</button>
+                    <button 
+                        onClick={handleSave} 
+                        disabled={isSaving}
+                        className="glass-button bg-primary text-white flex items-center gap-2"
+                    >
+                        {isSaving ? 'Saving...' : <><Save size={18} /> Apply to Selected</>}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
 const ITEMS_PER_PAGE = 12;
 
 const ManageInventory: React.FC = () => {
@@ -180,6 +281,8 @@ const ManageInventory: React.FC = () => {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState({ status: 'all', stock: 'all', productType: 'all' });
     const [viewMode, setViewMode] = useState('grid');
+    const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+    const [isBulkSizingModalOpen, setIsBulkSizingModalOpen] = useState(false);
 
     const fetchAllProducts = useCallback(async () => {
         if (!seller?.token) return;
@@ -266,6 +369,32 @@ const ManageInventory: React.FC = () => {
         if (response.ok) { alert('Product duplicated successfully!'); fetchAllProducts(); } else { alert(`Failed to duplicate product: ${response.body?.message || 'Unknown error'}`); }
     };
 
+    const handleSelectProduct = (id: string) => {
+        setSelectedProductIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) newSet.delete(id);
+            else newSet.add(id);
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedProductIds.size === filteredProducts.length) {
+            setSelectedProductIds(new Set());
+        } else {
+            setSelectedProductIds(new Set(filteredProducts.map(p => p.id)));
+        }
+    };
+
+    const handleBulkSizingGuide = () => {
+        setIsBulkSizingModalOpen(true);
+    };
+
+    const handleBulkSizingSave = () => {
+        setSelectedProductIds(new Set());
+        fetchAllProducts();
+    };
+
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
@@ -287,15 +416,53 @@ const ManageInventory: React.FC = () => {
                 </div>
             </div>
 
+            <div className="flex items-center gap-4 mb-4">
+                 <button onClick={handleSelectAll} className="flex items-center text-sm text-neutral-400 hover:text-white">
+                    {selectedProductIds.size === filteredProducts.length && filteredProducts.length > 0 ? <CheckSquare size={18} className="mr-2 text-primary" /> : <Square size={18} className="mr-2" />}
+                    Select All
+                </button>
+                {selectedProductIds.size > 0 && (
+                    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4 bg-white/5 px-4 py-1.5 rounded-lg border border-white/10">
+                        <span className="text-sm font-medium text-white">{selectedProductIds.size} Selected</span>
+                        <div className="h-4 w-[1px] bg-white/20"></div>
+                        <button onClick={handleBulkSizingGuide} className="text-sm text-primary hover:text-primary-light flex items-center">
+                            <Ruler size={16} className="mr-1.5" /> Set Sizing Guide
+                        </button>
+                    </motion.div>
+                )}
+            </div>
+
             {isLoading ? (
                 <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>
             ) : viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
-                    {paginatedProducts.map(product => <ProductCard key={product.id} product={product} onEdit={handleOpenEditorForUpdate} onDelete={handleDeleteProduct} onDuplicate={handleDuplicateProduct} onUpdateProduct={handleUpdateProduct} />)}
+                    {paginatedProducts.map(product => (
+                        <ProductCard 
+                            key={product.id} 
+                            product={product} 
+                            selected={selectedProductIds.has(product.id)}
+                            onSelect={handleSelectProduct}
+                            onEdit={handleOpenEditorForUpdate} 
+                            onDelete={handleDeleteProduct} 
+                            onDuplicate={handleDuplicateProduct} 
+                            onUpdateProduct={handleUpdateProduct} 
+                        />
+                    ))}
                 </div>
             ) : (
                 <div className="space-y-4 mt-4">
-                    {paginatedProducts.map(product => <ProductListItem key={product.id} product={product} onEdit={handleOpenEditorForUpdate} onDelete={handleDeleteProduct} onDuplicate={handleDuplicateProduct} onUpdateProduct={handleUpdateProduct} />)}
+                    {paginatedProducts.map(product => (
+                        <ProductListItem 
+                            key={product.id} 
+                            product={product} 
+                            selected={selectedProductIds.has(product.id)}
+                            onSelect={handleSelectProduct}
+                            onEdit={handleOpenEditorForUpdate} 
+                            onDelete={handleDeleteProduct} 
+                            onDuplicate={handleDuplicateProduct} 
+                            onUpdateProduct={handleUpdateProduct} 
+                        />
+                    ))}
                 </div>
             )}
 
@@ -310,6 +477,17 @@ const ManageInventory: React.FC = () => {
             {!isLoading && totalPages > 1 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
 
             <AnimatePresence>{isEditorOpen && <ProductEditor product={editingProduct} onClose={handleCloseEditor} />}</AnimatePresence>
+            <AnimatePresence>
+                {isBulkSizingModalOpen && (
+                    <BulkSizingGuideModal 
+                        isOpen={isBulkSizingModalOpen} 
+                        onClose={() => setIsBulkSizingModalOpen(false)} 
+                        selectedProductIds={Array.from(selectedProductIds)}
+                        allProducts={allProducts}
+                        onSave={handleBulkSizingSave}
+                    />
+                )}
+            </AnimatePresence>
         </motion.div>
     );};
 
