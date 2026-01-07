@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Download, Smartphone, AlertCircle, Apple, CheckCircle, Info } from 'lucide-react';
+import { ShieldCheck, Download, Smartphone, Apple } from 'lucide-react';
 
 const DownloadRedirect: React.FC = () => {
   const [os, setOs] = useState<'android' | 'ios' | 'other'>('other');
   const [countdown, setCountdown] = useState(5);
-  const [showAndroidInstructions, setShowAndroidInstructions] = useState(false);
 
   const iosUrl = "https://apps.apple.com/pk/app/juno-swipe-to-shop/id6751541492";
   const androidUrl = "https://storage.googleapis.com/juno_media/constants/juno_1.0.2.apk";
@@ -16,7 +15,6 @@ const DownloadRedirect: React.FC = () => {
 
     if (/android/i.test(userAgent)) {
       setOs('android');
-      setShowAndroidInstructions(true);
     } else if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
       setOs('ios');
       // Start countdown for iOS

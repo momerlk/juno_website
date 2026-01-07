@@ -25,18 +25,20 @@ const ImpactCard: React.FC<{ icon: React.ReactNode; title: string; description: 
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 50 }}
+      initial={{ opacity: 0, y: 40 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.6, delay }}
-      className="card card-hover text-center p-8"
+      className="group relative bg-white/5 border border-white/5 hover:border-white/10 p-8 rounded-3xl backdrop-blur-sm transition-all hover:bg-white/10 overflow-hidden"
     >
-      <div className="mb-5 flex justify-center">
-        <div className="p-4 bg-primary/10 rounded-full">
+      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      <div className="relative z-10">
+        <div className="mb-6 inline-flex p-4 rounded-2xl bg-white/5 border border-white/10 group-hover:scale-110 transition-transform duration-300">
           {icon}
         </div>
+        <h3 className="text-5xl font-black text-white mb-4 tracking-tight">{title}</h3>
+        <p className="text-neutral-400 text-lg leading-relaxed">{description}</p>
       </div>
-      <h3 className="text-5xl font-extrabold text-white mb-3">{title}</h3>
-      <p className="text-neutral-400">{description}</p>
     </motion.div>
   );
 };
@@ -50,9 +52,13 @@ const PartnerLogo: React.FC<{ logo: string; name: string; delay: number; }> = ({
       initial={{ opacity: 0, scale: 0.8 }}
       animate={inView ? { opacity: 1, scale: 1 } : {}}
       transition={{ duration: 0.5, delay }}
-      className="group flex items-center justify-center p-6 bg-neutral-900/80 rounded-2xl border border-neutral-800 hover:bg-white/5 transition-all duration-300"
+      className="group flex items-center justify-center p-8 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all duration-300 backdrop-blur-sm"
     >
-      <img src={logo} alt={name} className="max-h-12 w-auto filter grayscale group-hover:grayscale-0 transition-all duration-300 opacity-70 group-hover:opacity-100"/>
+      <img 
+        src={logo} 
+        alt={name} 
+        className="max-h-16 w-auto filter grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110"
+      />
     </motion.div>
   );
 };
@@ -82,26 +88,28 @@ const JunoApp: React.FC = () => {
   ];
 
   return (
-    <section id="juno-app" className="section section-glow bg-background-dark">
-      <div className="container mx-auto">
+    <section id="juno-app" className="py-32 bg-black relative">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-black to-black opacity-50" />
+      
+      <div className="container mx-auto px-4 relative z-10">
         {/* Impact Section */}
-        <div className="mb-24">
+        <div className="mb-32">
           <motion.div
             ref={ref}
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="text-center mb-16"
+            className="text-center mb-20"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Empowering a <span className="gradient-text">Fashion Revolution</span>
+            <h2 className="text-4xl md:text-6xl font-black mb-6 text-white tracking-tight">
+              Empowering a <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Fashion Revolution</span>
             </h2>
-            <p className="text-lg text-neutral-400 max-w-3xl mx-auto">
+            <p className="text-xl text-neutral-400 max-w-3xl mx-auto leading-relaxed">
               We're not just building an app; we're fostering a community and creating tangible impact for entrepreneurs and fashion lovers across Pakistan.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
             {impactStats.map((stat, index) => (
               <ImpactCard key={index} {...stat} />
             ))}
@@ -114,14 +122,15 @@ const JunoApp: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="text-center mb-12"
+            className="text-center mb-16"
           >
-            <h3 className="text-3xl font-bold mb-2 text-neutral-300">
-              Backed by Industry Leaders & Innovators
+            <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+              Backed by Industry Leaders
             </h3>
+            <div className="h-1 w-20 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full" />
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-6xl mx-auto">
             {partners.map((partner, index) => (
               <PartnerLogo
                 key={index}

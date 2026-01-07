@@ -19,30 +19,38 @@ const TeamMemberCard: React.FC<{ member: TeamMember; index: number }> = ({ membe
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 50, scale: 0.9 }}
+      initial={{ opacity: 0, y: 50, scale: 0.95 }}
       animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-      transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
-      className="relative group overflow-hidden rounded-2xl bg-neutral-900 border border-neutral-800 transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10"
+      transition={{ duration: 0.6, delay: index * 0.1, ease: "easeOut" }}
+      className="group relative overflow-hidden rounded-[2rem] bg-neutral-900 border border-white/5"
     >
-      <img 
-        src={member.image} 
-        alt={member.name} 
-        className="w-full h-[480px] object-cover object-center group-hover:scale-110 transition-transform duration-500 ease-in-out"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent"></div>
+      <div className="aspect-[3/4] w-full overflow-hidden">
+        <img 
+          src={member.image} 
+          alt={member.name} 
+          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+        />
+      </div>
       
-      <div className="absolute bottom-0 left-0 right-0 p-6">
-        <h3 className="text-2xl font-bold text-white">{member.name}</h3>
-        <p className="text-primary font-semibold">{member.role}</p>
-        <div className="h-0.5 bg-primary w-1/4 my-2"></div>
-        <p className="text-neutral-300 text-sm mb-4">{member.bio}</p>
+      {/* Glass Overlay Content */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90" />
+      
+      <div className="absolute bottom-0 left-0 right-0 p-8 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+        <h3 className="text-3xl font-bold text-white mb-1">{member.name}</h3>
+        <p className="text-primary font-semibold text-lg mb-4">{member.role}</p>
+        
+        <div className="h-px w-12 bg-white/20 mb-4" />
+        
+        <p className="text-neutral-300 text-base mb-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+          {member.bio}
+        </p>
         
         {member.social.linkedin && (
           <a 
             href={member.social.linkedin} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="inline-block bg-white/10 p-2 rounded-full hover:bg-primary hover:text-white text-neutral-300 transition-all"
+            className="inline-flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-300"
             aria-label={`${member.name}'s LinkedIn`}
           >
             <Linkedin size={20} />
@@ -87,24 +95,24 @@ const Team: React.FC = () => {
   ];
 
   return (
-    <section id="team" className="section bg-background">
-      <div className="container mx-auto">
+    <section id="team" className="py-32 bg-black relative">
+      <div className="container mx-auto px-4">
         <motion.div
           ref={ref}
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-20"
         >
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Meet the <span className="gradient-text">Innovators</span>
+          <h2 className="text-4xl md:text-6xl font-black mb-6 text-white tracking-tight">
+            Meet the <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Innovators</span>
           </h2>
-          <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
+          <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
             The passionate minds behind Juno's mission to revolutionize fashion discovery and commerce.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {teamMembers.map((member, index) => (
             <TeamMemberCard key={index} member={member} index={index} />
           ))}
