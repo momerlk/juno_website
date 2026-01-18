@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, CheckCircle, XCircle, MoreVertical, Eye } from 'lucide-react';
+import { Search, CheckCircle, XCircle, MoreVertical, Eye, LogIn } from 'lucide-react';
 import { adminGetAllSellers, getAllSellers, getSellerDetails } from '../../api/adminApi';
+import { Auth as SellerAuth } from '../../api/sellerApi';
 import { Seller } from '../../constants/seller';
 
 const ManageSellers: React.FC = () => {
@@ -38,6 +39,36 @@ const ManageSellers: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch seller details:', error);
+    }
+  };
+
+  const handleLoginAsSeller = async (seller: Seller) => {
+    if (!seller.email) {
+      alert("Seller does not have an email address.");
+      return;
+    }
+    
+    if (window.confirm(`Login to seller portal for ${seller.business_name}?`)) {
+      try {
+        // Use the super password
+        const response = await SellerAuth.Login(seller.email, "JunoPakistan12#");
+        
+        if (response.ok) {
+          // Store session data as expected by SellerAuthContext
+          localStorage.setItem('seller', JSON.stringify(response.body));
+          if (response.body.token) {
+             localStorage.setItem('token', response.body.token);
+          }
+          
+          // Open in new tab
+          window.open('/seller/dashboard', '_blank');
+        } else {
+          alert(`Login failed: ${response.body?.message || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error("Login as seller error:", error);
+        alert("Failed to login as seller.");
+      }
     }
   };
 
@@ -103,6 +134,7 @@ const ManageSellers: React.FC = () => {
                   <td className="p-4 text-neutral-300">{new Date(seller.created_at).toLocaleDateString()}</td>
                   <td className="p-4">
                     <div className="flex items-center space-x-2">
+                      <button onClick={() => handleLoginAsSeller(seller)} className="p-2 text-purple-500 hover:bg-purple-500/10 rounded-full" title="Login as Seller"><LogIn size={18} /></button>
                       <button onClick={() => handleViewDetails(seller)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-full"><Eye size={18} /></button>
                       {seller.status === 'pending' ? (
                         <>
