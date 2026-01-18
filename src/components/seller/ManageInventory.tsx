@@ -106,7 +106,12 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
   const currentGender = useMemo(() => product.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase())) || '', [product.tags]);
   const hasMetadata = product.product_type && currentGender;
   const status = !hasMetadata ? 'inactive' : (product.status || 'draft');
-  const statusConfig = { active: { text: 'Active', className: 'bg-green-600 text-white' }, draft: { text: 'Draft', className: 'bg-yellow-600 text-white' }, inactive: { text: 'Inactive', className: 'bg-red-600 text-white' } };
+  const statusConfig = { 
+      active: { text: 'Active', className: 'bg-green-600 text-white' }, 
+      draft: { text: 'Draft', className: 'bg-yellow-600 text-white' }, 
+      inactive: { text: 'Inactive', className: 'bg-red-600 text-white' },
+      archived: { text: 'Archived', className: 'bg-neutral-600 text-neutral-300' }
+  };
   const currentStatus = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
 
   const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -179,7 +184,12 @@ const ProductListItem: React.FC<{ product: Product; selected: boolean; onSelect:
     const currentGender = useMemo(() => product.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase())) || '', [product.tags]);
     const hasMetadata = product.product_type && currentGender;
     const status = !hasMetadata ? 'inactive' : (product.status || 'draft');
-    const statusConfig = { active: { text: 'Active', className: 'bg-green-600 text-white' }, draft: { text: 'Draft', className: 'bg-yellow-600 text-white' }, inactive: { text: 'Inactive', className: 'bg-red-600 text-white' } };
+    const statusConfig = { 
+        active: { text: 'Active', className: 'bg-green-600 text-white' }, 
+        draft: { text: 'Draft', className: 'bg-yellow-600 text-white' }, 
+        inactive: { text: 'Inactive', className: 'bg-red-600 text-white' },
+        archived: { text: 'Archived', className: 'bg-neutral-600 text-neutral-300' }
+    };
     const currentStatus = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
 
     const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -449,17 +459,30 @@ const ManageInventory: React.FC = () => {
     };
 
     const filteredProducts = useMemo(() => {
-        return allProducts.filter(p => {
-            const searchMatch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
-            const currentGender = p.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase())) || '';
-            const hasMetadata = p.product_type && currentGender;
-            const status = !hasMetadata ? 'inactive' : (p.status || 'draft');
-            const statusMatch = filters.status === 'all' || status === filters.status;
-            const totalInventory = p.variants.reduce((total, v) => total + (v.inventory?.quantity || 0), 0);
-            const stockMatch = filters.stock === 'all' || (filters.stock === 'inStock' && totalInventory > 0) || (filters.stock === 'outOfStock' && totalInventory === 0);
-            const typeMatch = filters.productType === 'all' || p.product_type === filters.productType;
-            return searchMatch && statusMatch && stockMatch && typeMatch;
-        });
+        return allProducts
+            .filter(p => {
+                const searchMatch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
+                const currentGender = p.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase())) || '';
+                const hasMetadata = p.product_type && currentGender;
+                const status = !hasMetadata ? 'inactive' : (p.status || 'draft');
+                const statusMatch = filters.status === 'all' || status === filters.status;
+                const totalInventory = p.variants.reduce((total, v) => total + (v.inventory?.quantity || 0), 0);
+                const stockMatch = filters.stock === 'all' || (filters.stock === 'inStock' && totalInventory > 0) || (filters.stock === 'outOfStock' && totalInventory === 0);
+                const typeMatch = filters.productType === 'all' || p.product_type === filters.productType;
+                return searchMatch && statusMatch && stockMatch && typeMatch;
+            })
+            .sort((a, b) => {
+                const getPriority = (p: Product) => {
+                    const currentGender = p.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase())) || '';
+                    const hasMetadata = p.product_type && currentGender;
+                    const status = !hasMetadata ? 'inactive' : (p.status || 'draft');
+                    
+                    if (status === 'active') return 0;
+                    if (status === 'archived') return 2;
+                    return 1; // draft, inactive, etc.
+                };
+                return getPriority(a) - getPriority(b);
+            });
     }, [allProducts, searchQuery, filters]);
 
     const totalPages = useMemo(() => Math.ceil(filteredProducts.length / ITEMS_PER_PAGE), [filteredProducts]);

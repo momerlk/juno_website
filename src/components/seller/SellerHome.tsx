@@ -101,18 +101,33 @@ const SellerHome: React.FC = () => {
                   setQueueCount(pending);
               }
 
-              // 2. Check Active Products for Stock
-              // Fetching page 1 for now, or ideally we iterate if count is small. 
-              // Given MVP, let's fetch up to 100 products to check.
-              const productsResponse = await api.Seller.GetProducts(seller.token, 1);
-              if (productsResponse.ok && productsResponse.body) {
-                  const products = productsResponse.body as Product[];
-                  const outOfStock = products.filter(p => 
-                      p.status === 'active' && 
-                      p.variants.some(v => v.available && (v.inventory?.quantity || 0) === 0)
-                  ).length;
-                  setOutOfStockCount(outOfStock);
+              // 2. Check Active Products for Stock (Check first 5 pages / ~60 items)
+              let allCheckedProducts: Product[] = [];
+              for (let i = 1; i <= 5; i++) {
+                  const productsResponse = await api.Seller.GetProducts(seller.token, i);
+                  if (productsResponse.ok && productsResponse.body) {
+                      const pageProducts = productsResponse.body as Product[];
+                      if (pageProducts.length === 0) break;
+                      allCheckedProducts = [...allCheckedProducts, ...pageProducts];
+                  } else {
+                      break;
+                  }
               }
+
+              const outOfStock = allCheckedProducts.filter(p => {
+                  if (p.status !== 'active') return false;
+                  
+                  // Check if total stock is 0
+                  const totalStock = p.variants.reduce((sum, v) => sum + (v.inventory?.quantity || 0), 0);
+                  if (totalStock === 0) return true;
+
+                  // Check if any specific ACTIVE variant has 0 stock
+                  // (Assuming 'available' true implies it's an active variant intended for sale)
+                  const hasZeroStockActiveVariant = p.variants.some(v => v.available && (v.inventory?.quantity || 0) === 0);
+                  return hasZeroStockActiveVariant;
+              }).length;
+              
+              setOutOfStockCount(outOfStock);
 
               // 3. Check Profile Images
               const profile = seller.user; // Assuming seller object is up to date or we fetch it
@@ -164,6 +179,20 @@ const SellerHome: React.FC = () => {
 
   return (
     <>
+      <AnimatePresence>
+        {isLoadingActions && (
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="mb-6 p-4 glass-panel border border-primary/20 flex items-center justify-center space-x-3"
+            >
+                <Loader className="animate-spin text-primary" size={20} />
+                <span className="text-neutral-300 font-medium">Checking for updates and TODOs required by you...</span>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {hasUrgentActions && !isLoadingActions && (
             <motion.div 

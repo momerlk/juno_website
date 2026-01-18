@@ -19,12 +19,13 @@ const Profile: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [uploadingImage, setUploadingImage] = useState<'logo_url' | 'banner_url' | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
             if (token) {
                 setIsLoading(true);
-                console.log("getting response")
                 const response = await api.Auth.GetProfile(token);
                 if (response.ok && response.body) {
                     setProfile(response.body);
@@ -34,11 +35,11 @@ const Profile: React.FC = () => {
                 setIsLoading(false);
             }
         };
-        console.log("fetching profile")
         fetchProfile();
     }, [token]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setHasUnsavedChanges(true);
         const { name, value } = e.target;
         const keys = name.split('.');
         if (keys.length > 1) {
@@ -57,8 +58,17 @@ const Profile: React.FC = () => {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logo_url' | 'banner_url') => {
         const file = e.target.files?.[0];
         if (file) {
-            const url = await api.uploadFileAndGetUrl(file, 'high_quality');
-            setProfile(prev => ({ ...prev, [field]: url }));
+            setUploadingImage(field);
+            try {
+                const url = await api.uploadFileAndGetUrl(file, 'high_quality');
+                setProfile(prev => ({ ...prev, [field]: url }));
+                setHasUnsavedChanges(true);
+            } catch (err) {
+                console.error("Upload failed", err);
+                alert("Failed to upload image. Please try again.");
+            } finally {
+                setUploadingImage(null);
+            }
         }
     };
 
@@ -69,6 +79,7 @@ const Profile: React.FC = () => {
             const response = await api.Seller.UpdateProfile(token, profile as TSeller);
             if (response.ok) {
                 alert('Profile updated successfully!');
+                setHasUnsavedChanges(false);
             } else {
                 alert('Failed to update profile.');
             }
@@ -103,16 +114,34 @@ const Profile: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-neutral-300">Logo</label>
-                            <input type="file" id="logo-upload" onChange={e => handleImageUpload(e, 'logo_url')} className="hidden" />
-                            <label htmlFor="logo-upload" className="mt-1 flex justify-center items-center w-32 h-32 rounded-full bg-white/5 border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300">
-                                {profile.logo_url ? <img src={profile.logo_url} className="w-full h-full rounded-full object-cover" /> : <Upload className="text-neutral-400"/>}
+                            <input type="file" id="logo-upload" onChange={e => handleImageUpload(e, 'logo_url')} className="hidden" disabled={uploadingImage === 'logo_url'} />
+                            <label htmlFor="logo-upload" className={`mt-1 flex justify-center items-center w-32 h-32 rounded-full bg-white/5 border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 overflow-hidden relative ${uploadingImage === 'logo_url' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {uploadingImage === 'logo_url' ? (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-10">
+                                        <Loader className="animate-spin text-white mb-1" size={24} />
+                                        <span className="text-xs text-white">Uploading...</span>
+                                    </div>
+                                ) : profile.logo_url ? (
+                                    <img src={profile.logo_url} className="w-full h-full object-cover" alt="Logo" />
+                                ) : (
+                                    <Upload className="text-neutral-400"/>
+                                )}
                             </label>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-neutral-300">Banner</label>
-                            <input type="file" id="banner-upload" onChange={e => handleImageUpload(e, 'banner_url')} className="hidden" />
-                            <label htmlFor="banner-upload" className="mt-1 flex justify-center items-center w-full h-full rounded-xl bg-white/5 border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300">
-                                {profile.banner_url ? <img src={profile.banner_url} className="w-full h-full rounded-xl object-cover" /> : <Upload className="text-neutral-400"/>}
+                            <input type="file" id="banner-upload" onChange={e => handleImageUpload(e, 'banner_url')} className="hidden" disabled={uploadingImage === 'banner_url'} />
+                            <label htmlFor="banner-upload" className={`mt-1 flex justify-center items-center w-full h-48 rounded-xl bg-white/5 border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 overflow-hidden relative ${uploadingImage === 'banner_url' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {uploadingImage === 'banner_url' ? (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-10">
+                                        <Loader className="animate-spin text-white mb-1" size={24} />
+                                        <span className="text-xs text-white">Uploading...</span>
+                                    </div>
+                                ) : profile.banner_url ? (
+                                    <img src={profile.banner_url} className="w-full h-full object-cover" alt="Banner" />
+                                ) : (
+                                    <Upload className="text-neutral-400"/>
+                                )}
                             </label>
                         </div>
                     </div>
@@ -160,7 +189,12 @@ const Profile: React.FC = () => {
                     </div>
                 </Section>
 
-                <div className="flex justify-end pt-6 border-t border-white/10">
+                <div className="flex flex-col items-end pt-6 border-t border-white/10">
+                    {hasUnsavedChanges && (
+                        <div className="mb-4 flex items-center text-yellow-400 bg-yellow-400/10 px-4 py-2 rounded-lg border border-yellow-400/20">
+                            <span className="text-sm font-medium">You have unsaved changes. Please save to apply.</span>
+                        </div>
+                    )}
                     <button type="submit" disabled={isSaving} className="glass-button bg-primary text-white hover:bg-primary-dark shadow-glow-primary border-primary/50 disabled:opacity-50">
                         {isSaving ? <><Loader className="animate-spin mr-2"/> Saving...</> : <><Save className="mr-2"/> Save Changes</>}
                     </button>
