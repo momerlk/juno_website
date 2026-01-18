@@ -159,3 +159,14 @@ export interface CustomizationOption {
   additional_price?: number;
   required: boolean;
 }
+
+export type QueueStatus = 'queued' | 'validation_pending' | 'enrichment_pending' | 'ready' | 'failed';
+
+export interface QueueItem {
+  id: string;
+  product: Product;
+  status: QueueStatus;
+  errors: string[];
+  created_at: string;
+  updated_at: string;
+}

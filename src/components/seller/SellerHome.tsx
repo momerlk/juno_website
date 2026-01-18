@@ -1,21 +1,73 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
-import { Loader, Globe, CreditCard, Store, ShoppingCart, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader, Globe, CreditCard, Store, ShoppingCart, ArrowRight, AlertTriangle, HelpCircle, Package, Image as ImageIcon, Phone } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import SubscriptionModal from './SubscriptionModal';
 import * as api from "../../api/sellerApi";
 import { uploadProductCatalogue } from '../../api';
 import { Order } from '../../constants/orders';
 import { OrderStatusBadge } from './OrderStatusBadge';
+import { Product, QueueItem } from '../../constants/types';
+
+const UrgentActionCard: React.FC<{ 
+    title: string; 
+    description: string; 
+    actionText: string; 
+    onAction: () => void; 
+    type: 'warning' | 'error' | 'info';
+    icon?: React.ReactNode;
+}> = ({ title, description, actionText, onAction, type, icon }) => (
+    <div className={`p-4 rounded-xl border flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between ${
+        type === 'error' ? 'bg-red-500/10 border-red-500/30' : 
+        type === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' : 
+        'bg-blue-500/10 border-blue-500/30'
+    }`}>
+        <div className="flex gap-3">
+            <div className={`p-2 rounded-lg h-fit ${
+                type === 'error' ? 'bg-red-500/20 text-red-400' : 
+                type === 'warning' ? 'bg-yellow-500/20 text-yellow-400' : 
+                'bg-blue-500/20 text-blue-400'
+            }`}>
+                {icon || <AlertTriangle size={20} />}
+            </div>
+            <div>
+                <h4 className={`font-semibold ${
+                    type === 'error' ? 'text-red-400' : 
+                    type === 'warning' ? 'text-yellow-400' : 
+                    'text-blue-400'
+                }`}>{title}</h4>
+                <p className="text-sm text-neutral-300 mt-1">{description}</p>
+            </div>
+        </div>
+        <button 
+            onClick={onAction}
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors w-full sm:w-auto ${
+                type === 'error' ? 'bg-red-500 text-white hover:bg-red-600' : 
+                type === 'warning' ? 'bg-yellow-500 text-black hover:bg-yellow-400' : 
+                'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+        >
+            {actionText}
+        </button>
+    </div>
+);
 
 const SellerHome: React.FC = () => {
   const { seller } = useSellerAuth();
+  const navigate = useNavigate();
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+
+  // Action Items State
+  const [queueCount, setQueueCount] = useState(0);
+  const [outOfStockCount, setOutOfStockCount] = useState(0);
+  const [hasInvalidProfile, setHasInvalidProfile] = useState(false);
+  const [isLoadingActions, setIsLoadingActions] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     const fetchRecentOrders = async () => {
@@ -34,6 +86,56 @@ const SellerHome: React.FC = () => {
     };
     fetchRecentOrders();
   }, [seller?.token]);
+
+  useEffect(() => {
+      const fetchActionItems = async () => {
+          if (!seller?.token) return;
+          setIsLoadingActions(true);
+          try {
+              // 1. Check Queue
+              const queueResponse = await api.Seller.Queue.List(seller.token);
+              if (queueResponse.ok && queueResponse.body) {
+                  const items = queueResponse.body as QueueItem[];
+                  // Filter for items that are NOT ready
+                  const pending = items.filter(i => i.status !== 'ready').length;
+                  setQueueCount(pending);
+              }
+
+              // 2. Check Active Products for Stock
+              // Fetching page 1 for now, or ideally we iterate if count is small. 
+              // Given MVP, let's fetch up to 100 products to check.
+              const productsResponse = await api.Seller.GetProducts(seller.token, 1);
+              if (productsResponse.ok && productsResponse.body) {
+                  const products = productsResponse.body as Product[];
+                  const outOfStock = products.filter(p => 
+                      p.status === 'active' && 
+                      p.variants.some(v => v.available && (v.inventory?.quantity || 0) === 0)
+                  ).length;
+                  setOutOfStockCount(outOfStock);
+              }
+
+              // 3. Check Profile Images
+              const profile = seller.user; // Assuming seller object is up to date or we fetch it
+              // We can also fetch fresh profile
+              const profileResponse = await api.Auth.GetProfile(seller.token);
+              if (profileResponse.ok && profileResponse.body) {
+                  const p = profileResponse.body;
+                  const isInvalid = (url: string | undefined | null) => 
+                      !url || url.includes("juno_media");
+                  
+                  if (isInvalid(p.logo_url) || isInvalid(p.banner_url)) {
+                      setHasInvalidProfile(true);
+                  }
+              }
+
+          } catch (e) {
+              console.error("Failed to fetch action items", e);
+          } finally {
+              setIsLoadingActions(false);
+          }
+      };
+      fetchActionItems();
+  }, [seller?.token, seller?.user]);
 
   const handleSyncCatalogue = async () => {
     if (!websiteUrl) {
@@ -58,8 +160,100 @@ const SellerHome: React.FC = () => {
     setIsSubscriptionModalOpen(false);
   };
 
+  const hasUrgentActions = queueCount > 0 || outOfStockCount > 0 || hasInvalidProfile;
+
   return (
     <>
+      <AnimatePresence>
+        {hasUrgentActions && !isLoadingActions && (
+            <motion.div 
+                initial={{ opacity: 0, height: 0 }} 
+                animate={{ opacity: 1, height: 'auto' }} 
+                className="mb-8"
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <AlertTriangle className="text-yellow-500" />
+                        Action Required
+                    </h2>
+                    <button 
+                        onClick={() => setShowHelp(!showHelp)}
+                        className="flex items-center gap-2 text-primary hover:text-primary-light transition-colors"
+                    >
+                        <HelpCircle size={20} />
+                        <span className="hidden sm:inline">How to resolve issues?</span>
+                    </button>
+                </div>
+
+                <AnimatePresence>
+                    {showHelp && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            exit={{ opacity: 0, y: -10 }}
+                            className="bg-primary/10 border border-primary/20 rounded-xl p-6 mb-6 text-neutral-200"
+                        >
+                            <h4 className="font-bold text-white mb-2 text-lg">Help & Support Guide</h4>
+                            <div className="space-y-4">
+                                <div>
+                                    <h5 className="font-semibold text-white">1. Pending Queue Items</h5>
+                                    <p className="text-sm mt-1">Products uploaded via Shopify or manually are placed in a queue. You <strong>must</strong> set their <strong>Gender</strong>, <strong>Product Type</strong>, and <strong>Sizing Guide</strong>. Once completed and "Ready", click "Publish" to make them live. This ensures our AI recommendation system can properly feature your products.</p>
+                                </div>
+                                <div>
+                                    <h5 className="font-semibold text-white">2. Out of Stock Active Products</h5>
+                                    <p className="text-sm mt-1">Active products with 0 stock frustrate customers. Please <strong>deactivate</strong> them or update their inventory quantity immediately.</p>
+                                </div>
+                                <div>
+                                    <h5 className="font-semibold text-white">3. Invalid Profile Images</h5>
+                                    <p className="text-sm mt-1">If your logo or banner uses the old "juno_media" storage, it will not load. Please upload new images in your Profile settings.</p>
+                                </div>
+                                <div className="pt-4 border-t border-primary/20">
+                                    <p className="font-bold text-white text-lg flex items-center gap-2">
+                                        <Phone size={20} />
+                                        Contact Support: <span className="text-primary">+92 315 8972405</span> (WhatsApp)
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <div className="space-y-4">
+                    {queueCount > 0 && (
+                        <UrgentActionCard 
+                            type="warning"
+                            title={`${queueCount} Products Pending in Queue`}
+                            description="These products require classification (Gender, Type) and Sizing Guides before they can be published and processed by our recommendation system."
+                            actionText="Process Queue"
+                            onAction={() => navigate('/seller/inventory')}
+                            icon={<Package size={20} />}
+                        />
+                    )}
+                    {outOfStockCount > 0 && (
+                        <UrgentActionCard 
+                            type="error"
+                            title={`${outOfStockCount} Active Products Out of Stock`}
+                            description="Active products with 0 quantity must be deactivated or restocked to avoid customer dissatisfaction."
+                            actionText="Manage Inventory"
+                            onAction={() => navigate('/seller/inventory')}
+                            icon={<AlertTriangle size={20} />}
+                        />
+                    )}
+                    {hasInvalidProfile && (
+                        <UrgentActionCard 
+                            type="error"
+                            title="Profile Images Need Update"
+                            description="Your store logo or banner is using an outdated image source. Please upload new images."
+                            actionText="Update Profile"
+                            onAction={() => navigate('/seller/profile')}
+                            icon={<ImageIcon size={20} />}
+                        />
+                    )}
+                </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="glass-card">
             <div className="flex items-center mb-4">

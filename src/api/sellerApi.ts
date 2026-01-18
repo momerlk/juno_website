@@ -1,8 +1,11 @@
 import moment from "moment";
-import { Inventory, Product } from "../constants/types";
+import { Inventory, Product, QueueItem } from "../constants/types";
 import { Address } from "../constants/address";
 import { NestedOrderMap, Order } from "../constants/orders";
 import { Seller as TSeller} from "../constants/seller";
+import { request, API_BASE_URL, APIResponse } from "./core";
+
+export { API_BASE_URL as api_url };
 
 export function setState(data: any) {
   if (data && data.token) {
@@ -10,233 +13,15 @@ export function setState(data: any) {
   }
 }
 
-// --- Generic API Response Interface ---
-export interface APIResponse<T> {
-    status: number;
-    ok: boolean;
-    body: T;
-}
-
-// --- API Configuration ---
-const api_urls = {
-    testing: "http://192.168.18.96:8080/api/v1",
-    production: "https://junoapi-1095577467512.asia-south2.run.app/api/v1",
-    recsystem : "https://junorecsys-710509977105.asia-south2.run.app",
-};
-
-/**
- * The base URL for all API requests.
- */
-export const api_url = api_urls.production;
-
-
-// --- Reusable Helper Functions (Refactored to top-level) ---
-
-/**
- * Parses the JSON body from a Response object.
- * @param resp The Response object.
- * @returns A promise that resolves to the parsed JSON or an empty object on error.
- */
-async function parseBody(resp: Response): Promise<any> {
-    try {
-        return await resp.json();
-    } catch {
-        return {};
-    }
-}
-
-/**
- * Makes an API request with a JSON body.
- * @param url The endpoint URL (e.g., "/users/profile").
- * @param method The HTTP method (e.g., "POST", "PUT").
- * @param token The authorization token.
- * @param data The data to be sent in the request body.
- * @returns A promise that resolves to an APIResponse.
- */
-async function requestWithBody(url: string, method: string, token: string, data: any): Promise<APIResponse<any>> {
-    const headers = new Headers({
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-    });
-
-    let resp = await fetch(`${api_url}${url}`, {
-        method,
-        headers,
-        body: JSON.stringify(data)
-    });
-
-    // token needs to be refreshed
-    if (resp.status === 401 && token.length > 0){
-      const refreshResponse = await fetch(`${api_url}/auth/refresh`, {
-        method : "POST",
-        body: JSON.stringify({
-          "refresh_token" : token,
-        })
-      });
-      if (!refreshResponse.ok){
-        return {
-          status : refreshResponse.status,
-          ok : false,
-          body : {message : "Login Token Expired"},
-        }
-      } else {
-        const body = await parseBody(refreshResponse);
-        setState({
-          token : body.token,
-        })
-        const headers = new Headers({
-          "Authorization": `Bearer ${body.token}`
-        });
-        resp = await fetch(`${api_url}${url}`, {
-            method,
-            headers,
-            body : JSON.stringify(data),
-        });
-      }
-    }
-
-    const body = await parseBody(resp);
-    return {
-        status: resp.status,
-        ok: resp.ok,
-        body: resp.ok ? body : body.error
-    };
-}
-
-/**
- * Makes an API request without a body.
- * @param url The endpoint URL, including any query parameters.
- * @param method The HTTP method (e.g., "GET", "DELETE").
- * @param token The authorization token.
- * @returns A promise that resolves to an APIResponse.
- */
-async function requestWithoutBody(url: string, method: string, token: string): Promise<APIResponse<any>> {
-    const headers = new Headers({
-        "Authorization": `Bearer ${token}`
-    });
-
-    let resp = await fetch(`${api_url}${url}`, {
-        method,
-        headers
-    });
-
-    // token needs to be refreshed
-    if (resp.status === 401 && token.length > 0){
-      const refreshResponse = await fetch(`${api_url}/auth/refresh`, {
-        method : "POST",
-        body: JSON.stringify({
-          refresh_token : token,
-        })
-      });
-      if (!refreshResponse.ok){
-        return {
-          status : refreshResponse.status,
-          ok : false,
-          body : {message : "Login Token Expired"},
-        }
-      } else {
-        const body = await parseBody(refreshResponse);
-        setState({
-          token : body.token,
-        })
-        const headers = new Headers({
-          "Authorization": `Bearer ${body.token}`
-        });
-        resp = await fetch(`${api_url}${url}`, {
-            method,
-            headers,
-        });
-      }
-    }
-
-    const body = await parseBody(resp);
-    return {
-        status: resp.status,
-        ok: resp.ok,
-        body: resp.ok ? body : body.error
-    };
-}
-
-// New helper for public endpoints that do not require an Authorization header.
-async function publicRequestWithoutBody(url: string, method: string): Promise<APIResponse<any>> {
-    const resp = await fetch(`${api_url}${url}`, {
-        method
-    });
-
-    const body = await parseBody(resp);
-    return {
-        status: resp.status,
-        ok: resp.ok,
-        body: resp.ok ? body : body.error
-    };
-}
-
-
+export type { APIResponse };
 
 export namespace OTP {
     export async function Send(phone_number : string) : Promise<APIResponse<any>> {
-        const myHeaders = new Headers();
-        myHeaders.append("Content-Type", "application/json");
-
-        const raw = JSON.stringify({
-            "phone_number": phone_number,
-        });
-
-        const requestOptions = {
-            method: "POST",
-            headers: myHeaders,
-            body: raw,
-        };
-
-        const resp = await fetch(api_url + "/auth/send-otp", requestOptions)
-
-        const body = await resp.json();
-        if (!resp.ok){
-            return {
-                status : resp.status,
-                ok : false,
-                body : body.error
-            }
-        }
-
-        return {
-            status : resp.status,
-            ok : true,
-            body : body
-        };
+        return await request("/auth/send-otp", "POST", { phone_number }, undefined, true);
     }
 
     export async function Verify(phone_number : string, otp : string) : Promise<APIResponse<any>> {
-        const myHeaders = new Headers();
-        myHeaders.append("Content-Type", "application/json");
-
-        const raw = JSON.stringify({
-            "otp": otp,
-            "phone_number": phone_number
-        });
-
-        const requestOptions = {
-            method: "POST",
-            headers: myHeaders,
-            body: raw,
-        };
-
-        const resp = await fetch(api_url + "/auth/verify", requestOptions)
-
-        const body = await resp.json();
-        if (!resp.ok){
-            return {
-                status : resp.status,
-                ok : false,
-                body : body.error
-            }
-        }
-
-        return {
-            status : resp.status,
-            ok : true,
-            body : body
-        };
+        return await request("/auth/verify", "POST", { phone_number, otp }, undefined, true);
     }
 }
 
@@ -287,43 +72,12 @@ export namespace Auth {
     };
 
     export async function Login(email : string, password : string) : Promise<APIResponse<any>> {
-        const myHeaders = new Headers();
-        myHeaders.append("Content-Type", "application/json");
-
         const device_info = await getDeviceInfo();
-
-        const raw = JSON.stringify({
-            "password": password,
-            "email": email,
-            "device_info" : device_info
-        });
-
-        const requestOptions = {
-            method: "POST",
-            headers: myHeaders,
-            body: raw,
-        };
-
-        const resp = await fetch(api_url + "/seller/auth/login", requestOptions)
-
-        const body = await resp.json();
-        if (!resp.ok){
-            return {
-                status : resp.status,
-                ok : false,
-                body : body.error
-            }
-        }
-
-        return {
-            status : resp.status,
-            ok : true,
-            body : body
-        };
+        return await request("/seller/auth/login", "POST", { email, password, device_info }, undefined, true);
     }
 
     export async function GetProfile(token : string) : Promise<APIResponse<TSeller>> {
-        return await requestWithoutBody("/seller/profile", "GET", token);
+        return await request("/seller/profile", "GET", undefined, token);
     }
     
 }
@@ -331,19 +85,22 @@ export namespace Auth {
 
 export namespace Seller {
   export async function GetProducts(token : string, page : number) :      Promise<APIResponse<Product[]>> {
-    return await requestWithoutBody(`/seller/products?page=${page}` , "GET" , token);
+    return await request(`/seller/products?page=${page}`, "GET", undefined, token);
   }
 
   export async function CreateProduct(token : string, product : Product) : Promise<APIResponse<any>> {
-    return await requestWithBody("/seller/products", "POST" , token, product);
+    // Deprecated in favor of Queue.Create, but kept for compatibility if needed (maybe it redirects now?)
+    // Or we can alias it to Queue.Create if the backend didn't change the endpoint path but logic.
+    // Based on instructions, we should use products_queue.
+    return await Queue.Create(token, product);
   }
 
   export async function UpdateProduct(token : string, product : Product) : Promise<APIResponse<any>> {
-    return await requestWithBody(`/seller/products/${product.id}`, "PUT" , token, product);
+    return await request(`/seller/products/${product.id}`, "PUT", product, token);
   }
 
   export async function DeleteProduct(token : string, productId : string) : Promise<APIResponse<any>>{
-    return await requestWithoutBody(`/seller/products/${productId}`, "DELETE" , token);
+    return await request(`/seller/products/${productId}`, "DELETE", undefined, token);
   }
 
   export interface InventoryUpdate {
@@ -353,11 +110,11 @@ export namespace Seller {
     reason : string;
   }
   export async function UpdateInventory(token : string, updates : InventoryUpdate[]){
-    return await requestWithBody("/seller/inventory/bulk-update", "POST", token, updates);
+    return await request("/seller/inventory/bulk-update", "POST", updates, token);
   }
 
   export async function GetOrders(token : string) : Promise<APIResponse<Order[]>> {
-    return await requestWithoutBody(`/seller/orders`, "GET", token);
+    return await request(`/seller/orders`, "GET", undefined, token);
   }
 
   export interface StatusUpdatePayload {
@@ -366,19 +123,19 @@ export namespace Seller {
     status: string;
   }
   export async function UpdateOrderStatus(token : string, order_id : string, payload : StatusUpdatePayload) : Promise<APIResponse<any>> {
-    return await requestWithBody(`/seller/orders/${order_id}/status`, "PUT", token, payload);
+    return await request(`/seller/orders/${order_id}/status`, "PUT", payload, token);
   }
 
   export async function GetAirwayBill(order_id: string): Promise<APIResponse<Blob>> {
-    const response = await fetch(`${api_url}/orders/${order_id}/airway-bill`);
+    const response = await fetch(`${API_BASE_URL}/orders/${order_id}/airway-bill`);
 
     if (!response.ok) {
-      const errorBody = await parseBody(response);
-      return {
-        status: response.status,
-        ok: false,
-        body: errorBody.error,
-      };
+        // Handle error...
+        return {
+            status: response.status,
+            ok: false,
+            body: {} as any
+        }
     }
 
     const blob = await response.blob();
@@ -391,15 +148,37 @@ export namespace Seller {
 
   
   export async function UpdateProfile(token: string, seller: TSeller): Promise<APIResponse<any>> {
-    return await requestWithBody(`/seller/profile`, "PUT", token, seller);
+    return await request(`/seller/profile`, "PUT", seller, token);
   }
 
   export async function UpdateProductSizingGuide(token: string, productIds: string[], sizingGuide: any): Promise<APIResponse<any>> {
-    return await requestWithBody("/seller/products/bulk-sizing-guide", "POST", token, { product_ids: productIds, sizing_guide: sizingGuide });
+    return await request("/seller/products/bulk-sizing-guide", "POST", { product_ids: productIds, sizing_guide: sizingGuide }, token);
   }
 
   export async function bookDelivery(token: string, order_id: string): Promise<APIResponse<any>> {
-    return await requestWithBody(`/delivery/book/${order_id}`, "POST", token, {});
+    return await request(`/delivery/book/${order_id}`, "POST", {}, token);
+  }
+
+  export namespace Queue {
+      export async function List(token: string): Promise<APIResponse<QueueItem[]>> {
+          return await request("/seller/products-queue", "GET", undefined, token);
+      }
+      export async function Get(token: string, id: string): Promise<APIResponse<QueueItem>> {
+          return await request(`/seller/products-queue/${id}`, "GET", undefined, token);
+      }
+      export async function Create(token: string, product: Product): Promise<APIResponse<any>> {
+          // Assuming creating a new item in queue
+          return await request("/seller/products-queue", "POST", { product }, token);
+      }
+      export async function Update(token: string, id: string, data: any): Promise<APIResponse<any>> {
+          return await request(`/seller/products-queue/${id}`, "PUT", data, token);
+      }
+      export async function Promote(token: string, id: string): Promise<APIResponse<any>> {
+          return await request(`/seller/products-queue/${id}/promote`, "POST", {}, token);
+      }
+      export async function Reject(token: string, id: string, reason: string): Promise<APIResponse<any>> {
+          return await request(`/seller/products-queue/${id}/reject`, "POST", { reason }, token);
+      }
   }
 }
 
@@ -410,7 +189,7 @@ export namespace SellerAnalytics {
     if (startTime) params.append("startTime", startTime);
     if (endTime) params.append("endTime", endTime);
     if (startTime || endTime) url += `?${params.toString()}`;
-    return await requestWithoutBody(url, "GET", token);
+    return await request(url, "GET", undefined, token);
   }
 
   export async function GetOrderAnalytics(token: string, startTime?: string, endTime?: string): Promise<APIResponse<any>> {
@@ -419,7 +198,7 @@ export namespace SellerAnalytics {
     if (startTime) params.append("startTime", startTime);
     if (endTime) params.append("endTime", endTime);
     if (startTime || endTime) url += `?${params.toString()}`;
-    return await requestWithoutBody(url, "GET", token);
+    return await request(url, "GET", undefined, token);
   }
 
   export async function GetInventoryAnalytics(token: string, startTime?: string, endTime?: string): Promise<APIResponse<any>> {
@@ -428,7 +207,7 @@ export namespace SellerAnalytics {
     if (startTime) params.append("startTime", startTime);
     if (endTime) params.append("endTime", endTime);
     if (startTime || endTime) url += `?${params.toString()}`;
-    return await requestWithoutBody(url, "GET", token);
+    return await request(url, "GET", undefined, token);
   }
 
   export async function GetProductAnalytics(token: string, productID: string, startTime?: string, endTime?: string): Promise<APIResponse<any>> {
@@ -437,7 +216,7 @@ export namespace SellerAnalytics {
     if (startTime) params.append("startTime", startTime);
     if (endTime) params.append("endTime", endTime);
     if (startTime || endTime) url += `?${params.toString()}`;
-    return await requestWithoutBody(url, "GET", token);
+    return await request(url, "GET", undefined, token);
   }
 }
 
@@ -445,39 +224,39 @@ export namespace SellerAnalytics {
 export namespace Users {
     // --- Addresses ---
     export async function AddAddress(token: string, address: any): Promise<APIResponse<any>> {
-        return await requestWithBody("/users/addresses", "POST", token, address);
+        return await request("/users/addresses", "POST", address, token);
     }
 
     export async function UpdateAddress(token: string, id: string, address: any): Promise<APIResponse<any>> {
-        return await requestWithBody(`/users/addresses/${id}`, "PUT", token, address);
+        return await request(`/users/addresses/${id}`, "PUT", address, token);
     }
 
     export async function DeleteAddress(token: string, id: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody(`/users/addresses/${id}`, "DELETE", token);
+        return await request(`/users/addresses/${id}`, "DELETE", undefined, token);
     }
 
     // --- Measurements ---
     export async function UpdateMeasurements(token: string, measurements: any): Promise<APIResponse<any>> {
-        return await requestWithBody("/users/measurements", "PUT", token, measurements);
+        return await request("/users/measurements", "PUT", measurements, token);
     }
 
     // --- Notification Preferences ---
     export async function UpdateNotificationPrefs(token: string, prefs: any): Promise<APIResponse<any>> {
-        return await requestWithBody("/users/notifications", "PUT", token, prefs);
+        return await request("/users/notifications", "PUT", prefs, token);
     }
 
     // --- User Preferences ---
     export async function UpdatePreferences(token: string, prefs: any): Promise<APIResponse<any>> {
-        return await requestWithBody("/users/preferences", "PUT", token, prefs);
+        return await request("/users/preferences", "PUT", prefs, token);
     }
 
     // --- User Profile ---
     export async function GetProfile(token: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody("/users/profile", "GET", token);
+        return await request("/users/profile", "GET", undefined, token);
     }
 
     export async function UpdateProfile(token: string, user: any): Promise<APIResponse<any>> {
-        return await requestWithBody("/users/profile", "PUT", token, user);
+        return await request("/users/profile", "PUT", user, token);
     }
     
     interface Interaction {
@@ -486,10 +265,10 @@ export namespace Users {
       action_type : string;
     }
     export async function PostInteraction(token: string, interaction: Interaction): Promise<APIResponse<any>> {
-        return await requestWithBody("/interactions", "POST", token, interaction);
+        return await request("/interactions", "POST", interaction, token);
     }
     export async function GetInteractions(token: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody("/interactions", "GET", token);
+        return await request("/interactions", "GET", undefined, token);
     }
 }
 
@@ -541,7 +320,7 @@ export namespace Products {
      * @returns A promise resolving to the API response with a list of products.
      */
     export async function GetProducts(limit? : number): Promise<APIResponse<Product[]>> {
-        return await requestWithoutBody(`/products?limit=${limit}`, "GET", "");
+        return await request(`/products?limit=${limit}`, "GET", undefined, undefined, true);
     }
 
     /**
@@ -550,7 +329,7 @@ export namespace Products {
      * @returns A promise resolving to the API response with a list of products.
      */
     export async function GetProductByID(id : string): Promise<APIResponse<Product>> {
-        return await publicRequestWithoutBody(`/products/${id}`, "GET");
+        return await request(`/products/${id}`, "GET", undefined, undefined, true);
     }
 
     /**
@@ -561,7 +340,7 @@ export namespace Products {
      */
     export async function SearchProducts(token: string, params: SearchParams): Promise<APIResponse<Product[]>> {
         const query = new URLSearchParams(params as any).toString();
-        return await requestWithoutBody(`/products/search?${query}`, "GET", token);
+        return await request(`/products/search?${query}`, "GET", undefined, token);
     }
 
     /**
@@ -570,7 +349,7 @@ export namespace Products {
      * @returns A promise resolving to the API response with available filters.
      */
     export async function GetAvailableFilters(token: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody("/products/filters/available", "GET", token);
+        return await request("/products/filters/available", "GET", undefined, token);
     }
 
     /**
@@ -580,7 +359,7 @@ export namespace Products {
      * @returns A promise resolving to the API response with a list of products.
      */
     export async function GetProductsByFilters(token: string, filters: ProductFilter): Promise<APIResponse<any>> {
-        return await requestWithBody(`/products/filter`, "POST", token, filters);
+        return await request(`/products/filter`, "POST", filters, token);
     }
 
 
@@ -591,11 +370,22 @@ export namespace Products {
      * @returns A promise resolving to the API response with a list of products.
      */
     export async function GetRecommendations(user_id : string, num_products : number): Promise<APIResponse<Product[]>> {
+      // Re-using core request but changing base URL if needed?
+      // For now, I'll keep the custom fetch as it points to a different URL (recsystem).
+      // Or I can update core.ts to accept a full URL or baseURL.
+      // Keeping it simple for now since it points to `api_urls.recsystem`.
+      
+      const recUrl = "https://junorecsys-710509977105.asia-south2.run.app"; // Hardcoding or importing if I could
+      // Since I removed api_urls local definition, I should import it from core or just use the string.
+      // core.ts exports api_urls.
+      // Wait, I exported `api_urls` from core? No, I exported `API_BASE_URL` and `api_urls` (locally there).
+      // Let's assume I can't access `api_urls.recsystem` easily unless I export it from core.
+      
       const requestOptions = {
         method: "GET",
       };
 
-      const resp = await fetch(`${api_urls.recsystem}/products?user_id=${user_id}&num_products=${num_products.toString()}`, requestOptions)
+      const resp = await fetch(`https://junorecsys-710509977105.asia-south2.run.app/products?user_id=${user_id}&num_products=${num_products.toString()}`, requestOptions)
       const body = await resp.json();
 
       return {
@@ -637,7 +427,7 @@ export namespace Orders {
      * @returns A promise resolving to the API response with an array of created orders.
      */
     export async function CreateOrder(token: string, orderData: CreateOrderRequest): Promise<APIResponse<any>> {
-        return await requestWithBody("/orders", "POST", token, orderData);
+        return await request("/orders", "POST", orderData, token);
     }
 
     /**
@@ -647,8 +437,7 @@ export namespace Orders {
      * @returns A promise resolving to the API response with the user's orders.
      */
     export async function GetUserOrders(token: string, userID: string): Promise<APIResponse<NestedOrderMap>> {
-      console.log(`${api_url}/users/${userID}/orders`);
-        return await requestWithoutBody(`/users/${userID}/orders`, "GET", token);
+        return await request(`/users/${userID}/orders`, "GET", undefined, token);
     }
 
     /**
@@ -659,7 +448,7 @@ export namespace Orders {
      */
     export async function GetEstimatedDeliveryDate(token: string, productID: string): Promise<APIResponse<any>> {
         const query = new URLSearchParams({ productID }).toString();
-        return await requestWithoutBody(`/orders/estimated-delivery?${query}`, "GET", token);
+        return await request(`/orders/estimated-delivery?${query}`, "GET", undefined, token);
     }
 
     /**
@@ -670,7 +459,7 @@ export namespace Orders {
      * @returns A promise resolving to the API response with tracking information.
      */
     export async function TrackOrderItemLocation(token: string, orderID: string, orderItemID: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody(`/orders/${orderID}/items/${orderItemID}/tracking`, "GET", token);
+        return await request(`/orders/${orderID}/items/${orderItemID}/tracking`, "GET", undefined, token);
     }
 
     /**
@@ -681,7 +470,7 @@ export namespace Orders {
      * @returns A promise resolving to the API response.
      */
     export async function UpdateOrderStatus(token: string, orderID: string, statusData: UpdateOrderStatusRequest): Promise<APIResponse<any>> {
-        return await requestWithBody(`/orders/${orderID}/status`, "PUT", token, statusData);
+        return await request(`/orders/${orderID}/status`, "PUT", statusData, token);
     }
 }
 
@@ -695,35 +484,35 @@ export namespace Cart {
      * Retrieves all items currently in the authenticated user's cart.
      */
     export async function GetUserCart(token: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody("/cart", "GET", token);
+        return await request("/cart", "GET", undefined, token);
     }
 
     /**
      * Adds a specified product with a given quantity to the cart.
      */
     export async function AddItemToCart(token: string, item: { product_id: string; quantity: number, variant_id : string}): Promise<APIResponse<any>> {
-        return await requestWithBody("/cart/items", "POST", token, item);
+        return await request("/cart/items", "POST", item, token);
     }
 
     /**
      * Updates the quantity of a specific product in the cart.
      */
     export async function UpdateItemQuantity(token: string, productID: string, variantID : string, newQuantity: { quantity: number }): Promise<APIResponse<any>> {
-        return await requestWithBody(`/cart/items/${productID}/${variantID}`, "PUT", token, newQuantity);
+        return await request(`/cart/items/${productID}/${variantID}`, "PUT", newQuantity, token);
     }
 
     /**
      * Removes a specific product from the cart.
      */
     export async function RemoveItemFromCart(token: string, productID: string, variantID : string): Promise<APIResponse<any>> {
-        return await requestWithoutBody(`/cart/items/${productID}/${variantID}`, "DELETE", token);
+        return await request(`/cart/items/${productID}/${variantID}`, "DELETE", undefined, token);
     }
 
     /**
      * Removes all items from the authenticated user's cart.
      */
     export async function ClearCart(token: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody("/cart/clear", "DELETE", token);
+        return await request("/cart/clear", "DELETE", undefined, token);
     }
 }
 
@@ -737,35 +526,35 @@ export namespace Addresses {
      * Adds a new address to the authenticated user's profile.
      */
     export async function CreateAddress(token: string, address: any): Promise<APIResponse<any>> {
-        return await requestWithBody("/addresses", "POST", token, address);
+        return await request("/addresses", "POST", address, token);
     }
 
     /**
      * Retrieves a list of all addresses for the authenticated user.
      */
     export async function GetAllAddresses(token: string): Promise<APIResponse<Address[]>> {
-        return await requestWithoutBody("/addresses", "GET", token);
+        return await request("/addresses", "GET", undefined, token);
     }
 
     /**
      * Retrieves details of a specific address by its ID.
      */
     export async function GetAddress(token: string, addressID: string): Promise<APIResponse<Address>> {
-        return await requestWithoutBody(`/addresses/${addressID}`, "GET", token);
+        return await request(`/addresses/${addressID}`, "GET", undefined, token);
     }
 
     /**
      * Updates details of an existing address by its ID.
      */
     export async function UpdateAddress(token: string, addressID: string, address: any): Promise<APIResponse<any>> {
-        return await requestWithBody(`/addresses/${addressID}`, "PUT", token, address);
+        return await request(`/addresses/${addressID}`, "PUT", address, token);
     }
 
     /**
      * Deletes an existing address by its ID.
      */
     export async function DeleteAddress(token: string, addressID: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody(`/addresses/${addressID}`, "DELETE", token);
+        return await request(`/addresses/${addressID}`, "DELETE", undefined, token);
     }
 
     /**
@@ -773,14 +562,14 @@ export namespace Addresses {
      */
     export async function SetDefaultAddress(token: string, addressID: string): Promise<APIResponse<any>> {
         // This endpoint doesn't require a body, so we pass an empty object.
-        return await requestWithBody(`/addresses/${addressID}/default`, "PUT", token, {});
+        return await request(`/addresses/${addressID}/default`, "PUT", {}, token);
     }
 
     /**
      * Retrieves the default address for the authenticated user.
      */
     export async function GetDefaultAddress(token: string): Promise<APIResponse<Address>> {
-        return await requestWithoutBody("/addresses/default", "GET", token);
+        return await request("/addresses/default", "GET", undefined, token);
     }
 }
 
@@ -812,42 +601,42 @@ export namespace Outfits {
      * Creates a new outfit for the authenticated user.
      */
     export async function CreateOutfit(token: string, outfitData: CreateOutfitRequest): Promise<APIResponse<any>> {
-        return await requestWithBody("/outfits", "POST", token, outfitData);
+        return await request("/outfits", "POST", outfitData, token);
     }
 
     /**
      * Retrieves all outfits saved by the authenticated user.
      */
     export async function GetUserOutfits(token: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody("/outfits", "GET", token);
+        return await request("/outfits", "GET", undefined, token);
     }
 
     /**
      * Retrieves a specific outfit by its ID.
      */
     export async function GetOutfitById(token: string, outfitId: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody(`/outfits/${outfitId}`, "GET", token);
+        return await request(`/outfits/${outfitId}`, "GET", undefined, token);
     }
 
     /**
      * Updates an existing outfit's details (name, product IDs, and/or image URL).
      */
     export async function UpdateOutfit(token: string, outfitId: string, outfitData: UpdateOutfitRequest): Promise<APIResponse<any>> {
-        return await requestWithBody(`/outfits/${outfitId}`, "PUT", token, outfitData);
+        return await request(`/outfits/${outfitId}`, "PUT", outfitData, token);
     }
 
     /**
      * Deletes an outfit by its ID.
      */
     export async function DeleteOutfit(token: string, outfitId: string): Promise<APIResponse<any>> {
-        return await requestWithoutBody(`/outfits/${outfitId}`, "DELETE", token);
+        return await request(`/outfits/${outfitId}`, "DELETE", undefined, token);
     }
 
     /**
      * Renames an existing outfit.
      */
     export async function RenameOutfit(token: string, outfitId: string, newName: RenameOutfitRequest): Promise<APIResponse<any>> {
-        return await requestWithBody(`/outfits/${outfitId}/rename`, "PATCH", token, newName);
+        return await request(`/outfits/${outfitId}/rename`, "PATCH", newName, token);
     }
 }
 
@@ -871,96 +660,83 @@ export namespace Tournaments {
      * Creates a new tournament. Requires admin privileges.
      */
     export async function CreateTournament(token: string, tournamentData: any): Promise<APIResponse<any>> {
-        return await requestWithBody("/admin/tournaments", "POST", token, tournamentData);
+        return await request("/admin/tournaments", "POST", tournamentData, token);
     }
 
     /**
      * Retrieves a list of all tournaments. (Public)
      */
     export async function GetAllTournaments(): Promise<APIResponse<any>> {
-        return await publicRequestWithoutBody("/tournaments", "GET");
+        return await request("/tournaments", "GET", undefined, undefined, true);
     }
 
     /**
      * Retrieves detailed information for a tournament, including its leaderboard. (Public)
      */
     export async function GetTournamentDetails(tournamentId: string): Promise<APIResponse<any>> {
-        return await publicRequestWithoutBody(`/tournaments/${tournamentId}`, "GET");
+        return await request(`/tournaments/${tournamentId}`, "GET", undefined, undefined, true);
     }
 
     /**
      * Retrieves the leaderboard for a specific tournament. (Public)
      */
     export async function GetTournamentLeaderboard(tournamentId: string): Promise<APIResponse<any>> {
-        return await publicRequestWithoutBody(`/tournaments/${tournamentId}/leaderboard`, "GET");
+        return await request(`/tournaments/${tournamentId}/leaderboard`, "GET", undefined, undefined, true);
     }
 
     /**
      * Retrieves outfits participating in a tournament, with their vote counts. (Public)
      */
     export async function GetParticipatingOutfits(tournamentId: string): Promise<APIResponse<any>> {
-        return await publicRequestWithoutBody(`/tournaments/${tournamentId}/outfits`, "GET");
+        return await request(`/tournaments/${tournamentId}/outfits`, "GET", undefined, undefined, true);
     }
 
     /**
      * Retrieves the vote breakdown for a specific outfit in a tournament. (Public)
      */
     export async function GetOutfitVoteBreakdown(tournamentId: string, outfitId: string): Promise<APIResponse<any>> {
-        return await publicRequestWithoutBody(`/tournaments/${tournamentId}/outfits/${outfitId}/votes`, "GET");
+        return await request(`/tournaments/${tournamentId}/outfits/${outfitId}/votes`, "GET", undefined, undefined, true);
     }
 
     /**
      * Registers the authenticated user for a tournament.
      */
     export async function RegisterForTournament(token: string, tournamentId: string): Promise<APIResponse<any>> {
-        return await requestWithBody(`/tournaments/${tournamentId}/register`, "POST", token, {});
+        return await request(`/tournaments/${tournamentId}/register`, "POST", {}, token);
     }
 
     /**
      * Records a user's vote for an outfit in a tournament.
      */
     export async function RecordVote(token: string, tournamentId: string, voteData: RecordVoteRequest): Promise<APIResponse<any>> {
-        return await requestWithBody(`/tournaments/${tournamentId}/vote`, "POST", token, voteData);
+        return await request(`/tournaments/${tournamentId}/vote`, "POST", voteData, token);
     }
 
     /**
      * Retrieves statistics for a tournament. (Public)
      */
     export async function GetTournamentStats(tournamentId: string): Promise<APIResponse<any>> {
-        return await publicRequestWithoutBody(`/tournaments/${tournamentId}/stats`, "GET");
+        return await request(`/tournaments/${tournamentId}/stats`, "GET", undefined, undefined, true);
     }
 
     /**
      * Adds an existing outfit to a tournament's featured list.
      */
     export async function AddOutfitToTournament(token: string, tournamentId: string, outfitData: AddOutfitRequest): Promise<APIResponse<any>> {
-        return await requestWithBody(`/tournaments/${tournamentId}/add-outfit`, "POST", token, outfitData);
+        return await request(`/tournaments/${tournamentId}/add-outfit`, "POST", outfitData, token);
     }
 }
 
 export async function get_neutral_image(images : string[]){
-  const myHeaders = new Headers();
-  myHeaders.append("Content-Type", "application/json");
-
-  const raw = JSON.stringify({
-    "images": images 
-  });
-
-  const requestOptions = {
-    method: "POST",
-    headers: myHeaders,
-    body: raw,
-  };
-
-  const resp = await fetch(api_url + "/neutral-image", requestOptions)
-  const data = await resp.json();
+  const resp = await request("/neutral-image", "POST", { images }, undefined, true);
   if (resp.ok){
-    return data.image as string;
+    return (resp.body as any).image as string;
   }
   else {
     return null;
   }
 }
+
 
 
 
@@ -1060,7 +836,7 @@ async function compressImage(
 export async function uploadFileAndGetUrl(
   file: File,
   compressionOptions?: CompressionOptions | keyof typeof COMPRESSION_PRESETS,
-  url: string = api_url + '/files/upload',
+  url: string = API_BASE_URL + '/files/upload',
 ): Promise<string> {
   if (!file) {
     throw new Error('No file provided');

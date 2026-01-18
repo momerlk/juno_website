@@ -152,6 +152,9 @@ interface FormData {
   // Status
   status: string;
   verified: boolean;
+  
+  // Agreement
+  contract_agreed: boolean;
 }
 
 interface LoadingStates {
@@ -234,7 +237,8 @@ const SellerOnboarding: React.FC = () => {
     categories: [],
     tags: [],
     status: 'pending',
-    verified: false
+    verified: false,
+    contract_agreed: false
   });
 
   const [loadingStates, setLoadingStates] = useState<LoadingStates>({
@@ -329,13 +333,15 @@ const SellerOnboarding: React.FC = () => {
       case 4:
         return !!(formData.bank_details.bank_name && formData.bank_details.account_title && 
                  formData.bank_details.account_number);
+      case 5:
+        return formData.contract_agreed;
       default:
         return true;
     }
   };
 
   const nextStep = () => {
-    if (validateStep(currentStep) && currentStep < 5) {
+    if (validateStep(currentStep) && currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -885,6 +891,51 @@ const SellerOnboarding: React.FC = () => {
             </div>
           </div>
         </div>
+      )
+    },
+    {
+      title: "Contract Agreement",
+      subtitle: "Review and accept our terms",
+      icon: <FileText className="text-white" size={32} />,
+      content: (
+          <div className="space-y-6">
+              <div className="bg-background-light/50 border border-neutral-700 rounded-lg p-6 h-64 overflow-y-auto custom-scrollbar">
+                  <h4 className="text-lg font-bold text-white mb-4">Seller Agreement</h4>
+                  <p className="text-sm text-neutral-300 mb-4">
+                      1. <strong>Introduction</strong><br/>
+                      These Terms and Conditions govern your use of the Juno Seller Platform. By registering as a seller, you agree to comply with these terms.
+                  </p>
+                  <p className="text-sm text-neutral-300 mb-4">
+                      2. <strong>Product Listing & Quality</strong><br/>
+                      You agree to list only authentic products. All product descriptions, images, and sizing information must be accurate. Juno reserves the right to reject products that do not meet our quality standards.
+                  </p>
+                  <p className="text-sm text-neutral-300 mb-4">
+                      3. <strong>Orders & Fulfillment</strong><br/>
+                      You are responsible for fulfilling orders within the specified handling time. Late shipments may result in penalties or account suspension.
+                  </p>
+                  <p className="text-sm text-neutral-300 mb-4">
+                      4. <strong>Fees & Payments</strong><br/>
+                      Juno charges a commission on each sale as agreed upon during registration. Payments are processed according to the schedule selected.
+                  </p>
+                  <p className="text-sm text-neutral-300 mb-4">
+                      5. <strong>Returns & Refunds</strong><br/>
+                      You must adhere to the platform's return policy. Disputes will be mediated by Juno, and our decision is final.
+                  </p>
+                   <p className="text-sm text-neutral-300">
+                      6. <strong>Termination</strong><br/>
+                      Juno reserves the right to terminate your account for violation of these terms or fraudulent activity.
+                  </p>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-lg border border-white/10 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setFormData(prev => ({ ...prev, contract_agreed: !prev.contract_agreed }))}>
+                  <div className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${formData.contract_agreed ? 'bg-primary border-primary' : 'border-neutral-500'}`}>
+                      {formData.contract_agreed && <Check size={14} className="text-white" />}
+                  </div>
+                  <span className="text-neutral-300 text-sm select-none">
+                      I have read and agree to the <span className="text-primary font-semibold">Seller Terms & Conditions</span> and <span className="text-primary font-semibold">Privacy Policy</span>.
+                  </span>
+              </div>
+          </div>
       )
     },
     {
