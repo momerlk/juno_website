@@ -39,7 +39,7 @@ export namespace Auth {
         // Generate or retrieve a unique ID from local storage
         let device_id = localStorage.getItem('device_id');
         if (!device_id) {
-            device_id = crypto.randomUUID();
+            device_id = "unknown"
             localStorage.setItem('device_id', device_id);
         }
         

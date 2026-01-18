@@ -17,7 +17,7 @@ const AdminAuth: React.FC = () => {
 
     try {
       await login(password);
-      navigate('/admin/dashboard');
+      navigate('/admin');
     } catch (err) {
       setError('Authentication failed. Please check your password.');
     }

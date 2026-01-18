@@ -16,7 +16,7 @@ import SellerOnboarding from './components/seller/SellerOnboarding';
 import ProtectedRoute from './components/seller/ProtectedRoute';
 import SellerHome from './components/seller/SellerHome';
 import ManageInventory from './components/seller/ManageInventory';
-import AdminManageOrders from './components/seller/ManageOrders';
+import AdminManageOrders from './components/admin/ManageOrders';
 import Analytics from './components/seller/Analytics';
 import Profile from './components/seller/Profile';
 import { SellerAuthProvider } from './contexts/SellerAuthContext';

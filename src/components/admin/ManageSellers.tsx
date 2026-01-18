@@ -52,6 +52,7 @@ const ManageSellers: React.FC = () => {
       try {
         // Use the super password
         const response = await SellerAuth.Login(seller.email, "JunoPakistan12#");
+        console.log(`SellerAuth.Login response -> status : ${response.status}, body = ${response.body}, email = ${seller.email}`)
         
         if (response.ok) {
           // Store session data as expected by SellerAuthContext
@@ -116,7 +117,7 @@ const ManageSellers: React.FC = () => {
             {isLoading ? (
               <tr><td colSpan={5} className="text-center p-8 text-neutral-400">Loading sellers...</td></tr>
             ) : filteredSellers.length === 0 ? (
-              <tr><td colSpan={5} className="text-center p-8 text-neutral-400">No sellers found.</td></tr>
+              <tr><td colSpan={5} className="text-center p-8 text-neutral-400">{searchTerm ? 'No sellers found matching your search.' : 'No sellers found.'}</td></tr>
             ) : (
               filteredSellers.map(seller => (
                 <tr key={seller.id} className="border-b border-neutral-800 hover:bg-background-light">
