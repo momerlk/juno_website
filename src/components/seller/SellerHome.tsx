@@ -254,7 +254,7 @@ const SellerHome: React.FC = () => {
                             title={`${queueCount} Products Pending in Queue`}
                             description="These products require classification (Gender, Type) and Sizing Guides before they can be published and processed by our recommendation system."
                             actionText="Process Queue"
-                            onAction={() => navigate('/seller/inventory')}
+                            onAction={() => navigate('/seller/dashboard/inventory')}
                             icon={<Package size={20} />}
                         />
                     )}
@@ -264,7 +264,7 @@ const SellerHome: React.FC = () => {
                             title={`${outOfStockCount} Active Products Out of Stock`}
                             description="Active products with 0 quantity must be deactivated or restocked to avoid customer dissatisfaction."
                             actionText="Manage Inventory"
-                            onAction={() => navigate('/seller/inventory')}
+                            onAction={() => navigate('/seller/dashboard/inventory')}
                             icon={<AlertTriangle size={20} />}
                         />
                     )}
@@ -274,7 +274,7 @@ const SellerHome: React.FC = () => {
                             title="Profile Images Need Update"
                             description="Your store logo or banner is using an outdated image source. Please upload new images."
                             actionText="Update Profile"
-                            onAction={() => navigate('/seller/profile')}
+                            onAction={() => navigate('/seller/dashboard/profile')}
                             icon={<ImageIcon size={20} />}
                         />
                     )}

@@ -103,6 +103,91 @@ const QueueItemCard: React.FC<{
     );
 };
 
+const QueueItemListItem: React.FC<{ 
+    item: QueueItem; 
+    selected: boolean;
+    onSelect: (id: string, shift: boolean) => void;
+    onEdit: (product: Product, queueId: string) => void; 
+    onPromote: (id: string) => void; 
+    onReject: (id: string) => void; 
+}> = ({ item, selected, onSelect, onEdit, onPromote, onReject }) => {
+    const product = item.product;
+    const isReady = item.status === 'ready';
+    
+    const missingFields = [];
+    if (!product.product_type) missingFields.push('Product Type');
+    const gender = product.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
+    if (!gender) missingFields.push('Gender');
+    if (!product.sizing_guide || !product.sizing_guide.size_chart || Object.keys(product.sizing_guide.size_chart).length === 0) missingFields.push('Sizing Guide');
+
+    const hasIssues = missingFields.length > 0 || (item.errors && item.errors.length > 0);
+
+    return (
+        <motion.div layout className={`glass-panel p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 hover:bg-white/5 transition-colors border-l-4 ${selected ? 'ring-1 ring-primary bg-primary/5 border-l-primary' : 'border-l-transparent hover:border-l-primary'}`}>
+            <div className="flex items-center gap-4 flex-grow min-w-0">
+                 <button onClick={(e) => { e.stopPropagation(); onSelect(item.id, e.shiftKey); }} className="text-neutral-400 hover:text-white">
+                    {selected ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
+                </button>
+                <img src={getShopifyThumbnail(product.images?.[0], '100x100')} alt={product.title} loading="lazy" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
+                <div className="min-w-0">
+                    <p className="font-semibold text-white truncate text-lg">{product.title || 'Untitled Product'}</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md uppercase tracking-wider ${
+                        item.status === 'ready' ? 'bg-green-500 text-white' : 
+                        item.status === 'failed' ? 'bg-red-500 text-white' : 
+                        'bg-yellow-500 text-black'
+                    }`}>
+                        {item.status.replace('_', ' ')}
+                    </span>
+                </div>
+            </div>
+
+            {hasIssues && (
+                <div className="flex-shrink-0 flex flex-col gap-1 max-w-xs">
+                    {missingFields.map(field => (
+                        <div key={field} className="flex items-center gap-2 text-red-400 text-xs font-medium bg-red-500/10 px-2 py-1 rounded">
+                            <AlertTriangle size={12} />
+                            <span>Missing {field}</span>
+                        </div>
+                    ))}
+                    {item.errors && item.errors.length > 0 && !missingFields.length && (
+                         <div className="flex items-center gap-2 text-red-400 text-xs font-semibold">
+                            <AlertTriangle size={12} />
+                            <span>{item.errors.length} issues</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div className="flex items-center gap-2 self-start sm:self-center mt-4 sm:mt-0 sm:border-l sm:border-white/10 sm:pl-4">
+                <button 
+                    onClick={() => onEdit(product, item.id)} 
+                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-medium transition-colors"
+                >
+                    Edit & Fix
+                </button>
+                {isReady && (
+                    <button 
+                        onClick={() => onPromote(item.id)} 
+                        className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors flex items-center gap-1"
+                    >
+                        <UploadCloud size={12} /> Publish
+                    </button>
+                )}
+                 <button 
+                    onClick={() => {
+                        const reason = prompt("Reason for discarding?");
+                        if (reason) onReject(item.id);
+                    }} 
+                    className="p-2 rounded-lg hover:bg-red-500/20 text-neutral-400 hover:text-red-500 transition-colors"
+                    title="Discard"
+                >
+                    <Trash2 size={16} />
+                </button>
+            </div>
+        </motion.div>
+    );
+};
+
 const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id: string, shift: boolean) => void; onEdit: (product: Product) => void; onDelete: (productId: string) => void; onDuplicate: (product: Product) => void; onUpdateProduct: (productId: string, data: Partial<Product>) => void; }> = React.memo(({ product, selected, onSelect, onEdit, onDelete, onDuplicate, onUpdateProduct }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const totalInventory = useMemo(() => product.variants.reduce((total, v) => total + (v.inventory?.quantity || 0), 0), [product.variants]);
@@ -540,6 +625,9 @@ const ManageInventory: React.FC = () => {
                     new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
                 );
                 setQueueItems(sorted);
+                if (sorted.length > 10) {
+                    setViewMode('list');
+                }
             } else {
                 setError('Failed to fetch queue items.');
             }
@@ -606,6 +694,8 @@ const ManageInventory: React.FC = () => {
     const totalPages = useMemo(() => Math.ceil(filteredProducts.length / ITEMS_PER_PAGE), [filteredProducts]);
     const paginatedProducts = useMemo(() => filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [filteredProducts, currentPage]);
 
+    const paginatedQueueItems = useMemo(() => queueItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [queueItems, currentPage]);
+
     const handleOpenEditorForCreate = () => { 
         setEditingProduct(null); 
         setEditingQueueId(undefined);
@@ -649,7 +739,7 @@ const ManageInventory: React.FC = () => {
     };
 
     const handleSelectProduct = (id: string, shiftPressed: boolean = false) => {
-        const items = activeTab === 'active' ? paginatedProducts : queueItems;
+        const items = activeTab === 'active' ? paginatedProducts : paginatedQueueItems;
         const currentIndex = items.findIndex(item => (activeTab === 'active' ? (item as Product).id : (item as QueueItem).id) === id);
         
         if (shiftPressed && lastSelectedIndex !== null) {
@@ -808,7 +898,7 @@ const ManageInventory: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
-                    {activeTab === 'active' && (
+                    {activeTab === 'active' ? (
                         <>
                         <div className="relative flex-grow"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search products..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="glass-input pl-10 pr-4 py-2 w-full text-white" /></div>
                         <div className="relative">
@@ -823,6 +913,8 @@ const ManageInventory: React.FC = () => {
                         </div>
                         <div className="flex items-center glass rounded-xl border-white/10 overflow-hidden"><button onClick={() => setViewMode('grid')} className={`p-2 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-2 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
                         </>
+                    ) : (
+                        <div className="flex items-center glass rounded-xl border-white/10 overflow-hidden"><button onClick={() => setViewMode('grid')} className={`p-2 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-2 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
                     )}
                     
                     <button onClick={handleOpenEditorForCreate} className="glass-button bg-primary text-white px-4 py-2 hover:bg-primary/90 flex-shrink-0 flex items-center gap-2 border-primary/50"><Plus size={20} /><span className="hidden sm:inline">Create New</span></button>
@@ -896,25 +988,50 @@ const ManageInventory: React.FC = () => {
                     {totalPages > 1 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
                 </>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
-                    {queueItems.length > 0 ? queueItems.map(item => (
-                        <QueueItemCard 
-                            key={item.id} 
-                            item={item} 
-                            selected={selectedProductIds.has(item.id)}
-                            onSelect={handleSelectProduct}
-                            onEdit={handleOpenEditorForQueue}
-                            onPromote={handlePromoteQueueItem}
-                            onReject={(id) => handleRejectQueueItemWithReason(id)}
-                        />
-                    )) : (
-                        <div className="col-span-full text-center py-20 glass-panel border-dashed border-white/20">
-                            <h3 className="text-xl font-semibold text-white">Queue is empty</h3>
-                            <p className="mt-1 text-neutral-400">Uploaded products awaiting review will appear here.</p>
-                            <button onClick={handleOpenEditorForCreate} className="mt-6 text-sm bg-primary text-white px-6 py-2 rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20">Upload Product</button>
+                <>
+                    {viewMode === 'grid' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+                            {paginatedQueueItems.length > 0 ? paginatedQueueItems.map(item => (
+                                <QueueItemCard 
+                                    key={item.id} 
+                                    item={item} 
+                                    selected={selectedProductIds.has(item.id)}
+                                    onSelect={handleSelectProduct}
+                                    onEdit={handleOpenEditorForQueue}
+                                    onPromote={handlePromoteQueueItem}
+                                    onReject={(id) => handleRejectQueueItemWithReason(id)}
+                                />
+                            )) : (
+                                <div className="col-span-full text-center py-20 glass-panel border-dashed border-white/20">
+                                    <h3 className="text-xl font-semibold text-white">Queue is empty</h3>
+                                    <p className="mt-1 text-neutral-400">Uploaded products awaiting review will appear here.</p>
+                                    <button onClick={handleOpenEditorForCreate} className="mt-6 text-sm bg-primary text-white px-6 py-2 rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20">Upload Product</button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-4 mt-4">
+                            {paginatedQueueItems.length > 0 ? paginatedQueueItems.map(item => (
+                                <QueueItemListItem 
+                                    key={item.id} 
+                                    item={item} 
+                                    selected={selectedProductIds.has(item.id)}
+                                    onSelect={handleSelectProduct}
+                                    onEdit={handleOpenEditorForQueue}
+                                    onPromote={handlePromoteQueueItem}
+                                    onReject={(id) => handleRejectQueueItemWithReason(id)}
+                                />
+                            )) : (
+                                <div className="text-center py-20 glass-panel border-dashed border-white/20 mt-4">
+                                    <h3 className="text-xl font-semibold text-white">Queue is empty</h3>
+                                    <p className="mt-1 text-neutral-400">Uploaded products awaiting review will appear here.</p>
+                                    <button onClick={handleOpenEditorForCreate} className="mt-6 text-sm bg-primary text-white px-6 py-2 rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20">Upload Product</button>
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
+                    {queueItems.length > ITEMS_PER_PAGE && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                </>
             )}
 
             <AnimatePresence>
