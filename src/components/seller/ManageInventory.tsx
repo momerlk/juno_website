@@ -471,39 +471,62 @@ const ManageInventory: React.FC = () => {
     const fetchAllProducts = useCallback(async () => {
         if (!seller?.token) return;
         setIsLoading(true);
-        let allFetchedProducts: Product[] = [];
         let page = 1;
         let hasMore = true;
         
-        // Safety break to prevent infinite loops if API is weird
-        let loopCount = 0;
+        // Initial fetch for first page
+        try {
+            const response = await api.Seller.GetProducts(seller.token, page);
+            if (response.ok && response.body) {
+                const newProducts = response.body as Product[];
+                setAllProducts(newProducts);
+                if (newProducts.length > 8) {
+                    setViewMode('list');
+                }
+                
+                // If we received fewer items than a typical page (assuming 20 or 50 from API), 
+                // or empty, we might be done. But safer to check length.
+                // Assuming API returns empty array when done.
+                if (newProducts.length === 0) hasMore = false;
+                else page++;
+            } else {
+                setError('Failed to fetch products.');
+                setIsLoading(false);
+                return;
+            }
+        } catch (err) {
+            setError('An error occurred while fetching products.');
+            setIsLoading(false);
+            return;
+        }
 
-        while (hasMore && loopCount < 20) {
-            loopCount++;
-            try {
-                const response = await api.Seller.GetProducts(seller.token, page);
-                if (response.ok && response.body) {
-                    const newProducts = response.body as Product[];
-                    if (newProducts.length > 0) {
-                        allFetchedProducts = [...allFetchedProducts, ...newProducts];
-                        page++;
+        setIsLoading(false); // Show content immediately after first page
+
+        // Background fetch for remaining pages
+        if (hasMore) {
+            let loopCount = 0;
+            const MAX_LOOPS = 50; // Increased limit for safety
+            
+            while (hasMore && loopCount < MAX_LOOPS) {
+                loopCount++;
+                try {
+                    const response = await api.Seller.GetProducts(seller.token, page);
+                    if (response.ok && response.body) {
+                        const newProducts = response.body as Product[];
+                        if (newProducts.length > 0) {
+                            setAllProducts(prev => [...prev, ...newProducts]);
+                            page++;
+                        } else {
+                            hasMore = false;
+                        }
                     } else {
                         hasMore = false;
                     }
-                } else {
-                    setError('Failed to fetch products.');
+                } catch (err) {
                     hasMore = false;
                 }
-            } catch (err) {
-                setError('An error occurred while fetching products.');
-                hasMore = false;
             }
         }
-        setAllProducts(allFetchedProducts);
-        if (allFetchedProducts.length > 8) {
-            setViewMode('list');
-        }
-        setIsLoading(false);
     }, [seller?.token]);
 
     const fetchQueueItems = useCallback(async () => {
