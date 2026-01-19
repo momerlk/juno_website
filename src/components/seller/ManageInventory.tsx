@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
-import { Product, Variant, SizingGuide, QueueItem } from '../../constants/types';
+import { Product, SizingGuide, QueueItem } from '../../constants/types';
 import { productTypes } from '../../constants/sizing';
-import { Plus, Edit, Trash2, Search, MoreVertical, Filter, X, Grid, List, Copy, ChevronLeft, ChevronRight, CheckSquare, Square, Ruler, Save, AlertTriangle, CheckCircle, UploadCloud } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, MoreVertical, Filter, X, Grid, List, Copy, ChevronLeft, ChevronRight, CheckSquare, Square, Ruler, Save, AlertTriangle, UploadCloud } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductEditor from './ProductEditor';
 import SizingGuideEditor from './SizingGuideEditor';
@@ -26,16 +26,23 @@ const getShopifyThumbnail = (url: string, size: string = '400x400') => {
 
 const QueueItemCard: React.FC<{ 
     item: QueueItem; 
+    selected: boolean;
+    onSelect: (id: string, shift: boolean) => void;
     onEdit: (product: Product, queueId: string) => void; 
     onPromote: (id: string) => void; 
     onReject: (id: string) => void; 
-}> = ({ item, onEdit, onPromote, onReject }) => {
+}> = ({ item, selected, onSelect, onEdit, onPromote, onReject }) => {
     const product = item.product;
     const isReady = item.status === 'ready';
     const hasErrors = item.errors && item.errors.length > 0;
 
     return (
-        <motion.div layout className="glass-panel overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-300 relative border-l-4 border-l-transparent hover:border-l-primary">
+        <motion.div layout className={`glass-panel overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-300 relative border-l-4 border-l-transparent hover:border-l-primary ${selected ? 'ring-2 ring-primary' : ''}`}>
+             <div className="absolute top-3 right-3 z-10">
+                <button onClick={() => onSelect(item.id, false)} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
+                    {selected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
+                </button>
+            </div>
             <div className="relative">
                 <img src={getShopifyThumbnail(product.images?.[0])} alt={product.title} loading="lazy" className="w-full h-48 object-cover bg-neutral-800" />
                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -96,7 +103,7 @@ const QueueItemCard: React.FC<{
     );
 };
 
-const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id: string) => void; onEdit: (product: Product) => void; onDelete: (productId: string) => void; onDuplicate: (product: Product) => void; onUpdateProduct: (productId: string, data: Partial<Product>) => void; }> = React.memo(({ product, selected, onSelect, onEdit, onDelete, onDuplicate, onUpdateProduct }) => {
+const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id: string, shift: boolean) => void; onEdit: (product: Product) => void; onDelete: (productId: string) => void; onDuplicate: (product: Product) => void; onUpdateProduct: (productId: string, data: Partial<Product>) => void; }> = React.memo(({ product, selected, onSelect, onEdit, onDelete, onDuplicate, onUpdateProduct }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const totalInventory = useMemo(() => product.variants.reduce((total, v) => total + (v.inventory?.quantity || 0), 0), [product.variants]);
   const price = useMemo(() => {
@@ -123,7 +130,7 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
   return (
     <motion.div layout className={`glass-panel overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-300 relative ${selected ? 'ring-2 ring-primary' : ''}`}>
       <div className="absolute top-3 right-12 z-10">
-          <button onClick={() => onSelect(product.id)} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
+          <button onClick={(e) => onSelect(product.id, e.shiftKey)} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
               {selected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
           </button>
       </div>
@@ -175,7 +182,7 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
   );
 });
 
-const ProductListItem: React.FC<{ product: Product; selected: boolean; onSelect: (id: string) => void; onEdit: (product: Product) => void; onDelete: (productId: string) => void; onDuplicate: (product: Product) => void; onUpdateProduct: (productId: string, data: Partial<Product>) => void; }> = React.memo(({ product, selected, onSelect, onEdit, onDelete, onDuplicate, onUpdateProduct }) => {
+const ProductListItem: React.FC<{ product: Product; selected: boolean; onSelect: (id: string, shift: boolean) => void; onEdit: (product: Product) => void; onDelete: (productId: string) => void; onDuplicate: (product: Product) => void; onUpdateProduct: (productId: string, data: Partial<Product>) => void; }> = React.memo(({ product, selected, onSelect, onEdit, onDelete, onDuplicate, onUpdateProduct }) => {
     const totalInventory = useMemo(() => product.variants.reduce((total, v) => total + (v.inventory?.quantity || 0), 0), [product.variants]);
     const price = useMemo(() => {
         const defaultVariant = product.variants.find(v => v.is_default);
@@ -201,7 +208,7 @@ const ProductListItem: React.FC<{ product: Product; selected: boolean; onSelect:
     return (
         <motion.div layout className={`glass-panel p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 hover:bg-white/5 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5' : ''}`}>
             <div className="flex items-center gap-4 flex-grow min-w-0">
-                 <button onClick={() => onSelect(product.id)} className="text-neutral-400 hover:text-white">
+                 <button onClick={(e) => onSelect(product.id, e.shiftKey)} className="text-neutral-400 hover:text-white">
                     {selected ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
                 </button>
                 <img src={getShopifyThumbnail(product.images[0], '100x100')} alt={product.title} loading="lazy" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
@@ -349,6 +356,88 @@ const BulkSizingGuideModal: React.FC<{
     );
 };
 
+const BulkAttributesModal: React.FC<{ 
+    isOpen: boolean; 
+    onClose: () => void; 
+    selectedProductIds: string[];
+    onSave: (attributes: { product_type?: string, gender?: string }) => Promise<void>;
+}> = ({ isOpen, onClose, selectedProductIds, onSave }) => {
+    const [productType, setProductType] = useState<string>('');
+    const [gender, setGender] = useState<string>('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        await onSave({ 
+            product_type: productType || undefined, 
+            gender: gender || undefined 
+        });
+        setIsSaving(false);
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="glass-panel w-full max-w-md flex flex-col"
+            >
+                <div className="flex justify-between items-center p-6 border-b border-white/10">
+                    <h3 className="text-xl font-bold text-white">Bulk Update Attributes</h3>
+                    <button onClick={onClose} className="text-neutral-400 hover:text-white"><X /></button>
+                </div>
+                <div className="p-6 space-y-4">
+                    <p className="text-neutral-400">
+                        Updating {selectedProductIds.length} products. Leave fields empty to keep existing values.
+                    </p>
+                    
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-300 mb-1">Product Type</label>
+                        <select 
+                            value={productType} 
+                            onChange={(e) => setProductType(e.target.value)}
+                            className="glass-input w-full p-2.5 bg-neutral-900/50"
+                        >
+                            <option value="">No Change</option>
+                            {productTypes.map(type => (
+                                <option key={type} value={type} className="bg-neutral-900">{type}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-300 mb-1">Gender</label>
+                        <select 
+                            value={gender} 
+                            onChange={(e) => setGender(e.target.value)}
+                            className="glass-input w-full p-2.5 bg-neutral-900/50"
+                        >
+                            <option value="">No Change</option>
+                            <option value="male" className="bg-neutral-900">Male</option>
+                            <option value="female" className="bg-neutral-900">Female</option>
+                            <option value="unisex" className="bg-neutral-900">Unisex</option>
+                        </select>
+                    </div>
+                </div>
+                <div className="p-6 border-t border-white/10 flex justify-end gap-4">
+                    <button onClick={onClose} className="px-4 py-2 text-neutral-400 hover:text-white">Cancel</button>
+                    <button 
+                        onClick={handleSave} 
+                        disabled={isSaving}
+                        className="glass-button bg-primary text-white flex items-center gap-2"
+                    >
+                        {isSaving ? 'Saving...' : <><Save size={18} /> Update Products</>}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
 const ITEMS_PER_PAGE = 12;
 
 const ManageInventory: React.FC = () => {
@@ -375,7 +464,9 @@ const ManageInventory: React.FC = () => {
     const [filters, setFilters] = useState({ status: 'all', stock: 'all', productType: 'all' });
     const [viewMode, setViewMode] = useState('grid');
     const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
     const [isBulkSizingModalOpen, setIsBulkSizingModalOpen] = useState(false);
+    const [isBulkAttributesModalOpen, setIsBulkAttributesModalOpen] = useState(false);
 
     const fetchAllProducts = useCallback(async () => {
         if (!seller?.token) return;
@@ -443,6 +534,10 @@ const ManageInventory: React.FC = () => {
             fetchQueueItems();
         }
     }, [activeTab, fetchAllProducts, fetchQueueItems]);
+
+    useEffect(() => {
+        setLastSelectedIndex(null);
+    }, [currentPage, searchQuery, filters, activeTab]);
 
     const handleFilterChange = (filterType: keyof typeof filters, value: string) => { setFilters(prev => ({ ...prev, [filterType]: value })); setCurrentPage(1); };
     const clearFilters = () => { setFilters({ status: 'all', stock: 'all', productType: 'all' }); setIsFilterOpen(false); setCurrentPage(1); };
@@ -530,20 +625,39 @@ const ManageInventory: React.FC = () => {
         if (response.ok) { alert('Product duplicated (added to queue)!'); fetchQueueItems(); setActiveTab('queue'); } else { alert(`Failed to duplicate product: ${response.body?.message || 'Unknown error'}`); }
     };
 
-    const handleSelectProduct = (id: string) => {
-        setSelectedProductIds(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(id)) newSet.delete(id);
-            else newSet.add(id);
-            return newSet;
-        });
+    const handleSelectProduct = (id: string, shiftPressed: boolean = false) => {
+        const items = activeTab === 'active' ? paginatedProducts : queueItems;
+        const currentIndex = items.findIndex(item => (activeTab === 'active' ? (item as Product).id : (item as QueueItem).id) === id);
+        
+        if (shiftPressed && lastSelectedIndex !== null) {
+            const start = Math.min(lastSelectedIndex, currentIndex);
+            const end = Math.max(lastSelectedIndex, currentIndex);
+            const rangeIds = items.slice(start, end + 1).map(item => (activeTab === 'active' ? (item as Product).id : (item as QueueItem).id));
+            
+            setSelectedProductIds(prev => {
+                const newSet = new Set(prev);
+                rangeIds.forEach(rangeId => newSet.add(rangeId));
+                return newSet;
+            });
+        } else {
+            setSelectedProductIds(prev => {
+                const newSet = new Set(prev);
+                if (newSet.has(id)) newSet.delete(id);
+                else newSet.add(id);
+                return newSet;
+            });
+        }
+        setLastSelectedIndex(currentIndex);
     };
 
     const handleSelectAll = () => {
-        if (selectedProductIds.size === filteredProducts.length) {
+        const items = activeTab === 'active' ? filteredProducts : queueItems;
+        const itemIds = items.map(item => (activeTab === 'active' ? (item as Product).id : (item as QueueItem).id));
+        
+        if (selectedProductIds.size === itemIds.length) {
             setSelectedProductIds(new Set());
         } else {
-            setSelectedProductIds(new Set(filteredProducts.map(p => p.id)));
+            setSelectedProductIds(new Set(itemIds));
         }
     };
 
@@ -551,9 +665,79 @@ const ManageInventory: React.FC = () => {
         setIsBulkSizingModalOpen(true);
     };
 
-    const handleBulkSizingSave = () => {
+    const handleBulkAttributes = () => {
+        setIsBulkAttributesModalOpen(true);
+    };
+
+    const handleBulkSizingSave = async (sizingGuide: SizingGuide) => {
+        if (!seller?.token) return;
+
+        if (activeTab === 'active') {
+             const response = await api.Seller.UpdateProductSizingGuide(seller.token, Array.from(selectedProductIds), sizingGuide);
+             if (!response.ok) alert('Failed to update sizing guide.');
+        } else {
+            const updates = Array.from(selectedProductIds).map(async (id) => {
+                const qItem = queueItems.find(item => item.id === id);
+                if (!qItem) return;
+                const updatedProduct = { ...qItem.product, sizing_guide: sizingGuide };
+                return api.Seller.Queue.Update(seller.token!, qItem.id, { product: updatedProduct });
+            });
+            await Promise.all(updates);
+        }
+
         setSelectedProductIds(new Set());
-        fetchAllProducts();
+        if (activeTab === 'active') fetchAllProducts();
+        else fetchQueueItems();
+        setIsBulkSizingModalOpen(false);
+    };
+
+    const handleBulkAttributesSave = async (attributes: { product_type?: string, gender?: string }) => {
+        if (!seller?.token) return;
+
+        const updates = Array.from(selectedProductIds).map(async (id) => {
+            let product: Product | undefined;
+            let queueId: string | undefined;
+
+            if (activeTab === 'active') {
+                product = allProducts.find(p => p.id === id);
+            } else {
+                const qItem = queueItems.find(item => item.id === id);
+                if (qItem) {
+                    product = qItem.product;
+                    queueId = qItem.id;
+                }
+            }
+
+            if (!product) return;
+
+            const updatedData: Partial<Product> = {};
+            
+            if (attributes.product_type) {
+                updatedData.product_type = attributes.product_type;
+            }
+
+            if (attributes.gender) {
+                const otherTags = product.tags?.filter(t => !['male', 'female', 'unisex'].includes(t.toLowerCase())) || [];
+                updatedData.tags = [...otherTags, attributes.gender];
+            }
+
+            if (Object.keys(updatedData).length === 0) return;
+
+            const finalProduct = { ...product, ...updatedData };
+            
+            if (activeTab === 'active') {
+                return api.Seller.UpdateProduct(seller.token!, finalProduct);
+            } else {
+                return api.Seller.Queue.Update(seller.token!, queueId!, { product: finalProduct });
+            }
+        });
+
+        await Promise.all(updates);
+        
+        setSelectedProductIds(new Set());
+        if (activeTab === 'active') fetchAllProducts();
+        else fetchQueueItems();
+        alert('Items updated successfully!');
     };
 
     const handlePromoteQueueItem = async (id: string) => {
@@ -568,62 +752,6 @@ const ManageInventory: React.FC = () => {
         }
     };
 
-    const handleRejectQueueItem = async (id: string) => {
-        if (!seller?.token) return;
-        // In this simplified UI, we just reject/discard without a reason prompt (or handled in card).
-        // The card implementation prompts for reason.
-        // Wait, I implemented the card to call onReject(id) AFTER prompting reason inside the card? 
-        // No, I implemented `onClick={() => { const reason = prompt...; if(reason) onReject(item.id); }}` inside the card?
-        // Let's check QueueItemCard implementation I provided earlier.
-        // Yes: `const reason = prompt("Reason for discarding?"); if (reason) onReject(item.id);`
-        // So here `onReject` receives `id`? Wait, I need to pass the reason to the API.
-        // The card calls `onReject(id)` but doesn't pass the reason?
-        // Ah, I made a mistake in QueueItemCard definition in the previous step if I did that.
-        // Let's fix it here by changing the handler signature or logic.
-        // Actually, let's just make `onReject` take `id` and `reason` or handle the prompt here.
-        // Better: handle the prompt here.
-        // So `QueueItemCard` should just emit `onReject(id)`.
-        
-        // Let's assume QueueItemCard calls `onReject(id)` and we prompt here? 
-        // Or if QueueItemCard already prompts, it should pass the reason.
-        // `onReject: (id: string, reason?: string) => void`
-        // I'll update this function to accept reason if passed, or prompt if not.
-    };
-
-    // Correct implementation for handler passed to QueueItemCard
-    // Assuming QueueItemCard logic:
-    /*
-    <button 
-        onClick={() => {
-            const reason = prompt("Reason for discarding?");
-            if (reason) onReject(item.id); 
-        }} 
-    */
-    // It seems I can't pass the reason easily if the signature is (id: string).
-    // I will redefine handleRejectQueueItem to take just ID and I'll assume the API call inside takes a default reason or I'll prompt again?
-    // Actually, I'll update QueueItemCard props in this file to pass reason.
-    // But `QueueItemCard` was defined in the previous `replace` block outside of this `ManageInventory` component. 
-    // I can't easily change `QueueItemCard` prop signature now without another replace.
-    // I'll stick to prompting in the handler here, and changing `QueueItemCard` to just call `onReject(item.id)`.
-    // Wait, the `QueueItemCard` I wrote previously:
-    /*
-     onClick={() => {
-        const reason = prompt("Reason for discarding?");
-        if (reason) onReject(item.id);
-    }}
-    */
-    // It prompts, gets a reason, then calls `onReject(item.id)`. The reason is LOST!
-    // That's a bug in my previous step.
-    // I should fix `QueueItemCard` as well. 
-    // Since I'm replacing `ManageInventory` component, I can't touch `QueueItemCard` which is outside.
-    // I will do a separate `replace` for `QueueItemCard` or just ignore the reason for now (pass "Discarded by seller").
-    
-    // Actually, I'll update `QueueItemCard` in a separate call if needed. For now I'll use a default reason or try to hack it.
-    // No, I should fix it.
-    
-    // Plan: Update `ManageInventory` first. Then fix `QueueItemCard` if I can.
-    // Or I can put `QueueItemCard` logic inside `ManageInventory` (it's not exported).
-    
     const handleRejectQueueItemWithReason = async (id: string, reason: string = "Discarded by seller") => {
         if (!seller?.token) return;
         const response = await api.Seller.Queue.Reject(seller.token, id, reason);
@@ -678,23 +806,25 @@ const ManageInventory: React.FC = () => {
                 </div>
             </div>
 
-            {activeTab === 'active' && (
-                <div className="flex items-center gap-4 mb-4">
-                    <button onClick={handleSelectAll} className="flex items-center text-sm text-neutral-400 hover:text-white">
-                        {selectedProductIds.size === filteredProducts.length && filteredProducts.length > 0 ? <CheckSquare size={18} className="mr-2 text-primary" /> : <Square size={18} className="mr-2" />}
-                        Select All
-                    </button>
-                    {selectedProductIds.size > 0 && (
-                        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4 bg-white/5 px-4 py-1.5 rounded-lg border border-white/10">
-                            <span className="text-sm font-medium text-white">{selectedProductIds.size} Selected</span>
+            <div className="flex items-center gap-4 mb-4">
+                <button onClick={handleSelectAll} className="flex items-center text-sm text-neutral-400 hover:text-white">
+                    {selectedProductIds.size === (activeTab === 'active' ? filteredProducts.length : queueItems.length) && (activeTab === 'active' ? filteredProducts.length : queueItems.length) > 0 ? <CheckSquare size={18} className="mr-2 text-primary" /> : <Square size={18} className="mr-2" />}
+                    Select All
+                </button>
+                {selectedProductIds.size > 0 && (
+                    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4 bg-white/5 px-4 py-1.5 rounded-lg border border-white/10">
+                        <span className="text-sm font-medium text-white">{selectedProductIds.size} Selected</span>
+                        <div className="h-4 w-[1px] bg-white/20"></div>
+                        <button onClick={handleBulkSizingGuide} className="text-sm text-primary hover:text-primary-light flex items-center">
+                            <Ruler size={16} className="mr-1.5" /> Set Sizing Guide
+                        </button>
                             <div className="h-4 w-[1px] bg-white/20"></div>
-                            <button onClick={handleBulkSizingGuide} className="text-sm text-primary hover:text-primary-light flex items-center">
-                                <Ruler size={16} className="mr-1.5" /> Set Sizing Guide
-                            </button>
-                        </motion.div>
-                    )}
-                </div>
-            )}
+                        <button onClick={handleBulkAttributes} className="text-sm text-primary hover:text-primary-light flex items-center">
+                            <Edit size={16} className="mr-1.5" /> Bulk Edit
+                        </button>
+                    </motion.div>
+                )}
+            </div>
 
             {isLoading ? (
                 <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>
@@ -748,6 +878,8 @@ const ManageInventory: React.FC = () => {
                         <QueueItemCard 
                             key={item.id} 
                             item={item} 
+                            selected={selectedProductIds.has(item.id)}
+                            onSelect={handleSelectProduct}
                             onEdit={handleOpenEditorForQueue}
                             onPromote={handlePromoteQueueItem}
                             onReject={(id) => handleRejectQueueItemWithReason(id)}
@@ -777,8 +909,18 @@ const ManageInventory: React.FC = () => {
                         isOpen={isBulkSizingModalOpen} 
                         onClose={() => setIsBulkSizingModalOpen(false)} 
                         selectedProductIds={Array.from(selectedProductIds)}
-                        allProducts={allProducts}
+                        allProducts={activeTab === 'active' ? allProducts : queueItems.map(it => it.product)}
                         onSave={handleBulkSizingSave}
+                    />
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {isBulkAttributesModalOpen && (
+                    <BulkAttributesModal 
+                        isOpen={isBulkAttributesModalOpen} 
+                        onClose={() => setIsBulkAttributesModalOpen(false)} 
+                        selectedProductIds={Array.from(selectedProductIds)}
+                        onSave={handleBulkAttributesSave}
                     />
                 )}
             </AnimatePresence>
