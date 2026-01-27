@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, ShoppingBag, DollarSign, Truck } from 'lucide-react';
+import { Users, ShoppingBag, DollarSign, Truck, TrendingUp } from 'lucide-react';
 import { GetAllOrders, getAllUsers, getAllSellers, getAllInvites, getAllDeliveryBookings } from '../../api/adminApi';
 import { Order } from '../../constants/orders';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -19,12 +19,12 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const formattedLabel = new Date(label).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     return (
-      <div className="bg-background-light/80 backdrop-blur-sm p-4 rounded-lg border border-neutral-700 shadow-lg">
+      <div className="glass-panel p-4 border border-white/10 shadow-xl">
         <p className="label text-base text-white font-bold mb-2">{formattedLabel}</p>
         {payload.map((pld: any) => (
-          <div key={pld.dataKey} className="flex items-center justify-between text-sm">
+          <div key={pld.dataKey} className="flex items-center justify-between text-sm gap-4">
             <p style={{ color: pld.stroke }}>{`${pld.name}:`}</p>
-            <p className="ml-4 font-mono font-bold" style={{ color: pld.stroke }}>{pld.value}</p>
+            <p className="font-mono font-bold text-white">{pld.value}</p>
           </div>
         ))}
       </div>
@@ -46,37 +46,40 @@ const PlatformStats: React.FC = () => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        const [ordersResponse, usersResponse, sellersResponse, bookingsResponse, invitesResponse] = await Promise.all([
+        const [ordersResponse, usersResponse, sellersResponse, bookingsResponse] = await Promise.all([
           GetAllOrders(),
           getAllUsers(),
-          getAllSellers(),
+          adminGetAllSellers(),
           getAllDeliveryBookings(),
-          getAllInvites(),
         ]);
 
-        if (ordersResponse.ok && usersResponse.ok && sellersResponse.ok && bookingsResponse.ok && invitesResponse.ok) {
-          const orders: Order[] = ordersResponse.body;
-          const users = usersResponse.body;
-          const sellers = sellersResponse.body;
+        const getArray = (resp: any) => {
+            if (!resp.ok) return [];
+            return Array.isArray(resp.body) ? resp.body : (resp.body?.data || []);
+        };
 
-          setAllOrders(orders);
-          setAllUsers(users);
+        const orders: Order[] = getArray(ordersResponse);
+        const users = getArray(usersResponse);
+        const sellers = getArray(sellersResponse);
+        const bookings = getArray(bookingsResponse);
 
-          const totalRevenue = orders.reduce((acc, order) => acc + (order.subtotal * 0.125) + order.shipping_cost, 0);
-          const gmv = orders.reduce((acc, order) => acc + order.total, 0);
-          const ambassadorPayout = totalRevenue * 0.15;
-          const brandPayout = orders.reduce((acc, order) => acc + (order.subtotal * 0.875), 0);
-          
-          setStats({
-            totalRevenue,
-            gmv,
-            ambassadorPayout,
-            brandPayout,
-            totalUsers: users.length,
-            totalSellers: sellers.length,
-            totalDeliveryBookings: bookingsResponse.body.length,
-          });
-        }
+        setAllOrders(orders);
+        setAllUsers(users);
+
+        const totalRevenue = orders.reduce((acc, order) => acc + (order.subtotal * 0.125) + (order.shipping_cost || 0), 0);
+        const gmv = orders.reduce((acc, order) => acc + (order.total || 0), 0);
+        const ambassadorPayout = totalRevenue * 0.15;
+        const brandPayout = orders.reduce((acc, order) => acc + (order.subtotal * 0.875), 0);
+        
+        setStats({
+          totalRevenue,
+          gmv,
+          ambassadorPayout,
+          brandPayout,
+          totalUsers: users.length,
+          totalSellers: sellers.length,
+          totalDeliveryBookings: bookings.length,
+        });
       } catch (error) {
         console.error("Failed to fetch platform stats:", error);
       } finally {
@@ -141,13 +144,13 @@ const PlatformStats: React.FC = () => {
   }, [timePeriod, allOrders, allUsers]);
 
   const displayStats = [
-    { name: 'Gross Merchandise Value', value: stats ? `Rs ${stats.gmv?.toFixed(2)}` : 'N/A', icon: DollarSign, color: 'text-accent' },
-    { name: 'Total Revenue', value: stats ? `Rs ${stats.totalRevenue?.toFixed(2)}` : 'N/A', icon: DollarSign, color: 'text-accent' },
-    { name: 'Campus Ambassador Payout', value: stats ? `Rs ${stats.ambassadorPayout?.toFixed(2)}` : 'N/A', icon: Users, color: 'text-primary' },
-    { name: 'Brand Payout', value: stats ? `Rs ${stats.brandPayout?.toFixed(2)}` : 'N/A', icon: ShoppingBag, color: 'text-secondary' },
-    { name: 'Total Users', value: stats ? stats.totalUsers : 'N/A', icon: Users, color: 'text-primary' },
-    { name: 'Total Sellers', value: stats ? stats.totalSellers : 'N/A', icon: ShoppingBag, color: 'text-secondary' },
-    { name: 'Total Delivery Bookings', value: stats ? stats.totalDeliveryBookings : 'N/A', icon: Truck, color: 'text-yellow-500' },
+    { name: 'Gross Merchandise Value', value: stats ? `Rs ${stats.gmv?.toLocaleString()}` : 'N/A', icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/20' },
+    { name: 'Total Revenue', value: stats ? `Rs ${stats.totalRevenue?.toLocaleString()}` : 'N/A', icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-500/20' },
+    { name: 'Ambassador Payout', value: stats ? `Rs ${stats.ambassadorPayout?.toLocaleString()}` : 'N/A', icon: Users, color: 'text-purple-400', bg: 'bg-purple-500/20' },
+    { name: 'Brand Payout', value: stats ? `Rs ${stats.brandPayout?.toLocaleString()}` : 'N/A', icon: ShoppingBag, color: 'text-pink-400', bg: 'bg-pink-500/20' },
+    { name: 'Total Users', value: stats ? stats.totalUsers : 'N/A', icon: Users, color: 'text-primary', bg: 'bg-primary/20' },
+    { name: 'Total Sellers', value: stats ? stats.totalSellers : 'N/A', icon: ShoppingBag, color: 'text-secondary', bg: 'bg-secondary/20' },
+    { name: 'Total Delivery Bookings', value: stats ? stats.totalDeliveryBookings : 'N/A', icon: Truck, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
   ];
 
   const timePeriods = [
@@ -160,7 +163,7 @@ const PlatformStats: React.FC = () => {
   ];
 
   if (isLoading) {
-    return <div className="bg-background rounded-lg p-6 text-center">Loading stats...</div>;
+    return <div className="glass-panel p-6 text-center text-neutral-400">Loading stats...</div>;
   }
 
   return (
@@ -168,35 +171,35 @@ const PlatformStats: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.1 }}
-      className="bg-background rounded-lg p-6"
+      className="space-y-6"
     >
-      <h2 className="text-xl font-semibold mb-4 text-white">Platform Overview</h2>
+      <h2 className="text-xl font-semibold text-white">Platform Overview</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         {displayStats.map((stat, index) => (
-          <div key={index} className="bg-background-light p-4 rounded-lg">
-            <div className="flex items-center">
-              <stat.icon size={24} className={`${stat.color} mr-3`} />
-              <div>
-                <p className="text-sm text-neutral-400">{stat.name}</p>
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
-              </div>
+          <div key={index} className="glass-card flex items-center">
+            <div className={`p-3 rounded-xl mr-4 ${stat.bg}`}>
+              <stat.icon size={24} className={stat.color} />
+            </div>
+            <div>
+              <p className="text-sm text-neutral-400">{stat.name}</p>
+              <p className="text-xl font-bold text-white mt-1">{stat.value}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-8">
-        <div className="flex justify-between items-center mb-4">
+      <div className="glass-panel p-6">
+        <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-white">Performance</h2>
-          <div className="flex items-center space-x-2 bg-background-light p-1 rounded-lg">
+          <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
             {timePeriods.map(period => (
               <button
                 key={period.key}
                 onClick={() => setTimePeriod(period.key)}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                   timePeriod === period.key
-                    ? 'bg-primary text-white'
-                    : 'text-neutral-400 hover:bg-neutral-700'
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {period.label}
@@ -208,47 +211,53 @@ const PlatformStats: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <h3 className="text-lg font-semibold mb-4 text-white">Daily Orders</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={ordersChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#404040" vertical={false} />
-                <XAxis 
-                  dataKey="date"
-                  stroke="#a3a3a3"
-                  tickFormatter={(dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                />
-                <YAxis stroke="#a3a3a3" />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="count" name="Orders" stroke="#82ca9d" fillOpacity={1} fill="url(#colorOrders)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={ordersChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                    <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                    </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                    <XAxis 
+                    dataKey="date"
+                    stroke="#a3a3a3"
+                    tickFormatter={(dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    tick={{fontSize: 12}}
+                    />
+                    <YAxis stroke="#a3a3a3" tick={{fontSize: 12}} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="count" name="Orders" stroke="#82ca9d" strokeWidth={2} fillOpacity={1} fill="url(#colorOrders)" />
+                </AreaChart>
+                </ResponsiveContainer>
+            </div>
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-4 text-white">Daily User Signups</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={usersChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#404040" vertical={false} />
-                <XAxis 
-                  dataKey="date"
-                  stroke="#a3a3a3"
-                  tickFormatter={(dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                />
-                <YAxis stroke="#a3a3a3" />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="count" name="User Signups" stroke="#8884d8" fillOpacity={1} fill="url(#colorUsers)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={usersChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                    </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                    <XAxis 
+                    dataKey="date"
+                    stroke="#a3a3a3"
+                    tickFormatter={(dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    tick={{fontSize: 12}}
+                    />
+                    <YAxis stroke="#a3a3a3" tick={{fontSize: 12}} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="count" name="User Signups" stroke="#8884d8" strokeWidth={2} fillOpacity={1} fill="url(#colorUsers)" />
+                </AreaChart>
+                </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>

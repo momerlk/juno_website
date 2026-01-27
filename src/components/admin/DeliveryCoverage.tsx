@@ -87,14 +87,14 @@ const DeliveryCoverage: React.FC = () => {
   }, []);
 
   const displayStats = [
-    { name: 'Covered Users', value: coverageStats ? `${coverageStats.coveredUsers} / ${coverageStats.totalUsers}` : 'N/A', icon: Users, color: 'text-primary' },
-    { name: 'Coverage Percentage', value: coverageStats ? `${coverageStats.coveragePercentage.toFixed(2)}%` : 'N/A', icon: Percent, color: 'text-accent' },
-    { name: 'Average Distance', value: coverageStats ? `${coverageStats.averageDistance.toFixed(2)} km` : 'N/A', icon: Route, color: 'text-secondary' },
-    { name: 'Average Cost', value: coverageStats ? `Rs ${coverageStats.averageCost.toFixed(2)}` : 'N/A', icon: Truck, color: 'text-yellow-500' },
+    { name: 'Covered Users', value: coverageStats ? `${coverageStats.coveredUsers} / ${coverageStats.totalUsers}` : 'N/A', icon: Users, color: 'text-primary', bg: 'bg-primary/20' },
+    { name: 'Coverage Percentage', value: coverageStats ? `${coverageStats.coveragePercentage.toFixed(2)}%` : 'N/A', icon: Percent, color: 'text-green-400', bg: 'bg-green-500/20' },
+    { name: 'Average Distance', value: coverageStats ? `${coverageStats.averageDistance.toFixed(2)} km` : 'N/A', icon: Route, color: 'text-blue-400', bg: 'bg-blue-500/20' },
+    { name: 'Average Cost', value: coverageStats ? `Rs ${coverageStats.averageCost.toFixed(2)}` : 'N/A', icon: Truck, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
   ];
 
   if (isLoading) {
-    return <div className="bg-background rounded-lg p-6 text-center">Calculating coverage...</div>;
+    return <div className="glass-panel p-6 text-center text-neutral-400">Calculating coverage...</div>;
   }
 
   return (
@@ -102,18 +102,24 @@ const DeliveryCoverage: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.6 }}
-      className="bg-background rounded-lg p-6 mt-6"
+      className="glass-panel p-6 mt-6"
     >
-      <h2 className="text-xl font-semibold mb-4 text-white">Instant Delivery Coverage</h2>
+      <div className="flex items-center mb-6">
+        <div className="p-2 bg-primary/20 rounded-lg mr-3">
+            <Truck size={24} className="text-primary" />
+        </div>
+        <h2 className="text-xl font-semibold text-white">Instant Delivery Coverage</h2>
+      </div>
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         {displayStats.map((stat, index) => (
-          <div key={index} className="bg-background-light p-4 rounded-lg">
-            <div className="flex items-center">
-              <stat.icon size={24} className={`${stat.color} mr-3`} />
-              <div>
-                <p className="text-sm text-neutral-400">{stat.name}</p>
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
-              </div>
+          <div key={index} className="glass-card flex items-center">
+            <div className={`p-3 rounded-xl mr-4 ${stat.bg}`}>
+              <stat.icon size={24} className={stat.color} />
+            </div>
+            <div>
+              <p className="text-sm text-neutral-400">{stat.name}</p>
+              <p className="text-2xl font-bold text-white mt-1">{stat.value}</p>
             </div>
           </div>
         ))}

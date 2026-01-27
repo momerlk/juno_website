@@ -3,7 +3,7 @@ import { Product } from "../constants/types";
 
 // --- API Configuration ---
 const api_urls = {
-    testing: "http://192.168.18.96:8080/api/v1",
+    testing: "http://localhost:8080/api/v1",
     production: "https://junoapi-1095577467512.asia-south2.run.app/api/v1",
 
 };
@@ -11,7 +11,7 @@ const api_urls = {
 /**
  * The base URL for all API requests.
  */
-export const api_url = api_urls.production;
+export const api_url = api_urls.testing;
 
 export function setState(data: any) {
   if (data && data.token) {
@@ -197,11 +197,36 @@ export const adminGetAllSellers = () => requestWithoutBody('/admin/sellers', 'GE
 export const adminGetAllInteractions = () => requestWithoutBody('/admin/interactions', 'GET');
 
 export const getSellerDetails = (sellerId: string) => requestWithoutBody(`/admin/sellers/${sellerId}`, 'GET');
+export const approveSeller = (sellerId: string) => requestWithBody(`/admin/sellers/${sellerId}/approve`, 'PUT', {});
+export const updateSeller = (sellerId: string, data: any) => requestWithBody(`/admin/sellers/${sellerId}`, 'PUT', data);
+
 export const getAllUsers = () => requestWithoutBody('/admin/users', 'GET');
 export const getUserDetails = (userId: string) => requestWithoutBody(`/admin/users/${userId}`, 'GET');
 export const getAllDeliveryBookings = () => requestWithoutBody('/admin/delivery-bookings', 'GET');
 export const getAllInvites = () => requestWithoutBody('/admin/invites', 'GET');
-// NOTE: No endpoints found for approving/rejecting sellers in the swagger file.
+export const getWaitlist = () => requestWithoutBody('/admin/waitlist', 'GET');
+
+// --- Products & Queue ---
+export const getAllProducts = () => requestWithoutBody('/admin/products', 'GET');
+export const getProductQueue = () => requestWithoutBody('/admin/products-queue', 'GET');
+export const getEmbeddings = () => requestWithoutBody('/admin/embeddings', 'GET');
+
+// --- Orders Extended ---
+export const getParentOrders = () => requestWithoutBody('/admin/parent-orders', 'GET');
+export const getOrderHistory = (orderId: string) => requestWithoutBody(`/admin/orders/${orderId}/history`, 'GET');
+export const updateOrder = (orderId: string, data: any) => requestWithBody(`/admin/orders/${orderId}`, 'PUT', data);
+export const getAllCarts = () => requestWithoutBody('/admin/carts', 'GET');
+
+// --- Analytics Extended ---
+export const getSalesFunnel = () => requestWithoutBody('/admin/analytics/sales-funnel', 'GET');
+export const getAnalyticsEvents = () => requestWithoutBody('/admin/analytics/events', 'GET');
+
+// --- Forms & System ---
+export const getChapterForms = () => requestWithoutBody('/admin/chapter-forms', 'GET');
+export const getNotificationTokens = () => requestWithoutBody('/admin/notifications/tokens', 'GET');
+export const getAllOTPs = () => requestWithoutBody('/admin/otps', 'GET');
+export const getSystemHealth = () => requestWithoutBody('/admin/health', 'GET');
+export const createTournament = (data: any) => requestWithBody('/admin/tournaments', 'POST', data);
 
 // --- Invites ---
 export const getInvitesByOwner = (ownerEmail: string) => requestWithoutBody(`/api/v1/invites/by-owner?owner=${encodeURIComponent(ownerEmail)}`, 'GET');

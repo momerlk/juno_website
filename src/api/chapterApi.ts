@@ -1,7 +1,7 @@
 // src/api/chapterApi.ts
 // --- API Configuration ---
 const api_urls = {
-    testing: "http://192.168.18.96:8080/api/v1",
+    testing: "http://localhost:8080/api/v1",
     production: "https://junoapi-1095577467512.asia-south2.run.app/api/v1",
     recsystem : "https://junorecsys-710509977105.asia-south2.run.app",
 };

@@ -40,6 +40,11 @@ import InteractionAnalytics from './components/admin/InteractionAnalytics';
 import ProductPerformance from './components/admin/ProductPerformance';
 import ManageNotifications from './components/admin/ManageNotifications';
 import PlatformStats from './components/admin/PlatformStats';
+import ApiStatus from './components/admin/ApiStatus';
+import ChapterForms from './components/admin/ChapterForms';
+import ManageProducts from './components/admin/ManageProducts';
+import SystemTools from './components/admin/SystemTools';
+import SalesFunnel from './components/admin/SalesFunnel';
 
 
 import AmbassadorAuth from "./components/ambassador/AmbassadorAuth";
@@ -141,6 +146,11 @@ function App() {
                     <Route path="interactions" element={<InteractionAnalytics />} />
                     <Route path="product-performance" element={<ProductPerformance />} />
                     <Route path="notifications" element={<ManageNotifications />} />
+                    <Route path="products" element={<ManageProducts />} />
+                    <Route path="funnel" element={<SalesFunnel />} />
+                    <Route path="system" element={<SystemTools />} />
+                    <Route path="api-status" element={<ApiStatus />} />
+                    <Route path="chapter-forms" element={<ChapterForms />} />
                   </Route>
                   <Route path="/admin/login" element={<AdminAuth />} />
 

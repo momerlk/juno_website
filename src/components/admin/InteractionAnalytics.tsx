@@ -62,7 +62,7 @@ const InteractionAnalytics: React.FC = () => {
   }, [interactions, orders]);
 
   if (isLoading) {
-    return <div className="text-center p-8">Loading interaction analytics...</div>;
+    return <div className="text-center p-8 text-neutral-400">Loading interaction analytics...</div>;
   }
 
   return (
@@ -71,25 +71,56 @@ const InteractionAnalytics: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <h2 className="text-2xl font-bold text-white mb-6">Overall Interaction Analytics</h2>
+      <div className="flex items-center mb-6">
+        <div className="p-2 bg-primary/20 rounded-lg mr-3">
+            <BarChart2 size={24} className="text-primary" />
+        </div>
+        <h2 className="text-2xl font-bold text-white">Overall Interaction Analytics</h2>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-background-light p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-primary mb-2">Total Swipes</h3>
-          <p className="text-4xl font-bold">{analytics?.totalInteractions}</p>
+        <div className="glass-card">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-blue-500/20 rounded-lg mr-3">
+                <BarChart2 size={20} className="text-blue-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white">Total Swipes</h3>
+          </div>
+          <p className="text-4xl font-bold text-white">{analytics?.totalInteractions}</p>
         </div>
-        <div className="bg-background-light p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-primary mb-2">Likes</h3>
-          <p className="text-4xl font-bold">{analytics?.likes}</p>
-          <p className="text-lg text-green-500">{analytics?.likePercentage.toFixed(2)}%</p>
+        <div className="glass-card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+                <div className="p-2 bg-green-500/20 rounded-lg mr-3">
+                    <ThumbsUp size={20} className="text-green-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Likes</h3>
+            </div>
+            <span className="text-green-400 font-bold bg-green-500/10 px-2 py-1 rounded">{analytics?.likePercentage.toFixed(1)}%</span>
+          </div>
+          <p className="text-4xl font-bold text-white">{analytics?.likes}</p>
         </div>
-        <div className="bg-background-light p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-primary mb-2">Dislikes</h3>
-          <p className="text-4xl font-bold">{analytics?.dislikes}</p>
-          <p className="text-lg text-red-500">{analytics?.dislikePercentage.toFixed(2)}%</p>
+        <div className="glass-card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+                <div className="p-2 bg-red-500/20 rounded-lg mr-3">
+                    <ThumbsDown size={20} className="text-red-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Dislikes</h3>
+            </div>
+            <span className="text-red-400 font-bold bg-red-500/10 px-2 py-1 rounded">{analytics?.dislikePercentage.toFixed(1)}%</span>
+          </div>
+          <p className="text-4xl font-bold text-white">{analytics?.dislikes}</p>
         </div>
-        <div className="bg-background-light p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-primary mb-2">Cart Abandonment Rate</h3>
-          <p className="text-4xl font-bold">{analytics?.cartAbandonmentRate.toFixed(2)}%</p>
+        <div className="glass-card">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-yellow-500/20 rounded-lg mr-3">
+                <ShoppingCart size={20} className="text-yellow-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white">Cart Abandonment</h3>
+          </div>
+          <p className="text-4xl font-bold text-white">{analytics?.cartAbandonmentRate.toFixed(1)}%</p>
+          <p className="text-sm text-neutral-400 mt-2">Rate of items added to cart but not purchased.</p>
         </div>
       </div>
     </motion.div>

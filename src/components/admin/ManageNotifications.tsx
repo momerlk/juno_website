@@ -42,13 +42,15 @@ const ManageNotifications: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.4 }}
-      className="bg-background rounded-lg p-6 mt-6"
+      className="glass-panel p-6 mt-6 max-w-2xl mx-auto"
     >
-      <div className="flex items-center mb-4">
-        <Bell size={22} className="text-primary mr-3" />
+      <div className="flex items-center mb-6 border-b border-white/10 pb-4">
+        <div className="p-3 bg-primary/20 rounded-xl mr-4">
+            <Bell size={24} className="text-primary" />
+        </div>
         <h2 className="text-xl font-semibold text-white">Broadcast Notifications</h2>
       </div>
-      <form onSubmit={handleSendBroadcast} className="space-y-4">
+      <form onSubmit={handleSendBroadcast} className="space-y-6">
         <FormInput
           id="notification-title"
           label="Notification Title"
@@ -67,19 +69,19 @@ const ManageNotifications: React.FC = () => {
             onChange={(e) => setBody(e.target.value)}
             placeholder="Describe the notification..."
             required
-            className="w-full px-3 py-2 bg-background-light border border-neutral-700 rounded-md text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="glass-input w-full min-h-[120px]"
             rows={4}
           />
         </div>
         
-        {error && <p className="text-sm text-red-500">{error}</p>}
-        {success && <p className="text-sm text-green-500">{success}</p>}
+        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">{error}</div>}
+        {success && <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">{success}</div>}
 
         <div className="text-right">
           <button
             type="submit"
             disabled={isLoading}
-            className="inline-flex items-center justify-center px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+            className="glass-button bg-primary text-white hover:bg-primary-dark shadow-glow-primary border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send size={18} className="mr-2" />
             {isLoading ? 'Sending...' : 'Send Broadcast'}
