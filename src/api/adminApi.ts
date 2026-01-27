@@ -11,7 +11,7 @@ const api_urls = {
 /**
  * The base URL for all API requests.
  */
-export const api_url = api_urls.testing;
+export const api_url = api_urls.production;
 
 export function setState(data: any) {
   if (data && data.token) {
