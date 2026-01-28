@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Truck, ArrowRight, ChevronDown, ChevronUp, XCircle, Download, MoreVertical, Package, Calendar, User, DollarSign, MapPin, CreditCard, ShoppingBag, Info, CheckCircle2 } from 'lucide-react';
+import { Truck, ChevronDown, XCircle, Download, MoreVertical, Package, Calendar, User, DollarSign, MapPin, CreditCard, ShoppingBag, Info, CheckCircle2 } from 'lucide-react';
 import { Order, OrderStatus } from '../../constants/orders';
 import { Product } from '../../constants/types';
 
@@ -171,20 +171,46 @@ const OrderCard: React.FC<{
                             <div className="grid grid-cols-1 gap-3">
                             {order.order_items?.map((item) => {
                                 const product = productDetails[item.product_id];
+                                // Ensure strict string comparison for IDs to handle potential type mismatches
+                                const variant = product?.variants?.find(v => String(v.id) === String(item.variant_id));
+                                
                                 return (
-                                <div key={item.id} className="flex items-center bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
-                                    {loadingProducts.has(item.product_id) ? <div className="w-16 h-16 rounded-xl bg-white/10 animate-pulse mr-4"/> : <img src={product?.images[0]} alt={product?.title} className="w-16 h-16 rounded-xl object-cover mr-4 shadow-lg group-hover:scale-105 transition-transform" />}
-                                    <div className="flex-grow">
-                                        <p className="text-sm font-bold text-white mb-1">{product?.title || 'Loading...'}</p>
-                                        <div className="flex flex-wrap items-center text-xs text-neutral-400 gap-3">
-                                            {item.size && <span className="bg-white/10 px-2 py-0.5 rounded text-white border border-white/5">Size: {item.size}</span>}
-                                            {item.color && <span className="bg-white/10 px-2 py-0.5 rounded text-white border border-white/5">Color: {item.color}</span>}
+                                <div key={item.id} className="flex items-start bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
+                                    {loadingProducts.has(item.product_id) ? <div className="w-16 h-16 rounded-xl bg-white/10 animate-pulse mr-4 flex-shrink-0"/> : <img src={product?.images[0]} alt={product?.title} className="w-16 h-16 rounded-xl object-cover mr-4 shadow-lg group-hover:scale-105 transition-transform flex-shrink-0" />}
+                                    <div className="flex-grow min-w-0">
+                                        <p className="text-sm font-bold text-white mb-1 truncate">{product?.title || 'Loading...'}</p>
+                                        
+                                        {/* Variant Title */}
+                                        {variant?.title && (
+                                            <p className="text-xs text-primary mb-1.5 font-medium">{variant.title}</p>
+                                        )}
+
+                                        <div className="flex flex-wrap items-center text-xs text-neutral-400 gap-2 mb-2">
+                                            {item.size && <span className="bg-white/10 px-2 py-0.5 rounded text-white border border-white/5 font-medium">Size: {item.size}</span>}
+                                            {item.color && <span className="bg-white/10 px-2 py-0.5 rounded text-white border border-white/5 font-medium">Color: {item.color}</span>}
                                             <span className="bg-white/5 px-2 py-0.5 rounded">Qty: {item.quantity}</span>
-                                            <span className="bg-white/5 px-2 py-0.5 rounded">Price: Rs. {item.unit_price}</span>
+                                        </div>
+                                        
+                                        <div className="flex flex-wrap items-center text-[10px] text-neutral-500 gap-x-4 gap-y-1 uppercase tracking-wider font-mono">
+                                            {/* Item/Variant SKU - Prioritize Variant SKU */}
+                                            {(variant?.sku || item.sku) && (
+                                                <div className="flex items-center gap-1">
+                                                    <span>SKU:</span>
+                                                    <span className="text-neutral-300 font-bold">{variant?.sku || item.sku}</span>
+                                                </div>
+                                            )}
+                                            {/* Product SKU */}
+                                            {product?.inventory?.sku && (
+                                                <div className="flex items-center gap-1">
+                                                    <span>Master SKU:</span>
+                                                    <span className="text-neutral-300 font-bold">{product.inventory.sku}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right ml-4 flex-shrink-0">
                                         <p className="text-sm font-bold text-white">Rs. {item.total_price.toLocaleString()}</p>
+                                        <p className="text-xs text-neutral-500 mt-1">@{item.unit_price.toLocaleString()}</p>
                                     </div>
                                 </div>
                                 )
