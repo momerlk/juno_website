@@ -7,7 +7,7 @@ const DownloadRedirect: React.FC = () => {
   const [countdown, setCountdown] = useState(5);
 
   const iosUrl = "https://apps.apple.com/pk/app/juno-swipe-to-shop/id6751541492";
-  const androidUrl = "https://storage.googleapis.com/juno_storage/downloads/juno_1.0.8.apk";
+  const androidUrl = "https://storage.googleapis.com/juno_storage/downloads/juno_1.1.0.apk";
   const whatsappUrl = "https://wa.me/923158972405";
 
   useEffect(() => {
