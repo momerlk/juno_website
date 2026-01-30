@@ -66,6 +66,30 @@ export const submitChapterApplication = async (formData: any) => {
 
 // --- New Ambassador Endpoints ---
 
+export const loginAmbassador = async (phoneNumber: string) => {
+  console.log(`[API REQUEST] POST ${API_BASE_URL}/ambassador/login`, { phoneNumber });
+  const response = await fetch(`${API_BASE_URL}/ambassador/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ phone_number: phoneNumber }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Login Failed' }));
+    throw new Error(errorData.message || 'Login Failed');
+  }
+
+  const data = await response.json();
+  console.log(`[API RESPONSE] Login success`, data);
+  return data;
+};
+
+export const getAmbassadorDashboard = async () => {
+  return requestWithAuth('/ambassador/dashboard');
+};
+
 export const getInstituteRanking = async () => {
   const url = '/ambassador/ranking';
   console.log(`[API REQUEST] GET ${API_BASE_URL}${url}`);
@@ -101,5 +125,9 @@ export const getMyTeam = async () => {
 
 export const getAmbassadorTasks = async () => {
   return requestWithAuth('/ambassador/tasks');
+};
+
+export const getInstituteUsers = async () => {
+  return requestWithAuth('/ambassador/users');
 };
 

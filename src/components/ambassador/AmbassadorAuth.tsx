@@ -3,20 +3,29 @@ import { useAmbassadorAuth } from '../../contexts/AmbassadorAuthContext';
 import { motion } from 'framer-motion';
 import { Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import FormInput from '../seller/FormInput';
 
 const AmbassadorAuth: React.FC = () => {
   const navigate = useNavigate();
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const { login } = useAmbassadorAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phoneNumber) {
+      setIsSubmitting(true);
+      setErrorMsg('');
       // Ensure we're sending the full international format
       const fullNumber = `+92${phoneNumber.replace(/^0+/, '')}`;
-      login(fullNumber);
-      navigate('/ambassador/dashboard');
+      try {
+        await login(fullNumber);
+        navigate('/ambassador/dashboard');
+      } catch (err: any) {
+        console.error("Login Error:", err);
+        setErrorMsg("Login failed. Please check your number and try again.");
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -37,6 +46,11 @@ const AmbassadorAuth: React.FC = () => {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {errorMsg && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-500 px-4 py-3 rounded-xl text-sm text-center">
+              {errorMsg}
+            </div>
+          )}
           <div className="space-y-1">
             <label htmlFor="phone" className="block text-sm font-medium text-neutral-400">
               Phone Number
@@ -48,7 +62,8 @@ const AmbassadorAuth: React.FC = () => {
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
                 required
-                className="glass-input w-full pl-24 py-3 text-white relative z-0"
+                disabled={isSubmitting}
+                className="glass-input w-full pl-24 py-3 text-white relative z-0 disabled:opacity-50"
                 placeholder="3001234567"
               />
               <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2 text-white pointer-events-none border-r border-white/20 pr-2 z-10">
@@ -61,9 +76,10 @@ const AmbassadorAuth: React.FC = () => {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg shadow-primary/20 transition-all active:scale-95"
+              disabled={isSubmitting}
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg shadow-primary/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Continue to Dashboard
+              {isSubmitting ? 'Logging in...' : 'Continue to Dashboard'}
             </button>
           </div>
         </form>

@@ -1,13 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAmbassadorAuth } from '../../contexts/AmbassadorAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Users, LogOut, Trophy, Crown, 
-    List, Building, BarChart2, Calendar, DollarSign, User
+    List, Building, BarChart2, Calendar, DollarSign, User, Target
 } from 'lucide-react';
-import { getInstituteRanking, getMyTeam, getAmbassadorTasks, getAmbassadorData } from '../../api/chapterApi';
+import { getInstituteRanking, getMyTeam, getAmbassadorTasks, getInstituteUsers, getAmbassadorDashboard } from '../../api/chapterApi';
 
 // --- Types ---
+
+interface InstituteUser {
+    id: string;
+    name: string;
+    avatar: string;
+    phone_number: string;
+    verification_status: string;
+    age: number;
+    swipe_count: number;
+    registered_at: string;
+}
 
 interface Task {
     id: string;
@@ -65,13 +76,14 @@ const AmbassadorDashboard: React.FC = () => {
   const { ambassador, logout } = useAmbassadorAuth();
   
   // State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'team' | 'rankings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'team' | 'rankings' | 'users'>('dashboard');
   
   // Data
   const [profile, setProfile] = useState<AmbassadorProfile | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [rankings, setRankings] = useState<Ranking[]>([]);
+  const [instituteUsers, setInstituteUsers] = useState<InstituteUser[]>([]);
   
   // Loaders
   const [isLoading, setIsLoading] = useState(true);
@@ -79,25 +91,32 @@ const AmbassadorDashboard: React.FC = () => {
   // --- Initial Fetch ---
   useEffect(() => {
     const getData = async () => {
-      if (ambassador?.phoneNumber) {
+      // If we are authenticated (ambassador exists), fetch data
+      if (ambassador) {
         setIsLoading(true);
-        console.log(`[Dashboard] Fetching initial data for ambassador: ${ambassador.phoneNumber}`);
+        console.log(`[Dashboard] Fetching initial data...`);
         try {
-            const [profileData, rankingsData] = await Promise.all([
-                getAmbassadorData(ambassador.phoneNumber),
-                getInstituteRanking()
+            const [dashboardData, rankingsData, usersData] = await Promise.all([
+                getAmbassadorDashboard(),
+                getInstituteRanking(),
+                getInstituteUsers()
             ]);
-            console.log(`[Dashboard] Profile data received:`, profileData);
-            console.log(`[Dashboard] Rankings received:`, rankingsData);
-            setProfile(profileData);
+            console.log(`[Dashboard] Dashboard data received:`, dashboardData);
+            
+            if (dashboardData.ambassador) {
+                setProfile(dashboardData.ambassador);
+            }
+            if (dashboardData.team_mates && Array.isArray(dashboardData.team_mates)) {
+                setTeam(dashboardData.team_mates);
+            }
+
             setRankings(Array.isArray(rankingsData) ? rankingsData : []);
+            setInstituteUsers(Array.isArray(usersData) ? usersData : []);
         } catch (e) {
             console.error("[Dashboard] Error fetching initial data:", e);
         } finally {
             setIsLoading(false);
         }
-      } else {
-          console.warn("[Dashboard] No phone number available for ambassador.");
       }
     };
     getData();
@@ -121,6 +140,10 @@ const AmbassadorDashboard: React.FC = () => {
                  const res = await getInstituteRanking();
                  console.log(`[Dashboard] Rankings received:`, res);
                  setRankings(Array.isArray(res) ? res : []);
+              } else if (activeTab === 'users') {
+                 const res = await getInstituteUsers();
+                 console.log(`[Dashboard] Institute users received:`, res);
+                 setInstituteUsers(Array.isArray(res) ? res : []);
               }
           } catch (error) {
               console.error(`[Dashboard] Failed to fetch ${activeTab} data`, error);
@@ -130,14 +153,30 @@ const AmbassadorDashboard: React.FC = () => {
   }, [activeTab, ambassador]);
 
 
-  const formatAmbassadorName = (identifier: string) => {
-    if (!identifier) return 'Ambassador';
-    if (identifier.includes('@')) {
-        const name = identifier.split('@')[0];
-        return name.charAt(0).toUpperCase() + name.slice(1);
-    }
-    return identifier; 
+  const formatAmbassadorName = (name: string) => {
+    return name || 'Ambassador';
   };
+
+  const weeklySignups = useMemo(() => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const day = startOfWeek.getDay(); // 0 (Sun) to 6 (Sat)
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    return instituteUsers.filter(user => {
+      const regDate = new Date(user.registered_at);
+      return regDate >= startOfWeek;
+    }).length;
+  }, [instituteUsers]);
+
+  const weeklyTarget = useMemo(() => {
+    // Target is proportional to team size.
+    // Base target per member is 4 signups/week.
+    // Total Size = Team Members (from API) + 1 (Current Ambassador)
+    return (team.length + 1) * 4;
+  }, [team]);
 
   // --- Render Sections ---
 
@@ -147,7 +186,7 @@ const AmbassadorDashboard: React.FC = () => {
               <div className="text-center py-20 bg-neutral-900/50 rounded-2xl border border-neutral-800">
                   <User size={48} className="mx-auto text-neutral-600 mb-4" />
                   <h3 className="text-xl font-bold text-white">Profile Not Found</h3>
-                  <p className="text-neutral-400 mt-2">Could not load ambassador details for {ambassador?.phoneNumber}.</p>
+                  <p className="text-neutral-400 mt-2">Could not load ambassador details.</p>
               </div>
           );
       }
@@ -162,22 +201,36 @@ const AmbassadorDashboard: React.FC = () => {
                     <h3 className="text-2xl font-bold mb-1">{profile.name}</h3>
                     <p className="text-white/80 font-medium">{profile.institute}</p>
                     <div className="mt-4 inline-block bg-black/20 backdrop-blur-md px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                        {profile.year} Year
+                        {profile.year || 'Student'}
                     </div>
                 </motion.div>
 
                 <div className="grid grid-cols-1 gap-4">
                     <StatCard 
+                        icon={<Users size={28} className="text-black"/>}
+                        title="Institute Signups"
+                        value={instituteUsers.length}
+                        subtitle="Total Users"
+                        colorClass="from-blue-400 to-indigo-500"
+                    />
+                    <StatCard 
+                        icon={<Target size={28} className="text-black"/>}
+                        title="Weekly Target"
+                        value={`${weeklySignups}/${weeklyTarget}`}
+                        subtitle={weeklySignups >= weeklyTarget ? "Target Met! 🎉" : `${weeklyTarget - weeklySignups} more to go`}
+                        colorClass={weeklySignups >= weeklyTarget ? "from-green-400 to-emerald-500" : "from-orange-400 to-red-500"}
+                    />
+                    <StatCard 
                         icon={<Trophy size={28} className="text-black"/>}
                         title="Roles"
-                        value={profile.role.split(',').length}
+                        value={profile.role ? profile.role.split(',').length : 1}
                         subtitle="Active Roles"
                         colorClass="from-yellow-400 to-amber-500"
                     />
                     <StatCard 
                         icon={<DollarSign size={28} className="text-black"/>}
                         title="Commitment"
-                        value={`${profile.commitment_hours} hrs`}
+                        value={`${profile.commitment_hours || 0} hrs`}
                         subtitle="Weekly"
                         colorClass="from-green-400 to-emerald-500"
                     />
@@ -196,11 +249,11 @@ const AmbassadorDashboard: React.FC = () => {
                             <div>
                                 <label className="text-xs text-neutral-500 uppercase tracking-wider font-bold">Roles</label>
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                    {profile.role.split(',').map((r, i) => (
+                                    {profile.role ? profile.role.split(',').map((r, i) => (
                                         <span key={i} className="bg-primary/10 text-primary px-3 py-1 rounded-lg text-xs font-bold border border-primary/20">
                                             {r.trim()}
                                         </span>
-                                    ))}
+                                    )) : <span className="text-white text-sm">Ambassador</span>}
                                 </div>
                             </div>
                             <div>
@@ -218,7 +271,7 @@ const AmbassadorDashboard: React.FC = () => {
                                             <span className="text-white">{profile.tech_interest}/10</span>
                                         </div>
                                         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                            <div className="h-full bg-blue-500" style={{ width: `${profile.tech_interest * 10}%` }}></div>
+                                            <div className="h-full bg-blue-500" style={{ width: `${(profile.tech_interest || 0) * 10}%` }}></div>
                                         </div>
                                     </div>
                                     <div>
@@ -227,12 +280,36 @@ const AmbassadorDashboard: React.FC = () => {
                                             <span className="text-white">{profile.fashion_interest}/10</span>
                                         </div>
                                         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                            <div className="h-full bg-pink-500" style={{ width: `${profile.fashion_interest * 10}%` }}></div>
+                                            <div className="h-full bg-pink-500" style={{ width: `${(profile.fashion_interest || 0) * 10}%` }}></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </motion.div>
+
+                {/* Signups Summary */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="bg-neutral-900/50 p-8 rounded-2xl border border-neutral-800">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="flex items-center text-xl font-bold text-white">
+                            <Users size={24} className="mr-3 text-blue-400" />
+                            Recent Institute Signups
+                        </h2>
+                        <button onClick={() => setActiveTab('users')} className="text-primary text-sm font-bold hover:underline">View All</button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {instituteUsers.slice(0, 4).map((user) => (
+                            <div key={user.id} className="flex items-center gap-4 p-4 bg-black/20 rounded-xl border border-white/5">
+                                <img src={user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.name} alt="" className="w-12 h-12 rounded-full border border-white/10" />
+                                <div className="min-w-0">
+                                    <p className="text-white font-bold truncate">{user.name}</p>
+                                    <p className="text-xs text-neutral-500">{user.swipe_count} Swipes • {user.verification_status}</p>
+                                </div>
+                            </div>
+                        ))}
+                        {instituteUsers.length === 0 && <p className="text-neutral-500 text-center py-4 col-span-2">No signups yet from your institute.</p>}
                     </div>
                 </motion.div>
 
@@ -405,6 +482,70 @@ const AmbassadorDashboard: React.FC = () => {
       </div>
   );
 
+  const renderUsers = () => (
+      <div className="bg-neutral-900/50 p-6 rounded-2xl border border-neutral-800">
+          <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <Users size={24} className="text-blue-400" /> Institute Signups
+              </h2>
+              <span className="bg-white/5 text-neutral-400 px-3 py-1 rounded-lg text-sm">
+                  {instituteUsers.length} Registered
+              </span>
+          </div>
+          
+          <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                  <thead>
+                      <tr className="border-b border-white/10 text-neutral-400 text-sm uppercase tracking-wider">
+                          <th className="p-4">User</th>
+                          <th className="p-4 text-center">Age</th>
+                          <th className="p-4 text-center">Status</th>
+                          <th className="p-4 text-center">Engagement</th>
+                          <th className="p-4 text-right">Joined</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {instituteUsers.map((user, i) => (
+                          <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                              <td className="p-4">
+                                  <div className="flex items-center gap-3">
+                                      <img src={user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.name} alt="" className="w-10 h-10 rounded-full border border-white/10" />
+                                      <div>
+                                          <p className="text-white font-bold">{user.name}</p>
+                                          <p className="text-xs text-neutral-500 font-mono">{user.phone_number}</p>
+                                      </div>
+                                  </div>
+                              </td>
+                              <td className="p-4 text-center text-neutral-300">{user.age || 'N/A'}</td>
+                              <td className="p-4 text-center">
+                                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${user.verification_status === 'verified' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
+                                      {user.verification_status}
+                                  </span>
+                              </td>
+                              <td className="p-4 text-center">
+                                  <div className="flex flex-col items-center">
+                                      <span className="text-primary font-bold">{user.swipe_count}</span>
+                                      <span className="text-[10px] text-neutral-500 uppercase">Swipes</span>
+                                  </div>
+                              </td>
+                              <td className="p-4 text-right text-xs text-neutral-500">
+                                  {new Date(user.registered_at).toLocaleDateString()}
+                              </td>
+                          </tr>
+                      ))}
+                      {instituteUsers.length === 0 && (
+                          <tr>
+                              <td colSpan={5} className="text-center py-12 text-neutral-500">
+                                  No users registered from your institute yet.
+                              </td>
+                          </tr>
+                      )}
+                  </tbody>
+              </table>
+          </div>
+      </div>
+  );
+
   return (
     <div className="min-h-screen bg-background-dark text-white">
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -412,7 +553,7 @@ const AmbassadorDashboard: React.FC = () => {
                 <div>
                     <h1 className="text-3xl font-black uppercase tracking-tight text-white">Ambassador Portal</h1>
                     <p className="text-neutral-400 mt-1">
-                        Welcome, <span className="text-primary font-bold">{formatAmbassadorName(ambassador?.phoneNumber || '')}</span>
+                        Welcome, <span className="text-primary font-bold">{formatAmbassadorName(ambassador?.name || '')}</span>
                     </p>
                 </div>
                 <button
@@ -426,15 +567,16 @@ const AmbassadorDashboard: React.FC = () => {
 
             {/* Navigation Tabs */}
             <div className="flex overflow-x-auto pb-4 mb-6 gap-2 no-scrollbar">
-                {[
+                {([
                     { id: 'dashboard', label: 'Dashboard', icon: BarChart2 },
                     { id: 'tasks', label: 'Tasks', icon: List },
+                    { id: 'users', label: 'Signups', icon: Users },
                     { id: 'team', label: 'My Team', icon: Users },
                     { id: 'rankings', label: 'Rankings', icon: Trophy },
-                ].map(tab => (
+                ] as const).map(tab => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
+                        onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${
                             activeTab === tab.id 
                             ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105' 
@@ -465,6 +607,7 @@ const AmbassadorDashboard: React.FC = () => {
                             {activeTab === 'tasks' && renderTasks()}
                             {activeTab === 'team' && renderTeam()}
                             {activeTab === 'rankings' && renderRankings()}
+                            {activeTab === 'users' && renderUsers()}
                         </motion.div>
                     </AnimatePresence>
                 )}
