@@ -1,6 +1,7 @@
 // src/api/chapterApi.ts
 // --- API Configuration ---
 import { API_BASE_URL } from "./core";
+import { createEvent } from "../api";
 
 /**
  * The base URL for all API requests.
@@ -65,6 +66,18 @@ export const submitChapterApplication = async (formData: any) => {
 };
 
 // --- New Ambassador Endpoints ---
+
+export const trackDownloadVisit = async (ip: string, os: string) => {
+  try {
+    await createEvent('download_page_visit', {
+      url: window.location.href,
+      ip,
+      os
+    });
+  } catch (error) {
+    console.error('Failed to track download visit:', error);
+  }
+};
 
 export const loginAmbassador = async (phoneNumber: string) => {
   console.log(`[API REQUEST] POST ${API_BASE_URL}/ambassador/login`, { phoneNumber });

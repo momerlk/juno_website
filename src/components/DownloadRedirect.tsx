@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Download, Smartphone, Apple } from 'lucide-react';
+import { Smartphone, Apple } from 'lucide-react';
+import { trackDownloadVisit } from '../api/chapterApi';
 
 const DownloadRedirect: React.FC = () => {
   const [os, setOs] = useState<'android' | 'ios' | 'other'>('other');
@@ -11,12 +12,36 @@ const DownloadRedirect: React.FC = () => {
   const whatsappUrl = "https://wa.me/923158972405";
 
   useEffect(() => {
-    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const trackVisit = async () => {
+      const hasVisited = localStorage.getItem('hasVisitedDownloadPage');
+      if (!hasVisited) {
+        try {
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          if (!ipResponse.ok) return;
+          const ipData = await ipResponse.json();
+          
+          const userAgent = navigator.userAgent || navigator.vendor;
+          let currentOs = 'other';
+          if (/android/i.test(userAgent)) currentOs = 'android';
+          else if (/iPad|iPhone|iPod/.test(userAgent)) currentOs = 'ios';
+
+          await trackDownloadVisit(ipData.ip, currentOs);
+          localStorage.setItem('hasVisitedDownloadPage', 'true');
+        } catch (e) {
+          console.error("Tracking error:", e);
+        }
+      }
+    };
+    trackVisit();
+  }, []);
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent || navigator.vendor;
     let targetOs: 'android' | 'ios' | 'other' = 'other';
 
     if (/android/i.test(userAgent)) {
       targetOs = 'android';
-    } else if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+    } else if (/iPad|iPhone|iPod/.test(userAgent)) {
       targetOs = 'ios';
     }
 
