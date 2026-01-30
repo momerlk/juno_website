@@ -1,17 +1,11 @@
 import { Order } from "../constants/orders";
 import { Product } from "../constants/types";
-
-// --- API Configuration ---
-const api_urls = {
-    testing: "http://localhost:8080/api/v1",
-    production: "https://junoapi-1095577467512.asia-south2.run.app/api/v1",
-
-};
+import { API_BASE_URL } from "./core";
 
 /**
  * The base URL for all API requests.
  */
-export const api_url = api_urls.production;
+export const api_url = API_BASE_URL;
 
 export function setState(data: any) {
   if (data && data.token) {
@@ -244,3 +238,5 @@ export const broadcastNotification = (title: string, body: string, data?: object
     }
   });
 };
+
+export const createAmbassadorTask = (data: any) => requestWithBody('/admin/ambassador/tasks', 'POST', data);

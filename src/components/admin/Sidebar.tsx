@@ -21,6 +21,7 @@ export const navigation = [
   { name: 'Notifications', href: '/admin/notifications', icon: Bell },
   { name: 'Chapter Forms', href: '/admin/chapter-forms', icon: FileText },
   { name: 'System', href: '/admin/system', icon: Settings },
+  { name: 'Ambassador Tasks', href: '/admin/ambassador-tasks', icon: FileText },
   { name: 'API Status', href: '/admin/api-status', icon: Server },
 ];
 

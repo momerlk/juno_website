@@ -1,6 +1,11 @@
 // src/api/workApi.ts
 
-const API_BASE = "https://junoapi-1095577467512.asia-south2.run.app/api/v1";
+import { API_BASE_URL } from "./core";
+
+/**
+ * The base URL for all API requests.
+ */
+export const API_BASE = API_BASE_URL;
 
 export const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('work_token');

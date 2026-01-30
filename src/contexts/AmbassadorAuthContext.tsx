@@ -2,26 +2,16 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const API_BASE_URL = 'https://junoapi-1095577467512.asia-south2.run.app/api/v1';
 
-interface InviteData {
-  owner: string;
-  code: string;
-  signups: number;
-  users : string[];
-}
-
 interface Ambassador {
-  email: string;
+  phoneNumber: string;
 }
 
 interface AmbassadorAuthContextType {
   isAuthenticated: boolean;
   ambassador: Ambassador | null;
   isLoading: boolean;
-  login: (email: string) => void;
+  login: (phoneNumber: string) => void;
   logout: () => void;
-  fetchInviteData: () => Promise<Array<InviteData> | null>;
-  fetchAllInvites: () => Promise<Array<InviteData> | null>;
-  generateInviteCode: () => Promise<InviteData | null>;
 }
 
 const AmbassadorAuthContext = createContext<AmbassadorAuthContextType | undefined>(undefined);
@@ -31,72 +21,21 @@ export const AmbassadorAuthProvider: React.FC<{ children: React.ReactNode }> = (
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem('ambassador_email');
-    if (storedEmail) {
-      setAmbassador({ email: storedEmail });
+    const storedPhone = localStorage.getItem('ambassador_phone');
+    if (storedPhone) {
+      setAmbassador({ phoneNumber: storedPhone });
     }
     setIsLoading(false);
   }, []);
 
-  const login = (email: string) => {
-    localStorage.setItem('ambassador_email', email);
-    setAmbassador({ email });
+  const login = (phoneNumber: string) => {
+    localStorage.setItem('ambassador_phone', phoneNumber);
+    setAmbassador({ phoneNumber });
   };
 
   const logout = () => {
-    localStorage.removeItem('ambassador_email');
+    localStorage.removeItem('ambassador_phone');
     setAmbassador(null);
-  };
-
-  const fetchInviteData = async (): Promise<Array<InviteData> | null> => {
-    if (!ambassador) return null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/invites/by-owner?owner=${encodeURIComponent(ambassador.email)}`);
-      if (response.ok) {
-        return await response.json();
-      }
-      if (response.status === 404) {
-        return null; // No code exists yet
-      }
-      throw new Error('Failed to fetch invite data');
-    } catch (error) {
-      console.error(error);
-      return null;
-    }
-  };
-
-
-  const fetchAllInvites = async (): Promise<Array<InviteData> | null> => {
-    if (!ambassador) return null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/invites/all`);
-      if (response.ok) {
-        return await response.json();
-      }
-      if (response.status === 404) {
-        return null; // No code exists yet
-      }
-      throw new Error('Failed to fetch invite data');
-    } catch (error) {
-      console.error(error);
-      return null;
-    }
-  };
-
-  const generateInviteCode = async (): Promise<InviteData | null> => {
-    if (!ambassador) return null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/invites/generate?owner=${encodeURIComponent(ambassador.email)}`, {
-        method: 'POST',
-      });
-      if (response.ok) {
-        return await response.json();
-      }
-      throw new Error('Failed to generate invite code');
-    } catch (error) {
-      console.error(error);
-      return null;
-    }
   };
 
   return (
@@ -106,9 +45,6 @@ export const AmbassadorAuthProvider: React.FC<{ children: React.ReactNode }> = (
       isLoading,
       login,
       logout,
-      fetchInviteData,
-      fetchAllInvites,
-      generateInviteCode
     }}>
       {children}
     </AmbassadorAuthContext.Provider>

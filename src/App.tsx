@@ -45,6 +45,7 @@ import ChapterForms from './components/admin/ChapterForms';
 import ManageProducts from './components/admin/ManageProducts';
 import SystemTools from './components/admin/SystemTools';
 import SalesFunnel from './components/admin/SalesFunnel';
+import AmbassadorTasks from './components/admin/AmbassadorTasks';
 
 
 import AmbassadorAuth from "./components/ambassador/AmbassadorAuth";
@@ -151,6 +152,7 @@ function App() {
                     <Route path="system" element={<SystemTools />} />
                     <Route path="api-status" element={<ApiStatus />} />
                     <Route path="chapter-forms" element={<ChapterForms />} />
+                    <Route path="ambassador-tasks" element={<AmbassadorTasks />} />
                   </Route>
                   <Route path="/admin/login" element={<AdminAuth />} />
 
