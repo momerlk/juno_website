@@ -3,11 +3,23 @@ import { useAmbassadorAuth } from '../../contexts/AmbassadorAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Users, LogOut, Trophy, Crown, 
-    List, Building, BarChart2, Calendar, DollarSign, User, Target
+    List, Building, BarChart2, Calendar, DollarSign, User, Target, FileText, Upload, Plus, CheckCircle, Clock
 } from 'lucide-react';
-import { getInstituteRanking, getMyTeam, getAmbassadorTasks, getInstituteUsers, getAmbassadorDashboard } from '../../api/chapterApi';
+import { 
+    getInstituteRanking, getMyTeam, getAmbassadorTasks, getInstituteUsers, getAmbassadorDashboard,
+    submitWeeklyReport, getAmbassadorReports
+} from '../../api/chapterApi';
 
 // --- Types ---
+
+interface WeeklyReport {
+    id: string;
+    week_number: number;
+    tasks_summary: string;
+    proof_files: string[];
+    created_at: string;
+    status: string;
+}
 
 interface InstituteUser {
     id: string;

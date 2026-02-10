@@ -4,7 +4,7 @@ export const api_urls = {
     recsystem : "https://junorecsys-710509977105.asia-south2.run.app/api/v1",
 };
 
-export const API_BASE_URL = api_urls.production;
+export const API_BASE_URL = api_urls.testing;
 
 export interface APIResponse<T> {
     status: number;

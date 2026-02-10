@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Search, ExternalLink, User, Building, Clock, Heart, Star, X, RefreshCw } from 'lucide-react';
+import { FileText, Search, ExternalLink, User, Building, Clock, Heart, Star, X, RefreshCw, Crown, Instagram } from 'lucide-react';
 import { getChapterForms } from '../../api/adminApi';
 
 const ChapterForms: React.FC = () => {
@@ -41,6 +41,8 @@ const ChapterForms: React.FC = () => {
       (f.name || '').toLowerCase().includes(s) ||
       (f.institute || '').toLowerCase().includes(s) ||
       (f.role || '').toLowerCase().includes(s) ||
+      (f.secondary_role || '').toLowerCase().includes(s) ||
+      (f.instagram_handle || '').toLowerCase().includes(s) ||
       (f.phone || '').toLowerCase().includes(s)
     );
   }, [forms, searchTerm]);
@@ -75,7 +77,7 @@ const ChapterForms: React.FC = () => {
             />
             <input
               type="text"
-              placeholder="Search by name, institute..."
+              placeholder="Search by name, institute, role..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="glass-input w-full pl-12 py-3 text-sm text-white"
@@ -114,8 +116,7 @@ const ChapterForms: React.FC = () => {
               <tr className="bg-white/5 text-neutral-400 text-xs uppercase tracking-wider font-semibold">
                 <th className="p-8">Candidate</th>
                 <th className="p-8">Institution</th>
-                <th className="p-8">Roles</th>
-                <th className="p-8">Interests</th>
+                <th className="p-8">Role</th>
                 <th className="p-8 w-48">Commitment</th>
                 <th className="p-8 w-40 text-center">Actions</th>
               </tr>
@@ -128,11 +129,26 @@ const ChapterForms: React.FC = () => {
                 >
                   <td className="p-8">
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-white font-black text-lg group-hover:text-primary">
-                        {form.name || 'N/A'}
-                      </span>
-                      <span className="text-xs text-neutral-400 font-bold">
-                        {form.gender} • {form.phone}
+                      <div className="flex items-center gap-2">
+                          <span className="text-white font-black text-lg group-hover:text-primary transition-colors">
+                            {form.name || 'N/A'}
+                          </span>
+                          {form.apply_chapter_head && (
+                              <div className="bg-yellow-500/20 p-1 rounded-full border border-yellow-500/50" title="Applied for Chapter Head">
+                                  <Crown size={14} className="text-yellow-500" />
+                              </div>
+                          )}
+                      </div>
+                      <span className="text-xs text-neutral-400 font-bold flex items-center gap-2">
+                        {form.phone}
+                        {form.instagram_handle && (
+                            <>
+                                <span>•</span>
+                                <span className="flex items-center gap-1 text-pink-400">
+                                    <Instagram size={10} /> {form.instagram_handle}
+                                </span>
+                            </>
+                        )}
                       </span>
                     </div>
                   </td>
@@ -142,34 +158,25 @@ const ChapterForms: React.FC = () => {
                       <span className="text-white font-medium">
                         {form.institute || 'N/A'}
                       </span>
-                      <span className="text-base text-neutral-500 font-black uppercase tracking-widest">
-                        {form.year} Year
-                      </span>
+                      <div className="flex items-center gap-2">
+                          <span className="text-base text-neutral-500 font-black uppercase tracking-widest">
+                            {form.year} Year
+                          </span>
+                          {form.cohort && (
+                              <span className="text-xs bg-white/10 px-2 py-0.5 rounded text-neutral-300 border border-white/10">
+                                  {form.cohort}
+                              </span>
+                          )}
+                      </div>
                     </div>
                   </td>
 
                   <td className="p-8">
-                    <div className="flex flex-wrap gap-2.5 max-w-sm">
-                      {form.role?.split(',').map((r: string, i: number) => (
-                        <span
-                          key={i}
-                          className="bg-primary/10 text-primary px-4 py-1.5 rounded-xl text-sm font-black border border-primary/20 uppercase"
-                        >
-                          {r.trim()}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-
-                  <td className="p-8">
-                    <div className="flex flex-col gap-3 font-black text-sm">
-                      <span className="bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-xl border border-blue-500/20 w-fit">
-                        TECH: {form.tech_interest}/10
+                     <span
+                        className="bg-primary/10 text-primary px-4 py-1.5 rounded-xl text-sm font-black border border-primary/20 uppercase"
+                      >
+                        {form.secondary_role || form.role || 'N/A'}
                       </span>
-                      <span className="bg-pink-500/10 text-pink-400 px-3 py-1.5 rounded-xl border border-pink-500/20 w-fit">
-                        FASHION: {form.fashion_interest}/10
-                      </span>
-                    </div>
                   </td>
 
                   <td className="p-8 text-white font-black">
@@ -210,15 +217,79 @@ const ChapterForms: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="glass-panel w-full max-w-6xl max-h-[90vh] overflow-y-auto"
+              className="glass-panel w-full max-w-4xl max-h-[90vh] overflow-y-auto"
             >
-              <div className="sticky top-0 p-10 flex justify-between items-center">
-                <h3 className="text-4xl font-black text-white uppercase">
-                  Application Master Profile
+              <div className="sticky top-0 p-8 flex justify-between items-center bg-black/50 backdrop-blur-xl border-b border-white/10 z-10">
+                <h3 className="text-2xl font-black text-white uppercase">
+                  Application Details
                 </h3>
-                <button onClick={() => setSelectedForm(null)}>
-                  <X size={48} />
+                <button onClick={() => setSelectedForm(null)} className="text-neutral-400 hover:text-white">
+                  <X size={32} />
                 </button>
+              </div>
+              
+              <div className="p-8 space-y-8">
+                  <div className="grid grid-cols-2 gap-8">
+                      <div>
+                          <label className="block text-neutral-500 text-xs font-bold uppercase mb-1">Name</label>
+                          <p className="text-2xl font-bold text-white">{selectedForm.name}</p>
+                      </div>
+                      <div>
+                          <label className="block text-neutral-500 text-xs font-bold uppercase mb-1">Contact</label>
+                          <p className="text-xl text-white">{selectedForm.phone}</p>
+                          <p className="text-sm text-neutral-400">{selectedForm.instagram_handle}</p>
+                      </div>
+                      <div>
+                          <label className="block text-neutral-500 text-xs font-bold uppercase mb-1">Institute</label>
+                          <p className="text-xl text-white">{selectedForm.institute}</p>
+                          <p className="text-sm text-neutral-400">{selectedForm.year} Year</p>
+                      </div>
+                      <div>
+                           <label className="block text-neutral-500 text-xs font-bold uppercase mb-1">Role</label>
+                           <p className="text-xl text-primary font-bold">{selectedForm.secondary_role || selectedForm.role}</p>
+                           {selectedForm.apply_chapter_head && (
+                               <span className="inline-flex items-center gap-1 mt-2 px-3 py-1 bg-yellow-500/20 text-yellow-500 rounded-lg text-sm font-bold border border-yellow-500/30">
+                                   <Crown size={14} /> Chapter Head Applicant
+                               </span>
+                           )}
+                      </div>
+                  </div>
+
+                  {selectedForm.chapter_head_motivation && (
+                      <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                          <label className="block text-neutral-500 text-xs font-bold uppercase mb-2">Leadership Statement</label>
+                          <p className="text-neutral-300 italic">"{selectedForm.chapter_head_motivation}"</p>
+                      </div>
+                  )}
+
+                   <div className="grid grid-cols-2 gap-8">
+                      <div>
+                          <label className="block text-neutral-500 text-xs font-bold uppercase mb-1">Commitment</label>
+                          <p className="text-lg text-white">{selectedForm.commitment_hours}</p>
+                      </div>
+                      <div>
+                          <label className="block text-neutral-500 text-xs font-bold uppercase mb-1">Motivation Level</label>
+                          <div className="flex items-center gap-2">
+                              <span className="text-2xl font-bold text-white">{selectedForm.motivation}/10</span>
+                              <div className="flex">
+                                  {[...Array(selectedForm.motivation)].map((_, i) => (
+                                      <Star key={i} size={12} className="text-yellow-500 fill-yellow-500" />
+                                  ))}
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                   <div>
+                          <label className="block text-neutral-500 text-xs font-bold uppercase mb-2">Portfolio / Links</label>
+                          {selectedForm.experience_link ? (
+                              <a href={selectedForm.experience_link} target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 underline break-all">
+                                  {selectedForm.experience_link}
+                              </a>
+                          ) : (
+                              <p className="text-neutral-500">No link provided.</p>
+                          )}
+                  </div>
               </div>
             </motion.div>
           </div>

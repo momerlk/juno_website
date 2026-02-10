@@ -144,3 +144,26 @@ export const getInstituteUsers = async () => {
   return requestWithAuth('/ambassador/users');
 };
 
+export const submitWeeklyReport = async (report: { week_number: number; tasks_summary: string; proof_files: string[] }) => {
+  console.log(`[API REQUEST] POST ${API_BASE_URL}/ambassador/reports`, report);
+  const response = await fetch(`${API_BASE_URL}/ambassador/reports`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAuthToken()}`
+    },
+    body: JSON.stringify(report),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to submit report' }));
+    throw new Error(errorData.message || 'Failed to submit report');
+  }
+
+  return await response.json();
+};
+
+export const getAmbassadorReports = async () => {
+  return requestWithAuth('/ambassador/reports');
+};
+

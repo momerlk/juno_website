@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { roles } from './roles';
-import { ArrowRight, Check, User, Phone, BookOpen, Clock, Link, Send } from 'lucide-react';
+import { ArrowRight, Check, User, Phone, BookOpen, Clock, Link, Send, Shield } from 'lucide-react';
 import { api_url, createEvent } from '../../api';
 
 const ChapterFormPage = () => {
@@ -15,8 +14,11 @@ const ChapterFormPage = () => {
     year: '',
     gender: '',
     role: [] as string[],
-    tech_interest: 5,
-    fashion_interest: 5,
+    secondary_role: '',
+    instagram_handle : "",
+    apply_chapter_head: false,
+    chapter_head_motivation: '',
+    cohort: 'Cohort 2',
     commitment_hours: '',
     motivation: 5,
     experience_link: '',
@@ -72,7 +74,7 @@ const ChapterFormPage = () => {
     try {
       const submissionData = {
         ...formData,
-        role: formData.role.join(','),
+        role: formData.secondary_role,
         phone: formData.phone.startsWith('03') ? `+92${formData.phone.substring(1)}` : formData.phone
       };
 
@@ -87,8 +89,6 @@ const ChapterFormPage = () => {
         body: raw,
         redirect: "follow"
       };
-
-      
 
       const resp = await fetch(`${api_url}/chapter-forms`, requestOptions as any)
       if(resp.ok === false){
@@ -106,9 +106,9 @@ const ChapterFormPage = () => {
   const steps = [
     <IntroStep onNext={handleNext} university={university} />,
     <PersonalDetailsStep onNext={handleNext} onUpdate={handleUpdate} formData={formData} university={university} />,
-    <RoleStep onNext={handleNext} onBack={handlePrev} onUpdate={handleUpdate} formData={formData} />,
-    <InterestStep onNext={handleNext} onBack={handlePrev} onUpdate={handleUpdate} formData={formData} />,
+    <SecondaryRoleStep onNext={handleNext} onBack={handlePrev} onUpdate={handleUpdate} formData={formData} />,
     <CommitmentStep onNext={handleNext} onBack={handlePrev} onUpdate={handleUpdate} formData={formData} />,
+    <ChapterHeadStep onNext={handleNext} onBack={handlePrev} onUpdate={handleUpdate} formData={formData} />,
     <ExperienceStep onNext={handleNext} onBack={handlePrev} onUpdate={handleUpdate} formData={formData} />,
     <FinalQuestionStep onSubmit={handleSubmit} onBack={handlePrev} onUpdate={handleUpdate} isSubmitting={isSubmitting} />,
     <ThankYouStep />
@@ -136,31 +136,75 @@ const ChapterFormPage = () => {
 
 const StepWrapper = ({ children, title, subtitle }: { children: React.ReactNode, title: string, subtitle?: string }) => (
   <div className="max-w-4xl mx-auto text-center">
+    <div style={{marginTop : 80}}></div>
     <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 gradient-text">{title}</h1>
     {subtitle && <p className="text-md sm:text-lg text-neutral-400 mb-10">{subtitle}</p>}
     {children}
   </div>
 );
 
+const PartnerLogos = () => (
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.3, duration: 0.6 }}
+    className="mb-16 px-4"
+  >
+    <div className="flex flex-wrap justify-center items-center gap-8 sm:gap-10 md:gap-12 lg:gap-16">
+      {[
+        { src: '/dark_logos/hbl.png', alt: 'HBL' },
+        { src: '/dark_logos/impactx.png', alt: 'ImpactX' },
+        { src: '/dark_logos/netsol.png', alt: 'NetSol' },
+        { src: '/dark_logos/nic.png', alt: 'NIC' },
+        { src: '/dark_logos/pmyp.png', alt: 'PMYP' },
+      ].map((logo, idx) => (
+        <motion.div
+          key={idx}
+          whileHover={{ scale: 1.05 }}
+          transition={{ duration: 0.3 }}
+          className="h-12 sm:h-14 flex items-center"
+        >
+          <img 
+            src={logo.src} 
+            alt={logo.alt} 
+            className="h-full object-contain filter opacity-70 hover:opacity-100 transition-opacity duration-300"
+          />
+        </motion.div>
+      ))}
+    </div>
+  </motion.div>
+);
+
 const IntroStep = ({ onNext, university }: { onNext: () => void, university?: string }) => (
-  <StepWrapper title={university ? `Calling on all ${university} students!` : 'Calling on all university and high school students!'} subtitle="Welcome to the Juno Chapter Program. This form takes just 60 seconds to complete.">
-    <div className="text-left bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-10 space-y-6">
+  <StepWrapper title={university ? `Juno Campus Fellowship: Cohort 2 - ${university}` : 'Juno Campus Fellowship: Cohort 2'} subtitle="A prestigious opportunity to shape the future of commerce.">
+    <PartnerLogos />
+    <div className="text-left bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-10 space-y-8">
       <div>
-        <h3 className="text-xl font-bold text-primary mb-2">What is Juno?</h3>
-        <p className="text-neutral-300">Juno is a marketplace for indie fashion brands. Users can swipe on videos to shop, build closets, create outfits and get orders delivered in under 1 hour in Karachi, Lahore, Islamabad and Rawalpindi. Juno is re-imagining commerce and shopping for the next generation.</p>
+        <h3 className="text-xl font-bold text-primary mb-3">About Juno</h3>
+        <p className="text-neutral-300 leading-relaxed">
+          Juno is Pakistan's premier fashion-tech marketplace, redefining commerce for the next generation through a video-first discovery engine and rapid fulfillment network. We are seeking high-potential candidates for our selective Cohort 2 internship program.
+        </p>
       </div>
       <div>
-        <h3 className="text-xl font-bold text-primary mb-2">Incentives</h3>
-        <ul className="list-disc list-inside text-neutral-300 space-y-1">
-          <li>15% commission on all revenue you bring in for Juno</li>
-          <li>Chance to become a paid intern if you meet our KPIs</li>
-          <li>Certificate & recommendation letter</li>
-          <li>Exclusive loyalty rewards, merch, and vouchers</li>
+        <h3 className="text-xl font-bold text-primary mb-3">Program Incentives</h3>
+        <ul className="space-y-4 text-neutral-300">
+            <li className="flex items-start gap-3">
+                <Check className="text-primary mt-1 flex-shrink-0" size={18} />
+                <span><strong className="text-white">Executive Letter of Recommendation:</strong> A formal endorsement from the CEO, reserved for candidates demonstrating exceptional leadership and execution capabilities.</span>
+            </li>
+            <li className="flex items-start gap-3">
+                <Check className="text-primary mt-1 flex-shrink-0" size={18} />
+                <span><strong className="text-white">Certificate of Completion:</strong> Official certification validating tenure and skill acquisition in high-growth startup operations.</span>
+            </li>
+            <li className="flex items-start gap-3">
+                <Check className="text-primary mt-1 flex-shrink-0" size={18} />
+                <span><strong className="text-white">Performance-Based Rewards:</strong> Exclusive accolades and the prestigious Platinum Card for top-quartile performers.</span>
+            </li>
         </ul>
       </div>
     </div>
     <button onClick={onNext} className="btn btn-primary text-lg px-10 py-4 group">
-      Start Application <ArrowRight size={22} className="ml-2 transition-transform group-hover:translate-x-1" />
+      Begin Assessment <ArrowRight size={22} className="ml-2 transition-transform group-hover:translate-x-1" />
     </button>
   </StepWrapper>
 );
@@ -185,13 +229,13 @@ const PersonalDetailsStep = ({ onNext, onUpdate, formData, university }: any) =>
   };
 
   return (
-    <StepWrapper title="Personal Details" subtitle="Let's get to know you a bit.">
+    <StepWrapper title="Personal Details" subtitle="Please provide your particulars for our records.">
       <div className="space-y-6 text-left">
-        <FormInput icon={<User />} placeholder="Your Name" value={formData.name} onChange={(v) => onUpdate({ name: v })} error={errors.name} />
-        <FormInput icon={<Phone />} placeholder="Phone (e.g., 03001234567)" value={formData.phone} onChange={(v) => onUpdate({ phone: v })} error={errors.phone} />
+        <FormInput icon={<User />} placeholder="Full Name" value={formData.name} onChange={(v) => onUpdate({ name: v })} error={errors.name} />
+        <FormInput icon={<Phone />} placeholder="Phone Number (e.g., 03001234567)" value={formData.phone} onChange={(v) => onUpdate({ phone: v })} error={errors.phone} />
         <FormInput icon={<BookOpen />} placeholder="Institute Name" value={formData.institute} onChange={(v) => onUpdate({ institute: v })} error={errors.institute} disabled={!!university} />
         
-        <OptionSelector label="University/High School Year" options={['1st', '2nd', '3rd', '4th']} selected={formData.year} onSelect={(v) => onUpdate({ year: v })} error={errors.year} />
+        <OptionSelector label="Academic Year" options={['1st', '2nd', '3rd', '4th']} selected={formData.year} onSelect={(v) => onUpdate({ year: v })} error={errors.year} />
         <OptionSelector label="Gender" options={['Male', 'Female', 'Other']} selected={formData.gender} onSelect={(v) => onUpdate({ gender: v })} error={errors.gender} />
       </div>
       <div className="mt-10">
@@ -203,75 +247,13 @@ const PersonalDetailsStep = ({ onNext, onUpdate, formData, university }: any) =>
   );
 };
 
-const RoleCard = ({ role, isSelected, onSelect }: any) => (
-  <motion.div
-    layout
-    onClick={onSelect}
-    className={`p-6 rounded-2xl cursor-pointer border-2 transition-all duration-300 ${isSelected ? 'border-primary bg-primary/10' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'}`}
-  >
-    <motion.div layout="position" className="flex justify-between items-center">
-      <h3 className="font-bold text-lg text-white">{role.title}</h3>
-      {isSelected && <Check size={20} className="text-primary flex-shrink-0" />}
-    </motion.div>
-    <motion.p layout="position" className="text-sm text-neutral-400 mt-1">{role.shortDescription}</motion.p>
-  </motion.div>
-);
-
-const RoleStep = ({ onNext, onBack, onUpdate, formData }: any) => {
-  const handleSelect = (roleTitle: string) => {
-    const currentRoles = formData.role as string[];
-    const isSelected = currentRoles.includes(roleTitle);
-
-    let newRoles;
-    if (isSelected) {
-      newRoles = currentRoles.filter(r => r !== roleTitle);
-    } else {
-      if (currentRoles.length < 4) {
-        newRoles = [...currentRoles, roleTitle];
-      } else {
-        newRoles = currentRoles;
-      }
-    }
-    onUpdate({ role: newRoles });
-  };
-
-  const selectedRoles = formData.role as string[];
-  const canProceed = selectedRoles.length >= 2 && selectedRoles.length <= 4;
-
-  return (
-    <StepWrapper title="Choose Your Roles" subtitle="Select 2 to 4 roles that fit you best.">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {roles.map(role => (
-          <RoleCard 
-            key={role.title} 
-            role={role} 
-            isSelected={selectedRoles.includes(role.title)}
-            onSelect={() => handleSelect(role.title)}
-          />
-        ))}
-      </div>
-      <NavigationButtons onBack={onBack} onNext={onNext} disabled={!canProceed} />
-    </StepWrapper>
-  );
-};
-
-const InterestStep = ({ onNext, onBack, onUpdate, formData }: any) => (
-  <StepWrapper title="Your Interests" subtitle="Don't pick 10 just for the sake of it :(">
-    <div className="space-y-10">
-      <ScaleSelector label="How interested are you in tech startups?" value={formData.tech_interest} onSelect={(v) => onUpdate({ tech_interest: v })} />
-      <ScaleSelector label="How interested are you in fashion?" value={formData.fashion_interest} onSelect={(v) => onUpdate({ fashion_interest: v })} />
-    </div>
-    <NavigationButtons onBack={onBack} onNext={onNext} />
-  </StepWrapper>
-);
-
 const CommitmentStep = ({ onNext, onBack, onUpdate, formData }: any) => {
   const [errors, setErrors] = useState<any>({});
 
   const validate = () => {
     const newErrors: any = {};
     if (!formData.commitment_hours) {
-      newErrors.commitment_hours = 'Please enter your commitment hours.';
+      newErrors.commitment_hours = 'Required field.';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -284,17 +266,17 @@ const CommitmentStep = ({ onNext, onBack, onUpdate, formData }: any) => {
   };
 
   return (
-    <StepWrapper title="Your Commitment">
+    <StepWrapper title="Commitment Level">
       <div className="space-y-10 text-left">
         <FormInput 
           icon={<Clock />} 
           placeholder="e.g., 5-10 hours" 
-          label="How many hours can you dedicate to Juno per week? *" 
+          label="Weekly hour commitment available for this fellowship *" 
           value={formData.commitment_hours} 
           onChange={(v: string) => onUpdate({ commitment_hours: v })} 
           error={errors.commitment_hours}
         />
-        <ScaleSelector label="On a scale of 1-10, how motivated are you to work with proper incentives? *" value={formData.motivation} onSelect={(v: number) => onUpdate({ motivation: v })} />
+        <ScaleSelector label="Motivation level to achieve KPIs (1-10) *" value={formData.motivation} onSelect={(v: number) => onUpdate({ motivation: v })} />
       </div>
       <NavigationButtons onBack={onBack} onNext={handleNext} disabled={!formData.commitment_hours} />
     </StepWrapper>
@@ -302,8 +284,8 @@ const CommitmentStep = ({ onNext, onBack, onUpdate, formData }: any) => {
 };
 
 const ExperienceStep = ({ onNext, onBack, onUpdate, formData }: any) => (
-  <StepWrapper title="Showcase Your Experience" subtitle="Drop a link to your resume, portfolio, Instagram, or anything that showcases your work. (Optional)">
-    <FormInput icon={<Link />} placeholder="https://..." value={formData.experience_link} onChange={(v) => onUpdate({ experience_link: v })} />
+  <StepWrapper title="Professional Portfolio" subtitle="Please provide a link to your resume, portfolio, or relevant social media profiles. (Optional)">
+    <FormInput icon={<Link />} placeholder="URL (LinkedIn, Portfolio, etc.)" value={formData.experience_link} onChange={(v) => onUpdate({ experience_link: v })} />
     <NavigationButtons onBack={onBack} onNext={onNext} />
   </StepWrapper>
 );
@@ -315,11 +297,24 @@ const FinalQuestionStep = ({ onSubmit, onBack, onUpdate, isSubmitting }: any) =>
   }
 
   return (
-    <StepWrapper title="Do you want to build the next big thing?">
+    <StepWrapper title="Declaration">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 rounded-2xl p-8 mb-10"
+      >
+        <div className="flex gap-4 items-start">
+          <Shield className="text-primary flex-shrink-0 mt-1" size={24} />
+          <p className="text-neutral-200 text-lg leading-relaxed">
+            By submitting this application, I confirm my interest in the Juno Cohort 2 Fellowship and commit to the professional standards required for this role.
+          </p>
+        </div>
+      </motion.div>
       <div className="flex justify-center items-center gap-4 mt-10">
         <button onClick={onBack} className="btn btn-outline px-8 py-3">Back</button>
         <button onClick={handleSubmitClick} className="btn btn-primary text-lg px-10 py-4 group" disabled={isSubmitting}>
-          {isSubmitting ? 'Submitting...' : 'Yes, Submit Application'}
+          {isSubmitting ? 'Submitting...' : 'Submit Application'}
           {!isSubmitting && <Send size={20} className="ml-2" />}
         </button>
       </div>
@@ -327,13 +322,88 @@ const FinalQuestionStep = ({ onSubmit, onBack, onUpdate, isSubmitting }: any) =>
   );
 };
 
+const SecondaryRoleStep = ({ onNext, onBack, onUpdate, formData }: any) => {
+  const secondaryRoles = [
+    { title: 'Content Creator', description: 'Specializing in video production and on-camera presence.' },
+    { title: 'Content Editor', description: 'Specializing in post-production and video editing (CapCut, Premiere).' },
+    { title: 'Outreach', description: 'Specializing in brand partnerships and business development.' }
+  ];
+
+  const handleSelect = (role: string) => {
+    onUpdate({ secondary_role: role });
+  };
+
+  return (
+    <StepWrapper title="Role Selection" subtitle="Please select your primary functional area for the duration of the fellowship.">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {secondaryRoles.map(role => (
+          <motion.div
+            key={role.title}
+            onClick={() => handleSelect(role.title)}
+            className={`p-6 rounded-2xl cursor-pointer border-2 transition-all duration-300 ${formData.secondary_role === role.title ? 'border-primary bg-primary/10' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'}`}
+          >
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-bold text-lg text-white">{role.title}</h3>
+              {formData.secondary_role === role.title && <Check size={20} className="text-primary flex-shrink-0" />}
+            </div>
+            <p className="text-sm text-neutral-400">{role.description}</p>
+          </motion.div>
+        ))}
+      </div>
+      <NavigationButtons onBack={onBack} onNext={onNext} disabled={!formData.secondary_role} />
+    </StepWrapper>
+  );
+};
+
+const ChapterHeadStep = ({ onNext, onBack, onUpdate, formData }: any) => {
+  return (
+    <StepWrapper title="Leadership Application" subtitle="Apply for the Chapter Head position. High responsibility, maximum reward.">
+      <div className="text-left space-y-6">
+        <motion.div 
+          whileHover={{ scale: 1.01 }}
+          onClick={() => onUpdate({ apply_chapter_head: !formData.apply_chapter_head })}
+          className={`p-6 rounded-2xl cursor-pointer border-2 transition-all duration-300 flex items-center justify-between ${formData.apply_chapter_head ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'}`}
+        >
+          <div>
+            <h3 className="font-bold text-lg text-white">Apply for Chapter Head</h3>
+            <p className="text-sm text-neutral-400 mt-1">Responsible for team performance metrics and weekly reporting.</p>
+          </div>
+          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${formData.apply_chapter_head ? 'border-primary bg-primary' : 'border-neutral-500'}`}>
+            {formData.apply_chapter_head && <Check size={14} className="text-black" />}
+          </div>
+        </motion.div>
+
+        <AnimatePresence>
+          {formData.apply_chapter_head && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <label className="block text-sm font-medium text-neutral-300 mb-2">Statement of Purpose (Leadership Experience)</label>
+              <textarea
+                value={formData.chapter_head_motivation}
+                onChange={(e) => onUpdate({ chapter_head_motivation: e.target.value })}
+                placeholder="Elaborate on your suitability for this leadership role..."
+                className="w-full h-32 p-4 bg-neutral-900/50 border-2 border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      <NavigationButtons onBack={onBack} onNext={onNext} disabled={formData.apply_chapter_head && !formData.chapter_head_motivation} />
+    </StepWrapper>
+  );
+};
+
 const ThankYouStep = () => (
-  <StepWrapper title="Thank You!">
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-10">
+  <StepWrapper title="Application Received">
+    <div className="bg-gradient-to-b from-neutral-900/50 to-neutral-900/30 border border-neutral-800 rounded-2xl p-10">
       <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', delay: 0.2}} className="w-24 h-24 bg-green-500/10 border-2 border-green-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
         <Check size={48} className="text-green-400" />
       </motion.div>
-      <p className="text-xl text-neutral-300">Your application has been submitted. We'll be in touch soon!</p>
+      <p className="text-xl text-neutral-300">Your application is under review. Successful candidates will be contacted shortly.</p>
     </div>
   </StepWrapper>
 );
