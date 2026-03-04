@@ -110,7 +110,7 @@ const DownloadRedirect: React.FC = () => {
             >
               <h1 className="text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Get Juno</h1>
               <p className="text-neutral-400 mb-8 text-lg">
-                Swipe to shop the latest fashion trends. Available on iOS and Android.
+                Discover and shop Pakistan's most exciting indie brands. Available on iOS and Android.
               </p>
 
               <div className="grid gap-4">

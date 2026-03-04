@@ -8,7 +8,6 @@ const DownloadSection: React.FC = () => {
 
   return (
     <section id="download" className="py-32 bg-black relative overflow-hidden">
-      {/* Background Gradients */}
       <div className="absolute inset-0">
         <div className="absolute top-0 right-0 w-[50vw] h-[50vw] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-0 left-0 w-[50vw] h-[50vw] bg-secondary/10 rounded-full blur-[120px] animate-pulse delay-1000" />
@@ -16,7 +15,6 @@ const DownloadSection: React.FC = () => {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch max-w-7xl mx-auto">
-          {/* Left Side: Download App */}
           <motion.div
             ref={ref}
             initial={{ opacity: 0, x: -40 }}
@@ -29,10 +27,12 @@ const DownloadSection: React.FC = () => {
             </div>
 
             <div>
-              <h3 className="text-4xl md:text-5xl font-black text-white mb-6">For Fashion Lovers</h3>
-              <p className="text-xl text-neutral-400 mb-10 max-w-md">Download the Juno app and start your personalized fashion discovery journey today.</p>
+              <h3 className="text-4xl md:text-5xl font-black text-white mb-6">For Indie Shoppers</h3>
+              <p className="text-xl text-neutral-400 mb-10 max-w-md">
+                Download Juno to discover original Pakistani labels, follow their stories, and shop new drops as they launch.
+              </p>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-4">
               <a
                 href="/download"
@@ -47,7 +47,7 @@ const DownloadSection: React.FC = () => {
                 </div>
                 <ArrowUpRight className="opacity-0 group-hover/btn:opacity-100 transition-opacity" />
               </a>
-              
+
               <a
                 href="/download"
                 className="flex items-center justify-between px-6 py-4 bg-white/10 border border-white/10 text-white rounded-2xl hover:bg-white/20 transition-colors group/btn"
@@ -64,7 +64,6 @@ const DownloadSection: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Right Side: Contact Form */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
@@ -72,9 +71,11 @@ const DownloadSection: React.FC = () => {
             className="relative overflow-hidden bg-gradient-to-br from-neutral-900 to-black border border-white/10 rounded-[3rem] p-10 md:p-14 flex flex-col justify-center"
           >
             <div>
-              <h3 className="text-4xl md:text-5xl font-black text-white mb-6">Partner With Us</h3>
-              <p className="text-xl text-neutral-400 mb-10">Are you a brand looking to scale? Or an investor interested in the future of commerce? Let's talk.</p>
-              
+              <h3 className="text-4xl md:text-5xl font-black text-white mb-6">For Indie Founders</h3>
+              <p className="text-xl text-neutral-400 mb-10">
+                Own a fashion label? Join Juno Studio to launch faster, build loyal demand, and scale with focused distribution.
+              </p>
+
               <div className="space-y-6">
                 <a href="mailto:junonoww@gmail.com" className="flex items-center p-6 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-colors group">
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
@@ -87,8 +88,8 @@ const DownloadSection: React.FC = () => {
                 </a>
 
                 <a href="https://instagram.com/junonow" target="_blank" rel="noopener noreferrer" className="flex items-center p-6 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-colors group">
-                  <div className="w-12 h-12 rounded-full bg-pink-500/20 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-                    <Instagram className="text-pink-500" size={24} />
+                  <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+                    <Instagram className="text-orange-400" size={24} />
                   </div>
                   <div>
                     <p className="text-sm text-neutral-400 font-medium">Follow Us</p>

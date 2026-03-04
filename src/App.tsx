@@ -70,7 +70,7 @@ import { WorkAuthProvider } from './contexts/WorkAuthContext';
 function App() {
   useEffect(() => {
     // Update page title
-    document.title = 'Juno - Swipe to Shop Fashion App';
+    document.title = 'Juno - Home of Indie Brands';
     
     // If the title element has a data-default attribute, remove it
     const titleElement = document.querySelector('title');

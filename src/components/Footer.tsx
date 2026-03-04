@@ -21,7 +21,7 @@ const Footer: React.FC = () => {
               <span className="font-bold text-2xl text-white tracking-tight">juno</span>
             </a>
             <p className="text-neutral-400 max-w-sm text-lg leading-relaxed">
-              Revolutionizing fashion discovery and commerce through innovative technology.
+              Pakistan's indie fashion destination, connecting thoughtful shoppers with standout independent labels.
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((link, index) => (

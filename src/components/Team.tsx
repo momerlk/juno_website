@@ -108,7 +108,7 @@ const Team: React.FC = () => {
             Meet the <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Innovators</span>
           </h2>
           <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
-            The passionate minds behind Juno's mission to revolutionize fashion discovery and commerce.
+            The team helping independent brands build visibility, trust, and long-term growth.
           </p>
         </motion.div>
 

@@ -145,7 +145,7 @@ const ProductPage: React.FC = () => {
                 </div>
                 <div className="flex-1 text-center sm:text-left">
                   <h4 className="text-lg font-semibold text-white">Get the full experience</h4>
-                  <p className="text-neutral-400 mb-4">Swipe, shop, and discover on the go.</p>
+                  <p className="text-neutral-400 mb-4">Explore indie drops, follow labels, and shop on the go.</p>
                   <a href="/download" className="btn btn-primary w-full sm:w-auto group">
                     <Download className="mr-2" size={20}/> Download Now
                   </a>

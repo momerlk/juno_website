@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Sparkles, Heart, Zap } from 'lucide-react';
+import { Store, Sparkles, HeartHandshake } from 'lucide-react';
 
 const ScreenshotsSection: React.FC = () => {
   const { ref, inView } = useInView({
@@ -11,25 +11,25 @@ const ScreenshotsSection: React.FC = () => {
 
   const features = [
     {
-      title: 'Swipe to Shop',
-      description: 'Discover new styles with a simple swipe. An interactive, fast, and fun way to find fashion you love.',
-      icon: <Zap className="text-white" size={24} />,
+      title: 'Brand Stories First',
+      description: 'See the people, process, and purpose behind each indie label before you buy.',
+      icon: <Store className="text-white" size={24} />,
       image: '/juno_screenshots/1.png',
-      color: 'from-yellow-400 to-orange-500'
+      color: 'from-orange-400 to-rose-500'
     },
     {
-      title: 'Build Your Outfits',
-      description: 'Mix and match pieces to create your own looks. Get AI-powered outfit suggestions tailored to your style.',
+      title: 'Curated Collections',
+      description: 'Shop tight, high-intent edits instead of endless catalogs and generic recommendations.',
       icon: <Sparkles className="text-white" size={24} />,
       image: '/juno_screenshots/2.png',
-      color: 'from-purple-400 to-pink-500'
+      color: 'from-cyan-400 to-blue-500'
     },
     {
-      title: 'Exclusive Indie Brands',
-      description: 'Discover exclusive indie fashion brands you won\'t find anywhere else. Curated from the best designers.',
-      icon: <Heart className="text-white" size={24} />,
+      title: 'Built for Indie Loyalty',
+      description: 'Follow your favorite labels, track new drops, and support brands that match your values.',
+      icon: <HeartHandshake className="text-white" size={24} />,
       image: '/juno_screenshots/3.png',
-      color: 'from-cyan-400 to-blue-500'
+      color: 'from-emerald-400 to-teal-500'
     },
   ];
 
@@ -52,16 +52,15 @@ const ScreenshotsSection: React.FC = () => {
         className="group relative h-full"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0 rounded-3xl transform group-hover:scale-[1.02] transition-transform duration-500" />
-        
+
         <div className="relative h-full bg-black/40 border border-white/10 backdrop-blur-xl rounded-3xl p-8 overflow-hidden flex flex-col">
-          {/* Glowing background blob */}
           <div className={`absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br ${color} rounded-full blur-[80px] opacity-20 group-hover:opacity-30 transition-opacity duration-500`} />
 
           <div className="relative z-10">
             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mb-6 shadow-lg`}>
               {icon}
             </div>
-            
+
             <h3 className="text-2xl font-bold text-white mb-3">{title}</h3>
             <p className="text-neutral-400 mb-8 leading-relaxed">{description}</p>
           </div>
@@ -93,13 +92,13 @@ const ScreenshotsSection: React.FC = () => {
           className="text-center mb-24"
         >
           <div className="inline-block px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm text-sm font-medium text-white mb-6">
-            ✨ Experience the New Standard
+            Built for indie-first shopping
           </div>
           <h2 className="text-4xl md:text-6xl font-black mb-6 text-white tracking-tight">
-            The Future of <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Discovery</span>
+            Discover Better, <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-cyan-400">Support Smaller</span>
           </h2>
           <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
-            Juno is more than just an app—it's a new way to interact with fashion. Explore our core features designed for a seamless journey.
+            Juno helps you move from random browsing to intentional discovery of independent brands worth backing.
           </p>
         </motion.div>
 

@@ -182,7 +182,7 @@ const IntroStep = ({ onNext, university }: { onNext: () => void, university?: st
       <div>
         <h3 className="text-xl font-bold text-primary mb-3">About Juno</h3>
         <p className="text-neutral-300 leading-relaxed">
-          Juno is Pakistan's premier fashion-tech marketplace, redefining commerce for the next generation through a video-first discovery engine and rapid fulfillment network. We are seeking high-potential candidates for our selective Cohort 2 internship program.
+          Juno is building Pakistan's leading indie-fashion commerce platform, connecting independent labels with high-intent shoppers through strong storytelling and modern distribution. We are seeking high-potential candidates for our selective Cohort 2 internship program.
         </p>
       </div>
       <div>

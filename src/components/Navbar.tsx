@@ -20,42 +20,40 @@ const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: 'Home', href: '/#home' },
-    { name: 'Blog', href: '/blog' },
-    { name: 'Features', href: '/#screenshots' },
+    { name: 'Indie Brands', href: '/#screenshots' },
+    { name: 'Ecosystem', href: '/#juno-app' },
     { name: 'Studio', href: '/#juno-studio' },
     { name: 'Pricing', href: '/#pricing' },
     { name: 'Team', href: '/#team' },
-    { name: 'Contact', href: '/#download' },
+    { name: 'Blog', href: '/blog' },
   ];
 
   return (
     <>
-      <nav 
+      <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled || isOpen ? 'py-4' : 'py-6'
         }`}
       >
         <div className="container mx-auto px-4 md:px-6">
-          <div 
+          <div
             className={`mx-auto max-w-7xl rounded-2xl border transition-all duration-300 ${
               scrolled || isOpen
-                ? 'bg-black/60 backdrop-blur-xl border-white/10 shadow-lg px-6 py-3' 
+                ? 'bg-black/60 backdrop-blur-xl border-white/10 shadow-lg px-6 py-3'
                 : 'bg-transparent border-transparent px-0 py-0'
             }`}
           >
             <div className="flex justify-between items-center">
-              {/* Logo */}
               <a href="/#home" className="flex items-center space-x-2 z-50" onClick={closeMenu}>
                 <div className="relative w-10 h-10 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary rounded-xl blur-sm opacity-70"></div>
-                    <div className="relative w-full h-full bg-black rounded-xl flex items-center justify-center border border-white/10">
-                        <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-tr from-primary to-secondary">J</span>
-                    </div>
+                  <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary rounded-xl blur-sm opacity-70" />
+                  <div className="relative w-full h-full bg-black rounded-xl flex items-center justify-center border border-white/10">
+                    <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-tr from-primary to-secondary">J</span>
+                  </div>
                 </div>
                 <span className="font-bold text-2xl text-white tracking-tight">juno</span>
               </a>
 
-              {/* Desktop Navigation */}
               <div className="hidden md:flex items-center space-x-1">
                 {navLinks.map((link) => (
                   <a
@@ -68,13 +66,12 @@ const Navbar: React.FC = () => {
                 ))}
               </div>
 
-              {/* Action Buttons */}
               <div className="hidden md:flex items-center space-x-3">
                 <a
                   href="/seller"
                   className="px-5 py-2.5 text-sm font-medium text-white hover:text-primary transition-colors"
                 >
-                  For Brands
+                  For Indie Brands
                 </a>
                 <a
                   href="/download"
@@ -88,7 +85,6 @@ const Navbar: React.FC = () => {
                 </a>
               </div>
 
-              {/* Mobile Toggle */}
               <button
                 className="md:hidden text-white p-2 rounded-full hover:bg-white/10 transition-colors z-50"
                 onClick={toggleMenu}
@@ -101,7 +97,6 @@ const Navbar: React.FC = () => {
         </div>
       </nav>
 
-      {/* Mobile Navigation Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -113,44 +108,43 @@ const Navbar: React.FC = () => {
           >
             <div className="absolute inset-0 bg-black/90 backdrop-blur-2xl" onClick={closeMenu} />
             <div className="relative z-50 bg-neutral-900/50 border border-white/10 rounded-3xl p-6 shadow-2xl overflow-hidden">
-                {/* Background Blobs */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10" />
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-secondary/20 rounded-full blur-3xl -z-10" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-secondary/20 rounded-full blur-3xl -z-10" />
 
-                <div className="flex flex-col space-y-2">
-                    {navLinks.map((link, index) => (
-                    <motion.a
-                        key={link.name}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        href={link.href}
-                        className="text-xl font-bold text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/5 transition-all flex items-center justify-between group"
-                        onClick={closeMenu}
-                    >
-                        {link.name}
-                        <ArrowRight size={16} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                    </motion.a>
-                    ))}
-                </div>
-                
-                <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
-                    <a
-                    href="/download"
-                    className="flex items-center justify-center w-full py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg shadow-lg shadow-primary/20"
+              <div className="flex flex-col space-y-2">
+                {navLinks.map((link, index) => (
+                  <motion.a
+                    key={link.name}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    href={link.href}
+                    className="text-xl font-bold text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/5 transition-all flex items-center justify-between group"
                     onClick={closeMenu}
-                    >
-                    <Smartphone size={20} className="mr-2" />
-                    Download App
-                    </a>
-                    <a
-                    href="/seller"
-                    className="flex items-center justify-center w-full py-4 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 transition-colors"
-                    onClick={closeMenu}
-                    >
-                    For Brands
-                    </a>
-                </div>
+                  >
+                    {link.name}
+                    <ArrowRight size={16} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                  </motion.a>
+                ))}
+              </div>
+
+              <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
+                <a
+                  href="/download"
+                  className="flex items-center justify-center w-full py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg shadow-lg shadow-primary/20"
+                  onClick={closeMenu}
+                >
+                  <Smartphone size={20} className="mr-2" />
+                  Download App
+                </a>
+                <a
+                  href="/seller"
+                  className="flex items-center justify-center w-full py-4 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 transition-colors"
+                  onClick={closeMenu}
+                >
+                  For Indie Brands
+                </a>
+              </div>
             </div>
           </motion.div>
         )}
