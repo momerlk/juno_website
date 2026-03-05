@@ -55,6 +55,7 @@ import BrandPage from './components/BrandPage';
 import BrandsSection from './components/BrandsSection';
 import BrandShowcase from './components/BrandShowcase';
 import BrandSpotlight from './components/BrandSpotlight';
+import CatchyProducts from './components/CatchyProducts';
 import TestimonialsSection from './components/TestimonialsSection';
 import BlogIndexPage from './components/blog/BlogIndexPage';
 import BlogPostPage from './components/blog/BlogPostPage';
@@ -91,6 +92,7 @@ function App() {
                     <main>
                       <Hero />
                       <BrandSpotlight />
+                      <CatchyProducts />
                       <BrandShowcase />
                       <BrandsSection />
                       <TestimonialsSection />

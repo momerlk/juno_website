@@ -2,14 +2,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const banners = [
-  { src: '/brand_banners/rakh2.jpg', alt: 'Rakh Collection' },
-  { src: '/brand_banners/ukiyo2.webp', alt: 'Ukiyo Lifestyle' },
   { src: '/brand_banners/kara2.webp', alt: 'Kara Studio' },
-  { src: '/brand_banners/rakh4.jpg', alt: 'Rakh Campaign' },
-  { src: '/brand_banners/ukiyo3.webp', alt: 'Ukiyo Collection' },
-  { src: '/brand_banners/qariney2.webp', alt: 'Qariney Series' },
-  { src: '/brand_banners/rakh5.jpg', alt: 'Rakh Collection' },
-  { src: '/brand_banners/ukiyo4.webp', alt: 'Ukiyo Lifestyle' },
+  { src: '/brand_banners/qariney_new.png', alt: 'Qariney Collection' },
+  { src: '/brand_banners/noire5.jpg', alt: 'NOIRE Collection' },
+  { src: '/brand_banners/ukiyo5.jpg', alt: 'Ukiyo Campaign' },
+  { src: '/brand_banners/noire6.jpg', alt: 'NOIRE Campaign' },
+  { src: '/brand_banners/ukiyo6.jpg', alt: 'Ukiyo Series' },
+  { src: '/brand_banners/ukiyo2.webp', alt: 'Ukiyo Lifestyle' },
+  { src: '/brand_banners/noire8.jpg', alt: 'NOIRE Lifestyle' },
+  { src: '/brand_banners/rakh2.jpg', alt: 'Rakh Campaign' },
+  { src: '/brand_banners/ukiyo4.webp', alt: 'Ukiyo Collection' },
 ];
 
 const BrandShowcase: React.FC = () => {
@@ -24,7 +26,7 @@ const BrandShowcase: React.FC = () => {
             transition={{ duration: 0.8 }}
           >
             <h2 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter">
-              Visualizing the <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic px-2">Indie Spirit</span>
+              Visualizing the <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic py-2 px-3">Indie Spirit</span>
             </h2>
             <p className="text-neutral-400 text-xl md:text-2xl font-light max-w-2xl mx-auto italic">
               Experience the visual narratives of Pakistan&apos;s most creative labels.
@@ -41,7 +43,7 @@ const BrandShowcase: React.FC = () => {
                 <img
                   src={banner.src}
                   alt={banner.alt}
-                  className="w-full h-full object-cover transition-all duration-700 scale-110 group-hover:scale-100"
+                  className={`w-full h-full object-cover transition-all duration-700 scale-110 group-hover:scale-100 ${banner.src.includes('noire') ? 'object-top' : ''}`}
                 />
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-500" />
                 <div className="absolute bottom-8 left-8 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
