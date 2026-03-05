@@ -20,11 +20,9 @@ const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: 'Home', href: '/#home' },
-    { name: 'Indie Brands', href: '/#screenshots' },
+    { name: 'Discover', href: '/#screenshots' },
     { name: 'Ecosystem', href: '/#juno-app' },
     { name: 'Studio', href: '/#juno-studio' },
-    { name: 'Pricing', href: '/#pricing' },
-    { name: 'Team', href: '/#team' },
     { name: 'Blog', href: '/blog' },
   ];
 
@@ -45,13 +43,11 @@ const Navbar: React.FC = () => {
           >
             <div className="flex justify-between items-center">
               <a href="/#home" className="flex items-center space-x-2 z-50" onClick={closeMenu}>
-                <div className="relative w-10 h-10 flex items-center justify-center">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary rounded-xl blur-sm opacity-70" />
-                  <div className="relative w-full h-full bg-black rounded-xl flex items-center justify-center border border-white/10">
-                    <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-tr from-primary to-secondary">J</span>
-                  </div>
-                </div>
-                <span className="font-bold text-2xl text-white tracking-tight">juno</span>
+                <img
+                  src="/juno_logos/icon+text_white.png"
+                  alt="Juno Logo"
+                  className="h-8 md:h-10 w-auto object-contain"
+                />
               </a>
 
               <div className="hidden md:flex items-center space-x-1">
@@ -75,13 +71,10 @@ const Navbar: React.FC = () => {
                 </a>
                 <a
                   href="/download"
-                  className="group relative px-5 py-2.5 rounded-full bg-white text-black font-bold text-sm overflow-hidden transition-all hover:scale-105"
+                  className="px-5 py-2.5 rounded-full bg-white text-black font-bold text-sm transition-all hover:scale-105 hover:bg-neutral-200 flex items-center group"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-primary opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                  <span className="relative flex items-center">
-                    Download App
-                    <ArrowRight size={16} className="ml-1 transition-transform group-hover:translate-x-1" />
-                  </span>
+                  Download App
+                  <ArrowRight size={16} className="ml-1 transition-transform group-hover:translate-x-1" />
                 </a>
               </div>
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Store, Sparkles, HeartHandshake } from 'lucide-react';
+import { Store, Sparkles, HeartHandshake, Zap, Search, ShoppingBag } from 'lucide-react';
 
 const ScreenshotsSection: React.FC = () => {
   const { ref, inView } = useInView({
@@ -11,69 +11,80 @@ const ScreenshotsSection: React.FC = () => {
 
   const features = [
     {
-      title: 'Brand Stories First',
-      description: 'See the people, process, and purpose behind each indie label before you buy.',
-      icon: <Store className="text-white" size={24} />,
-      image: '/juno_screenshots/1.png',
-      color: 'from-orange-400 to-rose-500'
-    },
-    {
-      title: 'Curated Collections',
-      description: 'Shop tight, high-intent edits instead of endless catalogs and generic recommendations.',
+      title: 'Curated Feed',
+      description: 'A personalized stream of the latest drops from Pakistan’s top indie labels.',
       icon: <Sparkles className="text-white" size={24} />,
-      image: '/juno_screenshots/2.png',
-      color: 'from-cyan-400 to-blue-500'
+      image: '/juno_mockups/feed.png'
     },
     {
-      title: 'Built for Indie Loyalty',
-      description: 'Follow your favorite labels, track new drops, and support brands that match your values.',
+      title: 'Swipe Mechanic',
+      description: 'Discovery turned into an experience. Swipe to find your next favorite piece.',
+      icon: <Zap className="text-white" size={24} />,
+      image: '/juno_mockups/swipe_to_shop.png'
+    },
+    {
+      title: 'A.I. Discovery',
+      description: 'Intelligent search that understands your style DNA and connects you to creators.',
+      icon: <Search className="text-white" size={24} />,
+      image: '/juno_mockups/ai_search.png'
+    },
+    {
+      title: 'Brand Ecosystem',
+      description: 'Explore 50+ handpicked independent labels in one unified marketplace.',
+      icon: <Store className="text-white" size={24} />,
+      image: '/juno_mockups/allbrands_page.png'
+    },
+    {
+      title: 'Label Spotlights',
+      description: 'Deep dive into the stories, craft, and vision of individual brand founders.',
       icon: <HeartHandshake className="text-white" size={24} />,
-      image: '/juno_screenshots/3.png',
-      color: 'from-emerald-400 to-teal-500'
+      image: '/juno_mockups/beands_page.png'
+    },
+    {
+      title: 'Instant Checkout',
+      description: 'Seamless one-tap ordering from multiple indie brands in a single experience.',
+      icon: <ShoppingBag className="text-white" size={24} />,
+      image: '/juno_mockups/checkout.png'
     },
   ];
 
-  const FeatureCard = ({ title, description, image, icon, index, color }: {
+  const FeatureCard = ({ title, description, image, icon, index }: {
     title: string;
     description: string;
     image: string;
     icon: React.ReactNode;
     index: number;
-    color: string;
   }) => {
-    const { ref: cardRef, inView: cardInView } = useInView({ triggerOnce: true, threshold: 0.3 });
+    const { ref: cardRef, inView: cardInView } = useInView({ triggerOnce: true, threshold: 0.2 });
 
     return (
       <motion.div
         ref={cardRef}
         initial={{ opacity: 0, y: 50 }}
         animate={cardInView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.7, delay: index * 0.2 }}
+        transition={{ duration: 0.7, delay: index * 0.1 }}
         className="group relative h-full"
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0 rounded-3xl transform group-hover:scale-[1.02] transition-transform duration-500" />
+        <div className="relative h-full bg-white/5 border border-white/10 backdrop-blur-xl rounded-[2.5rem] p-8 overflow-hidden flex flex-col hover:border-primary/20 transition-all duration-500">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
 
-        <div className="relative h-full bg-black/40 border border-white/10 backdrop-blur-xl rounded-3xl p-8 overflow-hidden flex flex-col">
-          <div className={`absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br ${color} rounded-full blur-[80px] opacity-20 group-hover:opacity-30 transition-opacity duration-500`} />
-
-          <div className="relative z-10">
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mb-6 shadow-lg`}>
+          <div className="relative z-10 mb-8">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center mb-6 shadow-xl shadow-primary/20">
               {icon}
             </div>
 
-            <h3 className="text-2xl font-bold text-white mb-3">{title}</h3>
-            <p className="text-neutral-400 mb-8 leading-relaxed">{description}</p>
+            <h3 className="text-xl font-black text-white mb-3 tracking-tighter uppercase">{title}</h3>
+            <p className="text-neutral-400 leading-relaxed font-light italic text-base">{description}</p>
           </div>
 
-          <div className="relative mt-auto flex justify-center">
-            <div className="relative w-full max-w-[240px] aspect-[9/19] rounded-[2.5rem] border-4 border-white/10 bg-black overflow-hidden shadow-2xl transform translate-y-12 group-hover:translate-y-8 transition-transform duration-500">
+          <div className="relative mt-auto flex justify-center px-4">
+            <div className="relative w-full max-w-[280px] transform translate-y-16 group-hover:translate-y-8 transition-transform duration-700 drop-shadow-2xl">
               <img
                 src={image}
                 alt={title}
-                className="w-full h-full object-cover"
+                className="w-full h-auto object-contain"
                 loading="lazy"
               />
-              <div className="absolute inset-0 pointer-events-none ring-1 ring-inset ring-black/10 rounded-[2.5rem]" />
             </div>
           </div>
         </div>
@@ -82,7 +93,7 @@ const ScreenshotsSection: React.FC = () => {
   };
 
   return (
-    <section id="screenshots" className="py-32 bg-black relative overflow-hidden">
+    <section id="screenshots" className="py-32 bg-black relative overflow-hidden border-b border-white/5">
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           ref={ref}
@@ -91,18 +102,15 @@ const ScreenshotsSection: React.FC = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-24"
         >
-          <div className="inline-block px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm text-sm font-medium text-white mb-6">
-            Built for indie-first shopping
-          </div>
-          <h2 className="text-4xl md:text-6xl font-black mb-6 text-white tracking-tight">
-            Discover Better, <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-cyan-400">Support Smaller</span>
+          <h2 className="text-5xl md:text-7xl font-black mb-8 text-white tracking-tighter">
+            Platform <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic px-2">Experience</span>
           </h2>
-          <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
-            Juno helps you move from random browsing to intentional discovery of independent brands worth backing.
+          <p className="text-xl md:text-2xl text-neutral-400 max-w-3xl mx-auto font-light italic">
+            A purpose-built ecosystem for discovering and supporting Pakistan&apos;s independent creators.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {features.map((feature, index) => (
             <FeatureCard key={index} {...feature} index={index} />
           ))}

@@ -4,8 +4,6 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import JunoApp from './components/JunoApp';
 import JunoStudio from './components/JunoStudio';
-import Pricing from './components/Pricing';
-import Team from './components/Team';
 import Mission from './components/Mission';
 import DownloadSection from './components/DownloadSection';
 import Footer from './components/Footer';
@@ -55,6 +53,9 @@ import AmbassadorProtectedRoute from "./components/ambassador/ProtectedRoute";
 import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
 import BrandPage from './components/BrandPage';
 import BrandsSection from './components/BrandsSection';
+import BrandShowcase from './components/BrandShowcase';
+import BrandSpotlight from './components/BrandSpotlight';
+import TestimonialsSection from './components/TestimonialsSection';
 import BlogIndexPage from './components/blog/BlogIndexPage';
 import BlogPostPage from './components/blog/BlogPostPage';
 import WritePage from './components/blog/WritePage';
@@ -69,10 +70,7 @@ import { WorkAuthProvider } from './contexts/WorkAuthContext';
 
 function App() {
   useEffect(() => {
-    // Update page title
     document.title = 'Juno - Home of Indie Brands';
-    
-    // If the title element has a data-default attribute, remove it
     const titleElement = document.querySelector('title');
     if (titleElement && titleElement.hasAttribute('data-default')) {
       titleElement.removeAttribute('data-default');
@@ -92,15 +90,14 @@ function App() {
                   <Route path="/" element={
                     <main>
                       <Hero />
+                      <BrandSpotlight />
+                      <BrandShowcase />
                       <BrandsSection />
+                      <TestimonialsSection />
                       <JunoApp />
                       <ScreenshotsSection />
                       <Mission />
                       <JunoStudio />
-                      
-                      
-                      <Pricing />
-                      <Team />
                       <DownloadSection />
                     </main>
                   } />
@@ -135,7 +132,6 @@ function App() {
                       <SellerOnboarding />
                   } />
 
-
                   <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}>
                     <Route index element={<PlatformStats />} />
                     <Route path="orders" element={<AdminManageOrders />} />
@@ -155,7 +151,6 @@ function App() {
                     <Route path="ambassador-tasks" element={<AmbassadorTasks />} />
                   </Route>
                   <Route path="/admin/login" element={<AdminAuth />} />
-
 
                   <Route path="/ambassador" element={
                     <AmbassadorProtectedRoute>

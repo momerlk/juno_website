@@ -1,22 +1,14 @@
 import React from 'react';
-import { Users, Building, TrendingUp } from 'lucide-react';
+import { Building, GraduationCap, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
-import pmyp from '../assets/partners/pmyp.png';
-import impactx from '../assets/partners/impactx.png';
-import khantastic from '../assets/partners/khantastic.png';
-import tajarba from '../assets/partners/tajarba.png';
-import creare from '../assets/partners/creare.png';
-import sparktank from '../assets/partners/sparktank.png';
-
 const partners = [
-  { name: 'PMYP', logo: pmyp },
-  { name: 'ImpactX', logo: impactx },
-  { name: 'Khantastic', logo: khantastic },
-  { name: 'Tajarba', logo: tajarba },
-  { name: 'Creare', logo: creare },
-  { name: 'SparkTank', logo: sparktank },
+  { name: 'HBL', logo: '/dark_logos/hbl.png' },
+  { name: 'ImpactX', logo: '/dark_logos/impactx.png' },
+  { name: 'NetSol', logo: '/dark_logos/netsol.png' },
+  { name: 'NIC', logo: '/dark_logos/nic.png' },
+  { name: 'PMYP', logo: '/dark_logos/pmyp.png' },
 ];
 
 const ImpactCard: React.FC<{ icon: React.ReactNode; title: string; description: string; delay: number }> = ({ icon, title, description, delay }) => {
@@ -28,37 +20,15 @@ const ImpactCard: React.FC<{ icon: React.ReactNode; title: string; description: 
       initial={{ opacity: 0, y: 40 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.6, delay }}
-      className="group relative bg-white/5 border border-white/5 hover:border-white/10 p-8 rounded-3xl backdrop-blur-sm transition-all hover:bg-white/10 overflow-hidden"
+      className="group relative bg-white/5 border border-white/5 p-10 rounded-[2.5rem] backdrop-blur-sm transition-all hover:bg-white/10 hover:border-white/20"
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-      <div className="relative z-10">
-        <div className="mb-6 inline-flex p-4 rounded-2xl bg-white/5 border border-white/10 group-hover:scale-110 transition-transform duration-300">
+      <div className="relative z-10 text-center flex flex-col items-center">
+        <div className="mb-8 p-6 rounded-3xl bg-white/5 border border-white/10 group-hover:scale-110 group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-500">
           {icon}
         </div>
-        <h3 className="text-5xl font-black text-white mb-4 tracking-tight">{title}</h3>
-        <p className="text-neutral-400 text-lg leading-relaxed">{description}</p>
+        <h3 className="text-6xl font-black text-white mb-6 tracking-tighter">{title}</h3>
+        <p className="text-neutral-400 text-lg leading-relaxed font-light italic">{description}</p>
       </div>
-    </motion.div>
-  );
-};
-
-const PartnerLogo: React.FC<{ logo: string; name: string; delay: number }> = ({ logo, name, delay }) => {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={inView ? { opacity: 1, scale: 1 } : {}}
-      transition={{ duration: 0.5, delay }}
-      className="group flex items-center justify-center p-8 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all duration-300 backdrop-blur-sm"
-    >
-      <img
-        src={logo}
-        alt={name}
-        className="max-h-16 w-auto filter grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110"
-      />
     </motion.div>
   );
 };
@@ -68,28 +38,28 @@ const JunoApp: React.FC = () => {
 
   const impactStats = [
     {
-      icon: <Building className="text-secondary" size={32} />,
+      icon: <Building className="text-primary" size={32} />,
       title: '200+',
-      description: 'Indie labels and microbusinesses supported through our ecosystem and tools.',
+      description: 'Microbusinesses utilizing our infrastructure to scale.',
+      delay: 0.1,
+    },
+    {
+      icon: <GraduationCap className="text-secondary" size={32} />,
+      title: '35+',
+      description: 'University chapters fostering homegrown talent.',
       delay: 0.2,
     },
     {
-      icon: <Users className="text-accent" size={32} />,
-      title: '35+',
-      description: 'Campuses activating the next generation of founders, creators, and community leaders.',
+      icon: <MapPin className="text-primary" size={32} />,
+      title: '4',
+      description: 'Major cities with optimized 1-hour indie delivery.',
       delay: 0.3,
-    },
-    {
-      icon: <TrendingUp className="text-primary" size={32} />,
-      title: '5000+',
-      description: 'Shoppers helping independent brands grow with every order and repeat purchase.',
-      delay: 0.4,
     },
   ];
 
   return (
-    <section id="juno-app" className="py-32 bg-black relative">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-black to-black opacity-50" />
+    <section id="juno-app" className="py-32 bg-black relative border-b border-white/5">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 via-black to-black opacity-50" />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="mb-32">
@@ -98,17 +68,17 @@ const JunoApp: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="text-center mb-20"
+            className="text-center mb-24"
           >
-            <h2 className="text-4xl md:text-6xl font-black mb-6 text-white tracking-tight">
-              Building Pakistan&apos;s <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Indie Commerce Layer</span>
+            <h2 className="text-5xl md:text-7xl font-black mb-8 text-white tracking-tighter">
+              Indie <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary py-2 px-3">Commerce Layer</span>
             </h2>
-            <p className="text-xl text-neutral-400 max-w-3xl mx-auto leading-relaxed">
-              Juno connects discovery, storytelling, and conversion so independent fashion brands can scale sustainably.
+            <p className="text-xl md:text-2xl text-neutral-400 max-w-3xl mx-auto leading-relaxed font-light italic">
+              Empowering the next generation of Pakistani creators with the tools to build empires.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-7xl mx-auto">
             {impactStats.map((stat, index) => (
               <ImpactCard key={index} {...stat} />
             ))}
@@ -119,23 +89,30 @@ const JunoApp: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="text-center mb-16"
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-center mb-20"
           >
-            <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-              Trusted By Ecosystem Partners
+            <h3 className="text-xl md:text-2xl font-black text-white/40 uppercase tracking-[0.3em]">
+              Ecosystem Partners
             </h3>
-            <div className="h-1 w-20 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full" />
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-6xl mx-auto">
+          <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 max-w-6xl mx-auto px-4">
             {partners.map((partner, index) => (
-              <PartnerLogo
+              <motion.div
                 key={index}
-                logo={partner.logo}
-                name={partner.name}
-                delay={0.1 * index}
-              />
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={inView ? { opacity: 0.6, scale: 1 } : {}}
+                whileHover={{ opacity: 1, scale: 1.1 }}
+                transition={{ duration: 0.5, delay: 0.1 * index }}
+                className="group h-12 md:h-16 flex items-center grayscale hover:grayscale-0 transition-all duration-500"
+              >
+                <img
+                  src={partner.logo}
+                  alt={partner.name}
+                  className="h-full w-auto object-contain"
+                />
+              </motion.div>
             ))}
           </div>
         </div>

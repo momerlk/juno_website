@@ -13,15 +13,16 @@ const Footer: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-16">
           {/* Logo and Company Info */}
-          <div className="lg:col-span-4 space-y-6">
-            <a href="/#home" className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-tr from-primary to-secondary rounded-xl flex items-center justify-center">
-                <span className="font-black text-xl text-white">J</span>
-              </div>
-              <span className="font-bold text-2xl text-white tracking-tight">juno</span>
+          <div className="lg:col-span-4 space-y-8">
+            <a href="/#home" className="flex items-center">
+              <img
+                src="/juno_logos/icon+text_white.png"
+                alt="Juno Logo"
+                className="h-10 md:h-12 w-auto object-contain"
+              />
             </a>
-            <p className="text-neutral-400 max-w-sm text-lg leading-relaxed">
-              Pakistan's indie fashion destination, connecting thoughtful shoppers with standout independent labels.
+            <p className="text-neutral-400 max-w-sm text-lg leading-relaxed font-light italic">
+              Pakistan&apos;s indie fashion destination. Empowering discovery, supporting creators.
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((link, index) => (
@@ -31,7 +32,7 @@ const Footer: React.FC = () => {
                   aria-label={link.label}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300"
+                  className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 border border-white/10"
                 >
                   {link.icon}
                 </a>
@@ -42,52 +43,50 @@ const Footer: React.FC = () => {
           {/* Links */}
           <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-8">
             <div>
-              <h4 className="text-base font-bold text-white mb-6 uppercase tracking-wider">App</h4>
+              <h4 className="text-base font-black text-white mb-8 uppercase tracking-[0.2em]">Platform</h4>
               <ul className="space-y-4">
-                <li><a href="/#screenshots" className="text-neutral-400 hover:text-white transition-colors">Features</a></li>
-                <li><a href="/download" className="text-neutral-400 hover:text-white transition-colors">Download</a></li>
-                <li><a href="/download" className="text-neutral-400 hover:text-white transition-colors">iOS</a></li>
-                <li><a href="/download" className="text-neutral-400 hover:text-white transition-colors">Android</a></li>
+                <li><a href="/#juno-app" className="text-neutral-500 hover:text-white transition-colors">Ecosystem</a></li>
+                <li><a href="/download" className="text-neutral-500 hover:text-white transition-colors">Download App</a></li>
+                <li><a href="/blog" className="text-neutral-500 hover:text-white transition-colors">Blog</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-base font-bold text-white mb-6 uppercase tracking-wider">Studio</h4>
+              <h4 className="text-base font-black text-white mb-8 uppercase tracking-[0.2em]">Studio</h4>
               <ul className="space-y-4">
-                <li><a href="/#juno-studio" className="text-neutral-400 hover:text-white transition-colors">Features</a></li>
-                <li><a href="/#pricing" className="text-neutral-400 hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="/seller" className="text-neutral-400 hover:text-white transition-colors">Seller Login</a></li>
+                <li><a href="/#juno-studio" className="text-neutral-500 hover:text-white transition-colors">Features</a></li>
+                <li><a href="/seller" className="text-neutral-500 hover:text-white transition-colors">Launch Label</a></li>
+                <li><a href="/seller/auth" className="text-neutral-500 hover:text-white transition-colors">Seller Portal</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-base font-bold text-white mb-6 uppercase tracking-wider">Company</h4>
+              <h4 className="text-base font-black text-white mb-8 uppercase tracking-[0.2em]">Community</h4>
               <ul className="space-y-4">
-                <li><a href="/#team" className="text-neutral-400 hover:text-white transition-colors">Team</a></li>
-                <li><a href="/blog" className="text-neutral-400 hover:text-white transition-colors">Blog</a></li>
-                <li><a href="/#download" className="text-neutral-400 hover:text-white transition-colors">Contact</a></li>
+                <li><a href="/chapters" className="text-neutral-500 hover:text-white transition-colors">Chapters</a></li>
+                <li><a href="/#juno-app" className="text-neutral-500 hover:text-white transition-colors">Partners</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-base font-bold text-white mb-6 uppercase tracking-wider">Legal</h4>
+              <h4 className="text-base font-black text-white mb-8 uppercase tracking-[0.2em]">Legal</h4>
               <ul className="space-y-4">
-                <li><a href="/privacy-policy" className="text-neutral-400 hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="/terms-and-conditions" className="text-neutral-400 hover:text-white transition-colors">Terms</a></li>
-                <li><a href="/refund-policy" className="text-neutral-400 hover:text-white transition-colors">Refunds</a></li>
+                <li><a href="/privacy-policy" className="text-neutral-500 hover:text-white transition-colors">Privacy</a></li>
+                <li><a href="/terms-and-conditions" className="text-neutral-500 hover:text-white transition-colors">Terms</a></li>
+                <li><a href="/refund-policy" className="text-neutral-500 hover:text-white transition-colors">Refunds</a></li>
               </ul>
             </div>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-neutral-500 text-sm">
-            &copy; {currentYear} Juno Technologies Inc. All rights reserved.
+        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+          <p className="text-neutral-600 text-xs font-bold uppercase tracking-widest">
+            &copy; {currentYear} Juno Technologies. Built for Pakistan.
           </p>
-          <div className="flex items-center space-x-2 text-neutral-600 text-sm">
-            <span>Made with</span>
-            <span className="text-red-500">♥</span>
-            <span>in Pakistan</span>
+          <div className="flex items-center space-x-2 text-neutral-600 text-xs font-bold uppercase tracking-widest">
+            <span>Home of Indie Brands</span>
+            <span className="text-primary">●</span>
+            <span>Est. 2024</span>
           </div>
         </div>
       </div>

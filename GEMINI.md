@@ -1,24 +1,27 @@
 # Project Overview
 
-This is a React-based web application for Juno, an e-commerce platform in Pakistan. The application serves as the main website and includes separate dashboards for sellers, administrators, ambassadors, and employees.
+Juno is the premier curated marketplace for Pakistan's independent labels. The platform is designed to prioritize **indie brands** and their stories as the primary discovery mechanism, with AI-driven features and a "swipe-to-shop" interface serving as secondary tools for conversion.
+
+The application serves as the main ecosystem hub, connecting shoppers with original creators through a unified experience.
 
 **Main Technologies:**
 
 *   **Frontend:** React, Vite, TypeScript, Tailwind CSS
 *   **Routing:** `react-router-dom`
-*   **State Management:** React Context API for authentication
-*   **API Communication:** The frontend communicates with a backend API for data fetching and mutations.
+*   **Animation:** Framer Motion (used for brand showcases, marquees, and interactions)
+*   **State Management:** React Context API for role-based authentication
+*   **API Communication:** Configured in `src/api.tsx`.
 
 **Architecture:**
 
-The application is divided into several parts:
+The application is modular and role-oriented:
 
-*   **Main Website:** The public-facing website with information about the Juno app, pricing, and company mission.
-*   **Blog:** A blog section with articles.
-*   **Seller Dashboard:** A dashboard for sellers to manage their products, orders, and profile.
-*   **Admin Dashboard:** A dashboard for administrators to manage the platform.
-*   **Ambassador Dashboard:** A dashboard for brand ambassadors.
-*   **Work Dashboard:** A dashboard for employees.
+*   **Main Website:** A high-impact, brand-first landing page featuring brand showcases, curated discovery, and community testimonials.
+*   **Blog:** MDX-powered section for founder stories and fashion discovery articles.
+*   **Seller Dashboard:** A specialized "Studio" for labels to manage inventory, analytics, and brand presence.
+*   **Admin Dashboard:** Platform management for orders, sellers, users, and delivery logistics.
+*   **Ambassador Dashboard:** Tracking for brand ambassadors and campus leads.
+*   **Work Dashboard:** Internal management for employee operations.
 
 # Building and Running
 
@@ -34,39 +37,33 @@ npm install
 
 **Development:**
 
-To start the development server, run:
-
 ```bash
 npm run dev
 ```
 
-**Building:**
-
-To build the application for production, run:
+**Production Build:**
 
 ```bash
 npm run build
 ```
 
-**Linting:**
-
-To lint the codebase, run:
-
-```bash
-npm run lint
-```
-
-**Previewing the Production Build:**
-
-To preview the production build locally, run:
-
-```bash
-npm run preview
-```
-
 # Development Conventions
 
-*   **Styling:** The project uses Tailwind CSS for styling.
-*   **Components:** Components are organized by feature/domain (e.g., `seller`, `admin`, `blog`).
-*   **Authentication:** Authentication is handled using React's Context API, with separate contexts for each user role (seller, admin, ambassador, work).
-*   **API:** The frontend communicates with a backend API. The base URL is configured in `src/api.tsx`.
+*   **Brand-First Design:** All visual updates must prioritize brand campaign imagery and founder narratives over generic platform features.
+*   **Styling Standards:**
+    *   **Colors:** Use the standardized Red-to-Pink/Orange gradient for primary actions and accents.
+    *   **Gradients:** Use `from-primary to-secondary` (Red to Pink) consistently across the site. Avoid mixing with other colors (blues/greens) in main UI components.
+    *   **Typography:** Use high-contrast font weights (Black/ExtraBold) for headlines to maintain the "Indie Spirit" aesthetic.
+*   **Components:** Organized by domain (e.g., `seller`, `admin`, `shared`).
+*   **Assets:**
+    *   Juno Logos: `public/juno_logos/**` (Use white `icon+text` for dark backgrounds).
+    *   Brand Logos: `public/brand_logos/**`.
+    *   Brand Banners: `public/brand_banners/**` (Used for the cinematic Brand Showcase).
+    *   Partner Logos: `public/dark_logos/**` (Used for the Ecosystem section).
+
+## Gemini Added Memories
+- **[REBRAND]** Executed a complete marketing pivot: shifted the mission from "swipe-to-shop app" to "Home of Pakistan's Indie Brands."
+- Standardized styling to a strict Red + Pink gradient and high-contrast typography.
+- Implemented the `BrandShowcase` (marquee campaign imagery) and `TestimonialsSection` (Community Wall).
+- Redesigned the `Hero`, `BrandsSection` (logo ticker), and `JunoApp` (ecosystem partners) to align with the new brand-first strategy.
+- Implemented 'Buy Now' button feature in Juno app (Feed and Product Details screens) allowing instant single-item checkout using Orders.CreateOrder.
