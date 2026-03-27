@@ -84,7 +84,7 @@ const JunoStudio: React.FC = () => {
           className="text-center"
         >
           <a 
-            href="/seller" 
+            href="/studio" 
             className="inline-flex items-center px-12 py-6 rounded-full bg-white text-black font-black text-xl hover:bg-neutral-200 transition-all hover:scale-105 active:scale-95 group shadow-2xl shadow-white/10"
           >
             Launch Your Label

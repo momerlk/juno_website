@@ -484,7 +484,7 @@ interface FormInputProps {
   disabled?: boolean;
 }
 
-// Reuse existing FormInput from seller portal
+// Reuse existing FormInput from Juno Studio
 ```
 
 #### StatusBadge Component

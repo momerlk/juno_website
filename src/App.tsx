@@ -17,6 +17,7 @@ import ManageInventory from './components/seller/ManageInventory';
 import AdminManageOrders from './components/admin/ManageOrders';
 import Analytics from './components/seller/Analytics';
 import Profile from './components/seller/Profile';
+import JunoStudioLanding from './components/seller/JunoStudioLanding';
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
 import { JunoStudioProvider } from './contexts/JunoStudioContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
@@ -63,6 +64,7 @@ import WritePage from './components/blog/WritePage';
 import ProductPage from './components/ProductPage';
 import DownloadRedirect from './components/DownloadRedirect';
 import ChapterFormPage from './components/chapter/ChapterFormPage';
+import BrandReelGraphic from './components/BrandReelGraphic';
 
 import WorkAuth from "./components/work/WorkAuth";
 import WorkDashboard from "./components/work/WorkDashboard";
@@ -86,7 +88,7 @@ function App() {
             <AmbassadorAuthProvider>
               <JunoStudioProvider>
                 <div className="min-h-screen bg-background text-white">
-                {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && <Navbar />}
+                {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Navbar />}
                 <Routes>
                   <Route path="/" element={
                     <main>
@@ -117,12 +119,13 @@ function App() {
                   <Route path="/chapters" element={<ChapterFormPage />} />
                   <Route path="/chapters/:university" element={<ChapterFormPage />} />
 
-                  <Route path="/seller" element={
-                    <ProtectedRoute>
-                      <Navigate to="/seller/dashboard" replace />
-                    </ProtectedRoute>
-                  } />
+                  {/* Juno Studio (Seller) Routes */}
+                  <Route path="/studio" element={<JunoStudioLanding />} />
+                  <Route path="/seller" element={<JunoStudioLanding />} />
+                  
                   <Route path="/seller/auth" element={<SellerAuth />} />
+                  <Route path="/studio/auth" element={<SellerAuth />} />
+
                   <Route path="/seller/dashboard" element={<ProtectedRoute><SellerDashboard /></ProtectedRoute>}>
                     <Route index element={<SellerHome />} />
                     <Route path="inventory" element={<ManageInventory />} />
@@ -130,9 +133,17 @@ function App() {
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="profile" element={<Profile />} />
                   </Route>
-                  <Route path="/seller/onboarding" element={
-                      <SellerOnboarding />
-                  } />
+
+                  <Route path="/studio/dashboard" element={<ProtectedRoute><SellerDashboard /></ProtectedRoute>}>
+                    <Route index element={<SellerHome />} />
+                    <Route path="inventory" element={<ManageInventory />} />
+                    <Route path="orders" element={<SellerManageOrders />} />
+                    <Route path="analytics" element={<Analytics />} />
+                    <Route path="profile" element={<Profile />} />
+                  </Route>
+
+                  <Route path="/seller/onboarding" element={<SellerOnboarding />} />
+                  <Route path="/studio/onboarding" element={<SellerOnboarding />} />
 
                   <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}>
                     <Route index element={<PlatformStats />} />
@@ -185,9 +196,10 @@ function App() {
                   />
                   
                   <Route path="/product/:productId" element={<ProductPage />} />
+                  <Route path="/brand-reel" element={<BrandReelGraphic />} />
                   <Route path="/:brandName" element={<BrandPage />} />
                 </Routes>
-                {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && <Footer />}
+                {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Footer />}
                 </div>
               </JunoStudioProvider>
             </AmbassadorAuthProvider>

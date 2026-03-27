@@ -283,122 +283,202 @@ const SellerHome: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="glass-card">
-            <div className="flex items-center mb-4">
-              <div className="p-2 bg-primary/20 rounded-lg mr-3">
-                 <Store size={24} className="text-primary" />
+      {/* Info Strip — unified panel with internal columns */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="rounded-2xl border border-white/8 bg-white/[0.02] overflow-hidden"
+        style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-white/[0.07]">
+
+          {/* — Brand Identity */}
+          <div className="relative p-6 overflow-hidden">
+            {/* Ghost monogram */}
+            <span
+              className="absolute -right-3 -bottom-4 text-[7rem] font-black leading-none select-none pointer-events-none text-white"
+              style={{ opacity: 0.025 }}
+            >
+              {seller?.user.business_name?.charAt(0)?.toUpperCase() ?? 'J'}
+            </span>
+
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-4">
+                <Store size={13} className="text-white/30" />
+                <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-white/30">Brand Profile</span>
               </div>
-              <h2 className="text-xl font-semibold text-white">Business Info</h2>
-            </div>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between items-center py-2 border-b border-white/5">
-                <span className="text-neutral-400">Name</span>
-                <span className="text-white font-semibold">{seller?.user.business_name}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-white/5">
-                <span className="text-neutral-400">Email</span>
-                <span className="text-white font-semibold">{seller?.user.email}</span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-neutral-400">Subscription</span>
-                <span className={`font-semibold px-2 py-1 rounded-full text-xs ${seller?.user.status === 'active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'}`}>
-                  {seller?.user.status || 'Inactive'}
+
+              <p className="text-xl font-bold text-white mb-0.5 truncate">{seller?.user.business_name}</p>
+              <p className="text-xs font-mono text-white/35 truncate mb-5">{seller?.user.email}</p>
+
+              <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
+                <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/25">Status</span>
+                <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full border ${
+                  seller?.user.status === 'active'
+                    ? 'text-emerald-400 bg-emerald-400/10 border-emerald-500/25'
+                    : 'text-amber-400 bg-amber-400/10 border-amber-500/25'
+                }`}>
+                  {seller?.user.status === 'active' ? '● Active' : '○ Inactive'}
                 </span>
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="glass-card">
-            <div className="flex items-center mb-4">
-              <div className="p-2 bg-secondary/20 rounded-lg mr-3">
-                <Globe size={24} className="text-secondary" />
-              </div>
-              <h2 className="text-xl font-semibold text-white">Sync Catalogue</h2>
+          {/* — Sync Catalogue */}
+          <div className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Globe size={13} className="text-white/30" />
+              <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-white/30">Sync Catalogue</span>
             </div>
-            <p className="text-sm text-neutral-400 mb-4">Enter your website URL to automatically sync your product catalogue.</p>
-            <div className="space-y-3">
-              <input
-                type="url"
-                placeholder="https://your-website.com"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-neutral-500 focus:outline-none focus:border-primary/50"
-                disabled={uploading}
-              />
-              <button 
+            <p className="text-xs text-white/35 mb-4 leading-relaxed">
+              Import products directly from your Shopify or custom store URL.
+            </p>
+            <div className="space-y-2.5">
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-[10px] font-mono text-white/20 pointer-events-none select-none">https://</span>
+                <input
+                  type="url"
+                  placeholder="your-store.myshopify.com"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-[4.5rem] pr-4 py-2.5 text-sm text-white font-mono placeholder-white/15 focus:outline-none focus:border-primary/40 focus:bg-white/[0.07] transition-all"
+                  disabled={uploading}
+                />
+              </div>
+              <button
                 onClick={handleSyncCatalogue}
                 disabled={uploading}
-                className="w-full glass-button bg-secondary/20 hover:bg-secondary/30 text-secondary border-secondary/30 flex justify-center items-center"
+                className="w-full py-2.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all duration-200 flex items-center justify-center gap-2 bg-white/[0.04] border-white/[0.08] text-white/50 hover:bg-primary/15 hover:border-primary/30 hover:text-primary disabled:opacity-40"
               >
                 {uploading ? (
-                  <>
-                    <Loader size={18} className="animate-spin mr-2" />
-                    Syncing...
-                  </>
+                  <><Loader size={13} className="animate-spin" /> Syncing…</>
                 ) : (
-                  'Sync Now'
+                  <><Globe size={13} /> Sync Now</>
                 )}
               </button>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="glass-card">
-            <div className="flex items-center mb-4">
-               <div className="p-2 bg-accent/20 rounded-lg mr-3">
-                 <CreditCard size={24} className="text-accent" />
-               </div>
-              <h2 className="text-xl font-semibold text-white">Subscription</h2>
-            </div>
-            <p className="text-sm text-neutral-400 mb-6 min-h-[40px]">
-              {seller?.user.status === 'active' ? 'Your subscription is active and renews automatically.' : 'Activate your subscription to unlock all features and start selling.'}
-            </p>
-            <button onClick={() => setIsSubscriptionModalOpen(true)} className="w-full glass-button bg-primary/20 hover:bg-primary/30 text-primary border-primary/30">
-              {seller?.user.status === 'active' ? 'Manage Subscription' : 'Subscribe Now'}
-            </button>
-          </motion.div>
-      </div>
-
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="mt-8 glass-card">
-        <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center">
-                <div className="p-2 bg-primary/20 rounded-lg mr-3">
-                  <ShoppingCart size={24} className="text-primary" />
-                </div>
-                <h2 className="text-xl font-semibold text-white">Recent Orders</h2>
-            </div>
-            <Link to="/seller/dashboard/orders" className="flex items-center text-sm text-primary hover:text-primary-light transition-colors">
-                View All <ArrowRight size={16} className="ml-1" />
-            </Link>
-        </div>
-        <div className="space-y-3">
-            {isLoadingOrders ? (
-                <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
-                   <Loader className="animate-spin mb-2" />
-                   <p>Loading orders...</p>
-                </div>
-            ) : recentOrders.length === 0 ? (
-                <p className="text-neutral-400 text-center py-12">No recent orders found.</p>
-            ) : (
-                recentOrders.map(order => (
-                    <div key={order.id} className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-300">
-                        <div>
-                            <p className="font-semibold text-white truncate text-sm">#{order.order_number}</p>
-                            <p className="text-xs text-neutral-400">{order.shipping_address?.name}</p>
-                        </div>
-                        <div className="hidden sm:block">
-                            <OrderStatusBadge status={order.status} />
-                        </div>
-                        <div className="text-right sm:text-left">
-                            <p className="font-semibold text-white text-sm">Rs. {order.total.toLocaleString()}</p>
-                            <p className="text-xs text-neutral-400">{order.order_items?.length} items</p>
-                        </div>
-                        <div className="text-right text-xs text-neutral-500 hidden sm:block">
-                            {new Date(order.created_at).toLocaleDateString()}
-                        </div>
-                    </div>
-                ))
+          {/* — Membership */}
+          <div className="relative p-6 overflow-hidden">
+            {seller?.user.status === 'active' && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: 'radial-gradient(circle at 80% 20%, rgba(255,24,24,0.06) 0%, transparent 60%)' }}
+              />
             )}
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCard size={13} className="text-white/30" />
+                <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-white/30">Membership</span>
+              </div>
+
+              <div className="mb-5">
+                <span className={`inline-block text-[10px] font-mono px-2.5 py-1 rounded border mb-3 ${
+                  seller?.user.status === 'active'
+                    ? 'text-primary border-primary/30 bg-primary/10'
+                    : 'text-white/25 border-white/10 bg-white/[0.04]'
+                }`}>
+                  {seller?.user.status === 'active' ? 'STANDARD PLAN' : 'NO ACTIVE PLAN'}
+                </span>
+                <p className="text-xs text-white/35 leading-relaxed">
+                  {seller?.user.status === 'active'
+                    ? 'Your plan is active and renews automatically each cycle.'
+                    : 'Subscribe to unlock full selling and analytics features.'}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsSubscriptionModalOpen(true)}
+                className={`w-full py-2.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all duration-200 ${
+                  seller?.user.status === 'active'
+                    ? 'border-primary/30 text-primary bg-primary/10 hover:bg-primary/20'
+                    : 'border-white/15 text-white/60 bg-white/[0.04] hover:bg-primary/15 hover:border-primary/30 hover:text-primary'
+                }`}
+              >
+                {seller?.user.status === 'active' ? 'Manage Plan' : 'Subscribe Now →'}
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </motion.div>
+
+      {/* Recent Orders — ledger table */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.15 }}
+        className="mt-5 rounded-2xl border overflow-hidden"
+        style={{ borderColor: 'rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.015)' }}
+      >
+        {/* Table header bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center gap-2.5">
+            <ShoppingCart size={13} className="text-white/30" />
+            <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-white/30">Recent Orders</span>
+          </div>
+          <Link
+            to="/seller/dashboard/orders"
+            className="flex items-center gap-1.5 text-[10px] font-mono tracking-[0.2em] uppercase text-white/25 hover:text-primary transition-colors"
+          >
+            View All <ArrowRight size={11} />
+          </Link>
+        </div>
+
+        {/* Column labels */}
+        {!isLoadingOrders && recentOrders.length > 0 && (
+          <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr] gap-4 px-6 py-2.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+            {['Order / Customer', 'Status', 'Amount', 'Date'].map(col => (
+              <span key={col} className="text-[9px] font-mono tracking-[0.25em] uppercase text-white/20">{col}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Rows */}
+        <div>
+          {isLoadingOrders ? (
+            <div className="flex items-center justify-center gap-3 py-14 text-white/20">
+              <Loader className="animate-spin" size={15} />
+              <span className="text-xs font-mono tracking-widest">Loading…</span>
+            </div>
+          ) : recentOrders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 gap-3 text-white/20">
+              <ShoppingCart size={22} style={{ opacity: 0.3 }} />
+              <p className="text-xs font-mono tracking-widest">No orders yet</p>
+            </div>
+          ) : (
+            recentOrders.map((order, index) => (
+              <motion.div
+                key={order.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 + index * 0.06 }}
+                className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr] gap-4 items-center px-6 py-4 border-b last:border-0 hover:bg-white/[0.025] transition-colors group cursor-default"
+                style={{ borderColor: 'rgba(255,255,255,0.04)' }}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-mono text-white group-hover:text-primary transition-colors truncate">
+                    #{order.order_number}
+                  </p>
+                  <p className="text-[11px] text-white/30 mt-0.5 truncate">{order.shipping_address?.name}</p>
+                </div>
+                <div>
+                  <OrderStatusBadge status={order.status} />
+                </div>
+                <div>
+                  <p className="text-sm font-mono text-white">Rs. {order.total.toLocaleString()}</p>
+                  <p className="text-[11px] text-white/30 mt-0.5">{order.order_items?.length} item{(order.order_items?.length ?? 0) !== 1 ? 's' : ''}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-mono text-white/30">
+                    {new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
+                  </p>
+                </div>
+              </motion.div>
+            ))
+          )}
         </div>
       </motion.div>
 

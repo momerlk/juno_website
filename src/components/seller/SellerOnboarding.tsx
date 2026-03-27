@@ -376,7 +376,8 @@ const SellerOnboarding: React.FC = () => {
 
       if (response.ok || response.status === 201) {
         alert('Registration successful. Please check your email for verification.');
-        navigate('/seller/auth');
+        const prefix = window.location.pathname.startsWith('/studio') ? '/studio' : '/seller';
+        navigate(`${prefix}/auth`);
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -459,7 +460,7 @@ const SellerOnboarding: React.FC = () => {
   const steps = [
     {
       title: "Account Credentials",
-      subtitle: "Create your seller account",
+      subtitle: "Create your brand account",
       icon: <User className="text-primary" size={32} />,
       content: (
         <div className="space-y-6">
@@ -900,10 +901,10 @@ const SellerOnboarding: React.FC = () => {
       content: (
           <div className="space-y-6">
               <div className="bg-background-light/50 border border-neutral-700 rounded-lg p-6 h-64 overflow-y-auto custom-scrollbar">
-                  <h4 className="text-lg font-bold text-white mb-4">Seller Agreement</h4>
+                  <h4 className="text-lg font-bold text-white mb-4">Brand Agreement</h4>
                   <p className="text-sm text-neutral-300 mb-4">
                       1. <strong>Introduction</strong><br/>
-                      These Terms and Conditions govern your use of the Juno Seller Platform. By registering as a seller, you agree to comply with these terms.
+                      These Terms and Conditions govern your use of the Juno Studio. By registering as a brand, you agree to comply with these terms.
                   </p>
                   <p className="text-sm text-neutral-300 mb-4">
                       2. <strong>Product Listing & Quality</strong><br/>
@@ -932,7 +933,7 @@ const SellerOnboarding: React.FC = () => {
                       {formData.contract_agreed && <Check size={14} className="text-white" />}
                   </div>
                   <span className="text-neutral-300 text-sm select-none">
-                      I have read and agree to the <span className="text-primary font-semibold">Seller Terms & Conditions</span> and <span className="text-primary font-semibold">Privacy Policy</span>.
+                      I have read and agree to the <span className="text-primary font-semibold">Brand Terms & Conditions</span> and <span className="text-primary font-semibold">Privacy Policy</span>.
                   </span>
               </div>
           </div>
@@ -1043,7 +1044,7 @@ const SellerOnboarding: React.FC = () => {
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-white">Seller Onboarding</h1>
+            <h1 className="text-2xl font-bold text-white">Juno Studio Onboarding</h1>
             <span className="text-sm text-neutral-400">Step {currentStep + 1} of {steps.length}</span>
           </div>
           <div className="w-full bg-neutral-700 rounded-full h-2">

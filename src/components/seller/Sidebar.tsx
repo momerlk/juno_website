@@ -28,22 +28,29 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const { seller, logout } = useSellerAuth();
+  const location = useLocation();
+  const prefix = location.pathname.startsWith('/studio') ? '/studio' : '/seller';
+
+  const navItems = navigation.map(item => ({
+    ...item,
+    href: item.href.replace('/seller', prefix)
+  }));
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-black/20 backdrop-blur-2xl border-r border-white/5">
       <div className="flex items-center justify-between h-20 flex-shrink-0 px-6 border-b border-white/5">
-        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-400">Seller Portal</h1>
+        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-400">Juno Studio</h1>
         <button onClick={() => setIsOpen(false)} className="md:hidden text-neutral-400 hover:text-white transition-colors">
           <X />
         </button>
       </div>
       <nav className="flex-grow p-4 overflow-y-auto space-y-1">
         <ul>
-          {navigation.map((item) => (
+          {navItems.map((item) => (
             <li key={item.name} className="mb-2">
               <NavLink
                 to={item.href}
-                end={item.href === '/seller/dashboard'}
+                end={item.href === `${prefix}/dashboard`}
                 onClick={() => isOpen && setIsOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center px-4 py-3 rounded-xl transition-all duration-300 group ${
@@ -67,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
           </div>
           <div className="overflow-hidden">
             <p className="text-white font-semibold truncate">{seller?.user.business_name}</p>
-            <p className="text-xs text-neutral-400">Seller Account</p>
+            <p className="text-xs text-neutral-400">Brand Account</p>
           </div>
         </div>
         <button

@@ -56,7 +56,7 @@ const Footer: React.FC = () => {
               <ul className="space-y-4">
                 <li><a href="/#juno-studio" className="text-neutral-500 hover:text-white transition-colors">Features</a></li>
                 <li><a href="/seller" className="text-neutral-500 hover:text-white transition-colors">Launch Label</a></li>
-                <li><a href="/seller/auth" className="text-neutral-500 hover:text-white transition-colors">Seller Portal</a></li>
+                <li><a href="/studio" className="text-neutral-500 hover:text-white transition-colors">Juno Studio</a></li>
               </ul>
             </div>
 

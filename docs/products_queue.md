@@ -4,7 +4,7 @@ This document outlines the design and usage of the **Products Queue System**, a 
 
 ## Overview
 
-All products coming from **Seller Portal Manual Uploads** or **Shopify Ingestion** must pass through the `products_queue` collection. No product is written directly to the `products` collection.
+All products coming from **Juno Studio Manual Uploads** or **Shopify Ingestion** must pass through the `products_queue` collection. No product is written directly to the `products` collection.
 
 ## Data Model
 
@@ -82,7 +82,7 @@ To ensure platform integrity, deactivation is enforced at the read layer:
 *   The recommendation engine must filter out products where `seller.status != active` OR `product.status != active`.
 *   Users with `account_status != active` should not receive personalized recommendations (or system should treat them as guests).
 
-## Seller Portal Expectations
+## Juno Studio Expectations
 
 *   The portal must show a "Drafts/Queue" tab separate from "Active Products".
 *   Items in "Queue" should display their `status` and `errors`.

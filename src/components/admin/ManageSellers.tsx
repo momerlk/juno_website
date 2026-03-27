@@ -49,7 +49,7 @@ const ManageSellers: React.FC = () => {
       return;
     }
     
-    if (window.confirm(`Login to seller portal for ${seller.business_name}?`)) {
+    if (window.confirm(`Login to Juno Studio for ${seller.business_name}?`)) {
       try {
         const response = await SellerAuth.Login(seller.email, "JunoPakistan12#");
         

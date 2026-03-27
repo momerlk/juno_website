@@ -17,13 +17,15 @@ const SellerAuth: React.FC = () => {
     e.preventDefault();
     setError('');
 
+    const prefix = window.location.pathname.startsWith('/studio') ? '/studio' : '/seller';
+
     try {
       if (isSignup) {
         await signup(email, password, businessName);
-        navigate('/seller/onboarding');
+        navigate(`${prefix}/onboarding`);
       } else {
         await login(email, password);
-        navigate('/seller/dashboard');
+        navigate(`${prefix}/dashboard`);
       }
     } catch (err) {
       setError('Authentication failed. Please try again.');
@@ -40,7 +42,7 @@ const SellerAuth: React.FC = () => {
       >
         <div className="text-center">
           <h2 className="mt-2 text-3xl font-extrabold text-white">
-            {isSignup ? 'Create your seller account' : 'Sign in to your seller account'}
+            {isSignup ? 'Create your brand account' : 'Sign in to your brand account'}
           </h2>
           <p className="mt-2 text-sm text-neutral-400">
             {isSignup ? 'Start selling on Juno today' : 'Welcome back to Juno'}
@@ -122,7 +124,10 @@ const SellerAuth: React.FC = () => {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => navigate("/seller/onboarding")}  
+              onClick={() => {
+                const prefix = window.location.pathname.startsWith('/studio') ? '/studio' : '/seller';
+                navigate(`${prefix}/onboarding`);
+              }}  
               className="text-sm text-neutral-400 hover:text-primary transition-colors"
             >
               {"Don't have an account? Sign up"}
