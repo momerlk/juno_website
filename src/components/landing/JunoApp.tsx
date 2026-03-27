@@ -40,19 +40,19 @@ const JunoApp: React.FC = () => {
     {
       icon: <Building className="text-primary" size={32} />,
       title: '200+',
-      description: 'Microbusinesses utilizing our infrastructure to scale.',
+      description: 'Independent labels making something original — nothing mass-produced, nothing generic.',
       delay: 0.1,
     },
     {
       icon: <GraduationCap className="text-secondary" size={32} />,
       title: '35+',
-      description: 'University chapters fostering homegrown talent.',
+      description: 'Campus communities across Pakistan shaping what indie fashion becomes next.',
       delay: 0.2,
     },
     {
       icon: <MapPin className="text-primary" size={32} />,
-      title: '4',
-      description: 'Major cities with optimized 1-hour indie delivery.',
+      title: '4 Cities',
+      description: 'Karachi, Lahore, Islamabad, Faisalabad — 1-hour delivery from indie to your door.',
       delay: 0.3,
     },
   ];
@@ -71,10 +71,10 @@ const JunoApp: React.FC = () => {
             className="text-center mb-24"
           >
             <h2 className="text-5xl md:text-7xl font-black mb-8 text-white tracking-tighter">
-              Indie <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary py-2 px-3">Commerce Layer</span>
+              The Community <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary py-2 px-3">is Growing</span>
             </h2>
             <p className="text-xl md:text-2xl text-neutral-400 max-w-3xl mx-auto leading-relaxed font-light italic">
-              Empowering the next generation of Pakistani creators with the tools to build empires.
+              Thousands of people choosing indie over generic. Join them.
             </p>
           </motion.div>
 

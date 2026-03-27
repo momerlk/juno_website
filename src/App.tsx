@@ -1,13 +1,12 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import JunoApp from './components/JunoApp';
-import JunoStudio from './components/JunoStudio';
-import Mission from './components/Mission';
-import DownloadSection from './components/DownloadSection';
+import Hero from './components/landing/Hero';
+import JunoApp from './components/landing/JunoApp';
+import Mission from './components/landing/Mission';
+import DownloadSection from './components/landing/DownloadSection';
 import Footer from './components/Footer';
-import ScreenshotsSection from './components/ScreenshotsSection';
+import ScreenshotsSection from './components/landing/ScreenshotsSection';
 import SellerAuth from './components/seller/SellerAuth';
 import SellerDashboard from './components/seller/SellerDashboard';
 import SellerOnboarding from './components/seller/SellerOnboarding';
@@ -53,11 +52,11 @@ import AmbassadorProtectedRoute from "./components/ambassador/ProtectedRoute";
 
 import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
 import BrandPage from './components/BrandPage';
-import BrandsSection from './components/BrandsSection';
-import BrandShowcase from './components/BrandShowcase';
-import BrandSpotlight from './components/BrandSpotlight';
-import CatchyProducts from './components/CatchyProducts';
-import TestimonialsSection from './components/TestimonialsSection';
+import BrandsSection from './components/landing/BrandsSection';
+import BrandShowcase from './components/landing/BrandShowcase';
+import BrandSpotlight from './components/landing/BrandSpotlight';
+import CatchyProducts from './components/landing/CatchyProducts';
+import TestimonialsSection from './components/landing/TestimonialsSection';
 import BlogIndexPage from './components/blog/BlogIndexPage';
 import BlogPostPage from './components/blog/BlogPostPage';
 import WritePage from './components/blog/WritePage';
@@ -101,7 +100,6 @@ function App() {
                       <JunoApp />
                       <ScreenshotsSection />
                       <Mission />
-                      <JunoStudio />
                       <DownloadSection />
                     </main>
                   } />

@@ -11,6 +11,7 @@ const products = [
     price: "2,499",
     image: "https://cdn.shopify.com/s/files/1/0567/2458/6614/files/WhatsApp_Image_2025-10-28_at_22.51.06_07b8590f.jpg?v=1761674146",
     tag: "Bird-eye Mesh",
+    story: "Ukiyo built this for Karachi summers. The bird-eye mesh breathes — made for the streets, not a studio.",
     color: "from-blue-500/20 to-cyan-500/20",
     icon: <Zap size={14} />
   },
@@ -21,6 +22,7 @@ const products = [
     price: "6,600",
     image: "https://cdn.shopify.com/s/files/1/0898/0778/2200/files/DSC09685.jpg?v=1762697592",
     tag: "Marine Fabric",
+    story: "Kara's take on the coord: clean lines, marine-weight fabric. Dressed-up or dressed-down — it decides.",
     color: "from-emerald-500/20 to-teal-500/20",
     icon: <Crown size={14} />
   },
@@ -31,6 +33,7 @@ const products = [
     price: "2,499",
     image: "https://cdn.shopify.com/s/files/1/0567/2458/6614/files/WhatsApp_Image_2025-10-28_at_22.51.06_eae36b49.jpg?v=1761674113",
     tag: "Oversized Fit",
+    story: "Oversized by design, not by accident. Ukiyo cut this deliberately wider — the slouch is the point.",
     color: "from-purple-500/20 to-pink-500/20",
     icon: <Zap size={14} />
   },
@@ -41,16 +44,18 @@ const products = [
     price: "5,999",
     image: "https://cdn.shopify.com/s/files/1/0759/8266/8026/files/25.jpg?v=1765052254",
     tag: "Artisanal Knit",
+    story: "Six days. Two hands. Twenty made. NOIRE doesn't do mass production — this is what craft looks like.",
     color: "from-orange-500/20 to-amber-500/20",
     icon: <Flame size={14} />
   },
   {
     vibe: "The Active Edit",
     brand: "Grabbers",
-    title: "GBR STREET RACER SET",
+    title: "GBR Street Racer Set",
     price: "7,999",
     image: "https://cdn.shopify.com/s/files/1/0945/2516/1755/files/rn-image_picker_lib_temp_c6331ea0-33e1-495e-bde7-2574bef3c11f.jpg?v=1765093426",
-    tag: "Limited Drop",
+    tag: "Limited Run",
+    story: "Grabbers made 40 of these. When they're gone, they're gone. Built for movement, designed for notice.",
     color: "from-red-500/20 to-orange-500/20",
     icon: <Zap size={14} />
   },
@@ -61,6 +66,7 @@ const products = [
     price: "7,100",
     image: "https://cdn.shopify.com/s/files/1/0898/0778/2200/files/DSC09135.jpg?v=1762687765",
     tag: "Minimalist",
+    story: "Kara sourced this olive fabric for three months. The result is a piece that earns its price in silence.",
     color: "from-green-500/20 to-lime-500/20",
     icon: <Crown size={14} />
   },
@@ -71,6 +77,7 @@ const products = [
     price: "1,999",
     image: "https://cdn.shopify.com/s/files/1/0567/2458/6614/files/kazan_front.jpg?v=1754329344",
     tag: "240 GSM Cotton",
+    story: "240 GSM so it sits right. Ukiyo uses the same weight across every basic — consistency is the craft.",
     color: "from-yellow-500/20 to-orange-500/20",
     icon: <Zap size={14} />
   },
@@ -81,6 +88,7 @@ const products = [
     price: "2,699",
     image: "https://cdn.shopify.com/s/files/1/0759/8266/8026/files/DROP_NEDDEL_RED_6.jpg?v=1754046385",
     tag: "Old Money Poise",
+    story: "NOIRE calls this their 'old money' silhouette. Ribbed polo, rust red — understated on purpose.",
     color: "from-red-900/20 to-red-600/20",
     icon: <Crown size={14} />
   },
@@ -91,6 +99,7 @@ const products = [
     price: "2,599",
     image: "https://cdn.shopify.com/s/files/1/0945/2516/1755/files/rn-image_picker_lib_temp_cb8dc639-1f50-4e62-bada-034a0d2ed823.jpg?v=1767681724",
     tag: "Distressed Denim",
+    story: "Grabbers distressed these in-house, not factory-done. Each pair is a little different — that's the point.",
     color: "from-indigo-500/20 to-blue-500/20",
     icon: <Zap size={14} />
   },
@@ -101,6 +110,7 @@ const products = [
     price: "3,699",
     image: "https://cdn.shopify.com/s/files/1/0567/2458/6614/files/WhatsAppImage2025-12-31at2.23.47AM.jpg?v=1767129893",
     tag: "Heavy Fleece",
+    story: "Heavy fleece for Lahore winters. The zipper runs clean — Ukiyo refuses to compromise on hardware.",
     color: "from-zinc-500/20 to-black/20",
     icon: <Zap size={14} />
   },
@@ -111,6 +121,7 @@ const products = [
     price: "2,199",
     image: "https://cdn.shopify.com/s/files/1/0945/2516/1755/files/2148a2e7-a425-40ee-a784-56813358cc60.jpg?v=1760179842",
     tag: "Versatile Layer",
+    story: "Grabbers designed this bomber to go everywhere. Campus to city, day to night — it adapts with you.",
     color: "from-slate-500/20 to-zinc-500/20",
     icon: <Zap size={14} />
   },
@@ -121,6 +132,7 @@ const products = [
     price: "3,899",
     image: "https://cdn.shopify.com/s/files/1/0567/2458/6614/files/EE9ADBCA-CF0B-4DA3-A984-DA939899A997.jpg?v=1746110572",
     tag: "3D Logo Print",
+    story: "The 3D logo is raised, not printed flat. Ukiyo spent two weeks getting the texture right — you'll feel it.",
     color: "from-blue-900/20 to-blue-400/20",
     icon: <Zap size={14} />
   }
@@ -158,10 +170,10 @@ const CatchyProducts: React.FC = () => {
               <span className="text-sm font-bold text-neutral-300 tracking-wider uppercase">The Catchy Edit</span>
             </div>
             <h2 className="text-5xl md:text-7xl font-black text-white mb-4 tracking-tighter">
-              Shop the <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic py-2 px-3">Unique Spirit</span>
+              The <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic py-2 px-3">Drop Board</span>
             </h2>
             <p className="text-xl text-neutral-400 font-light italic max-w-2xl leading-relaxed">
-              Curated distinctive pieces defining Pakistan's new aesthetic.
+              What the community is wearing — and the story behind why.
             </p>
           </motion.div>
 
@@ -221,23 +233,25 @@ const CatchyProducts: React.FC = () => {
 
                   {/* Content */}
                   <div className="p-8 flex flex-col flex-grow">
-                    <div className="mb-4">
+                    <div className="mb-3">
                       <p className="text-primary font-bold text-xs uppercase tracking-[0.2em] mb-1">{product.brand}</p>
                       <h3 className="text-2xl font-black text-white tracking-tight leading-tight group-hover:text-primary transition-colors line-clamp-1">{product.title}</h3>
                     </div>
-                    
+
+                    <p className="text-neutral-500 text-xs leading-relaxed mb-4 italic">{product.story}</p>
+
                     <div className="flex items-center gap-2 mb-6">
-                      <div className="w-1 h-1 rounded-full bg-neutral-500" />
-                      <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest">{product.tag}</p>
+                      <div className="w-1 h-1 rounded-full bg-neutral-600" />
+                      <p className="text-neutral-600 text-xs font-bold uppercase tracking-widest">{product.tag}</p>
                     </div>
-                    
+
                     <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-neutral-500 uppercase font-black tracking-[0.2em] mb-0.5">Price</p>
+                        <p className="text-[10px] text-neutral-500 uppercase font-black tracking-[0.2em] mb-0.5">From</p>
                         <p className="text-xl font-black text-white">Rs. {product.price}</p>
                       </div>
                       <button className="flex items-center gap-2 text-white font-black text-sm uppercase tracking-wider group/btn">
-                        View
+                        Discover
                         <ArrowRight size={18} className="transition-transform group-hover/btn:translate-x-1" />
                       </button>
                     </div>
@@ -258,7 +272,7 @@ const CatchyProducts: React.FC = () => {
             href="/download"
             className="inline-flex items-center px-12 py-6 rounded-full bg-white text-black font-black text-xl hover:bg-neutral-200 hover:scale-105 transition-all shadow-2xl shadow-white/10 group"
           >
-            Explore the Juno Ecosystem
+            Join the Community
             <ArrowRight size={24} className="ml-2 transition-transform group-hover:translate-x-1" />
           </a>
         </motion.div>
