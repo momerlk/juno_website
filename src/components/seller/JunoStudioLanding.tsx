@@ -24,7 +24,211 @@ const SpotlightPill: React.FC<{ text: string }> = ({ text }) => (
   </span>
 );
 
-const StorySection: React.FC<{ title: string; subtitle: string; description: string; side: 'left' | 'right'; image?: string }> = ({ title, subtitle, description, side, image }) => (
+/* ── Logistics Globe ─────────────────────────────────────── */
+const LogisticsGraphic: React.FC = () => {
+  const cities = [
+    { cx: 258, cy: 158, label: 'ISB' },
+    { cx: 240, cy: 178, label: 'LHE' },
+    { cx: 270, cy: 242, label: 'KHI' },
+    { cx: 148, cy: 210, label: 'DXB' },
+  ];
+  const activeArcs = [
+    { d: 'M 258,158 Q 200,128 148,210', dur: '2.5s', dotColor: '#FF4585' },
+    { d: 'M 258,158 Q 276,198 270,242', dur: '2.2s', dotColor: '#FF1818' },
+    { d: 'M 240,178 Q 195,218 148,210', dur: '3.0s', dotColor: '#FF4585' },
+    { d: 'M 270,242 Q 210,252 148,210', dur: '3.5s', dotColor: '#FF1818' },
+  ];
+
+  return (
+    <div
+      className="w-full h-full relative"
+      style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255,24,24,0.09) 0%, #040404 65%)' }}
+    >
+      <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full">
+        <defs>
+          <linearGradient id="logArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#FF1818" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#FF4585" stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+
+        {/* Globe outline */}
+        <circle cx="200" cy="200" r="148" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+
+        {/* Latitude ellipses */}
+        <ellipse cx="200" cy="200" rx="148" ry="37" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
+        <ellipse cx="200" cy="174" rx="127" ry="32" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8" />
+        <ellipse cx="200" cy="226" rx="127" ry="32" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8" />
+        <ellipse cx="200" cy="150" rx="88"  ry="22" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="0.8" />
+        <ellipse cx="200" cy="250" rx="88"  ry="22" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="0.8" />
+
+        {/* Longitude ellipses */}
+        <ellipse cx="200" cy="200" rx="37"  ry="148" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
+        <ellipse cx="200" cy="200" rx="80"  ry="148" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8" />
+        <ellipse cx="200" cy="200" rx="120" ry="148" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8" />
+
+        {/* Inactive connections */}
+        <path d="M 245,155 Q 268,195 265,242" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
+        <path d="M 148,210 Q 195,252 265,242" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
+
+        {/* Animated delivery arcs */}
+        {activeArcs.map((arc, i) => (
+          <g key={i}>
+            <path d={arc.d} fill="none" stroke="url(#logArcGrad)" strokeWidth="1.5" strokeDasharray="5 4">
+              <animate attributeName="stroke-dashoffset" from="0" to="-18" dur="1.8s" repeatCount="indefinite" />
+            </path>
+            <circle r="3.5" fill={arc.dotColor} opacity="0.9">
+              {/* @ts-ignore — animateMotion path attr */}
+              <animateMotion dur={arc.dur} repeatCount="indefinite" path={arc.d} />
+            </circle>
+          </g>
+        ))}
+
+        {/* City nodes */}
+        {cities.map((city, i) => (
+          <g key={i}>
+            <circle cx={city.cx} cy={city.cy} r="8" fill="none" stroke="rgba(255,24,24,0.35)" strokeWidth="1">
+              <animate attributeName="r"       values="7;14;7"     dur={`${2.5 + i * 0.35}s`} repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.6;0;0.6"  dur={`${2.5 + i * 0.35}s`} repeatCount="indefinite" />
+            </circle>
+            <circle cx={city.cx} cy={city.cy} r="4.5" fill="#FF1818" />
+            <circle cx={city.cx} cy={city.cy} r="2"   fill="white" />
+            <text x={city.cx} y={city.cy - 13} textAnchor="middle"
+              fill="rgba(255,255,255,0.35)" fontSize="8" fontFamily="monospace" letterSpacing="1">
+              {city.label}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+};
+
+/* ── AI Neural Network ───────────────────────────────────── */
+const AIGraphic: React.FC = () => {
+  const lx = [65, 165, 265, 355];
+  const ly: number[][] = [
+    [80, 140, 200, 260, 320],
+    [80, 140, 200, 260, 320],
+    [103, 168, 233, 298],
+    [155, 245],
+  ];
+  const path1: [number, number][] = [[0, 0], [1, 1], [2, 0], [3, 0]];
+  const path2: [number, number][] = [[0, 3], [1, 3], [2, 2], [3, 1]];
+  const isHot = (l: number, n: number) =>
+    [...path1, ...path2].some(([pl, pn]) => pl === l && pn === n);
+  const inputLabels = ['Style', 'Fit', 'Price', 'Size', 'City'];
+
+  return (
+    <div
+      className="w-full h-full relative"
+      style={{ background: 'radial-gradient(circle at 75% 50%, rgba(255,69,133,0.08) 0%, #040404 70%)' }}
+    >
+      <svg viewBox="0 0 420 400" className="absolute inset-0 w-full h-full">
+        <defs>
+          <linearGradient id="aiPathGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#FF1818" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#FF4585" stopOpacity="0.7" />
+          </linearGradient>
+        </defs>
+
+        {/* All dim connections */}
+        {ly.slice(0, -1).flatMap((layer, li) =>
+          layer.flatMap((y1, ni) =>
+            ly[li + 1].map((y2, nj) => (
+              <line key={`c-${li}-${ni}-${nj}`}
+                x1={lx[li]} y1={y1} x2={lx[li + 1]} y2={y2}
+                stroke="rgba(255,255,255,0.035)" strokeWidth="0.8"
+              />
+            ))
+          )
+        )}
+
+        {/* Hot path 1 */}
+        {path1.slice(0, -1).map(([l, n], i) => {
+          const [nl, nn] = path1[i + 1];
+          return (
+            <line key={`h1-${i}`} x1={lx[l]} y1={ly[l][n]} x2={lx[nl]} y2={ly[nl][nn]}
+              stroke="url(#aiPathGrad)" strokeWidth="1.5"
+            >
+              <animate attributeName="opacity" values="0.3;0.9;0.3" dur="2.5s" repeatCount="indefinite" begin={`${i * 0.3}s`} />
+            </line>
+          );
+        })}
+
+        {/* Hot path 2 */}
+        {path2.slice(0, -1).map(([l, n], i) => {
+          const [nl, nn] = path2[i + 1];
+          return (
+            <line key={`h2-${i}`} x1={lx[l]} y1={ly[l][n]} x2={lx[nl]} y2={ly[nl][nn]}
+              stroke="url(#aiPathGrad)" strokeWidth="1.5"
+            >
+              <animate attributeName="opacity" values="0.3;0.9;0.3" dur="3s" repeatCount="indefinite" begin={`${i * 0.4 + 0.6}s`} />
+            </line>
+          );
+        })}
+
+        {/* Nodes */}
+        {ly.flatMap((layer, li) =>
+          layer.map((y, ni) => {
+            const hot = isHot(li, ni);
+            return (
+              <g key={`n-${li}-${ni}`}>
+                {hot && (
+                  <circle cx={lx[li]} cy={y} r="12" fill="none" stroke="rgba(255,24,24,0.2)">
+                    <animate attributeName="r"       values="9;17;9"    dur="2.5s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.5;0;0.5" dur="2.5s" repeatCount="indefinite" />
+                  </circle>
+                )}
+                <circle cx={lx[li]} cy={y} r={hot ? 7 : 5.5}
+                  fill={hot ? 'rgba(255,24,24,0.2)' : 'rgba(255,255,255,0.03)'}
+                  stroke={hot ? 'rgba(255,24,24,0.85)' : 'rgba(255,255,255,0.13)'}
+                  strokeWidth={hot ? 1.5 : 0.8}
+                />
+                {hot && (
+                  <circle cx={lx[li]} cy={y} r="2.5" fill="#FF4585">
+                    <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
+                  </circle>
+                )}
+              </g>
+            );
+          })
+        )}
+
+        {/* Input labels */}
+        {inputLabels.map((label, i) => (
+          <text key={`il-${i}`} x={lx[0] - 10} y={ly[0][i] + 4} textAnchor="end"
+            fill={isHot(0, i) ? 'rgba(255,100,100,0.65)' : 'rgba(255,255,255,0.18)'}
+            fontSize="9" fontFamily="monospace"
+          >{label}</text>
+        ))}
+
+        {/* Output labels */}
+        {['Match', 'Match'].map((label, i) => (
+          <text key={`ol-${i}`} x={lx[3] + 10} y={ly[3][i] + 4} textAnchor="start"
+            fill="rgba(255,69,133,0.8)" fontSize="9" fontFamily="monospace"
+          >{label}</text>
+        ))}
+
+        {/* Footer watermark */}
+        <text x="210" y="382" textAnchor="middle"
+          fill="rgba(255,255,255,0.07)" fontSize="7.5" fontFamily="monospace" letterSpacing="2">
+          STYLE INFERENCE ENGINE
+        </text>
+      </svg>
+    </div>
+  );
+};
+
+/* ── StorySection ─────────────────────────────────────────── */
+const StorySection: React.FC<{
+  title: string;
+  subtitle: string;
+  description: string;
+  side: 'left' | 'right';
+  image?: string;
+  graphic?: React.ReactNode;
+}> = ({ title, subtitle, description, side, image, graphic }) => (
   <div className={`flex flex-col ${side === 'right' ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-16 mb-32`}>
     <div className="flex-1 w-full">
       <motion.div
@@ -50,14 +254,16 @@ const StorySection: React.FC<{ title: string; subtitle: string; description: str
         transition={{ duration: 0.8 }}
         className="relative aspect-square lg:aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl group"
       >
-        {image ? (
+        {graphic ? (
+          <div className="w-full h-full">{graphic}</div>
+        ) : image ? (
           <img src={image} alt={title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center">
-             <Package size={80} className="text-white/20" />
+            <Package size={80} className="text-white/20" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60 pointer-events-none" />
       </motion.div>
     </div>
   </div>
@@ -191,11 +397,33 @@ const JunoStudioLanding: React.FC = () => {
               transition={{ duration: 0.8 }}
             >
 
-              <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.85] mb-12 uppercase">
+              {/* Badge */}
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8">
+                <span className="w-2 h-2 rounded-full bg-primary mr-2 animate-pulse" />
+                <span className="text-xs font-mono text-neutral-300 tracking-[0.2em] uppercase">Pakistan&apos;s First Swipe-to-Shop · Now Live</span>
+              </div>
+
+              <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.85] mb-6 uppercase">
                 FOR BRANDS <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic py-2">BY BRANDS.</span>
               </h1>
 
+              <p className="text-lg md:text-xl text-neutral-400 font-light italic mb-10 max-w-lg mx-auto leading-relaxed">
+                A marketplace for indie fashion brands.
+              </p>
+
+              {/* Social proof stats */}
+              <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16 mb-12">
+                {([
+                  { value: '50+', label: 'Indie Labels' },
+                  { value: '12.5%', label: 'Commission Only' },
+                ] as { value: string; label: string }[]).map((stat, i) => (
+                  <div key={i} className="text-center">
+                    <p className="text-3xl md:text-4xl font-black text-white tracking-tighter">{stat.value}</p>
+                    <p className="text-[10px] font-mono tracking-[0.25em] uppercase text-white/30 mt-1">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
 
               {/* Main CTA Auth Form */}
               <CondensedAuth />
@@ -212,6 +440,64 @@ const JunoStudioLanding: React.FC = () => {
               </div>
             </motion.div>
           </div>
+        </section>
+
+        {/* Community Showcase — "who's already inside" */}
+        <section className="py-20 bg-black relative overflow-hidden border-b border-white/5">
+          <div className="container mx-auto px-6 mb-10">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+              <div>
+                <span className="text-[10px] font-mono tracking-[0.3em] uppercase text-primary/70 mb-2 block">The Circle</span>
+                <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter leading-none">
+                  Who&apos;s Already{' '}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic">Inside</span>
+                </h2>
+              </div>
+              <p className="text-neutral-500 font-mono text-sm uppercase tracking-[0.2em] shrink-0">
+                Invite-Only · 50+ Curated Labels
+              </p>
+            </div>
+          </div>
+
+          {(() => {
+            const communityLogos = [
+              'enthenio.jpg', 'kainaat.jpg', 'mugho.jpg', 'rakh.jpg',
+              'zarukee.jpg', 'egnar.jpg', 'ukiyo.jpeg', 'grabbers.jpg',
+              'Aphrodite.png', 'Gumaan.png', 'Kara.png', 'NOIRE.png',
+              'Tabaadil.png', 'Seek Attire.png', 'Ukiyo.png', 'NoRgrt.png',
+              'Nakashi.png', 'Qariney.png', 'ROPE.png', 'Core Store.png',
+            ].map(f => ({ src: `/brand_logos/${f}`, alt: f.split('.')[0] }));
+            const row1 = communityLogos.slice(0, Math.ceil(communityLogos.length / 2));
+            const row2 = communityLogos.slice(Math.ceil(communityLogos.length / 2));
+            return (
+              <div className="relative flex flex-col gap-4 overflow-hidden">
+                <div className="flex whitespace-nowrap py-3" style={{ animation: 'seller-marquee 50s linear infinite' }}>
+                  {[...row1, ...row1, ...row1, ...row1].map((logo, i) => (
+                    <div key={i} className="inline-flex items-center justify-center px-5 group">
+                      <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border border-white/10 overflow-hidden bg-white/[0.03] grayscale group-hover:grayscale-0 opacity-35 group-hover:opacity-100 group-hover:border-primary/40 transition-all duration-500">
+                        <img src={logo.src} alt={logo.alt} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex whitespace-nowrap py-3" style={{ animation: 'seller-marquee-rev 50s linear infinite' }}>
+                  {[...row2, ...row2, ...row2, ...row2].map((logo, i) => (
+                    <div key={i} className="inline-flex items-center justify-center px-5 group">
+                      <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border border-white/10 overflow-hidden bg-white/[0.03] grayscale group-hover:grayscale-0 opacity-35 group-hover:opacity-100 group-hover:border-primary/40 transition-all duration-500">
+                        <img src={logo.src} alt={logo.alt} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
+                <div className="absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
+                <style>{`
+                  @keyframes seller-marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+                  @keyframes seller-marquee-rev { from { transform: translateX(-50%) } to { transform: translateX(0) } }
+                `}</style>
+              </div>
+            );
+          })()}
         </section>
 
         {/* Process Section - MOVED UP */}
@@ -288,27 +574,120 @@ const JunoStudioLanding: React.FC = () => {
         <section className="py-32 container mx-auto px-6 overflow-hidden">
           <StorySection 
             subtitle="The Supply Chain"
-            title="Surgical Logistics"
-            description="Focus on your craft, not the courier. Our riders pick up from your warehouse. We handle the 1-hour delivery, tracking, and returns. All for a flat 12.5% commission."
+            title="Logistics"
+            description="Focus on your craft, not the courier. Smartlane-managed riders pick up from your warehouse daily. We handle carrier assignment, tracking, and returns — all at a flat 12.5% commission."
             side="left"
-            image="/brand_banners/noire6.jpg"
+            graphic={<LogisticsGraphic />}
           />
           
           <StorySection 
             subtitle="The Discovery"
-            title="AI-Driven Narrative"
+            title="AI-Driven"
             description="Our app prioritizes stories over stock photos. Your brand campaign imagery is featured front-and-center, powered by a recommendation engine that understands style DNA."
             side="right"
-            image="/brand_banners/ukiyo6.jpg"
+            graphic={<AIGraphic />}
           />
 
           <StorySection 
             subtitle="The Community"
-            title="The Indie Circle"
+            title="Indie"
             description="Join an invite-only circle of Pakistan's most ambitious founders. Collaborate on drops, share manufacturing hacks, and scale the ecosystem together."
             side="left"
             image="/brand_banners/kara2.webp"
           />
+        </section>
+
+        {/* The Economics */}
+        <section className="py-32 border-t border-white/5">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-16">
+              <span className="text-primary font-black uppercase tracking-[0.3em] text-sm mb-4 block">The Deal</span>
+              <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase leading-none">
+                FAIR{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic">BY DESIGN</span>
+              </h2>
+              <p className="text-neutral-400 font-light italic mt-4 max-w-md mx-auto text-sm leading-relaxed">
+                We take less so you keep more. Our commission is the lowest in Pakistan — by a long way.
+              </p>
+            </div>
+
+            {/* Main stats row */}
+            <div
+              className="grid grid-cols-1 md:grid-cols-3 overflow-hidden rounded-2xl mb-px"
+              style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.015)' }}
+            >
+              {([
+                {
+                  tag: 'Commission',
+                  value: '12.5%',
+                  sub: 'vs. up to 30% on other platforms',
+                  highlight: true,
+                },
+                {
+                  tag: 'Ad Spend Required',
+                  value: 'Zero.',
+                  sub: 'AI surfaces your brand to the right buyers automatically',
+                  highlight: false,
+                  gradient: true,
+                },
+              ] as { tag: string; value: string; sub: string; highlight?: boolean; gradient?: boolean }[]).map((item, i) => (
+                <div
+                  key={i}
+                  className="relative p-10 border-b md:border-b-0 md:border-r last:border-r-0"
+                  style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                >
+                  {item.highlight && (
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/8 to-transparent pointer-events-none rounded-none" />
+                  )}
+                  <p className="text-[10px] font-mono tracking-[0.3em] uppercase text-white/25 mb-5 relative">{item.tag}</p>
+                  <p className={`text-6xl md:text-7xl font-black tracking-tighter leading-none mb-3 relative ${
+                    item.gradient
+                      ? 'text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary'
+                      : 'text-white'
+                  }`}>
+                    {item.value}
+                  </p>
+                  <p className="text-xs text-neutral-400 font-light leading-relaxed relative">{item.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Supporting details */}
+            <div
+              className="grid grid-cols-1 md:grid-cols-3 overflow-hidden rounded-2xl"
+              style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}
+            >
+              {([
+                {
+                  icon: <Truck size={16} />,
+                  title: 'End-to-End Logistics',
+                  desc: 'Smartlane-managed couriers pick up from your warehouse daily. Daily load sheets, airway bills, full tracking — handled.',
+                },
+                {
+                  icon: <Smartphone size={16} />,
+                  title: 'Swipe-to-Shop Discovery',
+                  desc: 'Buyers swipe through your campaign imagery full-screen. Our AI learns their preferences and surfaces your products intelligently.',
+                },
+                {
+                  icon: <Users size={16} />,
+                  title: 'Founder-to-Founder Support',
+                  desc: 'Direct WhatsApp access to the Juno founders. We help you optimize listings, plan drops, and grow — not just list and forget.',
+                },
+              ] as { icon: React.ReactNode; title: string; desc: string }[]).map((item, i) => (
+                <div
+                  key={i}
+                  className="p-8 border-b md:border-b-0 md:border-r last:border-r-0 flex flex-col gap-3"
+                  style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+                >
+                  <div className="w-8 h-8 rounded-lg border border-white/10 bg-white/[0.04] flex items-center justify-center text-white/35">
+                    {item.icon}
+                  </div>
+                  <h4 className="text-sm font-black text-white uppercase tracking-tighter">{item.title}</h4>
+                  <p className="text-xs text-neutral-400 font-light leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* The Interface Toolkit */}
