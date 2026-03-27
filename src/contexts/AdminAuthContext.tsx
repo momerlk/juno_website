@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-
-const API_BASE_URL = 'https://junoapi-1095577467512.asia-south2.run.app/api/v1';
+import { request } from '../api/core';
 
 interface Admin {
   name: "Admin";
@@ -34,14 +33,10 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const login = async (password: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/admin-login?password=${encodeURIComponent(password)}`);
-      if (!response.ok) {
-        throw new Error('Login failed');
-      }
-      const data = await response.json();
-      if (!data.token) {
-        throw new Error('Token not found in response');
-      }
+      const resp = await request(`/auth/admin-login?password=${encodeURIComponent(password)}`, 'GET', undefined, undefined, true);
+      if (!resp.ok) throw new Error('Login failed');
+      const data = resp.body as any;
+      if (!data.token) throw new Error('Token not found in response');
       localStorage.setItem('admin_token', data.token);
       setToken(data.token);
       setAdmin({ name: 'Admin' });

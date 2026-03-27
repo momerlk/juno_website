@@ -1,9 +1,12 @@
-import moment from "moment";
-import { Inventory, Product, QueueItem } from "../constants/types";
+import { Product, QueueItem } from "../constants/types";
 import { Address } from "../constants/address";
 import { NestedOrderMap, Order } from "../constants/orders";
 import { Seller as TSeller} from "../constants/seller";
-import { request, API_BASE_URL, APIResponse } from "./core";
+import { request, API_BASE_URL, RECSYSTEM_BASE_URL, APIResponse } from "./core";
+import { getDeviceInfo, uploadFileAndGetUrl, COMPRESSION_PRESETS, CompressionOptions } from "./shared";
+
+export { uploadFileAndGetUrl, COMPRESSION_PRESETS };
+export type { CompressionOptions };
 
 export { API_BASE_URL as api_url };
 
@@ -26,50 +29,6 @@ export namespace OTP {
 }
 
 export namespace Auth {
-    const getDeviceInfo = async (): Promise<{
-        app_version: string;
-        device_id: string;
-        device_name: string;
-        device_type: string;
-        last_used: string;
-        os_version: string;
-        user_agent: string;
-    }> => {
-        const app_version = "1.0.0"; // Placeholder for web app version
-        // Generate or retrieve a unique ID from local storage
-        let device_id = localStorage.getItem('device_id');
-        if (!device_id) {
-            device_id = "unknown"
-            localStorage.setItem('device_id', device_id);
-        }
-        
-        const device_name = "Web Browser";
-        const device_type = "web";
-        
-        // Attempt to parse OS from user agent
-        const ua = navigator.userAgent;
-        let os_version = "unknown";
-        if (/Windows NT 10.0/.test(ua)) os_version = "Windows 10/11";
-        else if (/Windows NT 6.2/.test(ua)) os_version = "Windows 8";
-        else if (/Mac OS X 10_15_7/.test(ua)) os_version = "macOS Catalina";
-        else if (/Mac OS X/.test(ua)) os_version = "macOS";
-        else if (/Android/.test(ua)) os_version = "Android";
-        else if (/Linux/.test(ua)) os_version = "Linux";
-        else if (/iPhone|iPad|iPod/.test(ua)) os_version = "iOS";
-
-        const user_agent = navigator.userAgent;
-        const last_used = moment().toISOString();
-
-        return {
-            app_version,
-            device_id,
-            device_name,
-            device_type,
-            last_used,
-            os_version,
-            user_agent,
-        };
-    };
 
     export async function Login(email : string, password : string) : Promise<APIResponse<any>> {
         const device_info = await getDeviceInfo();
@@ -369,30 +328,10 @@ export namespace Products {
      * @param num_products The number of products to get.
      * @returns A promise resolving to the API response with a list of products.
      */
-    export async function GetRecommendations(user_id : string, num_products : number): Promise<APIResponse<Product[]>> {
-      // Re-using core request but changing base URL if needed?
-      // For now, I'll keep the custom fetch as it points to a different URL (recsystem).
-      // Or I can update core.ts to accept a full URL or baseURL.
-      // Keeping it simple for now since it points to `api_urls.recsystem`.
-      
-      const recUrl = "https://junorecsys-710509977105.asia-south2.run.app"; // Hardcoding or importing if I could
-      // Since I removed api_urls local definition, I should import it from core or just use the string.
-      // core.ts exports api_urls.
-      // Wait, I exported `api_urls` from core? No, I exported `API_BASE_URL` and `api_urls` (locally there).
-      // Let's assume I can't access `api_urls.recsystem` easily unless I export it from core.
-      
-      const requestOptions = {
-        method: "GET",
-      };
-
-      const resp = await fetch(`https://junorecsys-710509977105.asia-south2.run.app/products?user_id=${user_id}&num_products=${num_products.toString()}`, requestOptions)
-      const body = await resp.json();
-
-      return {
-        status: resp.status,
-        ok: resp.ok,
-        body: resp.ok? body.products : body.error
-      };
+    export async function GetRecommendations(user_id: string, num_products: number): Promise<APIResponse<Product[]>> {
+        const resp = await fetch(`${RECSYSTEM_BASE_URL}/products?user_id=${user_id}&num_products=${num_products}`);
+        const body = await resp.json();
+        return { status: resp.status, ok: resp.ok, body: resp.ok ? body.products : body.error };
     }
 }
 
@@ -727,168 +666,7 @@ export namespace Tournaments {
     }
 }
 
-export async function get_neutral_image(images : string[]){
-  const resp = await request("/neutral-image", "POST", { images }, undefined, true);
-  if (resp.ok){
-    return (resp.body as any).image as string;
-  }
-  else {
-    return null;
-  }
-}
-
-
-
-
-
-// Compression options interface
-interface CompressionOptions {
-  compress?: number; // 0.1 to 1.0 (0.1 = highest compression, 1.0 = no compression)
-  resize?: {
-    width?: number;
-    height?: number;
-  };
-}
-
-// Default compression settings for different use cases
-export const COMPRESSION_PRESETS = {
-  thumbnail: { compress: 0.3, resize: { width: 300 } },
-  profile: { compress: 0.6, resize: { width: 800 } },
-  high_quality: { compress: 0.8, resize: { width: 1200 } },
-  ultra_fast: { compress: 0.2, resize: { width: 400 } }
-};
-
-// Image compression function for web using canvas
-async function compressImage(
-  file: File,
-  options?: CompressionOptions | keyof typeof COMPRESSION_PRESETS
-): Promise<File> {
-  return new Promise((resolve, reject) => {
-    let compressionSettings: CompressionOptions;
-
-    // Handle preset or custom options
-    if (typeof options === 'string' && COMPRESSION_PRESETS[options]) {
-      compressionSettings = COMPRESSION_PRESETS[options];
-    } else if (typeof options === 'object' && options !== null) {
-      compressionSettings = options;
-    } else {
-      // Default compression for fast upload
-      compressionSettings = COMPRESSION_PRESETS.ultra_fast;
-    }
-
-    const image = new Image();
-    image.src = URL.createObjectURL(file);
-    image.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) {
-        return reject(new Error('Failed to get canvas context'));
-      }
-
-      let { width, height } = image;
-
-      // Resize logic
-      if (compressionSettings.resize) {
-        if (compressionSettings.resize.width && compressionSettings.resize.height) {
-            width = compressionSettings.resize.width;
-            height = compressionSettings.resize.height;
-        } else if (compressionSettings.resize.width) {
-          const ratio = width / height;
-          width = compressionSettings.resize.width;
-          height = width / ratio;
-        } else if (compressionSettings.resize.height) {
-          const ratio = width / height;
-          height = compressionSettings.resize.height;
-          width = height * ratio;
-        }
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(image, 0, 0, width, height);
-
-      const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-      const quality = compressionSettings.compress || 0.3;
-
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            const newFile = new File([blob], file.name, { type: mimeType });
-            resolve(newFile);
-          } else {
-            reject(new Error('Canvas to Blob conversion failed'));
-          }
-        },
-        mimeType,
-        quality
-      );
-    };
-    image.onerror = (error) => {
-      console.error('Image loading failed:', error);
-      // Return original file if compression fails
-      resolve(file);
-    };
-  });
-}
-
-// Main function with compression
-export async function uploadFileAndGetUrl(
-  file: File,
-  compressionOptions?: CompressionOptions | keyof typeof COMPRESSION_PRESETS,
-  url: string = API_BASE_URL + '/files/upload',
-): Promise<string> {
-  if (!file) {
-    throw new Error('No file provided');
-  }
-
-  console.log(`Processing file: ${file.name}`);
-
-  let processedFile = file;
-
-  // Compress image if it's an image file
-  if (file.type.startsWith('image/')) {
-    console.log('Compressing image...');
-    processedFile = await compressImage(file, compressionOptions);
-    console.log(`Image compressed. Original size: ${file.size}, Compressed size: ${processedFile.size}`);
-  }
-
-  // Create FormData and append the file
-  const formData = new FormData();
-  formData.append('file', processedFile, processedFile.name);
-
-  try {
-    // Send the request
-    const response = await fetch(url, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        // 'Content-Type': 'multipart/form-data' is set by the browser automatically
-      },
-    });
-
-    if (!response.ok) {
-      try {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error ${response.status}`);
-      } catch (err) {
-        if (err instanceof SyntaxError) {
-          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-        }
-        throw err;
-      }
-    }
-
-    const data = await response.json();
-
-    if (data.success && data.file && data.file.url) {
-      console.log('File uploaded successfully:', data.file.url);
-      return data.file.url;
-    } else {
-      throw new Error('Invalid response format or missing URL');
-    }
-  } catch (error) {
-    console.error('Upload failed:', error);
-    throw error;
-  }
+export async function get_neutral_image(images: string[]) {
+    const resp = await request("/neutral-image", "POST", { images }, undefined, true);
+    return resp.ok ? (resp.body as any).image as string : null;
 }

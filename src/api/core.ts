@@ -1,10 +1,11 @@
 export const api_urls = {
     testing: "http://localhost:8080/api/v1",
     production: "https://junoapi-1095577467512.asia-south2.run.app/api/v1",
-    recsystem : "https://junorecsys-710509977105.asia-south2.run.app/api/v1",
+    recsystem: "https://junorecsys-710509977105.asia-south2.run.app/api/v1",
 };
 
 export const API_BASE_URL = api_urls.production;
+export const RECSYSTEM_BASE_URL = "https://junorecsys-710509977105.asia-south2.run.app";
 
 export interface APIResponse<T> {
     status: number;
@@ -97,4 +98,9 @@ export async function request<T>(
         ok: resp.ok,
         body: resp.ok ? body : body.error
     };
+}
+
+export async function createEvent(name: string, data: any): Promise<boolean> {
+    const resp = await request('/events', 'POST', { name, data }, undefined, true);
+    return resp.ok;
 }

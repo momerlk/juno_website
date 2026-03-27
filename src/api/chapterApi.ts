@@ -1,169 +1,70 @@
-// src/api/chapterApi.ts
-// --- API Configuration ---
-import { API_BASE_URL } from "./core";
-import { createEvent } from "../api";
+import { request, API_BASE_URL, createEvent } from "./core";
 
-/**
- * The base URL for all API requests.
- */
 export const api_url = API_BASE_URL;
 
-const getAuthToken = () => localStorage.getItem('ambassador_token');
+const getToken = () => localStorage.getItem('ambassador_token') ?? undefined;
 
 async function requestWithAuth(url: string, method: string = 'GET', body?: any) {
-  const token = getAuthToken();
-  const headers: any = {
-      'Content-Type': 'application/json',
-  };
-  if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const config: any = { method, headers };
-  if (body) {
-      config.body = JSON.stringify(body);
-  }
-
-  console.log(`[API REQUEST] ${method} ${API_BASE_URL}${url}`, config);
-
-  const response = await fetch(`${API_BASE_URL}${url}`, config);
-  
-  console.log(`[API RESPONSE STATUS] ${response.status} for ${url}`);
-
-  if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'API Error' }));
-      console.error(`[API ERROR] ${url}:`, errorData);
-      throw new Error(errorData.message || `Error ${response.status}`);
-  }
-  
-  const data = await response.json();
-  console.log(`[API RESPONSE BODY] ${url}:`, data);
-  return data;
+    const resp = await request(url, method, body, getToken());
+    if (!resp.ok) {
+        throw new Error((resp.body as any)?.message || `Error ${resp.status}`);
+    }
+    return resp.body;
 }
 
 export const submitChapterApplication = async (formData: any) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/chapter-applications`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred' }));
-      alert(errorData.message || `API Error: ${response.status}`)
-      throw new Error(errorData.message || `API Error: ${response.status}`);
+    const resp = await request('/chapter-applications', 'POST', formData, undefined, true);
+    if (!resp.ok) {
+        const msg = (resp.body as any)?.message || `API Error: ${resp.status}`;
+        alert(msg);
+        throw new Error(msg);
     }
-
-    return await response.json();
-  } catch (error) {
-    alert("Chapter submission failed")
-    console.error('Chapter application submission failed:', error);
-    throw error;
-  }
+    return resp.body;
 };
 
-// --- New Ambassador Endpoints ---
-
 export const trackDownloadVisit = async (ip: string, os: string) => {
-  try {
-    await createEvent('download_page_visit', {
-      url: window.location.href,
-      ip,
-      os
-    });
-  } catch (error) {
-    console.error('Failed to track download visit:', error);
-  }
+    try {
+        await createEvent('download_page_visit', { url: window.location.href, ip, os });
+    } catch (error) {
+        console.error('Failed to track download visit:', error);
+    }
 };
 
 export const loginAmbassador = async (phoneNumber: string) => {
-  console.log(`[API REQUEST] POST ${API_BASE_URL}/ambassador/login`, { phoneNumber });
-  const response = await fetch(`${API_BASE_URL}/ambassador/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ phone_number: phoneNumber }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Login Failed' }));
-    throw new Error(errorData.message || 'Login Failed');
-  }
-
-  const data = await response.json();
-  console.log(`[API RESPONSE] Login success`, data);
-  return data;
+    const resp = await request('/ambassador/login', 'POST', { phone_number: phoneNumber }, undefined, true);
+    if (!resp.ok) {
+        throw new Error((resp.body as any)?.message || 'Login Failed');
+    }
+    return resp.body;
 };
 
-export const getAmbassadorDashboard = async () => {
-  return requestWithAuth('/ambassador/dashboard');
-};
+export const getAmbassadorDashboard = async () => requestWithAuth('/ambassador/dashboard');
 
 export const getInstituteRanking = async () => {
-  const url = '/ambassador/ranking';
-  console.log(`[API REQUEST] GET ${API_BASE_URL}${url}`);
-  const response = await fetch(`${API_BASE_URL}${url}`);
-  if (!response.ok) {
-      console.error(`[API ERROR] ${url} ${response.status}`);
-      throw new Error('Failed to fetch ranking');
-  }
-  const data = await response.json();
-  console.log(`[API RESPONSE BODY] ${url}:`, data);
-  return data;
+    const resp = await request('/ambassador/ranking', 'GET', undefined, undefined, true);
+    if (!resp.ok) throw new Error('Failed to fetch ranking');
+    return resp.body;
 };
 
 export const getAmbassadorData = async (phoneNumber: string) => {
-  const url = `/ambassador/data?phone_number=${encodeURIComponent(phoneNumber)}`;
-  console.log(`[API REQUEST] GET ${API_BASE_URL}${url}`);
-  const response = await fetch(`${API_BASE_URL}${url}`);
-  
-  console.log(`[API RESPONSE STATUS] ${response.status} for ${url}`);
-
-  if (!response.ok) {
-      console.error(`[API ERROR] ${url} ${response.status}`);
-      throw new Error('Failed to fetch ambassador data');
-  }
-  const data = await response.json();
-  console.log(`[API RESPONSE BODY] ${url}:`, data);
-  return data;
+    const resp = await request(`/ambassador/data?phone_number=${encodeURIComponent(phoneNumber)}`, 'GET', undefined, undefined, true);
+    if (!resp.ok) throw new Error('Failed to fetch ambassador data');
+    return resp.body;
 };
 
-export const getMyTeam = async () => {
-  return requestWithAuth('/ambassador/team');
+export const getMyTeam            = async () => requestWithAuth('/ambassador/team');
+export const getAmbassadorTasks   = async () => requestWithAuth('/ambassador/tasks');
+export const getInstituteUsers    = async () => requestWithAuth('/ambassador/users');
+export const getAmbassadorReports = async () => requestWithAuth('/ambassador/reports');
+
+export const submitWeeklyReport = async (report: {
+    week_number: number;
+    tasks_summary: string;
+    proof_files: string[];
+}) => {
+    const resp = await request('/ambassador/reports', 'POST', report, getToken());
+    if (!resp.ok) {
+        throw new Error((resp.body as any)?.message || 'Failed to submit report');
+    }
+    return resp.body;
 };
-
-export const getAmbassadorTasks = async () => {
-  return requestWithAuth('/ambassador/tasks');
-};
-
-export const getInstituteUsers = async () => {
-  return requestWithAuth('/ambassador/users');
-};
-
-export const submitWeeklyReport = async (report: { week_number: number; tasks_summary: string; proof_files: string[] }) => {
-  console.log(`[API REQUEST] POST ${API_BASE_URL}/ambassador/reports`, report);
-  const response = await fetch(`${API_BASE_URL}/ambassador/reports`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getAuthToken()}`
-    },
-    body: JSON.stringify(report),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Failed to submit report' }));
-    throw new Error(errorData.message || 'Failed to submit report');
-  }
-
-  return await response.json();
-};
-
-export const getAmbassadorReports = async () => {
-  return requestWithAuth('/ambassador/reports');
-};
-

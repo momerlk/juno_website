@@ -1,33 +1,18 @@
-// src/api/workApi.ts
+import { request, API_BASE_URL } from "./core";
 
-import { API_BASE_URL } from "./core";
-
-/**
- * The base URL for all API requests.
- */
 export const API_BASE = API_BASE_URL;
 
+const getToken = () => localStorage.getItem('work_token') ?? undefined;
+
 export const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('work_token');
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
-  };
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred' }));
-    throw new Error(errorData.message || `API Error: ${response.status}`);
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
+    const method = (options.method as string | undefined) || 'GET';
+    let data: any;
+    if (options.body && typeof options.body === 'string') {
+        try { data = JSON.parse(options.body); } catch { /* leave data undefined */ }
+    }
+    const resp = await request(endpoint, method, data, getToken());
+    if (!resp.ok) {
+        throw new Error((resp.body as any)?.message || `API Error: ${resp.status}`);
+    }
+    return resp.status === 204 ? null : resp.body;
 };
