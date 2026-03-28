@@ -11,7 +11,7 @@ interface SellerAuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    signup: (email: string, password: string, businessName: string) => Promise<void>;
+    signup: (data: SellerApi.Auth.RegisterRequest) => Promise<void>;
     logout: () => void;
 }
 
@@ -39,17 +39,13 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const login = async (email: string, password: string) => {
         setIsLoading(true);
         try {
-            const loginResp = await SellerApi.Auth.Login(email, password);
-            if (!loginResp.ok) throw new Error('Login failed');
+            const resp = await SellerApi.Auth.Login(email, password);
+            if (!resp.ok) throw new Error('Login failed');
 
-            const session: SellerSession = { token: loginResp.body.token, user: null };
-
-            const profileResp = await SellerApi.Auth.GetProfile(session.token);
-            if (profileResp.ok) {
-                session.user = profileResp.body;
-            } else {
-                alert('Failed to get seller profile');
-            }
+            const session: SellerSession = {
+                token: resp.body.token,
+                user: resp.body.seller ?? null,
+            };
 
             localStorage.setItem('seller', JSON.stringify(session));
             setSeller(session);
@@ -61,8 +57,25 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
     };
 
-    const signup = async (_email: string, _password: string, _businessName: string) => {
-        // TODO: implement
+    const signup = async (data: SellerApi.Auth.RegisterRequest) => {
+        setIsLoading(true);
+        try {
+            const resp = await SellerApi.Auth.Register(data);
+            if (!resp.ok) throw new Error('Registration failed');
+
+            const session: SellerSession = {
+                token: resp.body.token,
+                user: resp.body.seller ?? null,
+            };
+
+            localStorage.setItem('seller', JSON.stringify(session));
+            setSeller(session);
+        } catch (error) {
+            console.error('Signup failed:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const logout = () => {

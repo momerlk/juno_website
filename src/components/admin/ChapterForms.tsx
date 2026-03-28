@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Search, ExternalLink, User, Building, Clock, Heart, Star, X, RefreshCw, Crown, Instagram } from 'lucide-react';
-import { getChapterForms } from '../../api/adminApi';
 
 const ChapterForms: React.FC = () => {
   const [forms, setForms] = useState<any[]>([]);
@@ -14,15 +13,7 @@ const ChapterForms: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getChapterForms();
-      if (response.ok) {
-        const body = Array.isArray(response.body)
-          ? response.body
-          : response.body?.data || [];
-        setForms(body.reverse());
-      } else {
-        setError('Failed to fetch chapter forms.');
-      }
+      setError('Chapter forms endpoint removed in API v2.');
     } catch {
       setError('An error occurred while fetching data.');
     } finally {

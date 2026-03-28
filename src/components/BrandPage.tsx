@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Download, Gift, Copy, Check, ArrowRight } from 'lucide-react';
-import { getAllSellers, getInvitesByOwner, generateInviteForOwner } from '../api/adminApi';
+import { getAllSellers } from '../api/adminApi';
 import * as sellerApi from '../api/sellerApi';
 import { Product } from '../constants/types';
 
@@ -73,19 +73,8 @@ const BrandPage: React.FC = () => {
         setSeller(foundSeller);
         setError(null);
 
-        const invitePromise = await getInvitesByOwner(foundSeller.business_name).catch(() => null);
         const productsPromise = await sellerApi.Products.GetProducts(100).catch(() => null);
-
-        const inviteResult = invitePromise?.ok ? invitePromise.body : null;
         const productResponse = productsPromise;
-
-
-        if (inviteResult && inviteResult.length > 0) {
-          setInvite(inviteResult[0]);
-        } else {
-          const newInvite = await generateInviteForOwner(foundSeller.business_name).catch(() => null);
-          if (newInvite) setInvite(newInvite.body);
-        }
 
         if (productResponse && productResponse.ok && Array.isArray(productResponse.body)) {
           const brandProducts = productResponse.body

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Eye, Package, User, Calendar, Tag, Hash, ShoppingCart, List, CreditCard } from 'lucide-react';
-import { GetAllOrders, getParentOrders, getAllCarts, getAllSellers } from '../../api/adminApi';
+import { Search, Eye, Package, User, Calendar, Tag, Hash, ShoppingCart, List } from 'lucide-react';
+import { GetAllOrders, getAllCarts, getAllSellers } from '../../api/adminApi';
 import { Order, OrderStatus, PaymentStatus } from '../../constants/orders';
 import { Seller } from '../../constants/seller';
 import OrderDetailModal from './OrderDetailModal';
@@ -20,7 +20,7 @@ const statusColors: { [key in OrderStatus]: string } = {
 };
 
 const ManageOrders: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'orders' | 'parent' | 'carts'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'carts'>('orders');
   const [data, setData] = useState<any[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +38,6 @@ const ManageOrders: React.FC = () => {
 
       let res;
       if (activeTab === 'orders') res = await GetAllOrders();
-      else if (activeTab === 'parent') res = await getParentOrders();
       else res = await getAllCarts();
 
       if (res.ok) {
@@ -81,7 +80,6 @@ const ManageOrders: React.FC = () => {
                 <div className="flex gap-2 mt-2">
                     {[
                         { id: 'orders', name: 'Seller Orders', icon: List },
-                        { id: 'parent', name: 'Parent Transactions', icon: CreditCard },
                         { id: 'carts', name: 'Active Carts', icon: ShoppingCart },
                     ].map(tab => (
                         <button 
@@ -123,14 +121,6 @@ const ManageOrders: React.FC = () => {
                     <th className="p-4 font-medium">Status</th>
                     <th className="p-4 font-medium">Items</th>
                     <th className="p-4 font-medium">Actions</th>
-                </>
-              ) : activeTab === 'parent' ? (
-                <>
-                    <th className="p-4 font-medium">Transaction ID</th>
-                    <th className="p-4 font-medium">Customer</th>
-                    <th className="p-4 font-medium">Amount</th>
-                    <th className="p-4 font-medium">Sub-Orders</th>
-                    <th className="p-4 font-medium">Date</th>
                 </>
               ) : (
                 <>
@@ -183,16 +173,6 @@ const ManageOrders: React.FC = () => {
                                     <Eye size={18} />
                                 </button>
                             </td>
-                        </tr>
-                    );
-                } else if (activeTab === 'parent') {
-                    return (
-                        <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors font-mono text-xs">
-                            <td className="p-4 text-primary">{item.id}</td>
-                            <td className="p-4 text-white font-sans">{item.user_name || item.user_id}</td>
-                            <td className="p-4 text-green-400 font-bold">Rs {item.total_amount?.toLocaleString()}</td>
-                            <td className="p-4 text-neutral-400">{item.sub_order_ids?.length || 0} orders</td>
-                            <td className="p-4 text-neutral-500">{new Date(item.created_at).toLocaleString()}</td>
                         </tr>
                     );
                 } else {

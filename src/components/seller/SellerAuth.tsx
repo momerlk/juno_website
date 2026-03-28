@@ -1,140 +1,122 @@
 import React, { useState } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Store } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const SellerAuth: React.FC = () => {
   const navigate = useNavigate();
-  const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [businessName, setBusinessName] = useState('');
   const [error, setError] = useState('');
-  const { login, signup, isLoading } = useSellerAuth();
+  const { login, isLoading } = useSellerAuth();
+
+  const prefix = window.location.pathname.startsWith('/studio') ? '/studio' : '/seller';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    const prefix = window.location.pathname.startsWith('/studio') ? '/studio' : '/seller';
-
     try {
-      if (isSignup) {
-        await signup(email, password, businessName);
-        navigate(`${prefix}/onboarding`);
-      } else {
-        await login(email, password);
-        navigate(`${prefix}/dashboard`);
-      }
-    } catch (err) {
-      setError('Authentication failed. Please try again.');
+      await login(email, password);
+      navigate(`${prefix}/dashboard`);
+    } catch {
+      setError('Invalid email or password. Please try again.');
     }
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8 glass-panel p-8"
-      >
-        <div className="text-center">
-          <h2 className="mt-2 text-3xl font-extrabold text-white">
-            {isSignup ? 'Create your brand account' : 'Sign in to your brand account'}
-          </h2>
-          <p className="mt-2 text-sm text-neutral-400">
-            {isSignup ? 'Start selling on Juno today' : 'Welcome back to Juno'}
-          </p>
-        </div>
+    <section className="min-h-screen flex items-center justify-center py-12 px-4">
+      <div className="max-w-md w-full space-y-10">
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm space-y-4">
-            {isSignup && (
-              <div>
-                <label htmlFor="business-name" className="sr-only">Business Name</label>
-                <div className="relative">
-                  <Store className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={20} />
-                  <input
-                    id="business-name"
-                    name="business-name"
-                    type="text"
-                    required
-                    className="glass-input w-full pl-10"
-                    placeholder="Business Name"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center"
+        >
+          <img
+            src="/juno_logos/icon+text_white.png"
+            alt="Juno"
+            className="h-10 mx-auto mb-8 opacity-90"
+          />
+          <h1 className="text-3xl font-black text-white tracking-tight">Welcome back</h1>
+          <p className="mt-2 text-neutral-400 text-sm">Sign in to Juno Studio</p>
+        </motion.div>
 
-            <div>
-              <label htmlFor="email-address" className="sr-only">Email address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={20} />
-                <input
-                  id="email-address"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="glass-input w-full pl-10"
-                  placeholder="Email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
+        {/* Form */}
+        <motion.form
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+            />
+          </div>
 
-            <div>
-              <label htmlFor="password" className="sr-only">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={20} />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="glass-input w-full pl-10"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+            />
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm text-center">{error}</div>
+            <p className="text-sm text-red-400 text-center">{error}</p>
           )}
 
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full glass-button bg-primary text-white hover:bg-primary-dark shadow-glow-primary border-primary/50"
-            >
-              {isLoading ? 'Processing...' : (isSignup ? 'Sign up' : 'Sign in')}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Signing in...' : (
+              <>
+                Sign in
+                <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+        </motion.form>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => {
-                const prefix = window.location.pathname.startsWith('/studio') ? '/studio' : '/seller';
-                navigate(`${prefix}/onboarding`);
-              }}  
-              className="text-sm text-neutral-400 hover:text-primary transition-colors"
-            >
-              {"Don't have an account? Sign up"}
-            </button>
-          </div>
-        </form>
-      </motion.div>
+        {/* Join CTA */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="border-t border-white/10 pt-8 text-center space-y-2"
+        >
+          <p className="text-sm text-neutral-500">Not on Juno yet?</p>
+          <button
+            type="button"
+            onClick={() => navigate(`${prefix}/onboarding`)}
+            className="text-sm font-semibold text-white hover:text-primary transition-colors"
+          >
+            Apply to sell on Juno →
+          </button>
+          <p className="text-xs text-neutral-600 pt-1">
+            Every brand is reviewed personally. We'll be in touch within 48 hours.
+          </p>
+        </motion.div>
+
+      </div>
     </section>
   );
 };

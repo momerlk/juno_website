@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Settings, Users, Key, Bell, ShieldCheck, Activity, Search, RefreshCw, Trash2 } from 'lucide-react';
-import { getWaitlist, getAllOTPs, getNotificationTokens, getSystemHealth } from '../../api/adminApi';
+import { getWaitlist, getAllOTPs, getSystemHealth } from '../../api/adminApi';
 
 const SystemTools: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'waitlist' | 'otps' | 'tokens' | 'health'>('waitlist');
+  const [activeTab, setActiveTab] = useState<'waitlist' | 'otps' | 'health'>('waitlist');
   const [data, setData] = useState<any[]>([]);
   const [health, setHealth] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,7 +17,6 @@ const SystemTools: React.FC = () => {
       switch(activeTab) {
         case 'waitlist': res = await getWaitlist(); break;
         case 'otps': res = await getAllOTPs(); break;
-        case 'tokens': res = await getNotificationTokens(); break;
         case 'health': res = await getSystemHealth(); break;
       }
       
@@ -59,7 +58,6 @@ const SystemTools: React.FC = () => {
                     {[
                         { id: 'waitlist', name: 'Waitlist', icon: Users },
                         { id: 'otps', name: 'Active OTPs', icon: Key },
-                        { id: 'tokens', name: 'Push Tokens', icon: Bell },
                         { id: 'health', name: 'Health Check', icon: Activity },
                     ].map(tab => (
                         <button 
@@ -148,14 +146,6 @@ const SystemTools: React.FC = () => {
                                 <th className="p-4 font-medium">Type</th>
                             </>
                         )}
-                        {activeTab === 'tokens' && (
-                            <>
-                                <th className="p-4 font-medium">User ID</th>
-                                <th className="p-4 font-medium">Token</th>
-                                <th className="p-4 font-medium">Device</th>
-                                <th className="p-4 font-medium">Last Active</th>
-                            </>
-                        )}
                     </tr>
                 </thead>
                 <tbody className="text-xs">
@@ -175,14 +165,6 @@ const SystemTools: React.FC = () => {
                                     <td className="p-4"><span className="bg-white/10 px-2 py-1 rounded text-primary font-bold">{item.code}</span></td>
                                     <td className="p-4 text-neutral-400">{new Date(item.expires_at).toLocaleTimeString()}</td>
                                     <td className="p-4 text-neutral-500">{item.type || 'Auth'}</td>
-                                </>
-                            )}
-                            {activeTab === 'tokens' && (
-                                <>
-                                    <td className="p-4 text-white">{item.user_id}</td>
-                                    <td className="p-4 text-neutral-400 truncate max-w-xs">{item.token}</td>
-                                    <td className="p-4 text-neutral-500">{item.device_type || 'iOS/Android'}</td>
-                                    <td className="p-4 text-neutral-400">{new Date(item.updated_at).toLocaleDateString()}</td>
                                 </>
                             )}
                         </tr>

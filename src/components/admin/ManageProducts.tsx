@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, Search, Tag, Eye, Layers, Clock, AlertCircle } from 'lucide-react';
-import { getAllProducts, getProductQueue } from '../../api/adminApi';
+import { getProductQueue } from '../../api/adminApi';
 import { Product } from '../../constants/types';
 
 const ManageProducts: React.FC = () => {
@@ -14,10 +14,7 @@ const ManageProducts: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      if (activeTab === 'catalog') {
-        const res = await getAllProducts();
-        setProducts(Array.isArray(res.body) ? res.body : (res.body?.data || []));
-      } else {
+      if (activeTab === 'queue') {
         const res = await getProductQueue();
         setQueue(Array.isArray(res.body) ? res.body : (res.body?.data || []));
       }

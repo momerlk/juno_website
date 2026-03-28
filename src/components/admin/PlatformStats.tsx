@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, ShoppingBag, DollarSign, Truck, TrendingUp } from 'lucide-react';
-import { GetAllOrders, getAllUsers, getAllSellers, getAllInvites, getAllDeliveryBookings } from '../../api/adminApi';
+import { GetAllOrders, getAllUsers, adminGetAllSellers } from '../../api/adminApi';
 import { Order } from '../../constants/orders';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -46,11 +46,10 @@ const PlatformStats: React.FC = () => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        const [ordersResponse, usersResponse, sellersResponse, bookingsResponse] = await Promise.all([
+        const [ordersResponse, usersResponse, sellersResponse] = await Promise.all([
           GetAllOrders(),
           getAllUsers(),
           adminGetAllSellers(),
-          getAllDeliveryBookings(),
         ]);
 
         const getArray = (resp: any) => {
@@ -61,7 +60,7 @@ const PlatformStats: React.FC = () => {
         const orders: Order[] = getArray(ordersResponse);
         const users = getArray(usersResponse);
         const sellers = getArray(sellersResponse);
-        const bookings = getArray(bookingsResponse);
+        const bookings: any[] = [];
 
         setAllOrders(orders);
         setAllUsers(users);

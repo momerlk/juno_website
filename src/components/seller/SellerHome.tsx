@@ -1,73 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
-import { Loader, Globe, CreditCard, Store, ShoppingCart, ArrowRight, AlertTriangle, HelpCircle, Package, Image as ImageIcon, Phone } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Loader, Globe, CreditCard, Store, ShoppingCart, ArrowRight, Link2, Link2Off, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import SubscriptionModal from './SubscriptionModal';
 import * as api from "../../api/sellerApi";
-import { uploadProductCatalogue } from '../../api';
 import { Order } from '../../constants/orders';
 import { OrderStatusBadge } from './OrderStatusBadge';
-import { Product, QueueItem } from '../../constants/types';
-
-const UrgentActionCard: React.FC<{ 
-    title: string; 
-    description: string; 
-    actionText: string; 
-    onAction: () => void; 
-    type: 'warning' | 'error' | 'info';
-    icon?: React.ReactNode;
-}> = ({ title, description, actionText, onAction, type, icon }) => (
-    <div className={`p-4 rounded-xl border flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between ${
-        type === 'error' ? 'bg-red-500/10 border-red-500/30' : 
-        type === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' : 
-        'bg-blue-500/10 border-blue-500/30'
-    }`}>
-        <div className="flex gap-3">
-            <div className={`p-2 rounded-lg h-fit ${
-                type === 'error' ? 'bg-red-500/20 text-red-400' : 
-                type === 'warning' ? 'bg-yellow-500/20 text-yellow-400' : 
-                'bg-blue-500/20 text-blue-400'
-            }`}>
-                {icon || <AlertTriangle size={20} />}
-            </div>
-            <div>
-                <h4 className={`font-semibold ${
-                    type === 'error' ? 'text-red-400' : 
-                    type === 'warning' ? 'text-yellow-400' : 
-                    'text-blue-400'
-                }`}>{title}</h4>
-                <p className="text-sm text-neutral-300 mt-1">{description}</p>
-            </div>
-        </div>
-        <button 
-            onClick={onAction}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors w-full sm:w-auto ${
-                type === 'error' ? 'bg-red-500 text-white hover:bg-red-600' : 
-                type === 'warning' ? 'bg-yellow-500 text-black hover:bg-yellow-400' : 
-                'bg-blue-500 text-white hover:bg-blue-600'
-            }`}
-        >
-            {actionText}
-        </button>
-    </div>
-);
 
 const SellerHome: React.FC = () => {
   const { seller } = useSellerAuth();
-  const navigate = useNavigate();
-  const [websiteUrl, setWebsiteUrl] = useState('');
-  const [uploading, setUploading] = useState(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+
+  // Shopify integration state
+  const [shopifyConnected, setShopifyConnected] = useState(false);
+  const [shopifyShop, setShopifyShop] = useState<string | undefined>(undefined);
+  const [shopifyLoading, setShopifyLoading] = useState(false);
+  const [shopifyShopInput, setShopifyShopInput] = useState('');
+  const [shopifyActionLoading, setShopifyActionLoading] = useState(false);
+  const [shopifyMessage, setShopifyMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
-
-  // Action Items State
-  const [queueCount, setQueueCount] = useState(0);
-  const [outOfStockCount, setOutOfStockCount] = useState(0);
-  const [hasInvalidProfile, setHasInvalidProfile] = useState(false);
-  const [isLoadingActions, setIsLoadingActions] = useState(true);
-  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     const fetchRecentOrders = async () => {
@@ -88,85 +41,58 @@ const SellerHome: React.FC = () => {
   }, [seller?.token]);
 
   useEffect(() => {
-      const fetchActionItems = async () => {
-          if (!seller?.token) return;
-          setIsLoadingActions(true);
-          try {
-              // 1. Check Queue
-              const queueResponse = await api.Seller.Queue.List(seller.token);
-              if (queueResponse.ok && queueResponse.body) {
-                  const items = queueResponse.body as QueueItem[];
-                  // Filter for items that are NOT ready
-                  const pending = items.filter(i => i.status !== 'ready').length;
-                  setQueueCount(pending);
-              }
+    const checkShopifyStatus = async () => {
+      if (!seller?.token) { setShopifyLoading(false); return; }
+      setShopifyLoading(true);
+      const res = await api.Shopify.GetStatus(seller.token);
+      if (res.ok) {
+        setShopifyConnected(res.body.connected);
+        setShopifyShop(res.body.shop);
+      }
+      setShopifyLoading(false);
+    };
+    checkShopifyStatus();
+  }, [seller?.token]);
 
-              // 2. Check Active Products for Stock (Check first 5 pages / ~60 items)
-              let allCheckedProducts: Product[] = [];
-              for (let i = 1; i <= 5; i++) {
-                  const productsResponse = await api.Seller.GetProducts(seller.token, i);
-                  if (productsResponse.ok && productsResponse.body) {
-                      const pageProducts = productsResponse.body as Product[];
-                      if (pageProducts.length === 0) break;
-                      allCheckedProducts = [...allCheckedProducts, ...pageProducts];
-                  } else {
-                      break;
-                  }
-              }
-
-              const outOfStock = allCheckedProducts.filter(p => {
-                  if (p.status !== 'active') return false;
-                  
-                  // Check if total stock is 0
-                  const totalStock = p.variants.reduce((sum, v) => sum + (v.inventory?.quantity || 0), 0);
-                  if (totalStock === 0) return true;
-
-                  // Check if any specific ACTIVE variant has 0 stock
-                  // (Assuming 'available' true implies it's an active variant intended for sale)
-                  const hasZeroStockActiveVariant = p.variants.some(v => v.available && (v.inventory?.quantity || 0) === 0);
-                  return hasZeroStockActiveVariant;
-              }).length;
-              
-              setOutOfStockCount(outOfStock);
-
-              // 3. Check Profile Images
-              const profile = seller.user; // Assuming seller object is up to date or we fetch it
-              // We can also fetch fresh profile
-              const profileResponse = await api.Auth.GetProfile(seller.token);
-              if (profileResponse.ok && profileResponse.body) {
-                  const p = profileResponse.body;
-                  const isInvalid = (url: string | undefined | null) => 
-                      !url || url.includes("juno_media");
-                  
-                  if (isInvalid(p.logo_url) || isInvalid(p.banner_url)) {
-                      setHasInvalidProfile(true);
-                  }
-              }
-
-          } catch (e) {
-              console.error("Failed to fetch action items", e);
-          } finally {
-              setIsLoadingActions(false);
-          }
-      };
-      fetchActionItems();
-  }, [seller?.token, seller?.user]);
-
-  const handleSyncCatalogue = async () => {
-    if (!websiteUrl) {
-      alert("Please enter a website URL");
-      return;
+  const handleShopifyConnect = async () => {
+    if (!shopifyShopInput.trim()) return;
+    setShopifyActionLoading(true);
+    setShopifyMessage(null);
+    const shop = shopifyShopInput.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const res = await api.Shopify.GetAuthUrl(seller!.token, shop);
+    setShopifyActionLoading(false);
+    if (res.ok && res.body?.url) {
+      window.location.href = res.body.url;
+    } else {
+      setShopifyMessage({ type: 'error', text: 'Could not get Shopify auth URL. Check your store domain and try again.' });
     }
-    
-    try {
-      setUploading(true);
-      await uploadProductCatalogue(seller!.token, websiteUrl);
-      setUploading(false);
-      alert("Catalogue sync started successfully!");
-      setWebsiteUrl('');
-    } catch(error) {
-      setUploading(false);
-      alert("Failed to sync catalogue, error = " + error);
+  };
+
+  const handleShopifySync = async () => {
+    setShopifyActionLoading(true);
+    setShopifyMessage(null);
+    const res = await api.Shopify.Sync(seller!.token);
+    setShopifyActionLoading(false);
+    if (res.ok) {
+      setShopifyMessage({ type: 'success', text: 'Sync started! Products will appear in your queue shortly.' });
+    } else {
+      setShopifyMessage({ type: 'error', text: 'Sync failed. Please try again or reconnect your store.' });
+    }
+  };
+
+  const handleShopifyDisconnect = async () => {
+    if (!confirm('Disconnect your Shopify store? You can reconnect at any time.')) return;
+    setShopifyActionLoading(true);
+    setShopifyMessage(null);
+    const res = await api.Shopify.Disconnect(seller!.token);
+    setShopifyActionLoading(false);
+    if (res.ok) {
+      setShopifyConnected(false);
+      setShopifyShop(undefined);
+      setShopifyShopInput('');
+      setShopifyMessage({ type: 'success', text: 'Shopify store disconnected.' });
+    } else {
+      setShopifyMessage({ type: 'error', text: 'Failed to disconnect. Please try again.' });
     }
   };
 
@@ -175,114 +101,8 @@ const SellerHome: React.FC = () => {
     setIsSubscriptionModalOpen(false);
   };
 
-  const hasUrgentActions = queueCount > 0 || outOfStockCount > 0 || hasInvalidProfile;
-
   return (
     <>
-      <AnimatePresence>
-        {isLoadingActions && (
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="mb-6 p-4 glass-panel border border-primary/20 flex items-center justify-center space-x-3"
-            >
-                <Loader className="animate-spin text-primary" size={20} />
-                <span className="text-neutral-300 font-medium">Checking for updates and TODOs required by you...</span>
-            </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {hasUrgentActions && !isLoadingActions && (
-            <motion.div 
-                initial={{ opacity: 0, height: 0 }} 
-                animate={{ opacity: 1, height: 'auto' }} 
-                className="mb-8"
-            >
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                        <AlertTriangle className="text-yellow-500" />
-                        Action Required
-                    </h2>
-                    <button 
-                        onClick={() => setShowHelp(!showHelp)}
-                        className="flex items-center gap-2 text-primary hover:text-primary-light transition-colors"
-                    >
-                        <HelpCircle size={20} />
-                        <span className="hidden sm:inline">How to resolve issues?</span>
-                    </button>
-                </div>
-
-                <AnimatePresence>
-                    {showHelp && (
-                        <motion.div 
-                            initial={{ opacity: 0, y: -10 }} 
-                            animate={{ opacity: 1, y: 0 }} 
-                            exit={{ opacity: 0, y: -10 }}
-                            className="bg-primary/10 border border-primary/20 rounded-xl p-6 mb-6 text-neutral-200"
-                        >
-                            <h4 className="font-bold text-white mb-2 text-lg">Help & Support Guide</h4>
-                            <div className="space-y-4">
-                                <div>
-                                    <h5 className="font-semibold text-white">1. Pending Queue Items</h5>
-                                    <p className="text-sm mt-1">Products uploaded via Shopify or manually are placed in a queue. You <strong>must</strong> set their <strong>Gender</strong>, <strong>Product Type</strong>, and <strong>Sizing Guide</strong>. Once completed and "Ready", click "Publish" to make them live. This ensures our AI recommendation system can properly feature your products.</p>
-                                </div>
-                                <div>
-                                    <h5 className="font-semibold text-white">2. Out of Stock Active Products</h5>
-                                    <p className="text-sm mt-1">Active products with 0 stock frustrate customers. Please <strong>deactivate</strong> them or update their inventory quantity immediately.</p>
-                                </div>
-                                <div>
-                                    <h5 className="font-semibold text-white">3. Invalid Profile Images</h5>
-                                    <p className="text-sm mt-1">If your logo or banner uses the old "juno_media" storage, it will not load. Please upload new images in your Profile settings.</p>
-                                </div>
-                                <div className="pt-4 border-t border-primary/20">
-                                    <p className="font-bold text-white text-lg flex items-center gap-2">
-                                        <Phone size={20} />
-                                        Contact Support: <span className="text-primary">+92 315 8972405</span> (WhatsApp)
-                                    </p>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <div className="space-y-4">
-                    {queueCount > 0 && (
-                        <UrgentActionCard 
-                            type="warning"
-                            title={`${queueCount} Products Pending in Queue`}
-                            description="These products require classification (Gender, Type) and Sizing Guides before they can be published and processed by our recommendation system."
-                            actionText="Process Queue"
-                            onAction={() => navigate('/seller/dashboard/inventory')}
-                            icon={<Package size={20} />}
-                        />
-                    )}
-                    {outOfStockCount > 0 && (
-                        <UrgentActionCard 
-                            type="error"
-                            title={`${outOfStockCount} Active Products Out of Stock`}
-                            description="Active products with 0 quantity must be deactivated or restocked to avoid customer dissatisfaction."
-                            actionText="Manage Inventory"
-                            onAction={() => navigate('/seller/dashboard/inventory')}
-                            icon={<AlertTriangle size={20} />}
-                        />
-                    )}
-                    {hasInvalidProfile && (
-                        <UrgentActionCard 
-                            type="error"
-                            title="Profile Images Need Update"
-                            description="Your store logo or banner is using an outdated image source. Please upload new images."
-                            actionText="Update Profile"
-                            onAction={() => navigate('/seller/dashboard/profile')}
-                            icon={<ImageIcon size={20} />}
-                        />
-                    )}
-                </div>
-            </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Info Strip — unified panel with internal columns */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -300,7 +120,7 @@ const SellerHome: React.FC = () => {
               className="absolute -right-3 -bottom-4 text-[7rem] font-black leading-none select-none pointer-events-none text-white"
               style={{ opacity: 0.025 }}
             >
-              {seller?.user.business_name?.charAt(0)?.toUpperCase() ?? 'J'}
+              {seller?.user?.business_name?.charAt(0)?.toUpperCase() ?? 'J'}
             </span>
 
             <div className="relative">
@@ -309,60 +129,96 @@ const SellerHome: React.FC = () => {
                 <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-white/30">Brand Profile</span>
               </div>
 
-              <p className="text-xl font-bold text-white mb-0.5 truncate">{seller?.user.business_name}</p>
-              <p className="text-xs font-mono text-white/35 truncate mb-5">{seller?.user.email}</p>
+              <p className="text-xl font-bold text-white mb-0.5 truncate">{seller?.user?.business_name}</p>
+              <p className="text-xs font-mono text-white/35 truncate mb-5">{seller?.user?.email}</p>
 
               <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
                 <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/25">Status</span>
                 <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full border ${
-                  seller?.user.status === 'active'
+                  seller?.user?.status === 'active'
                     ? 'text-emerald-400 bg-emerald-400/10 border-emerald-500/25'
                     : 'text-amber-400 bg-amber-400/10 border-amber-500/25'
                 }`}>
-                  {seller?.user.status === 'active' ? '● Active' : '○ Inactive'}
+                  {seller?.user?.status === 'active' ? '● Active' : '○ Inactive'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* — Sync Catalogue */}
+          {/* — Shopify Integration */}
           <div className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Globe size={13} className="text-white/30" />
-              <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-white/30">Sync Catalogue</span>
+              <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-white/30">Shopify</span>
             </div>
-            <p className="text-xs text-white/35 mb-4 leading-relaxed">
-              Import products directly from your Shopify or custom store URL.
-            </p>
-            <div className="space-y-2.5">
-              <div className="relative flex items-center">
-                <span className="absolute left-3 text-[10px] font-mono text-white/20 pointer-events-none select-none">https://</span>
-                <input
-                  type="url"
-                  placeholder="your-store.myshopify.com"
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-[4.5rem] pr-4 py-2.5 text-sm text-white font-mono placeholder-white/15 focus:outline-none focus:border-primary/40 focus:bg-white/[0.07] transition-all"
-                  disabled={uploading}
-                />
+
+            {shopifyLoading ? (
+              <div className="flex items-center gap-2 text-white/25 py-4">
+                <Loader size={13} className="animate-spin" />
+                <span className="text-xs font-mono">Checking connection…</span>
               </div>
-              <button
-                onClick={handleSyncCatalogue}
-                disabled={uploading}
-                className="w-full py-2.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all duration-200 flex items-center justify-center gap-2 bg-white/[0.04] border-white/[0.08] text-white/50 hover:bg-primary/15 hover:border-primary/30 hover:text-primary disabled:opacity-40"
-              >
-                {uploading ? (
-                  <><Loader size={13} className="animate-spin" /> Syncing…</>
-                ) : (
-                  <><Globe size={13} /> Sync Now</>
+            ) : shopifyConnected ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                  <span className="text-xs font-mono text-emerald-400 truncate">{shopifyShop ?? 'Connected'}</span>
+                </div>
+                {shopifyMessage && (
+                  <p className={`text-[11px] font-mono ${shopifyMessage.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {shopifyMessage.text}
+                  </p>
                 )}
-              </button>
-            </div>
+                <button
+                  onClick={handleShopifySync}
+                  disabled={shopifyActionLoading}
+                  className="w-full py-2.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all duration-200 flex items-center justify-center gap-2 bg-white/[0.04] border-white/[0.08] text-white/50 hover:bg-primary/15 hover:border-primary/30 hover:text-primary disabled:opacity-40"
+                >
+                  {shopifyActionLoading ? <Loader size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                  {shopifyActionLoading ? 'Syncing…' : 'Sync Products'}
+                </button>
+                <button
+                  onClick={handleShopifyDisconnect}
+                  disabled={shopifyActionLoading}
+                  className="w-full py-2 rounded-lg text-[10px] font-mono tracking-widest uppercase border border-white/[0.05] text-white/20 hover:border-red-500/30 hover:text-red-400 transition-all duration-200 flex items-center justify-center gap-1.5 disabled:opacity-40"
+                >
+                  <Link2Off size={11} /> Disconnect
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <p className="text-xs text-white/35 leading-relaxed">
+                  Connect your Shopify store to import products automatically.
+                </p>
+                {shopifyMessage && (
+                  <p className="text-[11px] font-mono text-red-400">{shopifyMessage.text}</p>
+                )}
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-[10px] font-mono text-white/20 pointer-events-none select-none">https://</span>
+                  <input
+                    type="text"
+                    placeholder="your-store.myshopify.com"
+                    value={shopifyShopInput}
+                    onChange={(e) => setShopifyShopInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleShopifyConnect()}
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-[4.5rem] pr-4 py-2.5 text-sm text-white font-mono placeholder-white/15 focus:outline-none focus:border-primary/40 focus:bg-white/[0.07] transition-all"
+                    disabled={shopifyActionLoading}
+                  />
+                </div>
+                <button
+                  onClick={handleShopifyConnect}
+                  disabled={shopifyActionLoading || !shopifyShopInput.trim()}
+                  className="w-full py-2.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all duration-200 flex items-center justify-center gap-2 bg-white/[0.04] border-white/[0.08] text-white/50 hover:bg-primary/15 hover:border-primary/30 hover:text-primary disabled:opacity-40"
+                >
+                  {shopifyActionLoading ? <Loader size={13} className="animate-spin" /> : <Link2 size={13} />}
+                  {shopifyActionLoading ? 'Connecting…' : 'Connect Shopify'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* — Membership */}
           <div className="relative p-6 overflow-hidden">
-            {seller?.user.status === 'active' && (
+            {seller?.user?.status === 'active' && (
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{ background: 'radial-gradient(circle at 80% 20%, rgba(255,24,24,0.06) 0%, transparent 60%)' }}
@@ -376,14 +232,14 @@ const SellerHome: React.FC = () => {
 
               <div className="mb-5">
                 <span className={`inline-block text-[10px] font-mono px-2.5 py-1 rounded border mb-3 ${
-                  seller?.user.status === 'active'
+                  seller?.user?.status === 'active'
                     ? 'text-primary border-primary/30 bg-primary/10'
                     : 'text-white/25 border-white/10 bg-white/[0.04]'
                 }`}>
-                  {seller?.user.status === 'active' ? 'STANDARD PLAN' : 'NO ACTIVE PLAN'}
+                  {seller?.user?.status === 'active' ? 'STANDARD PLAN' : 'NO ACTIVE PLAN'}
                 </span>
                 <p className="text-xs text-white/35 leading-relaxed">
-                  {seller?.user.status === 'active'
+                  {seller?.user?.status === 'active'
                     ? 'Your plan is active and renews automatically each cycle.'
                     : 'Subscribe to unlock full selling and analytics features.'}
                 </p>
@@ -392,12 +248,12 @@ const SellerHome: React.FC = () => {
               <button
                 onClick={() => setIsSubscriptionModalOpen(true)}
                 className={`w-full py-2.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all duration-200 ${
-                  seller?.user.status === 'active'
+                  seller?.user?.status === 'active'
                     ? 'border-primary/30 text-primary bg-primary/10 hover:bg-primary/20'
                     : 'border-white/15 text-white/60 bg-white/[0.04] hover:bg-primary/15 hover:border-primary/30 hover:text-primary'
                 }`}
               >
-                {seller?.user.status === 'active' ? 'Manage Plan' : 'Subscribe Now →'}
+                {seller?.user?.status === 'active' ? 'Manage Plan' : 'Subscribe Now →'}
               </button>
             </div>
           </div>
@@ -486,7 +342,7 @@ const SellerHome: React.FC = () => {
         isOpen={isSubscriptionModalOpen}
         onClose={() => setIsSubscriptionModalOpen(false)}
         onSubscribe={handleSubscriptionUpdate}
-        currentPlan={seller?.user.status === 'active' ? { id: 'standard', name: 'Standard', price: 4999, billingPeriod: 'monthly', features: ['Unlimited products', 'Advanced analytics', 'Priority support'] } : undefined}
+        currentPlan={seller?.user?.status === 'active' ? { id: 'standard', name: 'Standard', price: 4999, billingPeriod: 'monthly', features: ['Unlimited products', 'Advanced analytics', 'Priority support'] } : undefined}
       />
     </>
   );

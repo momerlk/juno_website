@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Filter, PieChart, TrendingUp, Users, ShoppingCart, Eye, ArrowRight, Wallet } from 'lucide-react';
-import { getSalesFunnel } from '../../api/adminApi';
 
 const SalesFunnel: React.FC = () => {
   const [funnel, setFunnel] = useState<any>(null);
@@ -11,10 +10,7 @@ const SalesFunnel: React.FC = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const res = await getSalesFunnel();
-        if (res.ok) {
-          setFunnel(res.body);
-        }
+        // Sales funnel endpoint removed in v2
       } catch (err) {
         console.error("Failed to fetch funnel:", err);
       } finally {

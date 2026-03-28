@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Gift } from 'lucide-react';
-import { getAllInvites } from '../../api/adminApi';
 
 interface InviteData {
   owner: string;
@@ -18,12 +17,7 @@ const ManageInvites: React.FC = () => {
     const fetchInvites = async () => {
       setIsLoading(true);
       try {
-        const response = await getAllInvites();
-        if (response.ok) {
-          setInvites(response.body);
-        } else {
-          setError('Failed to fetch invites.');
-        }
+        setError('Invites endpoint removed in API v2.');
       } catch (err) {
         setError('An error occurred while fetching invites.');
       } finally {

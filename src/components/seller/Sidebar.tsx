@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
@@ -73,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
              <Store size={24} className="text-primary" />
           </div>
           <div className="overflow-hidden">
-            <p className="text-white font-semibold truncate">{seller?.user.business_name}</p>
+            <p className="text-white font-semibold truncate">{seller?.user?.business_name}</p>
             <p className="text-xs text-neutral-400">Brand Account</p>
           </div>
         </div>
