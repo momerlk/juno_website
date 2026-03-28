@@ -1,6 +1,6 @@
 export const api_urls = {
     testing: "http://localhost:8080/api/v2",
-    production: "https://apijuno-3oztvkyxua-em.a.run.app//api/v2",
+    production: "https://apijuno-3oztvkyxua-em.a.run.app/api/v2",
     recsystem: "https://junorecsys-710509977105.asia-south2.run.app/api/v2",
 };
 
@@ -20,7 +20,18 @@ export function setAuthToken(token: string) {
 }
 
 export function getAuthToken() {
-    return localStorage.getItem('token');
+    // Check the direct token key first (user auth)
+    const direct = localStorage.getItem('token');
+    if (direct) return direct;
+
+    // Fall back to seller session (stored as JSON { token, user })
+    const sellerRaw = localStorage.getItem('seller');
+    if (sellerRaw) {
+        try { return JSON.parse(sellerRaw).token as string || null; }
+        catch { return null; }
+    }
+
+    return null;
 }
 
 async function parseBody(resp: Response): Promise<any> {

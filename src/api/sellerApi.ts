@@ -586,9 +586,10 @@ export namespace Tournaments {
  * ===========================================================================
  */
 export namespace Shopify {
-    // Returns { url: string } — the OAuth redirect URL for the seller to authorize Juno on their Shopify store
-    export async function GetAuthUrl(token: string, shop: string): Promise<APIResponse<{ url: string }>> {
-        return await request(`/shopify/auth?shop=${encodeURIComponent(shop)}`, "GET", undefined, token);
+    // Returns the direct OAuth redirect URL to open in a new tab.
+    // Cannot use fetch() here — the backend returns a 303 redirect to Shopify which CORS blocks.
+    export function GetAuthUrl(token: string, shop: string): string {
+        return `${API_BASE_URL}/shopify/auth?shop=${encodeURIComponent(shop)}&token=${encodeURIComponent(token)}`;
     }
     export async function GetStatus(token: string): Promise<APIResponse<{ connected: boolean; shop?: string }>> {
         return await request("/shopify/status", "GET", undefined, token);

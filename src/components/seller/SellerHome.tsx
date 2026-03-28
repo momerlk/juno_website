@@ -19,6 +19,7 @@ const SellerHome: React.FC = () => {
   const [shopifyShopInput, setShopifyShopInput] = useState('');
   const [shopifyActionLoading, setShopifyActionLoading] = useState(false);
   const [shopifyMessage, setShopifyMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [shopifyAuthUrl, setShopifyAuthUrl] = useState<string | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
 
@@ -54,24 +55,18 @@ const SellerHome: React.FC = () => {
     checkShopifyStatus();
   }, [seller?.token]);
 
-  const handleShopifyConnect = async () => {
-    if (!shopifyShopInput.trim()) return;
-    setShopifyActionLoading(true);
-    setShopifyMessage(null);
+  const handleShopifyConnect = () => {
+    if (!shopifyShopInput.trim() || !seller?.token) return;
     const shop = shopifyShopInput.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const res = await api.Shopify.GetAuthUrl(seller!.token, shop);
-    setShopifyActionLoading(false);
-    if (res.ok && res.body?.url) {
-      window.location.href = res.body.url;
-    } else {
-      setShopifyMessage({ type: 'error', text: 'Could not get Shopify auth URL. Check your store domain and try again.' });
-    }
+    const url = api.Shopify.GetAuthUrl(seller.token, shop);
+    setShopifyAuthUrl(url);
   };
 
   const handleShopifySync = async () => {
+    if (!seller?.token) return;
     setShopifyActionLoading(true);
     setShopifyMessage(null);
-    const res = await api.Shopify.Sync(seller!.token);
+    const res = await api.Shopify.Sync(seller.token);
     setShopifyActionLoading(false);
     if (res.ok) {
       setShopifyMessage({ type: 'success', text: 'Sync started! Products will appear in your queue shortly.' });
@@ -81,10 +76,10 @@ const SellerHome: React.FC = () => {
   };
 
   const handleShopifyDisconnect = async () => {
-    if (!confirm('Disconnect your Shopify store? You can reconnect at any time.')) return;
+    if (!seller?.token || !confirm('Disconnect your Shopify store? You can reconnect at any time.')) return;
     setShopifyActionLoading(true);
     setShopifyMessage(null);
-    const res = await api.Shopify.Disconnect(seller!.token);
+    const res = await api.Shopify.Disconnect(seller.token);
     setShopifyActionLoading(false);
     if (res.ok) {
       setShopifyConnected(false);
@@ -192,26 +187,46 @@ const SellerHome: React.FC = () => {
                 {shopifyMessage && (
                   <p className="text-[11px] font-mono text-red-400">{shopifyMessage.text}</p>
                 )}
-                <div className="relative flex items-center">
-                  <span className="absolute left-3 text-[10px] font-mono text-white/20 pointer-events-none select-none">https://</span>
-                  <input
-                    type="text"
-                    placeholder="your-store.myshopify.com"
-                    value={shopifyShopInput}
-                    onChange={(e) => setShopifyShopInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleShopifyConnect()}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-[4.5rem] pr-4 py-2.5 text-sm text-white font-mono placeholder-white/15 focus:outline-none focus:border-primary/40 focus:bg-white/[0.07] transition-all"
-                    disabled={shopifyActionLoading}
-                  />
-                </div>
-                <button
-                  onClick={handleShopifyConnect}
-                  disabled={shopifyActionLoading || !shopifyShopInput.trim()}
-                  className="w-full py-2.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all duration-200 flex items-center justify-center gap-2 bg-white/[0.04] border-white/[0.08] text-white/50 hover:bg-primary/15 hover:border-primary/30 hover:text-primary disabled:opacity-40"
-                >
-                  {shopifyActionLoading ? <Loader size={13} className="animate-spin" /> : <Link2 size={13} />}
-                  {shopifyActionLoading ? 'Connecting…' : 'Connect Shopify'}
-                </button>
+                {shopifyAuthUrl ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-mono text-emerald-400">Auth link ready — open it to install the Juno app on your store:</p>
+                    <a
+                      href={shopifyAuthUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all duration-200 flex items-center justify-center gap-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
+                    >
+                      <ArrowRight size={13} /> Open Shopify Auth
+                    </a>
+                    <button
+                      onClick={() => { setShopifyAuthUrl(null); setShopifyShopInput(''); }}
+                      className="w-full py-1.5 text-[10px] font-mono text-white/20 hover:text-white/40 transition-colors"
+                    >
+                      Use a different store
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3 text-[10px] font-mono text-white/20 pointer-events-none select-none">https://</span>
+                      <input
+                        type="text"
+                        placeholder="your-store.myshopify.com"
+                        value={shopifyShopInput}
+                        onChange={(e) => setShopifyShopInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleShopifyConnect()}
+                        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-[4.5rem] pr-4 py-2.5 text-sm text-white font-mono placeholder-white/15 focus:outline-none focus:border-primary/40 focus:bg-white/[0.07] transition-all"
+                      />
+                    </div>
+                    <button
+                      onClick={handleShopifyConnect}
+                      disabled={!shopifyShopInput.trim()}
+                      className="w-full py-2.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all duration-200 flex items-center justify-center gap-2 bg-white/[0.04] border-white/[0.08] text-white/50 hover:bg-primary/15 hover:border-primary/30 hover:text-primary disabled:opacity-40"
+                    >
+                      <Link2 size={13} /> Get Connect Link
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

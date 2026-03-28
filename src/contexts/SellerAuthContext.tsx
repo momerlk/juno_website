@@ -42,9 +42,10 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             const resp = await SellerApi.Auth.Login(email, password);
             if (!resp.ok) throw new Error('Login failed');
 
+            const payload = resp.body.data ?? resp.body;
             const session: SellerSession = {
-                token: resp.body.token,
-                user: resp.body.seller ?? null,
+                token: payload.token,
+                user: payload.seller ?? null,
             };
 
             localStorage.setItem('seller', JSON.stringify(session));
@@ -63,9 +64,10 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             const resp = await SellerApi.Auth.Register(data);
             if (!resp.ok) throw new Error('Registration failed');
 
+            const payload = resp.body.data ?? resp.body;
             const session: SellerSession = {
-                token: resp.body.token,
-                user: resp.body.seller ?? null,
+                token: payload.token,
+                user: payload.seller ?? null,
             };
 
             localStorage.setItem('seller', JSON.stringify(session));

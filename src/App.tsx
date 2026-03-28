@@ -29,6 +29,7 @@ import AdminAuth from "./components/admin/AdminAuth";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import AdminProtectedRoute from "./components/admin/ProtectedRoute";
 import SellerManageOrders from './components/seller/ManageOrders';
+import ShopifySuccess from './components/seller/ShopifySuccess';
 import ManageSellers from './components/admin/ManageSellers';
 import ManageUsers from './components/admin/ManageUsers';
 import ManageInvites from './components/admin/ManageInvites';
@@ -142,6 +143,8 @@ function App() {
 
                   <Route path="/seller/onboarding" element={<SellerOnboarding />} />
                   <Route path="/studio/onboarding" element={<SellerOnboarding />} />
+
+                  <Route path="/shopify/success" element={<ShopifySuccess />} />
 
                   <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}>
                     <Route index element={<PlatformStats />} />
