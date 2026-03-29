@@ -27,13 +27,64 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [seller, setSeller] = useState<SellerSession | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const persistSession = (session: SellerSession | null) => {
+        if (!session) {
+            localStorage.removeItem('seller');
+            localStorage.removeItem('token');
+            return;
+        }
+
+        localStorage.setItem('seller', JSON.stringify(session));
+        localStorage.setItem('token', session.token);
+    };
+
     useEffect(() => {
         const stored = localStorage.getItem('seller');
-        if (stored) {
-            try { setSeller(JSON.parse(stored)); }
-            catch { localStorage.removeItem('seller'); }
+        if (!stored) {
+            setIsLoading(false);
+            return;
         }
-        setIsLoading(false);
+
+        let parsed: SellerSession | null = null;
+        try {
+            parsed = JSON.parse(stored);
+            setSeller(parsed);
+            persistSession(parsed);
+        }
+        catch {
+            persistSession(null);
+            setIsLoading(false);
+            return;
+        }
+
+        if (!parsed?.token) {
+            persistSession(null);
+            setSeller(null);
+            setIsLoading(false);
+            return;
+        }
+
+        const syncProfile = async () => {
+            try {
+                const resp = await SellerApi.Seller.GetProfile(parsed!.token);
+                if (!resp.ok) throw new Error('Failed to fetch seller profile');
+
+                const refreshedSession: SellerSession = {
+                    token: parsed!.token,
+                    user: resp.body,
+                };
+
+                setSeller(refreshedSession);
+                persistSession(refreshedSession);
+            } catch {
+                setSeller(null);
+                persistSession(null);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        syncProfile();
     }, []);
 
     const login = async (email: string, password: string) => {
@@ -43,12 +94,13 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             if (!resp.ok) throw new Error('Login failed');
 
             const payload = resp.body.data ?? resp.body;
+            const profileResponse = await SellerApi.Seller.GetProfile(payload.token);
             const session: SellerSession = {
                 token: payload.token,
-                user: payload.seller ?? null,
+                user: profileResponse.ok ? profileResponse.body : payload.seller ?? null,
             };
 
-            localStorage.setItem('seller', JSON.stringify(session));
+            persistSession(session);
             setSeller(session);
         } catch (error) {
             console.error('Login failed:', error);
@@ -65,12 +117,13 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             if (!resp.ok) throw new Error('Registration failed');
 
             const payload = resp.body.data ?? resp.body;
+            const profileResponse = await SellerApi.Seller.GetProfile(payload.token);
             const session: SellerSession = {
                 token: payload.token,
-                user: payload.seller ?? null,
+                user: profileResponse.ok ? profileResponse.body : payload.seller ?? null,
             };
 
-            localStorage.setItem('seller', JSON.stringify(session));
+            persistSession(session);
             setSeller(session);
         } catch (error) {
             console.error('Signup failed:', error);
@@ -81,7 +134,7 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
 
     const logout = () => {
-        localStorage.removeItem('seller');
+        persistSession(null);
         setSeller(null);
     };
 

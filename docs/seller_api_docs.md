@@ -1,199 +1,180 @@
 # Seller Module
 
-Seller registration, authentication, product management, inventory, orders, and analytics. Seller-protected endpoints require `Authorization: Bearer <seller_token>`.
+Seller registration, authentication, onboarding, catalog management, queue processing, inventory, seller-order fulfillment, and seller analytics.
+
+Route groups and auth:
+- `POST /api/v2/seller/auth/register` — public
+- `POST /api/v2/seller/auth/login` — public
+- `POST /api/v2/seller/auth/register/draft` — public
+- `GET /api/v2/seller/auth/register/draft` — public
+- All other `/api/v2/seller/*` endpoints require seller auth: `Authorization: Bearer <seller_token>`
 
 ---
 
-## Auth Endpoints _(no auth required)_
+## Shared Response Schemas
 
-### Register
-`POST /api/v2/seller/auth/register`
-
-Creates a new seller account. Account starts in `pending` status until approved by an admin.
-
-**Body**
+### `SellerAuthResponse`
 ```json
 {
-  "name": "Ahmed Raza",
-  "email": "ahmed@mybrand.pk",
-  "password": "secret123",
-  "legal_name": "Raza Textiles Pvt Ltd",
-  "business_name": "Raza Fabrics",
-  "description": "Premium lawn and silk fabrics from Lahore.",
-  "short_description": "Lahore's finest fabric house",
-  "contact": {
-    "phone_number": "+923001234567",
-    "contact_person_name": "Ahmed Raza",
-    "alternate_phone_number": "+923007654321",
-    "whatsapp": "+923001234567",
-    "support_email": "support@mybrand.pk",
-    "business_hours": "Mon-Sat 9am-6pm"
-  },
-  "location": {
-    "address": "12 Main Gulberg",
-    "city": "Lahore",
-    "state": "Punjab",
-    "postal_code": "54000",
-    "country": "Pakistan",
-    "latitude": 31.5204,
-    "longitude": 74.3587,
-    "neighborhood": "Gulberg III",
-    "store_directions": "Near Gaddafi Stadium, first left after the petrol pump",
-    "pickup_available": true,
-    "pickup_hours": "Mon-Sat 10am-5pm"
-  },
-  "business_details": {
-    "business_type": "sole_proprietorship",
-    "business_category": "Fashion",
-    "business_subcategory": "Women Wear",
-    "founded_year": 2015,
-    "number_of_employees": 12
-  },
-  "kyc_documents": {
-    "cnic_front": "https://cdn.example.com/cnic_front.jpg",
-    "cnic_back": "https://cdn.example.com/cnic_back.jpg"
-  },
-  "bank_details": {
-    "bank_name": "HBL",
-    "account_title": "Ahmed Raza",
-    "account_number": "01234567890123",
-    "iban": "PK36SCBL0000001123456702",
-    "payment_method": "bank_transfer",
-    "branch_code": "0123",
-    "branch_address": "Main Branch, Lahore",
-    "swift_code": "HABBPKKA",
-    "payment_schedule": "monthly",
-    "payment_threshold": 5000
-  },
-  "website": "https://razafabrics.pk",
-  "logo_url": "https://cdn.example.com/logo.png",
-  "banner_url": "https://cdn.example.com/banner.jpg",
-  "banner_mobile_url": "https://cdn.example.com/banner_mobile.jpg"
-}
-```
-
-**Required fields:** `name`, `email`, `password` (min 8 chars), `legal_name`, `business_name`, `contact.phone_number`, `contact.contact_person_name`, `location.address/city/state/postal_code/country`, `business_details.business_type/business_category`, `kyc_documents.cnic_front/cnic_back`, `bank_details.bank_name/account_title/account_number/iban/payment_method`.
-
-**Ignored by backend** (UI-only fields stripped silently): `formErrors`, `confirmPassword`, `contract_agreed`, `status`, `verified`, `shipping_settings`, `return_policy`, `categories`, `tags`.
-
-KYC `verification_status` is automatically set to `pending`.
-
-**Response `201`**
-```json
-{ "token": "<seller_jwt>", "seller": { "id": "...", "email": "...", "status": "pending", ... } }
-```
-
----
-
-### Save Draft
-`POST /api/v2/seller/auth/register/draft`
-
-Saves (or updates) a partial registration form. Upserts by email — calling again with the same email overwrites the previous draft. Drafts expire after 7 days. Passwords are never stored in drafts.
-
-**Body**
-```json
-{
-  "email": "ahmed@mybrand.pk",
-  "step": 3,
-  "draft_data": {
-    "business_name": "Raza Fabrics",
+  "token": "<seller_jwt>",
+  "seller": {
+    "id": "uuid",
+    "name": "Ahmed Raza",
+    "email": "ahmed@mybrand.pk",
     "legal_name": "Raza Textiles Pvt Ltd",
-    "contact": { "contact_person_name": "Ahmed Raza", "phone_number": "+923001234567" }
+    "business_name": "Raza Fabrics",
+    "description": "Premium lawn and silk fabrics from Lahore.",
+    "short_description": "Lahore's finest fabric house",
+    "contact": {
+      "phone_number": "+923001234567",
+      "alternate_phone_number": "+923007654321",
+      "whatsapp": "+923001234567",
+      "contact_person_name": "Ahmed Raza",
+      "support_email": "support@mybrand.pk",
+      "business_hours": "Mon-Sat 9am-6pm"
+    },
+    "location": {
+      "address": "12 Main Gulberg",
+      "city": "Lahore",
+      "state": "Punjab",
+      "postal_code": "54000",
+      "country": "Pakistan",
+      "latitude": 31.5204,
+      "longitude": 74.3587,
+      "neighborhood": "Gulberg III",
+      "store_directions": "Near Gaddafi Stadium",
+      "pickup_available": true,
+      "pickup_hours": "Mon-Sat 10am-5pm"
+    },
+    "business_details": {
+      "business_type": "sole_proprietorship",
+      "business_category": "Fashion",
+      "business_subcategory": "Women Wear",
+      "founded_year": 2015,
+      "number_of_employees": "12"
+    },
+    "kyc_documents": {
+      "cnic_front": "https://cdn.example.com/cnic_front.jpg",
+      "cnic_back": "https://cdn.example.com/cnic_back.jpg",
+      "verification_status": "pending",
+      "verified_at": null
+    },
+    "bank_details": {
+      "bank_name": "HBL",
+      "account_title": "Ahmed Raza",
+      "account_number": "01234567890123",
+      "iban": "PK36SCBL0000001123456702",
+      "payment_method": "bank_transfer",
+      "branch_code": "0123",
+      "branch_address": "Main Branch, Lahore",
+      "swift_code": "HABBPKKA",
+      "payment_schedule": "monthly",
+      "payment_threshold": 5000
+    },
+    "status": "pending",
+    "website": "https://razafabrics.pk",
+    "logo_url": "https://cdn.example.com/logo.png",
+    "banner_url": "https://cdn.example.com/banner.jpg",
+    "banner_mobile_url": "https://cdn.example.com/banner_mobile.jpg",
+    "rejection_reason": "",
+    "kyc_verified": false,
+    "bank_verified": false,
+    "created_at": "2026-03-28T14:30:00Z",
+    "updated_at": "2026-03-28T14:30:00Z"
   }
 }
 ```
 
-**Response `200`**
+### `SellerProfile`
+Same `seller` object shown above, without the top-level `token`.
+
+### `ProductsQueue`
 ```json
-{ "message": "Draft saved", "draft_id": "uuid", "step": 3, "updated_at": "..." }
+{
+  "id": "uuid",
+  "seller_id": "uuid",
+  "product": {
+    "id": "uuid",
+    "raw_id": "shopify-123",
+    "handle": "floral-lawn-suit",
+    "title": "Floral Lawn Suit",
+    "description": "Printed 3-piece lawn suit",
+    "short_description": "Summer lawn edit",
+    "seller_id": "uuid",
+    "seller_name": "Raza Fabrics",
+    "seller_logo": "https://cdn.example.com/logo.png",
+    "categories": [{ "id": "cat-1", "name": "Lawn", "slug": "lawn" }],
+    "product_type": "Eastern",
+    "pricing": {
+      "price": 3500,
+      "compare_at_price": 4200,
+      "currency": "PKR",
+      "discounted": true,
+      "discount_value": 17,
+      "discounted_price": 3500
+    },
+    "images": ["https://cdn.example.com/img1.jpg"],
+    "variants": [
+      {
+        "id": "var-1",
+        "sku": "RF-001-S",
+        "title": "Small",
+        "options": { "Size": "S" },
+        "price": 3500,
+        "available": true
+      }
+    ],
+    "options": [{ "name": "Size", "values": ["S", "M", "L"] }],
+    "tags": ["summer", "lawn"],
+    "inventory": { "in_stock": true, "available_quantity": 12 },
+    "shipping_details": { "free_shipping": false },
+    "status": "draft",
+    "created_at": "2026-03-28T14:30:00Z",
+    "updated_at": "2026-03-28T14:30:00Z",
+    "published_at": null,
+    "rating": 0,
+    "review_count": 0,
+    "is_trending": false,
+    "is_featured": false
+  },
+  "status": "queued",
+  "source": "manual",
+  "shopify_product_id": "",
+  "enrichment": {
+    "product_type": "Eastern",
+    "gender": "Female",
+    "sizing_guide": {
+      "S": { "chest": 86, "waist": 68 }
+    }
+  },
+  "embeddings": [0.12, -0.34, 0.56],
+  "errors": [],
+  "created_at": "2026-03-28T14:30:00Z",
+  "updated_at": "2026-03-28T15:00:00Z"
+}
 ```
 
-**Response `409`** — email already has a full seller account.
-
----
-
-### Get Draft
-`GET /api/v2/seller/auth/register/draft?email=ahmed@mybrand.pk`
-
-Retrieves a saved draft by email.
-
-**Response `200`**
+### `DraftResponse`
 ```json
 {
   "draft_id": "uuid",
   "email": "ahmed@mybrand.pk",
   "step": 3,
-  "draft_data": { ... },
-  "created_at": "...",
-  "updated_at": "...",
-  "expires_at": "..."
+  "draft_data": {
+    "business_name": "Raza Fabrics",
+    "contact": {
+      "contact_person_name": "Ahmed Raza",
+      "phone_number": "+923001234567"
+    }
+  },
+  "created_at": "2026-03-28T14:30:00Z",
+  "updated_at": "2026-03-28T15:00:00Z",
+  "expires_at": "2026-04-04T15:00:00Z",
+  "message": "Draft saved"
 }
 ```
 
-**Response `404`** — no draft found.
-
----
-
-### Login
-`POST /api/v2/seller/auth/login`
-
-**Body**
-```json
-{ "email": "ahmed@mybrand.pk", "password": "secret123" }
-```
-
-**Response `200`** — `{ "token": "<seller_jwt>", "seller": { ... } }`
-
----
-
-## Profile Endpoints _(seller auth required)_
-
-### Get Profile
-`GET /api/v2/seller/profile`
-
-Returns the full seller profile including contact, location, KYC status, and bank details.
-
-**Response `200`** — full `SellerProfile` object (password excluded).
-
----
-
-### Update Profile
-`PATCH /api/v2/seller/profile`
-
-Updates seller profile fields. All fields optional — only provided fields are changed. Available to sellers in **any** status (`pending`, `active`, `suspended`) so sellers can fix issues before approval.
-
-**Body** (all fields optional)
-```json
-{
-  "name": "Ahmed R.",
-  "legal_name": "Raza Textiles Pvt Ltd",
-  "business_name": "Raza Fabrics Co.",
-  "description": "Updated description",
-  "short_description": "New tagline",
-  "website": "https://razafabrics.pk",
-  "logo_url": "https://cdn.example.com/logo.png",
-  "banner_url": "https://cdn.example.com/banner.jpg",
-  "banner_mobile_url": "https://cdn.example.com/banner_mobile.jpg",
-  "contact": { "phone_number": "+923001234567", "contact_person_name": "Ahmed" },
-  "location": { "address": "New address", "city": "Lahore", "state": "Punjab", "postal_code": "54000", "country": "Pakistan" },
-  "business_details": { "business_type": "partnership", "business_category": "Fashion" },
-  "kyc_documents": { "cnic_front": "https://cdn.example.com/new_front.jpg", "cnic_back": "https://cdn.example.com/new_back.jpg" },
-  "bank_details": { "bank_name": "UBL", "account_title": "Ahmed Raza", "account_number": "99887766554433", "iban": "PK36SCBL0000001123456703", "payment_method": "bank_transfer" }
-}
-```
-
-**Response `200`** — updated `SellerProfile`.
-
----
-
-## Onboarding Endpoints _(seller auth required)_
-
-### Get Onboarding Status
-`GET /api/v2/seller/onboarding/status`
-
-Returns the seller's application status and step-by-step onboarding progress. Works for sellers in **any** status (pending, active, suspended, rejected).
-
-**Response `200`**
+### `OnboardingStatusResponse`
 ```json
 {
   "status": "pending",
@@ -212,164 +193,542 @@ Returns the seller's application status and step-by-step onboarding progress. Wo
 }
 ```
 
-| `status` | Meaning |
-|----------|---------|
-| `pending` | Awaiting admin review |
-| `active` | Approved — redirect to dashboard |
-| `suspended` | Suspended — show rejection reason |
-| `rejected` | Rejected — show rejection reason |
-
-`can_edit_profile` is `true` for `pending`, `suspended`, and `rejected` sellers.
+### `SellerOrder`
+```json
+{
+  "id": "uuid",
+  "order_number": "ORD-00123",
+  "user_id": "uuid",
+  "items": [
+    {
+      "id": "item-1",
+      "product_id": "prod-1",
+      "variant_id": "var-1",
+      "quantity": 1,
+      "unit_price": 3500
+    }
+  ],
+  "status": "pending",
+  "total": 3700,
+  "created_at": "2026-03-28T14:30:00Z"
+}
+```
 
 ---
 
-## Product Endpoints _(seller auth required)_
+## Seller Auth Endpoints
+
+### Register
+`POST /api/v2/seller/auth/register`
+
+Auth: public
+
+Creates a new seller account. New sellers start in `pending` status.
+
+**Body**
+```json
+{
+  "name": "Ahmed Raza",
+  "email": "ahmed@mybrand.pk",
+  "password": "secret123",
+  "legal_name": "Raza Textiles Pvt Ltd",
+  "business_name": "Raza Fabrics",
+  "description": "Premium lawn and silk fabrics from Lahore.",
+  "short_description": "Lahore's finest fabric house",
+  "contact": {
+    "phone_number": "+923001234567",
+    "contact_person_name": "Ahmed Raza"
+  },
+  "location": {
+    "address": "12 Main Gulberg",
+    "city": "Lahore",
+    "state": "Punjab",
+    "postal_code": "54000",
+    "country": "Pakistan"
+  },
+  "business_details": {
+    "business_type": "sole_proprietorship",
+    "business_category": "Fashion"
+  },
+  "kyc_documents": {
+    "cnic_front": "https://cdn.example.com/cnic_front.jpg",
+    "cnic_back": "https://cdn.example.com/cnic_back.jpg"
+  },
+  "bank_details": {
+    "bank_name": "HBL",
+    "account_title": "Ahmed Raza",
+    "account_number": "01234567890123",
+    "iban": "PK36SCBL0000001123456702",
+    "payment_method": "bank_transfer"
+  }
+}
+```
+
+Required fields:
+- `name`
+- `email`
+- `password`
+- `legal_name`
+- `business_name`
+- `contact.phone_number`
+- `contact.contact_person_name`
+- `location.address`
+- `location.city`
+- `location.state`
+- `location.postal_code`
+- `location.country`
+- `business_details.business_type`
+- `business_details.business_category`
+- `kyc_documents.cnic_front`
+- `kyc_documents.cnic_back`
+- `bank_details.bank_name`
+- `bank_details.account_title`
+- `bank_details.account_number`
+- `bank_details.iban`
+- `bank_details.payment_method`
+
+**Response `201`**: `SellerAuthResponse`
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — missing required fields / validation failure
+- `409 CONFLICT` — seller email already exists
+
+---
+
+### Login
+`POST /api/v2/seller/auth/login`
+
+Auth: public
+
+**Body**
+```json
+{
+  "email": "ahmed@mybrand.pk",
+  "password": "secret123"
+}
+```
+
+**Response `200`**: `SellerAuthResponse`
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `401 UNAUTHORIZED` — invalid credentials
+
+---
+
+### Save Draft
+`POST /api/v2/seller/auth/register/draft`
+
+Auth: public
+
+Upserts a partial seller registration draft by email. Passwords are stripped before storage.
+
+**Body**
+```json
+{
+  "email": "ahmed@mybrand.pk",
+  "step": 3,
+  "draft_data": {
+    "business_name": "Raza Fabrics",
+    "contact": {
+      "contact_person_name": "Ahmed Raza",
+      "phone_number": "+923001234567"
+    }
+  }
+}
+```
+
+**Response `200`**: `DraftResponse`
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `409 CONFLICT` — seller account already exists for this email
+
+---
+
+### Get Draft
+`GET /api/v2/seller/auth/register/draft?email=ahmed@mybrand.pk`
+
+Auth: public
+
+**Response `200`**: `DraftResponse`
+
+**Common errors**
+- `404 NOT_FOUND` — no draft found for the email
+
+---
+
+## Onboarding and Profile
+
+### Get Onboarding Status
+`GET /api/v2/seller/onboarding/status`
+
+Auth: seller token required
+
+Returns the seller's current onboarding state. `can_edit_profile` is true for `pending`, `suspended`, and `rejected` sellers.
+
+**Response `200`**: `OnboardingStatusResponse`
+
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid seller token
+
+---
+
+### Get Profile
+`GET /api/v2/seller/profile`
+
+Auth: seller token required
+
+**Response `200`**: `SellerProfile`
+
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid seller token
+
+---
+
+### Update Profile
+`PATCH /api/v2/seller/profile`
+
+Auth: seller token required
+
+PATCH semantics: only provided fields are changed.
+
+**Body**
+```json
+{
+  "name": "Ahmed R.",
+  "business_name": "Raza Fabrics Co.",
+  "legal_name": "Raza Textiles Pvt Ltd",
+  "description": "Updated description",
+  "short_description": "New tagline",
+  "website": "https://razafabrics.pk",
+  "logo_url": "https://cdn.example.com/logo.png",
+  "banner_url": "https://cdn.example.com/banner.jpg",
+  "banner_mobile_url": "https://cdn.example.com/banner_mobile.jpg",
+  "contact": {
+    "phone_number": "+923001234567",
+    "contact_person_name": "Ahmed"
+  },
+  "location": {
+    "address": "New address",
+    "city": "Lahore",
+    "state": "Punjab",
+    "postal_code": "54000",
+    "country": "Pakistan"
+  },
+  "business_details": {
+    "business_type": "partnership",
+    "business_category": "Fashion"
+  },
+  "kyc_documents": {
+    "cnic_front": "https://cdn.example.com/new_front.jpg",
+    "cnic_back": "https://cdn.example.com/new_back.jpg"
+  },
+  "bank_details": {
+    "bank_name": "UBL",
+    "account_title": "Ahmed Raza",
+    "account_number": "99887766554433",
+    "iban": "PK36SCBL0000001123456703",
+    "payment_method": "bank_transfer"
+  }
+}
+```
+
+**Response `200`**: `SellerProfile`
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — validation failure
+- `401 UNAUTHORIZED` — missing or invalid seller token
+
+---
+
+## Products
 
 ### List Products
 `GET /api/v2/seller/products`
 
-Returns all products belonging to the seller.
+Auth: seller token required
 
-**Query Parameters**
+**Query parameters**
+- `status` — optional product status filter
 
-| Param | Type | Description |
-|-------|------|-------------|
-| `status` | string | Filter by status: `active`, `draft`, `archived` |
-
-**Response `200`** — array of `Product` objects.
+**Response `200`**
+```json
+[
+  {
+    "id": "uuid",
+    "handle": "floral-lawn-suit",
+    "title": "Floral Lawn Suit",
+    "description": "Printed 3-piece lawn suit",
+    "seller_id": "uuid",
+    "seller_name": "Raza Fabrics",
+    "categories": [{ "id": "cat-1", "name": "Lawn", "slug": "lawn" }],
+    "product_type": "Eastern",
+    "pricing": {
+      "price": 3500,
+      "currency": "PKR",
+      "discounted": false
+    },
+    "images": ["https://cdn.example.com/img1.jpg"],
+    "variants": [],
+    "options": [],
+    "tags": ["summer"],
+    "inventory": { "in_stock": true, "available_quantity": 12 },
+    "shipping_details": { "free_shipping": false },
+    "status": "active",
+    "created_at": "2026-03-28T14:30:00Z",
+    "updated_at": "2026-03-28T14:30:00Z",
+    "rating": 0,
+    "review_count": 0,
+    "is_trending": false,
+    "is_featured": false
+  }
+]
+```
 
 ---
 
 ### Create Product
 `POST /api/v2/seller/products`
 
-Adds a new product to the moderation queue (status: `queued`). It will not be publicly visible until it passes enrichment, embedding, and promotion.
+Auth: seller token required
 
-**Body** — `Product` object (see [Catalog module](./catalog.md) for the full `Product` schema). `seller_id` is injected automatically from the token.
+Adds a product to the moderation queue. The authenticated seller ID is injected from the token.
 
-**Response `201`** — `ProductsQueue` object.
+**Body**: catalog product payload
+
+**Response `201`**: `ProductsQueue`
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — validation failure
+- `401 UNAUTHORIZED` — missing or invalid seller token
 
 ---
 
 ### Update Product
 `PUT /api/v2/seller/products/{id}`
 
-Replaces an existing product's details.
+Auth: seller token required
 
-**Body** — `Product` object.
+Replaces an existing seller-owned product.
 
-**Response `200`** — updated `Product`.
+**Body**: catalog product payload
+
+**Response `200`**
+```json
+{
+  "id": "uuid",
+  "handle": "floral-lawn-suit",
+  "title": "Updated Floral Lawn Suit",
+  "description": "Updated description",
+  "seller_id": "uuid",
+  "seller_name": "Raza Fabrics",
+  "categories": [],
+  "product_type": "Eastern",
+  "pricing": {
+    "price": 3800,
+    "currency": "PKR",
+    "discounted": false
+  },
+  "images": [],
+  "variants": [],
+  "options": [],
+  "tags": [],
+  "inventory": { "in_stock": true, "available_quantity": 12 },
+  "shipping_details": { "free_shipping": false },
+  "status": "active",
+  "created_at": "2026-03-28T14:30:00Z",
+  "updated_at": "2026-03-29T10:00:00Z",
+  "rating": 0,
+  "review_count": 0,
+  "is_trending": false,
+  "is_featured": false
+}
+```
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — product not found
 
 ---
 
 ### Delete Product
 `DELETE /api/v2/seller/products/{id}`
 
-Permanently removes a product.
+Auth: seller token required
 
-**Response `200`** `{ "message": "Product deleted" }`
+**Response `200`**
+```json
+{ "message": "Product deleted" }
+```
+
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — product not found
 
 ---
 
-## Product Queue _(seller auth required)_
+## Product Queue
 
-Products go through a pipeline before becoming publicly visible:
-`queued` → `enrichment_pending` → `embedding_pending` → `ready` → `promoted`
+Queue status flow:
+- `queued`
+- `synced`
+- `enrichment_pending`
+- `embedding_pending`
+- `ready`
+- `promoted`
+- `failed`
 
 ### Get Queue
 `GET /api/v2/seller/queue`
 
-Returns all queue items for the seller.
+Auth: seller token required
 
-**Response `200`** — array of `ProductsQueue` objects.
-
----
-
-### Enrich Product
-`PUT /api/v2/seller/queue/{id}/enrich`
-
-Adds product type, gender targeting, and sizing guide metadata. Transitions item to `embedding_pending`.
-
-**Body**
-```json
-{
-  "product_type": "Eastern",
-  "gender": "Female",
-  "sizing_guide": { "S": { "chest": 86, "waist": 68 }, "M": { "chest": 91, "waist": 73 } }
-}
-```
-
-**Response `200`** `{ "message": "Product enriched, pending embeddings" }`
+**Response `200`**: array of `ProductsQueue`
 
 ---
 
 ### Get Pending Embeddings
 `GET /api/v2/seller/queue/pending-embeddings`
 
-Returns all queue items in `embedding_pending` status for the local embedding machine to process.
+Auth: seller token required
 
-**Response `200`** — array of `ProductsQueue` objects.
+Despite its name, this route is currently protected by seller auth in the router.
+
+**Response `200`**: array of `ProductsQueue`
+
+---
+
+### Enrich Product
+`PUT /api/v2/seller/queue/{id}/enrich`
+
+Auth: seller token required
+
+**Body**
+```json
+{
+  "product_type": "Eastern",
+  "gender": "Female",
+  "sizing_guide": {
+    "S": { "chest": 86, "waist": 68 },
+    "M": { "chest": 91, "waist": 73 }
+  }
+}
+```
+
+**Response `200`**
+```json
+{ "message": "Product enriched, pending embeddings" }
+```
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — invalid queue state or request data
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — queue item not found
 
 ---
 
 ### Submit Embeddings
 `POST /api/v2/seller/queue/{id}/embeddings`
 
-Stores the AI embedding vector for a product. Transitions item to `ready`.
+Auth: seller token required
 
 **Body**
 ```json
-{ "embeddings": [0.12, -0.34, 0.56, ...] }
+{
+  "embeddings": [0.12, -0.34, 0.56]
+}
 ```
 
-**Response `200`** `{ "message": "Embeddings stored, product is ready for promotion" }`
+**Response `200`**
+```json
+{ "message": "Embeddings stored, product is ready for promotion" }
+```
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — invalid queue state or embedding payload
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — queue item not found
 
 ---
 
 ### Promote Product
 `POST /api/v2/seller/queue/{id}/promote`
 
-Moves a `ready` queue item into the live catalog. Product becomes publicly visible.
+Auth: seller token required
 
-**Response `200`** `{ "message": "Product promoted from queue" }`
+**Response `200`**
+```json
+{ "message": "Product promoted from queue" }
+```
+
+**Common errors**
+- `400` — queue item not in `ready` state
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — queue item not found
 
 ---
 
-## Inventory Endpoints _(seller auth required)_
+## Inventory
 
 ### Bulk Update Inventory
 `POST /api/v2/seller/inventory/bulk-update`
 
-Updates stock quantities for multiple variants at once.
+Auth: seller token required
 
 **Body**
 ```json
 [
-  { "product_id": "uuid", "variant_id": "uuid", "quantity_change": 50, "reason": "restock" },
-  { "product_id": "uuid", "variant_id": "uuid", "quantity_change": -3, "reason": "damage" }
+  {
+    "product_id": "uuid",
+    "variant_id": "uuid",
+    "quantity_change": 50,
+    "reason": "restock"
+  },
+  {
+    "product_id": "uuid",
+    "variant_id": "uuid",
+    "quantity_change": -3,
+    "reason": "damage"
+  }
 ]
 ```
-`reason` values: `restock`, `sale`, `damage`, `other`. Positive `quantity_change` adds stock; negative removes it.
 
-**Response `200`** `{ "message": "Inventory updated successfully" }`
+**Response `200`**
+```json
+{ "message": "Inventory updated successfully" }
+```
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — invalid update payload
+- `401 UNAUTHORIZED` — missing or invalid seller token
 
 ---
 
 ### Get Low Stock
 `GET /api/v2/seller/inventory/low-stock`
 
-Returns variants with inventory at or below the threshold.
+Auth: seller token required
 
-**Query Parameters**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| `threshold` | int | Alert threshold (default: 10) |
+**Query parameters**
+- `threshold` — optional integer, defaults to `10`
 
 **Response `200`**
 ```json
 [
-  { "product_id": "uuid", "product_name": "Lawn Suit", "current_quantity": 3, "threshold": 10 }
+  {
+    "product_id": "uuid",
+    "product_name": "Lawn Suit",
+    "current_quantity": 3,
+    "threshold": 10
+  }
 ]
 ```
 
@@ -378,76 +737,90 @@ Returns variants with inventory at or below the threshold.
 ### Get Inventory Categories
 `GET /api/v2/seller/inventory/categories`
 
-Returns a count of products per category in the seller's catalog.
-
-**Response `200`**
-```json
-[{ "name": "Tops", "count": 24 }, { "name": "Bottoms", "count": 18 }]
-```
-
----
-
-## Order Endpoints _(seller auth required)_
-
-### Get Orders
-`GET /api/v2/seller/orders`
-
-Returns all orders containing this seller's products.
+Auth: seller token required
 
 **Response `200`**
 ```json
 [
-  {
-    "id": "uuid",
-    "order_number": "ORD-00123",
-    "user_id": "uuid",
-    "items": [{ "id": "...", "product_id": "...", "variant_id": "...", "quantity": 1, "unit_price": 3500 }],
-    "status": "pending",
-    "total": 3700,
-    "created_at": "..."
-  }
+  { "name": "Tops", "count": 24 },
+  { "name": "Bottoms", "count": 18 }
 ]
 ```
+
+---
+
+## Orders
+
+### Get Orders
+`GET /api/v2/seller/orders`
+
+Auth: seller token required
+
+**Response `200`**: array of `SellerOrder`
 
 ---
 
 ### Fulfill Order
 `POST /api/v2/seller/orders/{id}/fulfill`
 
-Marks an order as shipped.
+Auth: seller token required
 
-**Body** (optional)
+The handler accepts an optional body in Swagger, but the current implementation ignores it and only transitions the order to `shipped`.
+
+**Response `200`**
 ```json
-{ "tracking_number": "TCS-123456" }
+{ "message": "Order fulfilled successfully" }
 ```
 
-**Response `200`** `{ "message": "Order fulfilled successfully" }`
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — order not found
 
 ---
 
 ### Update Order Status
 `PUT /api/v2/seller/orders/{id}/status`
 
-Updates the fulfillment status of an order.
+Auth: seller token required
 
 **Body**
 ```json
 { "status": "delivered" }
 ```
-Valid values: `shipped`, `delivered`, `cancelled`.
 
-**Response `200`** `{ "message": "Order status updated" }`
+Valid values in the service layer:
+- `pending`
+- `shipped`
+- `delivered`
+- `cancelled`
+
+**Response `200`**
+```json
+{ "message": "Order status updated" }
+```
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — unsupported status
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — order not found
 
 ---
 
-## Analytics Endpoints _(seller auth required)_
+## Analytics
 
 ### Get Sales Analytics
 `GET /api/v2/seller/analytics/sales`
 
+Auth: seller token required
+
 **Response `200`**
 ```json
-{ "total_revenue": 125000.00, "total_orders": 84, "average_order_value": 1488.10 }
+{
+  "total_revenue": 125000,
+  "total_orders": 84,
+  "average_order_value": 1488.1
+}
 ```
 
 ---
@@ -455,9 +828,17 @@ Valid values: `shipped`, `delivered`, `cancelled`.
 ### Get Order Analytics
 `GET /api/v2/seller/analytics/orders`
 
+Auth: seller token required
+
 **Response `200`**
 ```json
-{ "pending": 5, "shipped": 30, "delivered": 45, "cancelled": 4, "total": 84 }
+{
+  "pending": 5,
+  "shipped": 30,
+  "delivered": 45,
+  "cancelled": 4,
+  "total": 84
+}
 ```
 
 ---
@@ -465,9 +846,16 @@ Valid values: `shipped`, `delivered`, `cancelled`.
 ### Get Inventory Analytics
 `GET /api/v2/seller/analytics/inventory`
 
+Auth: seller token required
+
 **Response `200`**
 ```json
-{ "total_products": 62, "in_stock": 54, "out_of_stock": 5, "low_stock": 3 }
+{
+  "total_products": 62,
+  "in_stock": 54,
+  "out_of_stock": 5,
+  "low_stock": 3
+}
 ```
 
 ---
@@ -475,12 +863,21 @@ Valid values: `shipped`, `delivered`, `cancelled`.
 ### Get Product Analytics
 `GET /api/v2/seller/analytics/product/{productID}`
 
-Returns units sold and revenue for a specific product.
+Auth: seller token required
 
 **Response `200`**
 ```json
-{ "product_id": "uuid", "product_name": "Lawn Suit", "total_sold": 18, "revenue": 63000.00 }
+{
+  "product_id": "uuid",
+  "product_name": "Lawn Suit",
+  "total_sold": 18,
+  "revenue": 63000
+}
 ```
+
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — product not found
 
 ---
 
@@ -488,8 +885,8 @@ Returns units sold and revenue for a specific product.
 
 | Code | Meaning |
 |------|---------|
-| `400 INVALID_BODY` | Malformed JSON |
-| `400` | Missing required fields during registration |
-| `401 UNAUTHORIZED` | Missing/invalid seller token |
-| `404 NOT_FOUND` | Product, queue item, or order not found |
-| `409 CONFLICT` | Email already registered |
+| `400 INVALID_BODY` | Malformed JSON request body |
+| `400` | Validation failure, invalid state transition, or unsupported status |
+| `401 UNAUTHORIZED` | Missing or invalid seller token |
+| `404 NOT_FOUND` | Seller resource, queue item, order, or product not found |
+| `409 CONFLICT` | Seller email or draft email conflicts with existing account |

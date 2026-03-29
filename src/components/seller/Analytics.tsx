@@ -38,21 +38,25 @@ const Analytics: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [timeRange, setTimeRange] = useState('30d');
 
+    const getRangeStart = (range: string) => {
+        const date = new Date();
+        const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
+        date.setDate(date.getDate() - days);
+        return date.toISOString();
+    };
+
     useEffect(() => {
         const fetchData = async () => {
             if (!token) return;
             setIsLoading(true);
             setError(null);
-
-            // This is a placeholder for date range logic
-            // const startTime = new Date();
-            // startTime.setDate(startTime.getDate() - 30);
+            const startTime = getRangeStart(timeRange);
 
             try {
                 const [sales, orders, inventory] = await Promise.all([
-                    api.SellerAnalytics.GetSalesAnalytics(token),
-                    api.SellerAnalytics.GetOrderAnalytics(token),
-                    api.SellerAnalytics.GetInventoryAnalytics(token)
+                    api.SellerAnalytics.GetSalesAnalytics(token, startTime),
+                    api.SellerAnalytics.GetOrderAnalytics(token, startTime),
+                    api.SellerAnalytics.GetInventoryAnalytics(token, startTime)
                 ]);
 
                 if (sales.ok) setSalesData(sales.body);
@@ -80,15 +84,19 @@ const Analytics: React.FC = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-white">Analytics Overview</h2>
-                {/* Time range selector can be added here */}
+                <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="glass-input px-3 py-2 text-sm">
+                    <option value="7d" className="bg-neutral-900">Last 7 days</option>
+                    <option value="30d" className="bg-neutral-900">Last 30 days</option>
+                    <option value="90d" className="bg-neutral-900">Last 90 days</option>
+                </select>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <AnalyticsCard title="Total Revenue" value={`Rs. ${salesData?.total_revenue?.toLocaleString() || 0}`} change={salesData?.revenue_change} icon={<DollarSign className="text-green-500"/>} colorClass="bg-green-500" />
-                <AnalyticsCard title="Total Orders" value={orderData?.total_orders || 0} change={orderData?.orders_change} icon={<ShoppingCart className="text-blue-500"/>} colorClass="bg-blue-500" />
-                <AnalyticsCard title="Avg. Order Value" value={`Rs. ${salesData?.average_order_value?.toLocaleString() || 0}`} change={salesData?.aov_change} icon={<DollarSign className="text-yellow-500"/>} colorClass="bg-yellow-500" />
-                <AnalyticsCard title="Conversion Rate" value={`${orderData?.conversion_rate || 0}%`} change={orderData?.conversion_rate_change} icon={<TrendingUp className="text-indigo-500"/>} colorClass="bg-indigo-500" />
-                <AnalyticsCard title="Products in Stock" value={inventoryData?.total_stock || 0} icon={<Package className="text-orange-500"/>} colorClass="bg-orange-500" />
-                <AnalyticsCard title="Out of Stock Products" value={inventoryData?.out_of_stock_products || 0} icon={<AlertCircle className="text-red-500"/>} colorClass="bg-red-500" />
+                <AnalyticsCard title="Total Revenue" value={`Rs. ${salesData?.total_revenue?.toLocaleString() || 0}`} icon={<DollarSign className="text-green-500"/>} colorClass="bg-green-500" />
+                <AnalyticsCard title="Total Orders" value={salesData?.total_orders || orderData?.total || 0} icon={<ShoppingCart className="text-blue-500"/>} colorClass="bg-blue-500" />
+                <AnalyticsCard title="Avg. Order Value" value={`Rs. ${salesData?.average_order_value?.toLocaleString() || 0}`} icon={<DollarSign className="text-yellow-500"/>} colorClass="bg-yellow-500" />
+                <AnalyticsCard title="Delivered Orders" value={orderData?.delivered || 0} icon={<TrendingUp className="text-indigo-500"/>} colorClass="bg-indigo-500" />
+                <AnalyticsCard title="Products In Stock" value={inventoryData?.in_stock || 0} icon={<Package className="text-orange-500"/>} colorClass="bg-orange-500" />
+                <AnalyticsCard title="Low / Out of Stock" value={`${inventoryData?.low_stock || 0} / ${inventoryData?.out_of_stock || 0}`} icon={<AlertCircle className="text-red-500"/>} colorClass="bg-red-500" />
             </div>
             <div className="mt-8 text-center text-neutral-500">
                 <p>More detailed charts and product-specific analytics coming soon.</p>

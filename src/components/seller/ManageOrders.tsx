@@ -2,64 +2,51 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Truck, ChevronDown, XCircle, Download, MoreVertical, Package, Calendar, User, DollarSign, MapPin, CreditCard, ShoppingBag, Info, CheckCircle2 } from 'lucide-react';
+import { Truck, ChevronDown, XCircle, MoreVertical, Package, Calendar, User, DollarSign, MapPin, CreditCard, ShoppingBag, Info, CheckCircle2 } from 'lucide-react';
 import { Order, OrderStatus } from '../../constants/orders';
 import { Product } from '../../constants/types';
 
 import { OrderStatusBadge } from './OrderStatusBadge';
 
+const SELLER_ORDER_STATUSES: (OrderStatus | 'all')[] = ['all', 'pending', 'shipped', 'delivered', 'cancelled'];
+
 const OrderCard: React.FC<{
     order: Order;
     productDetails: Record<string, Product>;
     loadingProducts: Set<string>;
-    onUpdateStatus: (orderId: string, currentStatus: OrderStatus) => void;
+    onFulfillOrder: (orderId: string) => void;
+    onMarkDelivered: (orderId: string) => void;
     onCancelOrder: (orderId: string) => void;
-    onBookDelivery: (orderId: string) => void;
-    onDownloadBill: (orderId: string) => void;
-}> = ({ order, productDetails, loadingProducts, onUpdateStatus, onCancelOrder, onBookDelivery, onDownloadBill }) => {
+}> = ({ order, productDetails, loadingProducts, onFulfillOrder, onMarkDelivered, onCancelOrder }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    const manualOrderStatusFlow: OrderStatus[] = ['pending', 'confirmed', 'packed'];
-    const nextStatus = useMemo(() => {
-        const currentIndex = manualOrderStatusFlow.indexOf(order.status.toLowerCase() as OrderStatus);
-        if (currentIndex !== -1 && currentIndex < manualOrderStatusFlow.length - 1) {
-            return manualOrderStatusFlow[currentIndex + 1];
-        }
-        return null;
-    }, [order.status]);
-
-    const isPacked = order.status.toLowerCase() === 'packed';
-    const canUpdate = !['booked', 'shipped', 'delivered', 'cancelled', 'returned'].includes(order.status.toLowerCase());
+    const normalizedStatus = order.status.toLowerCase() as OrderStatus;
+    const canCancel = ['pending', 'shipped'].includes(normalizedStatus);
+    const canFulfill = normalizedStatus === 'pending';
+    const canDeliver = normalizedStatus === 'shipped';
 
     const primaryAction = () => {
-        if (isPacked && canUpdate) {
+        if (canDeliver) {
             return (
                 <button 
-                    onClick={(e) => { e.stopPropagation(); onBookDelivery(order.id!); }} 
+                    onClick={(e) => { e.stopPropagation(); onMarkDelivered(order.id!); }} 
                     className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-light text-white rounded-xl font-bold transition-all shadow-lg shadow-primary/20 hover:shadow-primary/40 active:scale-95 whitespace-nowrap"
                 >
-                    <Truck size={18} />
-                    Book Delivery
+                    <CheckCircle2 size={18} />
+                    Mark as Delivered
                 </button>
             );
         }
         
-        if (!isPacked && canUpdate && nextStatus) {
-            const isConfirming = nextStatus === 'confirmed';
-            const bgColor = isConfirming ? 'bg-success' : 'bg-accent';
-            const hoverColor = isConfirming ? 'hover:bg-success-light' : 'hover:bg-accent-light';
-            const shadowColor = isConfirming ? 'shadow-success/20' : 'shadow-accent/20';
-            const shadowHoverColor = isConfirming ? 'hover:shadow-success/40' : 'hover:shadow-accent/40';
-            const icon = isConfirming ? <CheckCircle2 size={18} /> : <Package size={18} />;
-
+        if (canFulfill) {
             return (
                 <button 
-                    onClick={(e) => { e.stopPropagation(); onUpdateStatus(order.id!, order.status); }} 
-                    className={`flex items-center gap-2 px-4 py-2 ${bgColor} ${hoverColor} text-white rounded-xl font-bold transition-all shadow-lg ${shadowColor} ${shadowHoverColor} active:scale-95 whitespace-nowrap`}
+                    onClick={(e) => { e.stopPropagation(); onFulfillOrder(order.id!); }} 
+                    className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-light text-white rounded-xl font-bold transition-all shadow-lg shadow-accent/20 hover:shadow-accent/40 active:scale-95 whitespace-nowrap"
                 >
-                    {icon}
-                    Mark as {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}
+                    <Truck size={18} />
+                    Mark as Shipped
                 </button>
             );
         }
@@ -74,12 +61,12 @@ const OrderCard: React.FC<{
                         <div className="flex items-center gap-4 mb-3">
                             <p className="font-bold text-white text-lg">#{order.order_number}</p>
                             <OrderStatusBadge status={order.status} />
-                            <span className="text-xs text-neutral-500 bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-wider">{order.payment_method.replace(/_/g, ' ')}</span>
+                            <span className="text-xs text-neutral-500 bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-wider">{String(order.payment_method || 'pending').replace(/_/g, ' ')}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-neutral-400">
                             <span className="flex items-center"><Calendar size={14} className="mr-2 text-primary"/>{new Date(order.created_at).toLocaleDateString()}</span>
-                            <span className="flex items-center"><User size={14} className="mr-2 text-secondary"/>{order.shipping_address?.name}</span>
-                            <span className="flex items-center"><MapPin size={14} className="mr-2 text-accent"/>{order.shipping_address?.city}, {order.shipping_address?.province}</span>
+                            <span className="flex items-center"><User size={14} className="mr-2 text-secondary"/>{order.shipping_address?.name || 'Customer'}</span>
+                            <span className="flex items-center"><MapPin size={14} className="mr-2 text-accent"/>{order.shipping_address?.city || 'N/A'}{order.shipping_address?.province ? `, ${order.shipping_address.province}` : ''}</span>
                             <span className="flex items-center font-bold text-white bg-white/5 px-2 py-1 rounded-lg"><DollarSign size={14} className="mr-1 text-green-400"/>Rs. {order.total.toLocaleString()}</span>
                         </div>
                     </div>
@@ -93,8 +80,7 @@ const OrderCard: React.FC<{
                                         initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                                         className="absolute right-0 mt-2 w-48 glass p-2 rounded-xl z-20 shadow-2xl border border-white/10"
                                     >
-                                        {canUpdate && <button onClick={() => onCancelOrder(order.id!)} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors font-medium"><XCircle size={14} className="mr-2"/> Cancel Order</button>}
-                                        {['confirmed', 'packed', 'booked'].includes(order.status.toLowerCase()) && <button onClick={() => onDownloadBill(order.id!)} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-white/10 rounded-lg transition-colors font-medium"><Download size={14} className="mr-2"/> Download Bill</button>}
+                                        {canCancel && <button onClick={() => onCancelOrder(order.id!)} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors font-medium"><XCircle size={14} className="mr-2"/> Cancel Order</button>}
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -114,11 +100,11 @@ const OrderCard: React.FC<{
                                         <span>Shipping Details</span>
                                     </div>
                                     <div className="bg-white/5 p-4 rounded-2xl space-y-2 border border-white/5">
-                                        <p className="text-sm text-white font-medium">{order.shipping_address?.name}</p>
+                                        <p className="text-sm text-white font-medium">{order.shipping_address?.name || 'Customer'}</p>
                                         <p className="text-sm text-neutral-400 leading-relaxed">
-                                            {order.shipping_address?.address_line1}<br />
+                                            {order.shipping_address?.address_line1 || 'Address unavailable'}<br />
                                             {order.shipping_address?.address_line2 && <>{order.shipping_address.address_line2}<br /></>}
-                                            {order.shipping_address?.city}, {order.shipping_address?.province} {order.shipping_address?.postal_code}
+                                            {order.shipping_address?.city || ''}{order.shipping_address?.province ? `, ${order.shipping_address.province}` : ''} {order.shipping_address?.postal_code || ''}
                                         </p>
                                     </div>
                                 </div>
@@ -130,11 +116,11 @@ const OrderCard: React.FC<{
                                     <div className="bg-white/5 p-4 rounded-2xl space-y-3 border border-white/5">
                                         <div className="flex justify-between text-sm">
                                             <span className="text-neutral-400 flex items-center gap-2"><CreditCard size={14} /> Payment Method</span>
-                                            <span className="text-white font-medium uppercase">{order.payment_method.replace(/_/g, ' ')}</span>
+                                            <span className="text-white font-medium uppercase">{String(order.payment_method || 'pending').replace(/_/g, ' ')}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-neutral-400 flex items-center gap-2"><Truck size={14} /> Delivery Method</span>
-                                            <span className="text-white font-medium uppercase">{order.delivery_method}</span>
+                                            <span className="text-white font-medium uppercase">{order.delivery_method || 'standard'}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-neutral-400">Payment Status</span>
@@ -258,16 +244,15 @@ const ManageOrders: React.FC = () => {
     fetchOrders();
   }, [fetchOrders]);
 
-  const allOrderStatuses: (OrderStatus | 'all')[] = ['all', 'pending', 'confirmed', 'packed', 'booked', 'shipped', 'delivered', 'cancelled', 'returned'];
+  const handleMarkDelivered = async (orderId: string) => {
+    if (!seller?.token || !seller.user) return;
 
-  const handleUpdateStatus = async (orderId: string, currentStatus: OrderStatus) => {
-    const manualOrderStatusFlow: OrderStatus[] = ['pending', 'confirmed', 'packed'];
-    const currentIndex = manualOrderStatusFlow.indexOf(currentStatus.toLowerCase() as OrderStatus);
-    const nextStatus = (currentIndex !== -1 && currentIndex < manualOrderStatusFlow.length - 1) ? manualOrderStatusFlow[currentIndex + 1] : null;
+    const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, {
+      status: 'delivered',
+      changed_by_id: seller.user.id,
+      changed_by_name: seller.user.business_name,
+    });
 
-    if (!nextStatus || !seller?.token || !seller.user) return;
-
-    const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, { status: nextStatus, changed_by_id: seller.user.id, changed_by_name: seller.user.business_name });
     if (response.ok) fetchOrders(); else alert('Failed to update order status.');
   };
 
@@ -277,31 +262,15 @@ const ManageOrders: React.FC = () => {
     if (response.ok) fetchOrders(); else alert('Failed to cancel order.');
   };
 
-  const handleBookDelivery = async (orderId: string) => {
+  const handleFulfillOrder = async (orderId: string) => {
     if (!seller?.token || !seller.user) return;
-    const bookResponse = await api.Seller.bookDelivery(seller.token, orderId);
-    if (bookResponse.ok) {
-      alert('Delivery booked successfully!');
-      await api.Seller.UpdateOrderStatus(seller.token, orderId, { status: 'booked', changed_by_id: seller.user.id, changed_by_name: seller.user.business_name });
+
+    const fulfillResponse = await api.Seller.FulfillOrder(seller.token, orderId);
+    if (fulfillResponse.ok) {
+      alert('Order marked as shipped.');
       fetchOrders();
     } else {
-      alert(`Failed to book delivery: ${bookResponse.body?.message || 'Unknown error'}`);
-    }
-  };
-
-  const handleDownloadBill = async (orderId: string) => {
-    const response = await api.Seller.GetAirwayBill(orderId);
-    if (response.ok && response.body) {
-      const url = window.URL.createObjectURL(response.body as Blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `airway-bill-${orderId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } else {
-      alert(`Try again in a few minutes: ${response.body || 'Unknown error'}`);
+      alert(`Failed to mark order as shipped: ${fulfillResponse.body?.message || 'Unknown error'}`);
     }
   };
 
@@ -340,7 +309,7 @@ const ManageOrders: React.FC = () => {
       
       <div className="mb-8">
         <div className="flex space-x-2 overflow-x-auto pb-4 scrollbar-hide">
-          {allOrderStatuses.map(status => (
+          {SELLER_ORDER_STATUSES.map(status => (
             <button
               key={status}
               onClick={() => setSelectedStatus(status)}
@@ -367,10 +336,9 @@ const ManageOrders: React.FC = () => {
                 order={order} 
                 productDetails={productDetails}
                 loadingProducts={loadingProducts}
-                onUpdateStatus={handleUpdateStatus}
+                onFulfillOrder={handleFulfillOrder}
+                onMarkDelivered={handleMarkDelivered}
                 onCancelOrder={handleCancelOrder}
-                onBookDelivery={handleBookDelivery}
-                onDownloadBill={handleDownloadBill}
             />
           ))
         )}

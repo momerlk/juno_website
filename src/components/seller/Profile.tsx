@@ -26,7 +26,7 @@ const Profile: React.FC = () => {
         const fetchProfile = async () => {
             if (token) {
                 setIsLoading(true);
-                const response = await api.Auth.GetProfile(token);
+                const response = await api.Seller.GetProfile(token);
                 if (response.ok && response.body) {
                     setProfile(response.body);
                 } else {
@@ -77,7 +77,8 @@ const Profile: React.FC = () => {
         if (token) {
             setIsSaving(true);
             const response = await api.Seller.UpdateProfile(token, profile as TSeller);
-            if (response.ok) {
+            if (response.ok && response.body) {
+                setProfile(response.body);
                 alert('Profile updated successfully!');
                 setHasUnsavedChanges(false);
             } else {
@@ -154,8 +155,8 @@ const Profile: React.FC = () => {
                             <input type="text" name="contact.contact_person_name" id="contact.contact_person_name" value={profile.contact?.contact_person_name || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                         <div>
-                            <label htmlFor="contact.email" className="block text-sm font-medium text-neutral-300">Contact Email</label>
-                            <input type="email" name="contact.email" id="contact.email" value={profile.contact?.email || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="contact.support_email" className="block text-sm font-medium text-neutral-300">Support Email</label>
+                            <input type="email" name="contact.support_email" id="contact.support_email" value={profile.contact?.support_email || ''} onChange={handleChange} className="glass-input w-full mt-1" />
                         </div>
                         <div>
                             <label htmlFor="contact.phone_number" className="block text-sm font-medium text-neutral-300">Phone Number</label>

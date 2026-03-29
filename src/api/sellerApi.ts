@@ -18,6 +18,86 @@ export function setState(data: any) {
 
 export type { APIResponse };
 
+function unwrapBody<T>(body: any): T {
+  return (body?.data ?? body) as T;
+}
+
+function normalizeSellerProfile(body: any): TSeller {
+  return unwrapBody<TSeller>(body);
+}
+
+function normalizeOrderStatus(status?: string): Order["status"] {
+  switch ((status || "").toLowerCase()) {
+    case "pending":
+    case "shipped":
+    case "delivered":
+    case "cancelled":
+    case "returned":
+    case "confirmed":
+    case "packed":
+    case "booked":
+    case "fulfilled":
+    case "refunded":
+      return status!.toLowerCase() as Order["status"];
+    default:
+      return "pending";
+  }
+}
+
+function normalizeSellerOrder(raw: any): Order {
+  const items = Array.isArray(raw?.order_items) ? raw.order_items : Array.isArray(raw?.items) ? raw.items : [];
+  const total = Number(raw?.total ?? raw?.total_amount ?? 0);
+
+  return {
+    id: raw?.id,
+    user_id: raw?.user_id ?? "",
+    seller_id: raw?.seller_id ?? "",
+    order_number: raw?.order_number ?? raw?.id ?? "Order",
+    order_items: items.map((item: any) => ({
+      id: item?.id,
+      order_id: raw?.id ?? "",
+      product_id: item?.product_id ?? "",
+      variant_id: item?.variant_id ?? "",
+      seller_id: raw?.seller_id ?? "",
+      quantity: Number(item?.quantity ?? 0),
+      unit_price: Number(item?.unit_price ?? item?.price ?? 0),
+      total_price: Number(item?.total_price ?? (item?.unit_price ?? item?.price ?? 0) * (item?.quantity ?? 0)),
+      sku: item?.sku ?? "",
+      size: item?.size,
+      color: item?.color,
+      discount: Number(item?.discount ?? 0),
+      status: item?.status ?? raw?.status ?? "pending",
+      is_returned: Boolean(item?.is_returned),
+      return_reason: item?.return_reason,
+      created_at: item?.created_at ?? raw?.created_at ?? new Date().toISOString(),
+      updated_at: item?.updated_at ?? raw?.updated_at ?? new Date().toISOString(),
+    })),
+    shipping_address_id: raw?.shipping_address_id ?? "",
+    shipping_address: raw?.shipping_address,
+    billing_address_id: raw?.billing_address_id ?? "",
+    billing_address: raw?.billing_address,
+    status: normalizeOrderStatus(raw?.status),
+    payment_method: (raw?.payment_method === "cod" ? "cash_on_delivery" : raw?.payment_method) ?? "cash_on_delivery",
+    payment_status: raw?.payment_status ?? "pending",
+    delivery_method: raw?.delivery_method ?? "standard",
+    delivery_partner: raw?.delivery_partner,
+    subtotal: Number(raw?.subtotal ?? total),
+    shipping_cost: Number(raw?.shipping_cost ?? 0),
+    discount: Number(raw?.discount ?? 0),
+    tax: Number(raw?.tax ?? 0),
+    total,
+    coupon_code: raw?.coupon_code,
+    notes: raw?.notes,
+    is_gift: Boolean(raw?.is_gift),
+    gift_message: raw?.gift_message,
+    require_signature: Boolean(raw?.require_signature),
+    tracking_info: raw?.tracking_info,
+    created_at: raw?.created_at ?? new Date().toISOString(),
+    updated_at: raw?.updated_at ?? raw?.created_at ?? new Date().toISOString(),
+    deleted_at: raw?.deleted_at,
+  };
+}
+
 export namespace Auth {
 
     export interface RegisterRequest {
@@ -95,7 +175,8 @@ export namespace Auth {
     }
 
     export async function GetProfile(token: string): Promise<APIResponse<TSeller>> {
-        return await request("/seller/profile", "GET", undefined, token);
+        const response = await request<any>("/seller/profile", "GET", undefined, token);
+        return { ...response, body: response.ok ? normalizeSellerProfile(response.body) : response.body };
     }
 
     export async function ChangePassword(token: string, old_password: string, new_password: string): Promise<APIResponse<any>> {
@@ -136,7 +217,11 @@ export namespace Seller {
   }
 
   export async function GetOrders(token : string) : Promise<APIResponse<Order[]>> {
-    return await request(`/seller/orders`, "GET", undefined, token);
+    const response = await request<any[]>(`/seller/orders`, "GET", undefined, token);
+    return {
+      ...response,
+      body: response.ok ? (Array.isArray(response.body) ? response.body : []).map(normalizeSellerOrder) : response.body,
+    };
   }
 
   export interface StatusUpdatePayload {
@@ -173,11 +258,13 @@ export namespace Seller {
   }
 
   export async function GetProfile(token: string): Promise<APIResponse<any>> {
-    return await request("/seller/profile", "GET", undefined, token);
+    const response = await request<any>("/seller/profile", "GET", undefined, token);
+    return { ...response, body: response.ok ? normalizeSellerProfile(response.body) : response.body };
   }
 
   export async function UpdateProfile(token: string, data: { name?: string; legal_name?: string; business_name?: string; description?: string; short_description?: string; logo_url?: string; banner_url?: string; banner_mobile_url?: string; website?: string; contact?: object; location?: object; business_details?: object; kyc_documents?: object; bank_details?: object }): Promise<APIResponse<any>> {
-    return await request("/seller/profile", "PATCH", data, token);
+    const response = await request<any>("/seller/profile", "PATCH", data, token);
+    return { ...response, body: response.ok ? normalizeSellerProfile(response.body) : response.body };
   }
 
   export async function FulfillOrder(token: string, order_id: string, tracking_number?: string): Promise<APIResponse<any>> {
@@ -266,6 +353,40 @@ export namespace SellerAnalytics {
     if (endTime) params.append("endTime", endTime);
     if (startTime || endTime) url += `?${params.toString()}`;
     return await request(url, "GET", undefined, token);
+  }
+}
+
+export namespace Shopify {
+  export interface ConnectionStatus {
+    connected: boolean;
+    shop?: string;
+    scopes?: string;
+    installed_at?: string;
+  }
+
+  function unwrapShopifyBody<T>(body: any): T {
+    return (body?.data ?? body) as T;
+  }
+
+  export function GetAuthUrl(token: string, shop: string): string {
+    const url = new URL(`${API_BASE_URL}/shopify/auth`);
+    url.searchParams.set("shop", shop);
+    return `${url.toString()}${url.search ? "&" : "?"}token=${encodeURIComponent(token)}`;
+  }
+
+  export async function GetStatus(token: string): Promise<APIResponse<ConnectionStatus>> {
+    const response = await request<any>("/shopify/status", "GET", undefined, token);
+    return { ...response, body: response.ok ? unwrapShopifyBody<ConnectionStatus>(response.body) : response.body };
+  }
+
+  export async function Sync(token: string): Promise<APIResponse<{ message: string; count: number }>> {
+    const response = await request<any>("/shopify/sync", "POST", {}, token);
+    return { ...response, body: response.ok ? unwrapShopifyBody<{ message: string; count: number }>(response.body) : response.body };
+  }
+
+  export async function Disconnect(token: string): Promise<APIResponse<{ message: string }>> {
+    const response = await request<any>("/shopify/disconnect", "DELETE", undefined, token);
+    return { ...response, body: response.ok ? unwrapShopifyBody<{ message: string }>(response.body) : response.body };
   }
 }
 
@@ -616,4 +737,3 @@ export async function get_neutral_image(images: string[]) {
     const resp = await request("/neutral-image", "POST", { images }, undefined, true);
     return resp.ok ? (resp.body as any).image as string : null;
 }
-
