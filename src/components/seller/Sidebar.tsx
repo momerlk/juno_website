@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 
 export const navigation = [
-  { name: 'Dashboard', href: '/seller/dashboard', icon: LayoutDashboard, subtitle: 'Your movement brief, buyer pulse, and next plays.', focus: 'Lead with story, not admin.' },
+  { name: 'Dashboard', href: '/seller/dashboard', icon: LayoutDashboard, subtitle: 'Build something delightful.', focus: 'Lead with story, not admin.' },
   { name: 'Inventory', href: '/seller/dashboard/inventory', icon: Package, subtitle: 'Add products fast and make quality feel easy.', focus: 'Keep listing friction brutally low.' },
   { name: 'Orders', href: '/seller/dashboard/orders', icon: ShoppingCart, subtitle: 'Fulfill quickly and keep trust compounding.', focus: 'Every delivery shapes brand loyalty.' },
   { name: 'Analytics', href: '/seller/dashboard/analytics', icon: BarChart2, subtitle: 'Read the signals behind saves, visits, and demand.', focus: 'Think like Instagram insights, not spreadsheets.' },

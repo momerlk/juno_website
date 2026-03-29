@@ -20,6 +20,30 @@ const SellerDashboard: React.FC = () => {
   const approvalStatus = seller?.user?.status ?? 'pending';
   const city = seller?.user?.location?.city || 'Pakistan';
   const founder = seller?.user?.contact?.contact_person_name || 'Founder';
+  const shopifyConnected = Boolean(seller?.user?.shopify_connected);
+
+  const topSnapshot = [
+    {
+      label: 'Brand',
+      value: seller?.user?.business_name || 'Indie Label',
+      note: `${city} · ${founder}`,
+    },
+    {
+      label: 'Status',
+      value: approvalStatus,
+      note: 'Seller account state',
+    },
+    {
+      label: 'Shopify',
+      value: shopifyConnected ? 'Live' : 'Pending',
+      note: shopifyConnected ? 'Catalog sync active' : 'Needs connection',
+    },
+    {
+      label: 'Focus',
+      value: currentRoute?.name ?? 'Dashboard',
+      note: currentRoute?.focus ?? 'Use the portal like a brand operating room.',
+    },
+  ];
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#050505] text-white">
@@ -91,6 +115,16 @@ const SellerDashboard: React.FC = () => {
                     <div className="rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.22em] text-primary">
                       {approvalStatus}
                     </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {topSnapshot.map(item => (
+                      <div key={item.label} className="rounded-[1.2rem] border border-white/10 bg-black/22 p-4">
+                        <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">{item.label}</p>
+                        <p className="mt-3 text-base font-black uppercase tracking-[-0.03em] text-white">{item.value}</p>
+                        <p className="mt-2 text-xs leading-relaxed text-white/42">{item.note}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 

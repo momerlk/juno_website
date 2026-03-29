@@ -123,6 +123,90 @@ const SellerHome: React.FC = () => {
     { name: 'Hooria', role: 'Growth & Brand', image: '/team/hooria.jpg' },
   ];
 
+  const priorityModules = useMemo(() => {
+    const modules = [
+      {
+        key: 'orders',
+        title: 'Orders',
+        eyebrow: 'Highest Priority',
+        description: 'Recent order flow should stay visible because fulfillment speed is trust.',
+        content: (
+          <div className="mt-4 space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Open', value: recentOrders.filter(order => !['delivered', 'fulfilled', 'cancelled'].includes(order.status)).length },
+                { label: 'Delivered', value: metrics.delivered },
+                { label: 'Revenue', value: `Rs ${metrics.revenue.toLocaleString()}` },
+              ].map(item => (
+                <div key={item.label} className="rounded-[1rem] border border-white/10 bg-black/25 p-3">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/30">{item.label}</p>
+                  <p className="mt-2 text-base font-black uppercase tracking-[-0.03em] text-white">{item.value}</p>
+                </div>
+              ))}
+            </div>
+            <Link
+              to={`${prefix}/dashboard/orders`}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-mono uppercase tracking-[0.2em] text-primary"
+            >
+              View Orders
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        ),
+        priority: 1,
+      },
+      {
+        key: 'shopify',
+        title: 'Shopify',
+        eyebrow: shopifyConnected ? 'Connected' : 'Action Needed',
+        description: shopifyConnected
+          ? 'Your catalog sync is live. Use this to keep the draft queue fresh.'
+          : 'If Shopify is not connected, this should jump to the top because catalog ingestion is blocked.',
+        content: (
+          <div className="mt-4 space-y-3">
+            <div className={`rounded-[1.1rem] border p-4 ${shopifyConnected ? 'border-emerald-400/20 bg-emerald-500/10' : 'border-primary/20 bg-primary/10'}`}>
+              <p className={`text-[10px] font-mono uppercase tracking-[0.2em] ${shopifyConnected ? 'text-emerald-300' : 'text-primary'}`}>
+                {shopifyConnected ? 'Connected Store' : 'Needs Connection'}
+              </p>
+              <p className="mt-2 text-sm font-semibold text-white">{shopifyConnected ? (shopifyShop ?? 'Store connected') : 'Connect Shopify to unlock easier catalog flow.'}</p>
+            </div>
+            <Link
+              to={`${prefix}/dashboard`}
+              className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-mono uppercase tracking-[0.2em] text-white/75"
+            >
+              Manage Sync
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        ),
+        priority: shopifyConnected ? 3 : 0,
+      },
+      {
+        key: 'inventory',
+        title: 'Inventory',
+        eyebrow: 'Catalog Health',
+        description: 'The portal should keep listings light to create and easy to trust.',
+        content: (
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {[
+              { label: 'Saves', value: metrics.projectedSaves },
+              { label: 'City', value: metrics.topCity },
+              { label: 'Trust', value: `${metrics.fulfillmentRate}%` },
+            ].map(item => (
+              <div key={item.label} className="rounded-[1rem] border border-white/10 bg-black/25 p-3">
+                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/30">{item.label}</p>
+                <p className="mt-2 text-base font-black uppercase tracking-[-0.03em] text-white">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        ),
+        priority: 2,
+      },
+    ];
+
+    return modules.sort((a, b) => a.priority - b.priority);
+  }, [metrics.delivered, metrics.fulfillmentRate, metrics.projectedSaves, metrics.revenue, metrics.topCity, prefix, recentOrders, shopifyConnected, shopifyShop]);
+
   const handleShopifyConnect = () => {
     if (!shopifyShopInput.trim() || !seller?.token) return;
     const shop = shopifyShopInput.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -285,6 +369,21 @@ const SellerHome: React.FC = () => {
               Your dashboard should help you tell a sharper story, understand what buyers respond to, and get better inventory live with less friction than Instagram DMs.
             </p>
 
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                { label: 'Orders in Motion', value: recentOrders.filter(order => !['delivered', 'fulfilled', 'cancelled'].includes(order.status)).length, note: 'Needs attention' },
+                { label: 'Shopify', value: shopifyConnected ? 'Live' : 'Pending', note: shopifyConnected ? (shopifyShop ?? 'Connected') : 'Connect soon' },
+                { label: 'Top City', value: metrics.topCity, note: 'Where buyers are showing up' },
+                { label: 'Fulfillment', value: `${metrics.fulfillmentRate}%`, note: 'Trust signal' },
+              ].map(item => (
+                <div key={item.label} className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">{item.label}</p>
+                  <p className="mt-3 text-xl font-black uppercase tracking-[-0.04em] text-white">{item.value}</p>
+                  <p className="mt-2 text-xs text-white/45">{item.note}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 to={`${prefix}/dashboard/inventory`}
@@ -386,6 +485,21 @@ const SellerHome: React.FC = () => {
       <motion.section
         {...fadeUp}
         transition={{ duration: 0.45, delay: 0.05 }}
+        className="mt-6 grid gap-4 xl:grid-cols-3"
+      >
+        {priorityModules.map(module => (
+          <div key={module.key} className="rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-5">
+            <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30">{module.eyebrow}</p>
+            <h3 className="mt-3 text-2xl font-black uppercase tracking-[-0.04em] text-white">{module.title}</h3>
+            <p className="mt-3 text-sm leading-relaxed text-white/58">{module.description}</p>
+            {module.content}
+          </div>
+        ))}
+      </motion.section>
+
+      <motion.section
+        {...fadeUp}
+        transition={{ duration: 0.45, delay: 0.07 }}
         className="mt-6 grid gap-4 xl:grid-cols-[1fr_1fr]"
       >
         <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-5">
