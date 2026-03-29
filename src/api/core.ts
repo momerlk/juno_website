@@ -42,6 +42,22 @@ async function parseBody(resp: Response): Promise<any> {
     }
 }
 
+function unwrapSuccessBody(body: any) {
+    if (body && typeof body === "object" && "data" in body) {
+        return body.data;
+    }
+
+    return body;
+}
+
+function unwrapErrorBody(body: any) {
+    if (body && typeof body === "object") {
+        return body.error ?? body.data ?? body;
+    }
+
+    return body;
+}
+
 async function handleRefreshToken(failedRequest: () => Promise<Response>, token: string): Promise<Response> {
     const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: "POST",
@@ -53,8 +69,8 @@ async function handleRefreshToken(failedRequest: () => Promise<Response>, token:
         throw new Error("Login Token Expired");
     }
 
-    const body = await parseBody(refreshResponse);
-    setAuthToken(body.token);
+    const body = unwrapSuccessBody(await parseBody(refreshResponse));
+    setAuthToken(body?.token);
     
     // Retry the original request with the new token
     return await failedRequest();
@@ -107,7 +123,7 @@ export async function request<T>(
     return {
         status: resp.status,
         ok: resp.ok,
-        body: resp.ok ? body : body.error
+        body: resp.ok ? unwrapSuccessBody(body) : unwrapErrorBody(body)
     };
 }
 

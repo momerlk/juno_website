@@ -18,12 +18,8 @@ export function setState(data: any) {
 
 export type { APIResponse };
 
-function unwrapBody<T>(body: any): T {
-  return (body?.data ?? body) as T;
-}
-
 function normalizeSellerProfile(body: any): TSeller {
-  return unwrapBody<TSeller>(body);
+  return body as TSeller;
 }
 
 function normalizeOrderStatus(status?: string): Order["status"] {
