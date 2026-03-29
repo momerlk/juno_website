@@ -3,7 +3,7 @@ import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 import { Product, SizingGuide, QueueItem } from '../../constants/types';
 import { productTypes } from '../../constants/sizing';
-import { Plus, Edit, Trash2, Search, MoreVertical, Filter, X, Grid, List, Copy, ChevronLeft, ChevronRight, CheckSquare, Square, Ruler, Save, AlertTriangle, UploadCloud } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, MoreVertical, Filter, X, Grid, List, Copy, ChevronLeft, ChevronRight, CheckSquare, Square, Ruler, Save, AlertTriangle, UploadCloud, Camera, BadgeCheck, BookOpen, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductEditor from './ProductEditor';
 import SizingGuideEditor from './SizingGuideEditor';
@@ -875,9 +875,95 @@ const ManageInventory: React.FC = () => {
         }
     }
 
+    const inventoryItems = activeTab === 'active' ? allProducts : queueItems.map(item => item.product);
+    const sizeGuideCoverage = inventoryItems.length > 0
+        ? Math.round((inventoryItems.filter(product => {
+            const chart = product.sizing_guide?.size_chart;
+            return chart && Object.keys(chart).length > 0;
+        }).length / inventoryItems.length) * 100)
+        : 0;
+    const readyCoreFields = inventoryItems.filter(product => {
+        const totalInventory = product.variants?.reduce((total, variant) => total + (variant.inventory?.quantity || 0), 0) ?? 0;
+        const price = product.variants?.find(variant => variant.is_default)?.price || product.pricing?.price || 0;
+        return Boolean(product.title?.trim()) && price > 0 && totalInventory > 0;
+    }).length;
+    const guideCards = [
+        {
+            icon: Camera,
+            eyebrow: 'Photo Prompt',
+            title: 'Shoot cleaner, not fancier.',
+            body: 'Natural light, one clean background, front-detail-back. Juno should help brands hit the visual baseline fast.',
+        },
+        {
+            icon: BadgeCheck,
+            eyebrow: 'Conversion Badge',
+            title: `Size guide coverage ${sizeGuideCoverage}%`,
+            body: 'Size guides stay optional, but buyers should clearly see which listings give them more confidence.',
+        },
+        {
+            icon: BookOpen,
+            eyebrow: 'Seller Education',
+            title: 'Teach the playbook in-flow.',
+            body: 'Good photos, better copy, and sharper drops improve trust before they improve GMV.',
+        },
+    ];
+
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div className="mb-6 overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.12),transparent_34%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 md:p-7">
+                <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+                    <div>
+                        <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-primary/75">Inventory Philosophy</p>
+                        <h2 className="mt-3 max-w-3xl text-3xl font-black uppercase tracking-[-0.05em] text-white md:text-4xl">
+                            Minimal fields. Better standards. Less guesswork for indie brands.
+                        </h2>
+                        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/60 md:text-base">
+                            Juno inventory should feel brutally simple: product name, price, quantity. Everything else should either help conversion or be handled by the platform.
+                        </p>
+                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                            {[
+                                { label: 'Core-ready listings', value: `${readyCoreFields}/${inventoryItems.length || 0}` },
+                                { label: 'Size guide coverage', value: `${sizeGuideCoverage}%` },
+                                { label: 'Draft queue', value: `${queueItems.length}` },
+                            ].map(stat => (
+                                <div key={stat.label} className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
+                                    <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">{stat.label}</p>
+                                    <p className="mt-3 text-2xl font-black uppercase tracking-[-0.04em] text-white">{stat.value}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                        {guideCards.map(card => (
+                            <div key={card.title} className="rounded-[1.3rem] border border-white/10 bg-black/25 p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="rounded-2xl border border-primary/20 bg-primary/10 p-2.5 text-primary">
+                                        <card.icon size={16} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-primary/75">{card.eyebrow}</p>
+                                        <h3 className="mt-2 text-lg font-black uppercase tracking-[0.02em] text-white">{card.title}</h3>
+                                        <p className="mt-2 text-sm leading-relaxed text-white/55">{card.body}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        <a
+                            href="https://wa.me/923158972405"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] border border-[#25D366]/20 bg-[#25D366]/10 px-4 py-3 text-sm font-semibold text-[#7DFFB1]"
+                        >
+                            <MessageCircle size={16} />
+                            Ask Juno for photo or listing help
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold text-white">Inventory</h2>
                 
@@ -917,7 +1003,7 @@ const ManageInventory: React.FC = () => {
                         <div className="flex items-center glass rounded-xl border-white/10 overflow-hidden"><button onClick={() => setViewMode('grid')} className={`p-2 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-2 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
                     )}
                     
-                    <button onClick={handleOpenEditorForCreate} className="glass-button bg-primary text-white px-4 py-2 hover:bg-primary/90 flex-shrink-0 flex items-center gap-2 border-primary/50"><Plus size={20} /><span className="hidden sm:inline">Create New</span></button>
+                    <button onClick={handleOpenEditorForCreate} className="glass-button bg-primary text-white px-4 py-2 hover:bg-primary/90 flex-shrink-0 flex items-center gap-2 border-primary/50"><Plus size={20} /><span className="hidden sm:inline">Add Product</span></button>
                 </div>
             </div>
 

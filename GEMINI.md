@@ -67,3 +67,9 @@ npm run build
 - Implemented the `BrandShowcase` (marquee campaign imagery) and `TestimonialsSection` (Community Wall).
 - Redesigned the `Hero`, `BrandsSection` (logo ticker), and `JunoApp` (ecosystem partners) to align with the new brand-first strategy.
 - Implemented 'Buy Now' button feature in Juno app (Feed and Product Details screens) allowing instant single-item checkout using Orders.CreateOrder.
+- **[SELLER PORTAL PHILOSOPHY]** The seller portal should feel like joining a movement, not filling out admin paperwork. Use `src/components/seller/SellerOnboarding.tsx` and `src/components/seller/JunoStudioLanding.tsx` as the design reference for portal upgrades.
+- The first approved-seller touchpoint should explain why Juno exists, who the buyers are, and why this is better than selling through Instagram DMs. Make sellers feel proud to be on the platform.
+- Analytics should look and feel more like Instagram-style brand intelligence than spreadsheet reporting. Prioritize saves, profile visits, story performance, browsing geography, and audience signals.
+- Inventory UX should stay brutally simple. The minimum viable listing is product name, price, and quantity. Size guide is optional, but the portal should visibly reward it because it improves buyer confidence.
+- The portal should teach as it operates. Add short educational guidance for product photography, product descriptions, and drop strategy directly inside seller flows.
+- Seller community is part of retention. Make room in the portal for invite-only WhatsApp or private-channel touchpoints, weekly tips, collaboration, and support between brands.
