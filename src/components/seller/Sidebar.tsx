@@ -9,7 +9,6 @@ import {
   X,
   LogOut,
   Store,
-  BookOpen,
   MessageCircle,
   ArrowUpRight,
 } from 'lucide-react';
@@ -33,10 +32,52 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const { seller, logout } = useSellerAuth();
   const location = useLocation();
   const prefix = location.pathname.startsWith('/studio') ? '/studio' : '/seller';
+  const metrics = seller?.user?.seller_metrics;
+  const productCount = metrics?.product_count ?? metrics?.total_orders ?? 0;
+  const orderCount = metrics?.order_count ?? metrics?.total_orders ?? 0;
+  const completedOrders = metrics?.completed_orders ?? 0;
+  const revenue = metrics?.revenue_generated ?? metrics?.total_sales ?? 0;
+  const verificationState = seller?.user?.verified ? 'Verified' : seller?.user?.status ?? 'Pending';
+
+  const getNavSnapshot = (name: string) => {
+    switch (name) {
+      case 'Dashboard':
+        return {
+          stat: seller?.user?.business_name || 'Studio',
+          note: verificationState,
+        };
+      case 'Inventory':
+        return {
+          stat: `${productCount}`,
+          note: 'Products',
+        };
+      case 'Orders':
+        return {
+          stat: `${orderCount}`,
+          note: completedOrders > 0 ? `${completedOrders} done` : 'Urgent',
+        };
+      case 'Analytics':
+        return {
+          stat: revenue > 0 ? `Rs ${Math.round(revenue).toLocaleString()}` : 'Preview',
+          note: revenue > 0 ? 'Revenue' : 'Signals',
+        };
+      case 'Profile':
+        return {
+          stat: verificationState,
+          note: seller?.user?.location?.city || 'Profile',
+        };
+      default:
+        return {
+          stat: '',
+          note: '',
+        };
+    }
+  };
 
   const navItems = navigation.map(item => ({
     ...item,
     href: item.href.replace('/seller', prefix),
+    snapshot: getNavSnapshot(item.name),
   }));
 
   const sidebarContent = (
@@ -56,9 +97,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
           <h2 className="mt-2 text-xl font-black uppercase tracking-[-0.04em] text-white">
             Built for indie brands with something to say.
           </h2>
-          <p className="mt-3 text-xs leading-relaxed text-white/50">
-            The portal should feel like a creative operating room, not a warehouse dashboard.
-          </p>
         </div>
       </div>
 
@@ -72,24 +110,37 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                 end={item.href === `${prefix}/dashboard`}
                 onClick={() => isOpen && setIsOpen(false)}
                 className={({ isActive }) =>
-                  `group block rounded-[1.35rem] border p-3 transition-all duration-300 ${
+                  `group block rounded-[1.35rem] p-3 transition-all duration-300 ${
                     isActive
-                      ? 'border-primary/30 bg-primary/12 shadow-[0_12px_40px_rgba(255,24,24,0.14)]'
-                      : 'border-white/8 bg-white/[0.02] hover:border-white/14 hover:bg-white/[0.04]'
+                      ? 'bg-[linear-gradient(135deg,rgba(255,24,24,0.16),rgba(255,255,255,0.05))] shadow-[0_12px_36px_rgba(255,24,24,0.10)]'
+                      : 'bg-white/[0.02] hover:bg-white/[0.05]'
                   }`
                 }
               >
                 {({ isActive }) => (
                   <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 rounded-2xl border p-2.5 ${isActive ? 'border-primary/30 bg-primary/15 text-primary' : 'border-white/10 bg-black/30 text-white/55 group-hover:text-white'}`}>
+                    <div className={`mt-0.5 rounded-2xl p-2.5 ${isActive ? 'bg-primary/15 text-primary' : 'bg-black/28 text-white/55 group-hover:text-white'}`}>
                       <item.icon size={16} />
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-black uppercase tracking-[0.04em] text-white">{item.name}</span>
-                        {isActive && <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary">Live</span>}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black uppercase tracking-[0.04em] text-white">{item.name}</span>
+                            {isActive && <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary">Live</span>}
+                          </div>
+                        </div>
+                        {item.snapshot.stat && (
+                          <div className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.18em] ${isActive ? 'bg-black/30 text-white/78' : 'bg-white/[0.05] text-white/50'}`}>
+                            {item.snapshot.stat}
+                          </div>
+                        )}
                       </div>
-                      <p className="mt-1 text-xs leading-relaxed text-white/45">{item.subtitle}</p>
+                      {item.snapshot.note && (
+                        <p className="mt-3 text-[11px] text-white/34">
+                          {item.snapshot.note}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -97,29 +148,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             </li>
           ))}
         </ul>
-
-        <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/25">Seller Education</p>
-          <a
-            href="https://wa.me/923158972405"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-3 py-3 text-sm font-semibold text-white transition-colors hover:border-primary/25 hover:text-primary"
-          >
-            Founder Support
-            <ArrowUpRight size={15} />
-          </a>
-          <div className="mt-3 space-y-2 text-xs text-white/50">
-            <div className="flex items-center gap-2">
-              <BookOpen size={13} className="text-primary/80" />
-              Product photo standards
-            </div>
-            <div className="flex items-center gap-2">
-              <MessageCircle size={13} className="text-primary/80" />
-              Community wins and weekly tips
-            </div>
-          </div>
-        </div>
       </nav>
 
       <div className="border-t border-white/10 p-4">
@@ -133,6 +161,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
               <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Brand Account</p>
             </div>
           </div>
+          <a
+            href="https://wa.me/923158972405"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-3 flex items-center justify-between rounded-2xl bg-black/35 px-4 py-3 text-sm font-semibold text-white/72 transition-colors hover:text-primary"
+          >
+            <span className="flex items-center gap-2">
+              <MessageCircle size={15} />
+              Support
+            </span>
+            <ArrowUpRight size={14} />
+          </a>
           <button
             onClick={logout}
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:border-red-500/25 hover:text-red-400"
@@ -147,7 +187,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
   return (
     <>
-      <div className="hidden border-r border-white/8 md:flex md:w-80 md:flex-col">
+      <div className="hidden md:flex md:w-80 md:flex-col">
         {sidebarContent}
       </div>
 
@@ -160,7 +200,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="w-[19rem] border-r border-white/10 shadow-2xl"
+              className="w-[19rem] shadow-2xl"
               initial={{ x: -320 }}
               animate={{ x: 0 }}
               exit={{ x: -320 }}

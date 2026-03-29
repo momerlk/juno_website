@@ -12,11 +12,10 @@ import {
   Palette,
   Settings,
   Mail,
-  Lock,
   Loader
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useSellerAuth } from '../../contexts/SellerAuthContext';
+import * as SellerApi from '../../api/sellerApi';
 
 const SpotlightPill: React.FC<{ text: string }> = ({ text }) => (
   <span className="px-6 py-2 rounded-full text-sm font-bold bg-white/5 border border-white/10 text-neutral-200 backdrop-blur-sm whitespace-nowrap">
@@ -288,26 +287,43 @@ const ProcessStep: React.FC<{ number: string; title: string; description: string
 
 const CondensedAuth: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isLoading } = useSellerAuth();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     const prefix = window.location.pathname.startsWith('/studio') ? '/studio' : '/seller';
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    setIsSubmitting(true);
     try {
-      await login(email, password);
-      navigate(`${prefix}/dashboard`);
-    } catch (err) {
-      setError('Invalid credentials. Please try again.');
+      const resp = await SellerApi.Auth.SaveDraft(normalizedEmail, 0, { email: normalizedEmail });
+
+      if (resp.ok) {
+        navigate(`${prefix}/onboarding`, { state: { prefillEmail: normalizedEmail } });
+        return;
+      }
+
+      if (resp.status === 409) {
+        navigate(`${prefix}/auth`, { state: { prefillEmail: normalizedEmail } });
+        return;
+      }
+
+      setError((resp.body as any)?.message || (resp.body as any)?.error || 'Unable to continue right now. Please try again.');
+    } catch {
+      setError('Unable to continue right now. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <form onSubmit={handleLogin} className="space-y-4">
+      <form onSubmit={handleContinue} className="space-y-4">
         <div className="relative">
           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={20} />
           <input 
@@ -317,26 +333,16 @@ const CondensedAuth: React.FC = () => {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary/50 transition-colors text-white font-medium"
             required
-          />
-        </div>
-        <div className="relative">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={20} />
-          <input 
-            type="password" 
-            placeholder="Password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary/50 transition-colors text-white font-medium"
-            required
+            autoComplete="email"
           />
         </div>
         {error && <p className="text-red-500 text-sm font-bold text-center italic">{error}</p>}
         <button 
           type="submit"
-          disabled={isLoading}
+          disabled={isSubmitting}
           className="w-full bg-gradient-to-r from-primary to-secondary text-white py-4 rounded-2xl font-black uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
         >
-          {isLoading ? <Loader className="animate-spin" size={20} /> : <>Enter Studio <ArrowRight size={20} /></>}
+          {isSubmitting ? <Loader className="animate-spin" size={20} /> : <>Continue <ArrowRight size={20} /></>}
         </button>
       </form>
       <div className="mt-6 text-center">

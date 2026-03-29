@@ -1,17 +1,29 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 const SellerAuth: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isLoading } = useSellerAuth();
 
   const prefix = window.location.pathname.startsWith('/studio') ? '/studio' : '/seller';
+
+  useEffect(() => {
+    const stateEmail = (location.state as { prefillEmail?: string } | null)?.prefillEmail;
+    const queryEmail = searchParams.get('email');
+    const nextEmail = stateEmail || queryEmail || '';
+
+    if (nextEmail) {
+      setEmail(nextEmail);
+    }
+  }, [location.state, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

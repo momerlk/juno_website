@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Check, Loader, Upload, FileText, Camera, MapPin } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import * as SellerApi from '../../api/sellerApi';
 import { uploadFileAndGetUrl } from '../../api/sellerApi';
 
@@ -113,6 +113,8 @@ const PasswordStrength: React.FC<{ password: string }> = ({ password }) => {
 // ─── Main component ─────────────────────────────────────────────────────────
 const SellerOnboarding: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -133,6 +135,29 @@ const SellerOnboarding: React.FC = () => {
   });
 
   const [loadingStates, setLoadingStates] = useState<LoadingStates>({ logo: false, banner: false, cnic_front: false, cnic_back: false, businessLicense: false });
+
+  useEffect(() => {
+    const stateEmail = (location.state as { prefillEmail?: string } | null)?.prefillEmail;
+    const queryEmail = searchParams.get('email');
+    const nextEmail = stateEmail || queryEmail || '';
+
+    if (!nextEmail) return;
+
+    setFormData(p => {
+      if (p.email === nextEmail && p.contact.email === nextEmail) {
+        return p;
+      }
+
+      return {
+        ...p,
+        email: nextEmail,
+        contact: {
+          ...p.contact,
+          email: p.contact.email || nextEmail,
+        },
+      };
+    });
+  }, [location.state, searchParams]);
 
   // ─── Constants ─────────────────────────────────────────────────────────────
   const businessTypes = ['Fashion Brand', 'Accessories Designer', 'Textile Company', 'Fashion Retailer', 'Clothing Manufacturer', 'Other'];
