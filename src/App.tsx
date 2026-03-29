@@ -16,7 +16,6 @@ import ManageInventory from './components/seller/ManageInventory';
 import AdminManageOrders from './components/admin/ManageOrders';
 import Analytics from './components/seller/Analytics';
 import Profile from './components/seller/Profile';
-import ShopifySettings from './components/seller/ShopifySettings';
 import JunoStudioLanding from './components/seller/JunoStudioLanding';
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
 import { JunoStudioProvider } from './contexts/JunoStudioContext';
@@ -71,7 +70,6 @@ import WorkAuth from "./components/work/WorkAuth";
 import WorkDashboard from "./components/work/WorkDashboard";
 import WorkProtectedRoute from "./components/work/ProtectedRoute";
 import { WorkAuthProvider } from './contexts/WorkAuthContext';
-import ShopifyPanel from './components/seller/ShopifyPanel';
 
 function App() {
   useEffect(() => {
@@ -131,7 +129,6 @@ function App() {
                     <Route index element={<SellerHome />} />
                     <Route path="inventory" element={<ManageInventory />} />
                     <Route path="orders" element={<SellerManageOrders />} />
-                    <Route path="shopify" element={<ShopifyPanel />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="profile" element={<Profile />} />
                   </Route>
@@ -140,7 +137,6 @@ function App() {
                     <Route index element={<SellerHome />} />
                     <Route path="inventory" element={<ManageInventory />} />
                     <Route path="orders" element={<SellerManageOrders />} />
-                    <Route path="shopify" element={<ShopifySettings />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="profile" element={<Profile />} />
                   </Route>

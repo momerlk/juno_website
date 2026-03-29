@@ -46,9 +46,11 @@ const SellerHome: React.FC = () => {
       if (!seller?.token) { setShopifyLoading(false); return; }
       setShopifyLoading(true);
       const res = await api.Shopify.GetStatus(seller.token);
+      const data = res.body.data;
+      console.log(`data = ${JSON.stringify(data)}`)
       if (res.ok) {
-        setShopifyConnected(res.body.connected);
-        setShopifyShop(res.body.shop);
+        setShopifyConnected(data.connected);
+        setShopifyShop(data.shop);
       }
       setShopifyLoading(false);
     };

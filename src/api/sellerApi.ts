@@ -356,39 +356,7 @@ export namespace SellerAnalytics {
   }
 }
 
-export namespace Shopify {
-  export interface ConnectionStatus {
-    connected: boolean;
-    shop?: string;
-    scopes?: string;
-    installed_at?: string;
-  }
 
-  function unwrapShopifyBody<T>(body: any): T {
-    return (body?.data ?? body) as T;
-  }
-
-  export function GetAuthUrl(token: string, shop: string): string {
-    const url = new URL(`${API_BASE_URL}/shopify/auth`);
-    url.searchParams.set("shop", shop);
-    return `${url.toString()}${url.search ? "&" : "?"}token=${encodeURIComponent(token)}`;
-  }
-
-  export async function GetStatus(token: string): Promise<APIResponse<ConnectionStatus>> {
-    const response = await request<any>("/shopify/status", "GET", undefined, token);
-    return { ...response, body: response.ok ? unwrapShopifyBody<ConnectionStatus>(response.body) : response.body };
-  }
-
-  export async function Sync(token: string): Promise<APIResponse<{ message: string; count: number }>> {
-    const response = await request<any>("/shopify/sync", "POST", {}, token);
-    return { ...response, body: response.ok ? unwrapShopifyBody<{ message: string; count: number }>(response.body) : response.body };
-  }
-
-  export async function Disconnect(token: string): Promise<APIResponse<{ message: string }>> {
-    const response = await request<any>("/shopify/disconnect", "DELETE", undefined, token);
-    return { ...response, body: response.ok ? unwrapShopifyBody<{ message: string }>(response.body) : response.body };
-  }
-}
 
 
 export namespace Users {
@@ -709,10 +677,13 @@ export namespace Tournaments {
 export namespace Shopify {
     // Returns the direct OAuth redirect URL to open in a new tab.
     // Cannot use fetch() here — the backend returns a 303 redirect to Shopify which CORS blocks.
+    
     export function GetAuthUrl(token: string, shop: string): string {
         return `${API_BASE_URL}/shopify/auth?shop=${encodeURIComponent(shop)}&token=${encodeURIComponent(token)}`;
     }
-    export async function GetStatus(token: string): Promise<APIResponse<{ connected: boolean; shop?: string }>> {
+
+
+    export async function GetStatus(token: string): Promise<APIResponse<any>> {
         return await request("/shopify/status", "GET", undefined, token);
     }
     // Syncs products from the already-connected Shopify store (no params needed after OAuth)
