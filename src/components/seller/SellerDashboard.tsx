@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Menu, Sparkles, RadioTower, ArrowUpRight } from 'lucide-react';
+import { Menu, RadioTower, ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Sidebar, { navigation } from './Sidebar';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
+import { sendSellerHeartbeat, trackSellerEvent } from './probe';
 
 const SellerDashboard: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -16,7 +17,7 @@ const SellerDashboard: React.FC = () => {
   }, [location.pathname]);
 
   const title = currentRoute?.name ?? 'Dashboard';
-  const subtitle = currentRoute?.subtitle ?? 'Build your brand, not just your backend.';
+  const subtitle = currentRoute?.subtitle ?? 'Run daily seller operations.';
   const approvalStatus = seller?.user?.status ?? 'pending';
   const city = seller?.user?.location?.city || 'Pakistan';
   const founder = seller?.user?.contact?.contact_person_name || 'Founder';
@@ -31,22 +32,53 @@ const SellerDashboard: React.FC = () => {
     {
       label: 'Status',
       value: approvalStatus,
-      note: 'Seller account state',
+      note: 'Account',
     },
     {
       label: 'Shopify',
       value: shopifyConnected ? 'Live' : 'Pending',
-      note: shopifyConnected ? 'Catalog sync active' : 'Needs connection',
+      note: shopifyConnected ? 'Sync active' : 'Connect store',
     },
     {
       label: 'Focus',
       value: currentRoute?.name ?? 'Dashboard',
-      note: currentRoute?.focus ?? 'Use the portal like a brand operating room.',
+      note: currentRoute?.focus ?? 'Current workspace',
     },
   ];
 
+  useEffect(() => {
+    const screenName = title.toLowerCase().replace(/\s+/g, '_');
+    trackSellerEvent({
+      sellerId: seller?.user?.id,
+      type: 'screen.view',
+      screenName,
+      properties: {
+        route: location.pathname,
+      },
+    });
+  }, [location.pathname, seller?.user?.id, title]);
+
+  useEffect(() => {
+    const screenName = title.toLowerCase().replace(/\s+/g, '_');
+    sendSellerHeartbeat({
+      sellerId: seller?.user?.id,
+      screenName,
+      pageCount: 1,
+    });
+
+    const heartbeat = window.setInterval(() => {
+      sendSellerHeartbeat({
+        sellerId: seller?.user?.id,
+        screenName,
+        pageCount: 1,
+      });
+    }, 30000);
+
+    return () => window.clearInterval(heartbeat);
+  }, [seller?.user?.id, title]);
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#050505] text-white">
+    <div className="relative h-[100dvh] overflow-hidden bg-[#050505] text-white">
       <div className="pointer-events-none absolute inset-0">
         <motion.div
           className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.15),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(255,119,65,0.10),transparent_26%)]"
@@ -57,10 +89,10 @@ const SellerDashboard: React.FC = () => {
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.45),rgba(5,5,5,0.92))]" />
       </div>
 
-      <div className="relative z-10 flex min-h-screen">
+      <div className="relative z-10 flex h-full">
         <Sidebar isOpen={isSidebarOpen} setIsOpen={setSidebarOpen} />
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="sticky top-0 z-30 border-b border-white/10 bg-black/45 backdrop-blur-2xl md:hidden">
             <div className="flex items-center justify-between px-4 py-4">
               <button onClick={() => setSidebarOpen(true)} className="rounded-2xl border border-white/10 bg-white/[0.03] p-2.5 text-white/75 transition-colors hover:text-white">
@@ -129,16 +161,16 @@ const SellerDashboard: React.FC = () => {
                 </div>
 
                 <div className="rounded-[1.6rem] border border-white/10 bg-black/28 p-5">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30">Focus</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30">Current Brand</p>
                   <p className="mt-3 text-lg font-black uppercase tracking-[-0.03em] text-white">
                     {seller?.user?.business_name || 'Indie Label'}
                   </p>
                   <p className="mt-3 text-sm leading-relaxed text-white/52">
-                    {currentRoute?.focus ?? 'Use the portal like a brand operating room.'}
+                    {currentRoute?.focus ?? 'Keep actions focused on orders, inventory, and updates.'}
                   </p>
                   <div className="mt-5 flex items-center gap-2 text-xs text-white/45">
                     <ArrowUpRight size={13} className="text-primary" />
-                    Move one step closer to a sharper drop.
+                    Complete pending tasks first.
                   </div>
                 </div>
               </div>

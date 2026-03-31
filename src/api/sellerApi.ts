@@ -3,7 +3,7 @@ import { Address } from "../constants/address";
 import { NestedOrderMap, Order } from "../constants/orders";
 import { Seller as TSeller} from "../constants/seller";
 import { request, API_BASE_URL, RECSYSTEM_BASE_URL, APIResponse } from "./core";
-import { getDeviceInfo, uploadFileAndGetUrl, COMPRESSION_PRESETS, CompressionOptions } from "./shared";
+import { uploadFileAndGetUrl, COMPRESSION_PRESETS, CompressionOptions } from "./shared";
 
 export { uploadFileAndGetUrl, COMPRESSION_PRESETS };
 export type { CompressionOptions };
@@ -221,12 +221,10 @@ export namespace Seller {
   }
 
   export interface StatusUpdatePayload {
-    changed_by_id: string;
-    changed_by_name: string;
-    status: string;
+    status: "pending" | "shipped" | "delivered" | "cancelled";
   }
   export async function UpdateOrderStatus(token : string, order_id : string, payload : StatusUpdatePayload) : Promise<APIResponse<any>> {
-    return await request(`/seller/orders/${order_id}/status`, "PUT", payload, token);
+    return await request(`/seller/orders/${order_id}/status`, "PUT", { status: payload.status }, token);
   }
 
   export async function GetAirwayBill(order_id: string): Promise<APIResponse<Blob>> {
@@ -613,19 +611,9 @@ export namespace Outfits {
  * Tournaments Namespace
  * ===========================================================================
  */
-interface RecordVoteRequest {
-    outfit_id: string;
-    vote_type: "upvote" | "downvote" | "cart";
-    comment?: string;
-}
-
-interface AddOutfitRequest {
-    outfit_id: string;
-}
-
 export namespace Tournaments {
     export async function CreateTournament(token: string, tournamentData: any): Promise<APIResponse<any>> {
-        return await request("/admin/tournaments", "POST", tournamentData, token);
+        return await request("/tournaments", "POST", tournamentData, token);
     }
 
     export async function GetAllTournaments(): Promise<APIResponse<any>> {
@@ -640,28 +628,8 @@ export namespace Tournaments {
         return await request(`/tournaments/${tournamentId}/leaderboard`, "GET", undefined, undefined, true);
     }
 
-    export async function GetParticipatingOutfits(tournamentId: string): Promise<APIResponse<any>> {
-        return await request(`/tournaments/${tournamentId}/outfits`, "GET", undefined, undefined, true);
-    }
-
-    export async function GetOutfitVoteBreakdown(tournamentId: string, outfitId: string): Promise<APIResponse<any>> {
-        return await request(`/tournaments/${tournamentId}/outfits/${outfitId}/votes`, "GET", undefined, undefined, true);
-    }
-
     export async function RegisterForTournament(token: string, tournamentId: string): Promise<APIResponse<any>> {
         return await request(`/tournaments/${tournamentId}/register`, "POST", {}, token);
-    }
-
-    export async function RecordVote(token: string, tournamentId: string, voteData: RecordVoteRequest): Promise<APIResponse<any>> {
-        return await request(`/tournaments/${tournamentId}/vote`, "POST", voteData, token);
-    }
-
-    export async function GetTournamentStats(tournamentId: string): Promise<APIResponse<any>> {
-        return await request(`/tournaments/${tournamentId}/stats`, "GET", undefined, undefined, true);
-    }
-
-    export async function AddOutfitToTournament(token: string, tournamentId: string, outfitData: AddOutfitRequest): Promise<APIResponse<any>> {
-        return await request(`/tournaments/${tournamentId}/add-outfit`, "POST", outfitData, token);
     }
 }
 
@@ -674,20 +642,110 @@ export namespace Shopify {
     // Returns the direct OAuth redirect URL to open in a new tab.
     // Cannot use fetch() here — the backend returns a 303 redirect to Shopify which CORS blocks.
     
+    export interface ConnectionStatus {
+        connected: boolean;
+        shop?: string;
+        scopes?: string;
+        installed_at?: string;
+    }
+
+    export interface SyncResponse {
+        message: string;
+        count: number;
+    }
+
     export function GetAuthUrl(token: string, shop: string): string {
+        // Docs require seller auth on GET /shopify/auth. On web, navigation cannot send Authorization headers,
+        // so we keep token-in-query fallback used by current backend web flow.
         return `${API_BASE_URL}/shopify/auth?shop=${encodeURIComponent(shop)}&token=${encodeURIComponent(token)}`;
     }
 
 
-    export async function GetStatus(token: string): Promise<APIResponse<any>> {
+    export async function GetStatus(token: string): Promise<APIResponse<ConnectionStatus>> {
         return await request("/shopify/status", "GET", undefined, token);
     }
     // Syncs products from the already-connected Shopify store (no params needed after OAuth)
-    export async function Sync(token: string): Promise<APIResponse<any>> {
+    export async function Sync(token: string): Promise<APIResponse<SyncResponse>> {
         return await request("/shopify/sync", "POST", {}, token);
     }
     export async function Disconnect(token: string): Promise<APIResponse<any>> {
         return await request("/shopify/disconnect", "DELETE", undefined, token);
+    }
+}
+
+export namespace Probe {
+    export interface ProbeDevice {
+        device_id?: string;
+        platform?: string;
+        app_version?: string;
+        os_version?: string;
+        locale?: string;
+    }
+
+    export interface ProbeEventContext {
+        screen_name?: string;
+        referrer?: string;
+        source?: string;
+        user_agent?: string;
+        ip_address?: string;
+    }
+
+    export interface ProbeEventInput {
+        type:
+            | "session.start"
+            | "session.end"
+            | "session.heartbeat"
+            | "screen.view"
+            | "screen.exit"
+            | "product.view"
+            | "product.impression"
+            | "product.share"
+            | "product.add_to_closet"
+            | "product.remove_from_closet"
+            | "cart.add"
+            | "cart.remove"
+            | "cart.view"
+            | "checkout.start"
+            | "checkout.complete"
+            | "checkout.abandon"
+            | "order.placed"
+            | "order.cancelled"
+            | "order.delivered"
+            | "order.returned"
+            | "seller.profile_view"
+            | "seller.follow"
+            | "seller.unfollow"
+            | "seller.contact";
+        product_id?: string;
+        category_id?: string;
+        timestamp?: string;
+        properties?: Record<string, any>;
+        context?: ProbeEventContext;
+    }
+
+    export interface IngestEventsRequest {
+        session_id: string;
+        user_id?: string;
+        device?: ProbeDevice;
+        events: ProbeEventInput[];
+    }
+
+    export interface SessionHeartbeatRequest {
+        session_id: string;
+        user_id?: string;
+        device?: ProbeDevice;
+        timestamp?: string;
+        screen_name?: string;
+        page_count?: number;
+        metadata?: Record<string, any>;
+    }
+
+    export async function IngestEvents(payload: IngestEventsRequest): Promise<APIResponse<{ accepted: number }>> {
+        return await request("/probe/events/ingest", "POST", payload, undefined, true);
+    }
+
+    export async function Heartbeat(payload: SessionHeartbeatRequest): Promise<APIResponse<{ session_id: string; last_seen_at: string }>> {
+        return await request("/probe/sessions/heartbeat", "POST", payload, undefined, true);
     }
 }
 

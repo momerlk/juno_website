@@ -91,13 +91,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             <X size={16} />
           </button>
         </div>
-
-        <div className="rounded-[1.6rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.18),transparent_42%),rgba(255,255,255,0.04)] p-4">
-          <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-primary/75">Seller OS</p>
-          <h2 className="mt-2 text-xl font-black uppercase tracking-[-0.04em] text-white">
-            Built for indie brands with something to say.
-          </h2>
-        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 py-5">
@@ -187,7 +180,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
   return (
     <>
-      <div className="hidden md:flex md:w-80 md:flex-col">
+      <div className="hidden md:flex md:h-[100dvh] md:w-80 md:flex-col md:sticky md:top-0">
         {sidebarContent}
       </div>
 
@@ -200,7 +193,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="w-[19rem] shadow-2xl"
+              className="h-[100dvh] w-[19rem] shadow-2xl"
               initial={{ x: -320 }}
               animate={{ x: 0 }}
               exit={{ x: -320 }}

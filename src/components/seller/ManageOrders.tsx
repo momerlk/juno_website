@@ -7,6 +7,7 @@ import { Order, OrderStatus } from '../../constants/orders';
 import { Product } from '../../constants/types';
 
 import { OrderStatusBadge } from './OrderStatusBadge';
+import { trackSellerEvent } from './probe';
 
 const SELLER_ORDER_STATUSES: (OrderStatus | 'all')[] = ['all', 'pending', 'shipped', 'delivered', 'cancelled'];
 
@@ -249,17 +250,35 @@ const ManageOrders: React.FC = () => {
 
     const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, {
       status: 'delivered',
-      changed_by_id: seller.user.id,
-      changed_by_name: seller.user.business_name,
     });
 
-    if (response.ok) fetchOrders(); else alert('Failed to update order status.');
+    if (response.ok) {
+      trackSellerEvent({
+        sellerId: seller.user.id,
+        type: 'order.delivered',
+        screenName: 'orders',
+        properties: { order_id: orderId },
+      });
+      fetchOrders();
+    } else {
+      alert('Failed to update order status.');
+    }
   };
 
   const handleCancelOrder = async (orderId: string) => {
     if (!seller?.token || !seller.user || !window.confirm('Are you sure you want to cancel this order?')) return;
-    const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, { status: 'cancelled', changed_by_id: seller.user.id, changed_by_name: seller.user.business_name });
-    if (response.ok) fetchOrders(); else alert('Failed to cancel order.');
+    const response = await api.Seller.UpdateOrderStatus(seller.token, orderId, { status: 'cancelled' });
+    if (response.ok) {
+      trackSellerEvent({
+        sellerId: seller.user.id,
+        type: 'order.cancelled',
+        screenName: 'orders',
+        properties: { order_id: orderId },
+      });
+      fetchOrders();
+    } else {
+      alert('Failed to cancel order.');
+    }
   };
 
   const handleFulfillOrder = async (orderId: string) => {
