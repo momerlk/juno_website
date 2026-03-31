@@ -4,7 +4,13 @@ export const api_urls = {
     recsystem: "https://junorecsys-710509977105.asia-south2.run.app/api/v2",
 };
 
-export const API_BASE_URL = api_urls.production;
+
+let base_url = api_urls.production
+if (process.env.DEBUG === "true") {
+    base_url = api_urls.testing;
+}
+
+export const API_BASE_URL = base_url;
 export const RECSYSTEM_BASE_URL = "https://junorecsys-710509977105.asia-south2.run.app";
 
 export interface APIResponse<T> {
