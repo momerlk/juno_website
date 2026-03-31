@@ -6,8 +6,13 @@ export const api_urls = {
 
 
 let base_url = api_urls.production
+console.log(`debug = ${import.meta.env.VITE_DEBUG}`)
 if (import.meta.env.VITE_DEBUG === "true") {
     base_url = api_urls.testing;
+    console.log(base_url)
+}
+else { 
+    console.log(base_url)
 }
 
 export const API_BASE_URL = base_url;
