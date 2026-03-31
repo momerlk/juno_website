@@ -3,10 +3,51 @@ import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 import { Product, SizingGuide, QueueItem } from '../../constants/types';
 import { productTypes } from '../../constants/sizing';
-import { Plus, Edit, Trash2, Search, MoreVertical, Filter, X, Grid, List, Copy, ChevronLeft, ChevronRight, CheckSquare, Square, Ruler, Save, AlertTriangle, UploadCloud, Camera, BadgeCheck, BookOpen, MessageCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, MoreVertical, Filter, X, Grid, List, Copy, ChevronLeft, ChevronRight, CheckSquare, Square, Ruler, Save, AlertTriangle, UploadCloud } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductEditor from './ProductEditor';
 import SizingGuideEditor from './SizingGuideEditor';
+
+interface InventoryDiagnostics {
+    source: 'products' | 'queue';
+    apiCount: number;
+    uniqueCount: number;
+    duplicateIds: string[];
+    pagesLoaded?: number;
+    sampleIds: string[];
+}
+
+const dedupeById = <T extends { id: string }>(items: T[]) => {
+    const seen = new Set<string>();
+    const duplicates: string[] = [];
+    const unique = items.filter((item) => {
+        const id = String(item.id);
+        if (seen.has(id)) {
+            duplicates.push(id);
+            return false;
+        }
+        seen.add(id);
+        return true;
+    });
+
+    return { unique, duplicates };
+};
+
+const logInventoryDiagnostics = (label: string, items: Array<{ id: string; title?: string; updated_at?: string }>, duplicates: string[] = []) => {
+    const ids = items.map((item) => String(item.id));
+    console.groupCollapsed(`[inventory-debug] ${label}`);
+    console.log('count', items.length);
+    console.log('ids', ids);
+    if (duplicates.length > 0) {
+        console.warn('duplicate_ids', duplicates);
+    }
+    console.log('sample', items.slice(0, 5).map((item) => ({
+        id: item.id,
+        title: item.title,
+        updated_at: item.updated_at,
+    })));
+    console.groupEnd();
+};
 
 const getShopifyThumbnail = (url: string, size: string = '400x400') => {
     if (!url || !url.includes("shopify.com")) return url || 'https://via.placeholder.com/400';
@@ -24,6 +65,20 @@ const getShopifyThumbnail = (url: string, size: string = '400x400') => {
     }
 };
 
+const getQueueIssues = (product: Product, item: QueueItem) => {
+    const missingFields: string[] = [];
+    if (!product.title?.trim()) missingFields.push('Title');
+    if (!product.product_type) missingFields.push('Product Type');
+    const gender = product.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
+    if (!gender) missingFields.push('Gender');
+    const requiresSizing = Boolean(product.options?.find(option => option.name.toLowerCase() === 'size')?.values?.length);
+    if (requiresSizing && (!product.sizing_guide || !product.sizing_guide.size_chart || Object.keys(product.sizing_guide.size_chart).length === 0)) {
+        missingFields.push('Sizing Guide');
+    }
+    const apiErrors = item.errors || [];
+    return { missingFields, apiErrors };
+};
+
 const QueueItemCard: React.FC<{ 
     item: QueueItem; 
     selected: boolean;
@@ -34,43 +89,62 @@ const QueueItemCard: React.FC<{
 }> = ({ item, selected, onSelect, onEdit, onPromote, onReject }) => {
     const product = item.product;
     const isReady = item.status === 'ready';
-    const hasErrors = item.errors && item.errors.length > 0;
+    const { missingFields, apiErrors } = getQueueIssues(product, item);
+    const hasErrors = missingFields.length > 0 || apiErrors.length > 0;
 
     return (
-        <motion.div layout className={`glass-panel overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-300 relative border-l-4 border-l-transparent hover:border-l-primary ${selected ? 'ring-2 ring-primary' : ''}`}>
+        <motion.div layout className={`relative flex h-full flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/[0.03] transition-all duration-300 hover:border-primary/25 hover:bg-white/[0.05] ${selected ? 'ring-2 ring-primary/70' : ''}`}>
              <div className="absolute top-3 right-3 z-10">
                 <button onClick={() => onSelect(item.id, false)} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
                     {selected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
                 </button>
             </div>
-            <div className="relative">
-                <img src={getShopifyThumbnail(product.images?.[0])} alt={product.title} loading="lazy" className="w-full h-48 object-cover bg-neutral-800" />
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="relative bg-[#111]">
+                <img src={getShopifyThumbnail(product.images?.[0])} alt={product.title} loading="lazy" decoding="async" className="w-full h-48 object-cover bg-[#111]" />
                 <div className="absolute top-3 left-3 flex flex-col gap-1">
                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full backdrop-blur-md uppercase tracking-wider ${
                         item.status === 'ready' ? 'bg-green-500 text-white' : 
                         item.status === 'failed' ? 'bg-red-500 text-white' : 
-                        'bg-yellow-500 text-black'
+                        'bg-yellow-400 text-black'
                     }`}>
                         {item.status.replace('_', ' ')}
                     </span>
                 </div>
             </div>
             <div className="p-4 flex-grow flex flex-col">
-                <h3 className="font-bold text-white truncate text-lg mb-1">{product.title || 'Untitled Product'}</h3>
+                <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">Draft Item</p>
+                <h3 className="mt-2 font-black text-white truncate text-lg uppercase tracking-[-0.03em]">{product.title || 'Untitled Product'}</h3>
                 
                 {hasErrors && (
-                    <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-                        <div className="flex items-center gap-2 text-red-400 text-xs font-semibold mb-1">
+                    <div className="mb-3 mt-3 rounded-[1rem] border border-red-500/20 bg-red-500/10 p-3">
+                        <div className="mb-2 flex items-center gap-2 text-red-400 text-xs font-semibold uppercase tracking-[0.08em]">
                             <AlertTriangle size={12} />
                             <span>Attention Needed</span>
                         </div>
-                        <ul className="list-disc list-inside text-xs text-neutral-300 space-y-0.5">
-                            {item.errors.slice(0, 2).map((err, i) => <li key={i}>{err}</li>)}
-                            {item.errors.length > 2 && <li>+{item.errors.length - 2} more issues</li>}
-                        </ul>
+                        {missingFields.length > 0 && (
+                            <p className="text-xs text-white/70">
+                                Missing: {missingFields.join(', ')}
+                            </p>
+                        )}
+                        {apiErrors.length > 0 && (
+                            <p className="mt-2 text-xs text-white/60">
+                                API: {apiErrors.slice(0, 2).join(' · ')}
+                                {apiErrors.length > 2 ? ` · +${apiErrors.length - 2} more` : ''}
+                            </p>
+                        )}
                     </div>
                 )}
+
+                <div className="mt-1 grid grid-cols-2 gap-2 text-xs text-white/52">
+                    <div className="rounded-[0.95rem] border border-white/10 bg-black/25 px-3 py-2">
+                        <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Type</p>
+                        <p className="mt-1 text-white/70">{product.product_type || 'Unset'}</p>
+                    </div>
+                    <div className="rounded-[0.95rem] border border-white/10 bg-black/25 px-3 py-2">
+                        <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Variants</p>
+                        <p className="mt-1 text-white/70">{product.variants?.length || 0}</p>
+                    </div>
+                </div>
 
                 <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between gap-2">
                     <button 
@@ -113,24 +187,19 @@ const QueueItemListItem: React.FC<{
 }> = ({ item, selected, onSelect, onEdit, onPromote, onReject }) => {
     const product = item.product;
     const isReady = item.status === 'ready';
-    
-    const missingFields = [];
-    if (!product.product_type) missingFields.push('Product Type');
-    const gender = product.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
-    if (!gender) missingFields.push('Gender');
-    if (!product.sizing_guide || !product.sizing_guide.size_chart || Object.keys(product.sizing_guide.size_chart).length === 0) missingFields.push('Sizing Guide');
-
-    const hasIssues = missingFields.length > 0 || (item.errors && item.errors.length > 0);
+    const { missingFields, apiErrors } = getQueueIssues(product, item);
+    const hasIssues = missingFields.length > 0 || apiErrors.length > 0;
 
     return (
-        <motion.div layout className={`glass-panel p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 hover:bg-white/5 transition-colors border-l-4 ${selected ? 'ring-1 ring-primary bg-primary/5 border-l-primary' : 'border-l-transparent hover:border-l-primary'}`}>
+        <motion.div layout className={`rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5 border-primary/25' : 'hover:bg-white/[0.05] hover:border-primary/20'}`}>
             <div className="flex items-center gap-4 flex-grow min-w-0">
                  <button onClick={(e) => { e.stopPropagation(); onSelect(item.id, e.shiftKey); }} className="text-neutral-400 hover:text-white">
                     {selected ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
                 </button>
-                <img src={getShopifyThumbnail(product.images?.[0], '100x100')} alt={product.title} loading="lazy" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
+                <img src={getShopifyThumbnail(product.images?.[0], '100x100')} alt={product.title} loading="lazy" decoding="async" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
                 <div className="min-w-0">
-                    <p className="font-semibold text-white truncate text-lg">{product.title || 'Untitled Product'}</p>
+                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Draft Item</p>
+                    <p className="font-black text-white truncate text-lg uppercase tracking-[-0.03em]">{product.title || 'Untitled Product'}</p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md uppercase tracking-wider ${
                         item.status === 'ready' ? 'bg-green-500 text-white' : 
                         item.status === 'failed' ? 'bg-red-500 text-white' : 
@@ -142,19 +211,13 @@ const QueueItemListItem: React.FC<{
             </div>
 
             {hasIssues && (
-                <div className="flex-shrink-0 flex flex-col gap-1 max-w-xs">
-                    {missingFields.map(field => (
-                        <div key={field} className="flex items-center gap-2 text-red-400 text-xs font-medium bg-red-500/10 px-2 py-1 rounded">
-                            <AlertTriangle size={12} />
-                            <span>Missing {field}</span>
-                        </div>
-                    ))}
-                    {item.errors && item.errors.length > 0 && !missingFields.length && (
-                         <div className="flex items-center gap-2 text-red-400 text-xs font-semibold">
-                            <AlertTriangle size={12} />
-                            <span>{item.errors.length} issues</span>
-                        </div>
-                    )}
+                <div className="max-w-sm rounded-[1rem] border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-white/70">
+                    <div className="flex items-center gap-2 text-red-400 text-xs font-semibold uppercase tracking-[0.08em]">
+                        <AlertTriangle size={12} />
+                        <span>Resolve Before Publish</span>
+                    </div>
+                    {missingFields.length > 0 && <p className="mt-2">Missing: {missingFields.join(', ')}</p>}
+                    {apiErrors.length > 0 && <p className="mt-1">API: {apiErrors.slice(0, 2).join(' · ')}</p>}
                 </div>
             )}
 
@@ -213,22 +276,21 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
   };
 
   return (
-    <motion.div layout className={`glass-panel overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-300 relative ${selected ? 'ring-2 ring-primary' : ''}`}>
+    <motion.div layout className={`relative flex flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/[0.03] transition-all duration-300 hover:border-primary/25 hover:bg-white/[0.05] ${selected ? 'ring-2 ring-primary/70' : ''}`}>
       <div className="absolute top-3 right-12 z-10">
           <button onClick={(e) => onSelect(product.id, e.shiftKey)} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
               {selected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
           </button>
       </div>
-      <div className="relative">
-        <img src={getShopifyThumbnail(product.images[0])} alt={product.title} loading="lazy" className="w-full h-56 object-cover bg-neutral-800 group-hover:scale-105 transition-transform duration-300" />
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+      <div className="relative bg-[#111]">
+        <img src={getShopifyThumbnail(product.images[0])} alt={product.title} loading="lazy" decoding="async" className="w-full h-56 object-cover bg-[#111] group-hover:scale-105 transition-transform duration-300" />
         <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-md ${currentStatus.className}`}>{currentStatus.text}</span>
         <div className="absolute top-3 right-3">
           <div className="relative">
             <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(prev => !prev); }} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"><MoreVertical size={18} /></button>
             <AnimatePresence>
               {isMenuOpen && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-48 glass-panel z-10 p-1">
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-48 rounded-[1.2rem] border border-white/10 bg-[#090909] z-10 p-1 shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
                   <button onClick={() => { onEdit(product); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-white/10 rounded-lg">Edit</button>
                   <button onClick={() => { onDuplicate(product); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-white/10 rounded-lg">Duplicate</button>
                   <button onClick={() => { onDelete(product.id); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg">Delete</button>
@@ -239,7 +301,8 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
         </div>
       </div>
       <div className="p-5 flex-grow flex flex-col">
-        <h3 className="font-bold text-white truncate group-hover:text-primary transition-colors text-lg">{product.title}</h3>
+        <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Catalog Item</p>
+        <h3 className="mt-2 font-black text-white truncate group-hover:text-primary transition-colors text-lg uppercase tracking-[-0.03em]">{product.title}</h3>
         <div className="flex items-center gap-2 mt-3 text-xs">
           <select value={product.product_type || ''} onChange={(e) => onUpdateProduct(product.id, { product_type: e.target.value })} onClick={(e) => e.stopPropagation()} className="glass-input py-1 px-2 text-xs w-full bg-white/5 border-white/10">
             <option value="" className="bg-neutral-900">Type</option>
@@ -252,12 +315,12 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
             <option value="unisex" className="bg-neutral-900">Unisex</option>
           </select>
         </div>
-        <div className="mt-4 flex justify-between items-end flex-grow pt-4 border-t border-white/5">
-          <div>
+        <div className="mt-4 grid grid-cols-2 gap-3 flex-grow pt-4 border-t border-white/5">
+          <div className="rounded-[1rem] border border-white/10 bg-black/25 p-3">
             <p className="text-xs text-neutral-500 mb-1">Price</p>
             <p className="text-lg font-semibold text-white">Rs. {price.toLocaleString()}</p>
           </div>
-          <div className="text-right">
+          <div className="rounded-[1rem] border border-white/10 bg-black/25 p-3 text-right">
             <p className="text-xs text-neutral-500 mb-1">Stock</p>
             <p className={`text-lg font-semibold ${totalInventory > 0 ? 'text-green-400' : 'text-red-400'}`}>{totalInventory}</p>
           </div>
@@ -291,14 +354,15 @@ const ProductListItem: React.FC<{ product: Product; selected: boolean; onSelect:
     };
 
     return (
-        <motion.div layout className={`glass-panel p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 hover:bg-white/5 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5' : ''}`}>
+        <motion.div layout className={`rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5 border-primary/25' : 'hover:bg-white/[0.05] hover:border-primary/20'}`}>
             <div className="flex items-center gap-4 flex-grow min-w-0">
                  <button onClick={(e) => onSelect(product.id, e.shiftKey)} className="text-neutral-400 hover:text-white">
                     {selected ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
                 </button>
-                <img src={getShopifyThumbnail(product.images[0], '100x100')} alt={product.title} loading="lazy" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
+                <img src={getShopifyThumbnail(product.images[0], '100x100')} alt={product.title} loading="lazy" decoding="async" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
                 <div className="min-w-0">
-                    <p className="font-semibold text-white truncate text-lg">{product.title}</p>
+                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Catalog Item</p>
+                    <p className="font-black text-white truncate text-lg uppercase tracking-[-0.03em]">{product.title}</p>
                     <p className="text-sm text-neutral-400">Rs. {price.toLocaleString()}</p>
                 </div>
             </div>
@@ -539,6 +603,8 @@ const ManageInventory: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
+    const [queueSearchQuery, setQueueSearchQuery] = useState('');
+    const [queueStatusFilter, setQueueStatusFilter] = useState<'all' | 'queued' | 'synced' | 'enrichment_pending' | 'embedding_pending' | 'ready' | 'promoted' | 'failed'>('all');
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     
     // Editor State
@@ -552,84 +618,103 @@ const ManageInventory: React.FC = () => {
     const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
     const [isBulkSizingModalOpen, setIsBulkSizingModalOpen] = useState(false);
     const [isBulkAttributesModalOpen, setIsBulkAttributesModalOpen] = useState(false);
+    const [diagnostics, setDiagnostics] = useState<InventoryDiagnostics | null>(null);
 
     const fetchAllProducts = useCallback(async () => {
         if (!seller?.token) return;
         setIsLoading(true);
-        let page = 1;
-        let hasMore = true;
-        
-        // Initial fetch for first page
+        setError(null);
         try {
-            const response = await api.Seller.GetProducts(seller.token, page);
-            if (response.ok && response.body) {
-                const newProducts = response.body as Product[];
-                setAllProducts(newProducts);
-                if (newProducts.length > 8) {
+            const pages: Product[][] = [];
+            const seenIds = new Set<string>();
+            const duplicateIds: string[] = [];
+            let page = 1;
+            let shouldContinue = true;
+
+            while (shouldContinue && page <= 20) {
+                const response = await api.Seller.GetProducts(seller.token, page);
+                if (!response.ok || !Array.isArray(response.body)) {
+                    if (page === 1) {
+                        setError('Failed to fetch products.');
+                    }
+                    break;
+                }
+
+                const incoming = response.body as Product[];
+                if (incoming.length === 0) {
+                    break;
+                }
+
+                pages.push(incoming);
+
+                const pageNewIds = incoming
+                    .map((item) => String(item.id))
+                    .filter((id) => {
+                        if (seenIds.has(id)) {
+                            duplicateIds.push(id);
+                            return false;
+                        }
+                        seenIds.add(id);
+                        return true;
+                    });
+
+                if (page === 1 && incoming.length > 8) {
                     setViewMode('list');
                 }
-                
-                // If we received fewer items than a typical page (assuming 20 or 50 from API), 
-                // or empty, we might be done. But safer to check length.
-                // Assuming API returns empty array when done.
-                if (newProducts.length === 0) hasMore = false;
-                else page++;
-            } else {
-                setError('Failed to fetch products.');
-                setIsLoading(false);
-                return;
+
+                // Stop if the API ignores `page` and returns only already-seen rows.
+                shouldContinue = pageNewIds.length > 0 && incoming.length >= ITEMS_PER_PAGE;
+                page += 1;
             }
+
+            const merged = pages.flat();
+            const { unique, duplicates } = dedupeById(merged);
+            logInventoryDiagnostics('products', unique.map((item) => ({ id: item.id, title: item.title, updated_at: item.updated_at })), [...duplicateIds, ...duplicates]);
+            setDiagnostics({
+                source: 'products',
+                apiCount: merged.length,
+                uniqueCount: unique.length,
+                duplicateIds: [...duplicateIds, ...duplicates],
+                pagesLoaded: pages.length,
+                sampleIds: unique.slice(0, 8).map((item) => item.id),
+            });
+            setAllProducts(unique);
         } catch (err) {
             setError('An error occurred while fetching products.');
+        } finally {
             setIsLoading(false);
-            return;
-        }
-
-        setIsLoading(false); // Show content immediately after first page
-
-        // Background fetch for remaining pages
-        if (hasMore) {
-            let loopCount = 0;
-            const MAX_LOOPS = 50; // Increased limit for safety
-            
-            while (hasMore && loopCount < MAX_LOOPS) {
-                loopCount++;
-                try {
-                    const response = await api.Seller.GetProducts(seller.token, page);
-                    if (response.ok && response.body) {
-                        const newProducts = response.body as Product[];
-                        if (newProducts.length > 0) {
-                            setAllProducts(prev => [...prev, ...newProducts]);
-                            page++;
-                        } else {
-                            hasMore = false;
-                        }
-                    } else {
-                        hasMore = false;
-                    }
-                } catch (err) {
-                    hasMore = false;
-                }
-            }
         }
     }, [seller?.token]);
 
     const fetchQueueItems = useCallback(async () => {
         if (!seller?.token) return;
         setIsLoading(true);
+        setError(null);
         try {
             const response = await api.Seller.Queue.List(seller.token);
             if (response.ok && response.body) {
-                // Sort by updated_at descending
-                const sorted = (response.body as QueueItem[]).sort((a, b) => 
+                const sorted = [...(response.body as QueueItem[])].sort((a, b) => 
                     new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
                 );
-                setQueueItems(sorted);
-                if (sorted.length > 10) {
+                const { unique, duplicates } = dedupeById(sorted);
+                logInventoryDiagnostics(
+                    'queue',
+                    unique.map((item) => ({ id: item.id, title: item.product?.title, updated_at: item.updated_at })),
+                    duplicates,
+                );
+                setDiagnostics({
+                    source: 'queue',
+                    apiCount: sorted.length,
+                    uniqueCount: unique.length,
+                    duplicateIds: duplicates,
+                    sampleIds: unique.slice(0, 8).map((item) => item.id),
+                });
+                setQueueItems(unique);
+                if (unique.length > 10) {
                     setViewMode('list');
                 }
             } else {
-                setError('Failed to fetch queue items.');
+                setError('Failed to fetch products.');
             }
         } catch (err) {
             setError('An error occurred while fetching queue items.');
@@ -639,6 +724,8 @@ const ManageInventory: React.FC = () => {
     }, [seller?.token]);
 
     useEffect(() => {
+        setCurrentPage(1);
+        setSelectedProductIds(new Set());
         if (activeTab === 'active') {
             fetchAllProducts();
         } else {
@@ -648,7 +735,7 @@ const ManageInventory: React.FC = () => {
 
     useEffect(() => {
         setLastSelectedIndex(null);
-    }, [currentPage, searchQuery, filters, activeTab]);
+    }, [currentPage, searchQuery, queueSearchQuery, queueStatusFilter, filters, activeTab]);
 
     const handleFilterChange = (filterType: keyof typeof filters, value: string) => { setFilters(prev => ({ ...prev, [filterType]: value })); setCurrentPage(1); };
     const clearFilters = () => { setFilters({ status: 'all', stock: 'all', productType: 'all' }); setIsFilterOpen(false); setCurrentPage(1); };
@@ -685,7 +772,7 @@ const ManageInventory: React.FC = () => {
                     
                     if (status === 'active') return 0;
                     if (status === 'archived') return 2;
-                    return 1; // draft, inactive, etc.
+                    return 1;
                 };
                 return getPriority(a) - getPriority(b);
             });
@@ -694,7 +781,22 @@ const ManageInventory: React.FC = () => {
     const totalPages = useMemo(() => Math.ceil(filteredProducts.length / ITEMS_PER_PAGE), [filteredProducts]);
     const paginatedProducts = useMemo(() => filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [filteredProducts, currentPage]);
 
-    const paginatedQueueItems = useMemo(() => queueItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [queueItems, currentPage]);
+    const filteredQueueItems = useMemo(() => {
+        return queueItems.filter((item) => {
+            const query = queueSearchQuery.trim().toLowerCase();
+            const matchesQuery = !query
+                || item.product?.title?.toLowerCase().includes(query)
+                || item.product?.handle?.toLowerCase().includes(query);
+            const matchesStatus = queueStatusFilter === 'all' || item.status === queueStatusFilter;
+            return matchesQuery && matchesStatus;
+        });
+    }, [queueItems, queueSearchQuery, queueStatusFilter]);
+
+    const paginatedQueueItems = useMemo(
+        () => filteredQueueItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE),
+        [filteredQueueItems, currentPage],
+    );
+    const queueTotalPages = useMemo(() => Math.ceil(filteredQueueItems.length / ITEMS_PER_PAGE), [filteredQueueItems.length]);
 
     const handleOpenEditorForCreate = () => { 
         setEditingProduct(null); 
@@ -732,8 +834,6 @@ const ManageInventory: React.FC = () => {
     const handleDuplicateProduct = async (productToDuplicate: Product) => {
         if (!seller?.token || !window.confirm(`Are you sure you want to duplicate "${productToDuplicate.title}"?`)) return;
         const createPayload = { ...productToDuplicate, id: "", title: `Copy of ${productToDuplicate.title}` };
-        // Assuming duplication creates a new QUEUE item now as well? Or active?
-        // Let's assume creating new goes to queue, so api.Seller.CreateProduct -> Queue.Create
         const response = await api.Seller.CreateProduct(seller.token, createPayload as Product);
         if (response.ok) { alert('Product duplicated (added to queue)!'); fetchQueueItems(); setActiveTab('queue'); } else { alert(`Failed to duplicate product: ${response.body?.message || 'Unknown error'}`); }
     };
@@ -764,7 +864,7 @@ const ManageInventory: React.FC = () => {
     };
 
     const handleSelectAll = () => {
-        const items = activeTab === 'active' ? filteredProducts : queueItems;
+        const items = activeTab === 'active' ? filteredProducts : filteredQueueItems;
         const itemIds = items.map(item => (activeTab === 'active' ? (item as Product).id : (item as QueueItem).id));
         
         if (selectedProductIds.size === itemIds.length) {
@@ -780,28 +880,6 @@ const ManageInventory: React.FC = () => {
 
     const handleBulkAttributes = () => {
         setIsBulkAttributesModalOpen(true);
-    };
-
-    const handleBulkSizingSave = async (sizingGuide: SizingGuide) => {
-        if (!seller?.token) return;
-
-        if (activeTab === 'active') {
-             const response = await api.Seller.UpdateProductSizingGuide(seller.token, Array.from(selectedProductIds), sizingGuide);
-             if (!response.ok) alert('Failed to update sizing guide.');
-        } else {
-            const updates = Array.from(selectedProductIds).map(async (id) => {
-                const qItem = queueItems.find(item => item.id === id);
-                if (!qItem) return;
-                const updatedProduct = { ...qItem.product, sizing_guide: sizingGuide };
-                return api.Seller.Queue.Update(seller.token!, qItem.id, { product: updatedProduct });
-            });
-            await Promise.all(updates);
-        }
-
-        setSelectedProductIds(new Set());
-        if (activeTab === 'active') fetchAllProducts();
-        else fetchQueueItems();
-        setIsBulkSizingModalOpen(false);
     };
 
     const handleBulkAttributesSave = async (attributes: { product_type?: string, gender?: string }) => {
@@ -820,7 +898,6 @@ const ManageInventory: React.FC = () => {
                     queueId = qItem.id;
                 }
             }
-
             if (!product) return;
 
             const updatedData: Partial<Product> = {};
@@ -875,7 +952,7 @@ const ManageInventory: React.FC = () => {
         }
     }
 
-    const inventoryItems = activeTab === 'active' ? allProducts : queueItems.map(item => item.product);
+    const inventoryItems = activeTab === 'active' ? allProducts : filteredQueueItems.map(item => item.product);
     const sizeGuideCoverage = inventoryItems.length > 0
         ? Math.round((inventoryItems.filter(product => {
             const chart = product.sizing_guide?.size_chart;
@@ -887,129 +964,176 @@ const ManageInventory: React.FC = () => {
         const price = product.variants?.find(variant => variant.is_default)?.price || product.pricing?.price || 0;
         return Boolean(product.title?.trim()) && price > 0 && totalInventory > 0;
     }).length;
-    const guideCards = [
-        {
-            icon: Camera,
-            eyebrow: 'Photo Prompt',
-            title: 'Shoot cleaner, not fancier.',
-            body: 'Natural light, one clean background, front-detail-back. Juno should help brands hit the visual baseline fast.',
-        },
-        {
-            icon: BadgeCheck,
-            eyebrow: 'Conversion Badge',
-            title: `Size guide coverage ${sizeGuideCoverage}%`,
-            body: 'Size guides stay optional, but buyers should clearly see which listings give them more confidence.',
-        },
-        {
-            icon: BookOpen,
-            eyebrow: 'Seller Education',
-            title: 'Teach the playbook in-flow.',
-            body: 'Good photos, better copy, and sharper drops improve trust before they improve GMV.',
-        },
-    ];
 
+    if (isEditorOpen) {
+        return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-full">
+                <ProductEditor
+                    product={editingProduct}
+                    queueId={editingQueueId}
+                    onClose={handleCloseEditor}
+                />
+            </motion.div>
+        );
+    }
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div className="mb-6 overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.12),transparent_34%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 md:p-7">
-                <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="mb-5 rounded-[1.9rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.16),transparent_35%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+                <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                        <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-primary/75">Inventory Philosophy</p>
-                        <h2 className="mt-3 max-w-3xl text-3xl font-black uppercase tracking-[-0.05em] text-white md:text-4xl">
-                            Minimal fields. Better standards. Less guesswork for indie brands.
-                        </h2>
-                        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/60 md:text-base">
-                            Juno inventory should feel brutally simple: product name, price, quantity. Everything else should either help conversion or be handled by the platform.
+                        <p className="text-[10px] font-mono uppercase tracking-[0.26em] text-primary/75">Inventory</p>
+                        <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.04em] text-white">Product Workspace</h2>
+                        <p className="mt-2 max-w-2xl text-sm text-white/58">
+                            Run catalog work from one place: clean products, fix queue issues, and publish only what is ready.
                         </p>
-                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                            {[
-                                { label: 'Core-ready listings', value: `${readyCoreFields}/${inventoryItems.length || 0}` },
-                                { label: 'Size guide coverage', value: `${sizeGuideCoverage}%` },
-                                { label: 'Draft queue', value: `${queueItems.length}` },
-                            ].map(stat => (
-                                <div key={stat.label} className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
-                                    <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">{stat.label}</p>
-                                    <p className="mt-3 text-2xl font-black uppercase tracking-[-0.04em] text-white">{stat.value}</p>
-                                </div>
-                            ))}
-                        </div>
                     </div>
-
-                    <div className="grid gap-3">
-                        {guideCards.map(card => (
-                            <div key={card.title} className="rounded-[1.3rem] border border-white/10 bg-black/25 p-4">
-                                <div className="flex items-start gap-3">
-                                    <div className="rounded-2xl border border-primary/20 bg-primary/10 p-2.5 text-primary">
-                                        <card.icon size={16} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-primary/75">{card.eyebrow}</p>
-                                        <h3 className="mt-2 text-lg font-black uppercase tracking-[0.02em] text-white">{card.title}</h3>
-                                        <p className="mt-2 text-sm leading-relaxed text-white/55">{card.body}</p>
-                                    </div>
-                                </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {[
+                            { label: 'Core Ready', value: `${readyCoreFields}/${inventoryItems.length || 0}` },
+                            { label: 'Size Guides', value: `${sizeGuideCoverage}%` },
+                            { label: 'Draft Queue', value: `${queueItems.length}` },
+                        ].map(stat => (
+                            <div key={stat.label} className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5">
+                                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/35">{stat.label}</p>
+                                <p className="mt-1 text-lg font-black uppercase tracking-[-0.03em] text-white">{stat.value}</p>
                             </div>
                         ))}
-
-                        <a
-                            href="https://wa.me/923158972405"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] border border-[#25D366]/20 bg-[#25D366]/10 px-4 py-3 text-sm font-semibold text-[#7DFFB1]"
-                        >
-                            <MessageCircle size={16} />
-                            Ask Juno for photo or listing help
-                        </a>
                     </div>
                 </div>
             </div>
 
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
-                <h2 className="text-2xl font-bold text-white">Inventory</h2>
-                
-                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+            <div className="mb-4 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">Workspace Debug</p>
+                            <h3 className="mt-2 text-lg font-black uppercase tracking-[-0.03em] text-white">Inventory Feed State</h3>
+                        </div>
+                        <div className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.2em] text-primary">
+                            {diagnostics?.source ?? activeTab}
+                        </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                        <div className="rounded-[1.1rem] border border-white/10 bg-black/25 p-3">
+                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">API Rows</p>
+                            <p className="mt-2 text-lg font-black uppercase tracking-[-0.03em] text-white">{diagnostics?.apiCount ?? 0}</p>
+                        </div>
+                        <div className="rounded-[1.1rem] border border-white/10 bg-black/25 p-3">
+                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">Unique Rows</p>
+                            <p className="mt-2 text-lg font-black uppercase tracking-[-0.03em] text-white">{diagnostics?.uniqueCount ?? 0}</p>
+                        </div>
+                        <div className="rounded-[1.1rem] border border-white/10 bg-black/25 p-3">
+                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">Duplicates</p>
+                            <p className={`mt-2 text-lg font-black uppercase tracking-[-0.03em] ${diagnostics && diagnostics.duplicateIds.length > 0 ? 'text-red-300' : 'text-white'}`}>
+                                {diagnostics?.duplicateIds.length ?? 0}
+                            </p>
+                        </div>
+                        <div className="rounded-[1.1rem] border border-white/10 bg-black/25 p-3">
+                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">Pages</p>
+                            <p className="mt-2 text-lg font-black uppercase tracking-[-0.03em] text-white">{diagnostics?.pagesLoaded ?? 1}</p>
+                        </div>
+                    </div>
+                    {diagnostics && (
+                        <div className="mt-3 rounded-[1.1rem] border border-white/10 bg-black/25 p-3 text-xs text-white/55">
+                            <p>Sample IDs: {(diagnostics.sampleIds || []).join(', ') || 'none'}</p>
+                            {diagnostics.duplicateIds.length > 0 && (
+                                <p className="mt-2 text-red-300">Duplicate IDs: {diagnostics.duplicateIds.join(', ')}</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">Mode</p>
+                    <div className="mt-4 flex bg-black/30 p-1 rounded-[1.1rem] border border-white/10">
                     <button 
                         onClick={() => setActiveTab('active')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'active' ? 'bg-primary text-white shadow-lg' : 'text-neutral-400 hover:text-white'}`}
+                        className={`flex-1 px-4 py-3 rounded-[0.95rem] text-sm font-black uppercase tracking-[0.08em] transition-all ${activeTab === 'active' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-neutral-400 hover:text-white'}`}
                     >
                         Active Products
                     </button>
                     <button 
                         onClick={() => setActiveTab('queue')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'queue' ? 'bg-primary text-white shadow-lg' : 'text-neutral-400 hover:text-white'}`}
+                        className={`flex-1 px-4 py-3 rounded-[0.95rem] text-sm font-black uppercase tracking-[0.08em] transition-all flex items-center justify-center gap-2 ${activeTab === 'queue' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-neutral-400 hover:text-white'}`}
                     >
                         Drafts & Queue
                         {queueItems.length > 0 && <span className="bg-white/20 px-1.5 rounded-full text-xs">{queueItems.length}</span>}
                     </button>
+                    </div>
                 </div>
+            </div>
 
-                <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
+            <div className="mb-6 rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div>
+                        <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">
+                            {activeTab === 'active' ? 'Catalog' : 'Queue'}
+                        </p>
+                        <h3 className="mt-2 text-xl font-black uppercase tracking-[-0.03em] text-white">
+                            {activeTab === 'active' ? 'Manage Live Catalog' : 'Fix Drafts Before Publish'}
+                        </h3>
+                    </div>
+                    <div className="flex items-center gap-2 md:gap-4 w-full xl:w-auto">
                     {activeTab === 'active' ? (
                         <>
-                        <div className="relative flex-grow"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search products..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="glass-input pl-10 pr-4 py-2 w-full text-white" /></div>
+                        <div className="relative flex-grow"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search products..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full rounded-[1.1rem] border border-white/10 bg-black/30 py-3 pl-10 pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/35" /></div>
                         <div className="relative">
-                            <button onClick={() => setIsFilterOpen(prev => !prev)} className="glass-button flex items-center space-x-2 px-4 py-2 hover:bg-white/10"><Filter size={16} /><span className="hidden sm:inline">Filters</span></button>
-                            <AnimatePresence>{isFilterOpen && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-72 glass-panel z-20 p-4 space-y-4">
+                            <button onClick={() => setIsFilterOpen(prev => !prev)} className="inline-flex items-center space-x-2 rounded-[1.05rem] border border-white/10 bg-black/25 px-4 py-3 text-sm font-semibold text-white/75 transition-colors hover:bg-white/10"><Filter size={16} /><span className="hidden sm:inline">Filters</span></button>
+                            <AnimatePresence>{isFilterOpen && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-72 rounded-[1.4rem] border border-white/10 bg-[#090909] z-20 p-4 space-y-4 shadow-[0_30px_80px_rgba(0,0,0,0.4)]">
                                 <h4 className="font-semibold text-white">Filter By</h4>
-                                <div><label className="text-sm text-neutral-400">Status</label><select value={filters.status} onChange={e => handleFilterChange('status', e.target.value)} className="glass-input w-full p-2 text-sm mt-1"><option value="all" className="bg-neutral-900">All Statuses</option><option value="active" className="bg-neutral-900">Active</option><option value="draft" className="bg-neutral-900">Draft</option><option value="inactive" className="bg-neutral-900">Inactive</option></select></div>
-                                <div><label className="text-sm text-neutral-400">Stock</label><select value={filters.stock} onChange={e => handleFilterChange('stock', e.target.value)} className="glass-input w-full p-2 text-sm mt-1"><option value="all" className="bg-neutral-900">All Stock</option><option value="inStock" className="bg-neutral-900">In Stock</option><option value="outOfStock" className="bg-neutral-900">Out of Stock</option></select></div>
-                                <div><label className="text-sm text-neutral-400">Product Type</label><select value={filters.productType} onChange={e => handleFilterChange('productType', e.target.value)} className="glass-input w-full p-2 text-sm mt-1"><option value="all" className="bg-neutral-900">All Types</option>{productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}</select></div>
+                                <div><label className="text-sm text-neutral-400">Status</label><select value={filters.status} onChange={e => handleFilterChange('status', e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 p-2 text-sm text-white outline-none"><option value="all" className="bg-neutral-900">All Statuses</option><option value="active" className="bg-neutral-900">Active</option><option value="draft" className="bg-neutral-900">Draft</option><option value="inactive" className="bg-neutral-900">Inactive</option></select></div>
+                                <div><label className="text-sm text-neutral-400">Stock</label><select value={filters.stock} onChange={e => handleFilterChange('stock', e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 p-2 text-sm text-white outline-none"><option value="all" className="bg-neutral-900">All Stock</option><option value="inStock" className="bg-neutral-900">In Stock</option><option value="outOfStock" className="bg-neutral-900">Out of Stock</option></select></div>
+                                <div><label className="text-sm text-neutral-400">Product Type</label><select value={filters.productType} onChange={e => handleFilterChange('productType', e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 p-2 text-sm text-white outline-none"><option value="all" className="bg-neutral-900">All Types</option>{productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}</select></div>
                                 <div className="flex justify-end gap-2 pt-2 border-t border-white/10"><button onClick={clearFilters} className="text-sm text-neutral-400 hover:text-white px-3 py-1 rounded">Clear</button><button onClick={() => setIsFilterOpen(false)} className="text-sm bg-primary text-white px-4 py-1 rounded-lg hover:bg-primary/90">Done</button></div>
                             </motion.div>)}</AnimatePresence>
                         </div>
-                        <div className="flex items-center glass rounded-xl border-white/10 overflow-hidden"><button onClick={() => setViewMode('grid')} className={`p-2 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-2 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
+                        <div className="flex items-center overflow-hidden rounded-[1.05rem] border border-white/10 bg-black/25"><button onClick={() => setViewMode('grid')} className={`p-3 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-3 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
                         </>
                     ) : (
-                        <div className="flex items-center glass rounded-xl border-white/10 overflow-hidden"><button onClick={() => setViewMode('grid')} className={`p-2 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-2 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
+                        <>
+                            <div className="relative flex-grow">
+                                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search drafts..."
+                                    value={queueSearchQuery}
+                                    onChange={(e) => {
+                                        setQueueSearchQuery(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="w-full rounded-[1.1rem] border border-white/10 bg-black/30 py-3 pl-10 pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/35"
+                                />
+                            </div>
+                            <select
+                                value={queueStatusFilter}
+                                onChange={(e) => {
+                                    setQueueStatusFilter(e.target.value as 'all' | 'queued' | 'synced' | 'enrichment_pending' | 'embedding_pending' | 'ready' | 'promoted' | 'failed');
+                                    setCurrentPage(1);
+                                }}
+                                className="min-w-[11rem] rounded-[1.1rem] border border-white/10 bg-black/30 py-3 px-4 text-sm text-white outline-none"
+                            >
+                                <option value="all" className="bg-neutral-900">All Draft Statuses</option>
+                                <option value="queued" className="bg-neutral-900">Queued</option>
+                                <option value="synced" className="bg-neutral-900">Synced</option>
+                                <option value="enrichment_pending" className="bg-neutral-900">Enrichment Pending</option>
+                                <option value="embedding_pending" className="bg-neutral-900">Embedding Pending</option>
+                                <option value="ready" className="bg-neutral-900">Ready</option>
+                                <option value="promoted" className="bg-neutral-900">Promoted</option>
+                                <option value="failed" className="bg-neutral-900">Failed</option>
+                            </select>
+                            <div className="flex items-center overflow-hidden rounded-[1.05rem] border border-white/10 bg-black/25"><button onClick={() => setViewMode('grid')} className={`p-3 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-3 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
+                        </>
                     )}
                     
-                    <button onClick={handleOpenEditorForCreate} className="glass-button bg-primary text-white px-4 py-2 hover:bg-primary/90 flex-shrink-0 flex items-center gap-2 border-primary/50"><Plus size={20} /><span className="hidden sm:inline">Add Product</span></button>
+                    <button onClick={handleOpenEditorForCreate} className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white transition-colors hover:bg-primary/90"><Plus size={18} /><span className="hidden sm:inline">Add Product</span></button>
+                    </div>
                 </div>
             </div>
 
             <div className="flex items-center gap-4 mb-4">
                 <button onClick={handleSelectAll} className="flex items-center text-sm text-neutral-400 hover:text-white">
-                    {selectedProductIds.size === (activeTab === 'active' ? filteredProducts.length : queueItems.length) && (activeTab === 'active' ? filteredProducts.length : queueItems.length) > 0 ? <CheckSquare size={18} className="mr-2 text-primary" /> : <Square size={18} className="mr-2" />}
+                    {selectedProductIds.size === (activeTab === 'active' ? filteredProducts.length : filteredQueueItems.length) && (activeTab === 'active' ? filteredProducts.length : filteredQueueItems.length) > 0 ? <CheckSquare size={18} className="mr-2 text-primary" /> : <Square size={18} className="mr-2" />}
                     Select All
                 </button>
                 {selectedProductIds.size > 0 && (
@@ -1089,8 +1213,8 @@ const ManageInventory: React.FC = () => {
                                 />
                             )) : (
                                 <div className="col-span-full text-center py-20 glass-panel border-dashed border-white/20">
-                                    <h3 className="text-xl font-semibold text-white">Queue is empty</h3>
-                                    <p className="mt-1 text-neutral-400">Uploaded products awaiting review will appear here.</p>
+                                    <h3 className="text-xl font-semibold text-white">No drafts match your query</h3>
+                                    <p className="mt-1 text-neutral-400">Try changing the status filter or search text.</p>
                                     <button onClick={handleOpenEditorForCreate} className="mt-6 text-sm bg-primary text-white px-6 py-2 rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20">Upload Product</button>
                                 </div>
                             )}
@@ -1109,26 +1233,17 @@ const ManageInventory: React.FC = () => {
                                 />
                             )) : (
                                 <div className="text-center py-20 glass-panel border-dashed border-white/20 mt-4">
-                                    <h3 className="text-xl font-semibold text-white">Queue is empty</h3>
-                                    <p className="mt-1 text-neutral-400">Uploaded products awaiting review will appear here.</p>
+                                    <h3 className="text-xl font-semibold text-white">No drafts match your query</h3>
+                                    <p className="mt-1 text-neutral-400">Try changing the status filter or search text.</p>
                                     <button onClick={handleOpenEditorForCreate} className="mt-6 text-sm bg-primary text-white px-6 py-2 rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20">Upload Product</button>
                                 </div>
                             )}
                         </div>
                     )}
-                    {queueItems.length > ITEMS_PER_PAGE && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                    {queueTotalPages > 1 && <Pagination currentPage={currentPage} totalPages={queueTotalPages} onPageChange={setCurrentPage} />}
                 </>
             )}
 
-            <AnimatePresence>
-                {isEditorOpen && (
-                    <ProductEditor 
-                        product={editingProduct} 
-                        queueId={editingQueueId}
-                        onClose={handleCloseEditor} 
-                    />
-                )}
-            </AnimatePresence>
             <AnimatePresence>
                 {isBulkSizingModalOpen && (
                     <BulkSizingGuideModal 
@@ -1136,7 +1251,11 @@ const ManageInventory: React.FC = () => {
                         onClose={() => setIsBulkSizingModalOpen(false)} 
                         selectedProductIds={Array.from(selectedProductIds)}
                         allProducts={activeTab === 'active' ? allProducts : queueItems.map(it => it.product)}
-                        onSave={handleBulkSizingSave}
+                        onSave={() => {
+                            setSelectedProductIds(new Set());
+                            if (activeTab === 'active') fetchAllProducts();
+                            else fetchQueueItems();
+                        }}
                     />
                 )}
             </AnimatePresence>

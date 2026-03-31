@@ -1,75 +1,83 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/landing/Hero';
-import JunoApp from './components/landing/JunoApp';
-import Mission from './components/landing/Mission';
-import DownloadSection from './components/landing/DownloadSection';
 import Footer from './components/Footer';
-import ScreenshotsSection from './components/landing/ScreenshotsSection';
-import SellerAuth from './components/seller/SellerAuth';
-import SellerDashboard from './components/seller/SellerDashboard';
-import SellerOnboarding from './components/seller/SellerOnboarding';
-import ProtectedRoute from './components/seller/ProtectedRoute';
-import SellerHome from './components/seller/SellerHome';
-import ManageInventory from './components/seller/ManageInventory';
-import AdminManageOrders from './components/admin/ManageOrders';
-import Analytics from './components/seller/Analytics';
-import Profile from './components/seller/Profile';
-import JunoStudioLanding from './components/seller/JunoStudioLanding';
+const JunoApp = React.lazy(() => import('./components/landing/JunoApp'));
+const Mission = React.lazy(() => import('./components/landing/Mission'));
+const DownloadSection = React.lazy(() => import('./components/landing/DownloadSection'));
+const ScreenshotsSection = React.lazy(() => import('./components/landing/ScreenshotsSection'));
+const SellerAuth = React.lazy(() => import('./components/seller/SellerAuth'));
+const SellerDashboard = React.lazy(() => import('./components/seller/SellerDashboard'));
+const SellerOnboarding = React.lazy(() => import('./components/seller/SellerOnboarding'));
+const ProtectedRoute = React.lazy(() => import('./components/seller/ProtectedRoute'));
+const SellerHome = React.lazy(() => import('./components/seller/SellerHome'));
+const ManageInventory = React.lazy(() => import('./components/seller/ManageInventory'));
+const AdminManageOrders = React.lazy(() => import('./components/admin/ManageOrders'));
+const Analytics = React.lazy(() => import('./components/seller/Analytics'));
+const Profile = React.lazy(() => import('./components/seller/Profile'));
+const JunoStudioLanding = React.lazy(() => import('./components/seller/JunoStudioLanding'));
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
 import { JunoStudioProvider } from './contexts/JunoStudioContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
-import PrivacyPolicy from './components/policies/PrivacyPolicy';
-import RefundPolicy from './components/policies/RefundPolicy';
-import ShippingServicePolicy from './components/policies/ShippingServicePolicy';
-import TermsConditions from './components/policies/TermsConditions';
+const PrivacyPolicy = React.lazy(() => import('./components/policies/PrivacyPolicy'));
+const RefundPolicy = React.lazy(() => import('./components/policies/RefundPolicy'));
+const ShippingServicePolicy = React.lazy(() => import('./components/policies/ShippingServicePolicy'));
+const TermsConditions = React.lazy(() => import('./components/policies/TermsConditions'));
 
-import AdminAuth from "./components/admin/AdminAuth";
-import AdminDashboard from "./components/admin/AdminDashboard";
-import AdminProtectedRoute from "./components/admin/ProtectedRoute";
-import SellerManageOrders from './components/seller/ManageOrders';
-import ShopifySuccess from './components/seller/ShopifySuccess';
-import ManageSellers from './components/admin/ManageSellers';
-import ManageUsers from './components/admin/ManageUsers';
-import ManageInvites from './components/admin/ManageInvites';
-import LocationMap from './components/admin/LocationMap';
-import DeliveryCoverage from './components/admin/DeliveryCoverage';
-import InteractionAnalytics from './components/admin/InteractionAnalytics';
-import ProductPerformance from './components/admin/ProductPerformance';
-import ManageNotifications from './components/admin/ManageNotifications';
-import PlatformStats from './components/admin/PlatformStats';
-import ApiStatus from './components/admin/ApiStatus';
-import ChapterForms from './components/admin/ChapterForms';
-import ManageProducts from './components/admin/ManageProducts';
-import SystemTools from './components/admin/SystemTools';
-import SalesFunnel from './components/admin/SalesFunnel';
-import AmbassadorTasks from './components/admin/AmbassadorTasks';
+const AdminAuth = React.lazy(() => import("./components/admin/AdminAuth"));
+const AdminDashboard = React.lazy(() => import("./components/admin/AdminDashboard"));
+const AdminProtectedRoute = React.lazy(() => import("./components/admin/ProtectedRoute"));
+const SellerManageOrders = React.lazy(() => import('./components/seller/ManageOrders'));
+const ShopifySuccess = React.lazy(() => import('./components/seller/ShopifySuccess'));
+const ManageSellers = React.lazy(() => import('./components/admin/ManageSellers'));
+const ManageUsers = React.lazy(() => import('./components/admin/ManageUsers'));
+const ManageInvites = React.lazy(() => import('./components/admin/ManageInvites'));
+const LocationMap = React.lazy(() => import('./components/admin/LocationMap'));
+const DeliveryCoverage = React.lazy(() => import('./components/admin/DeliveryCoverage'));
+const InteractionAnalytics = React.lazy(() => import('./components/admin/InteractionAnalytics'));
+const ProductPerformance = React.lazy(() => import('./components/admin/ProductPerformance'));
+const ManageNotifications = React.lazy(() => import('./components/admin/ManageNotifications'));
+const PlatformStats = React.lazy(() => import('./components/admin/PlatformStats'));
+const ApiStatus = React.lazy(() => import('./components/admin/ApiStatus'));
+const ChapterForms = React.lazy(() => import('./components/admin/ChapterForms'));
+const ManageProducts = React.lazy(() => import('./components/admin/ManageProducts'));
+const SystemTools = React.lazy(() => import('./components/admin/SystemTools'));
+const SalesFunnel = React.lazy(() => import('./components/admin/SalesFunnel'));
+const AmbassadorTasks = React.lazy(() => import('./components/admin/AmbassadorTasks'));
 
 
-import AmbassadorAuth from "./components/ambassador/AmbassadorAuth";
-import AmbassadorDashboard from "./components/ambassador/AmbassadorDashboard";
-import AmbassadorProtectedRoute from "./components/ambassador/ProtectedRoute";
+const AmbassadorAuth = React.lazy(() => import("./components/ambassador/AmbassadorAuth"));
+const AmbassadorDashboard = React.lazy(() => import("./components/ambassador/AmbassadorDashboard"));
+const AmbassadorProtectedRoute = React.lazy(() => import("./components/ambassador/ProtectedRoute"));
 
 import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
-import BrandPage from './components/BrandPage';
-import BrandsSection from './components/landing/BrandsSection';
-import BrandShowcase from './components/landing/BrandShowcase';
-import BrandSpotlight from './components/landing/BrandSpotlight';
-import CatchyProducts from './components/landing/CatchyProducts';
-import TestimonialsSection from './components/landing/TestimonialsSection';
-import BlogIndexPage from './components/blog/BlogIndexPage';
-import BlogPostPage from './components/blog/BlogPostPage';
-import WritePage from './components/blog/WritePage';
-import ProductPage from './components/ProductPage';
-import DownloadRedirect from './components/DownloadRedirect';
-import ChapterFormPage from './components/chapter/ChapterFormPage';
-import BrandReelGraphic from './components/BrandReelGraphic';
+const BrandPage = React.lazy(() => import('./components/BrandPage'));
+const BrandsSection = React.lazy(() => import('./components/landing/BrandsSection'));
+const BrandShowcase = React.lazy(() => import('./components/landing/BrandShowcase'));
+const BrandSpotlight = React.lazy(() => import('./components/landing/BrandSpotlight'));
+const CatchyProducts = React.lazy(() => import('./components/landing/CatchyProducts'));
+const TestimonialsSection = React.lazy(() => import('./components/landing/TestimonialsSection'));
+const BlogIndexPage = React.lazy(() => import('./components/blog/BlogIndexPage'));
+const BlogPostPage = React.lazy(() => import('./components/blog/BlogPostPage'));
+const WritePage = React.lazy(() => import('./components/blog/WritePage'));
+const ProductPage = React.lazy(() => import('./components/ProductPage'));
+const DownloadRedirect = React.lazy(() => import('./components/DownloadRedirect'));
+const ChapterFormPage = React.lazy(() => import('./components/chapter/ChapterFormPage'));
+const BrandReelGraphic = React.lazy(() => import('./components/BrandReelGraphic'));
 
-import WorkAuth from "./components/work/WorkAuth";
-import WorkDashboard from "./components/work/WorkDashboard";
-import WorkProtectedRoute from "./components/work/ProtectedRoute";
+const WorkAuth = React.lazy(() => import("./components/work/WorkAuth"));
+const WorkDashboard = React.lazy(() => import("./components/work/WorkDashboard"));
+const WorkProtectedRoute = React.lazy(() => import("./components/work/ProtectedRoute"));
 import { WorkAuthProvider } from './contexts/WorkAuthContext';
+
+const AppShellFallback = () => (
+  <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
+    <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-white/65">
+      Loading workspace...
+    </div>
+  </div>
+);
 
 function App() {
   useEffect(() => {
@@ -89,6 +97,7 @@ function App() {
               <JunoStudioProvider>
                 <div className="min-h-screen bg-background text-white">
                 {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Navbar />}
+                <Suspense fallback={<AppShellFallback />}>
                 <Routes>
                   <Route path="/" element={
                     <main>
@@ -200,6 +209,7 @@ function App() {
                   <Route path="/brand-reel" element={<BrandReelGraphic />} />
                   <Route path="/:brandName" element={<BrandPage />} />
                 </Routes>
+                </Suspense>
                 {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Footer />}
                 </div>
               </JunoStudioProvider>
