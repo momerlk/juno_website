@@ -20,11 +20,19 @@ const mosaic = [
     col: 'left',
   },
   {
+    src: '/brand_banners/kara2.webp',
+    alt: 'Kara',
+    label: 'KARA',
+    style: { aspectRatio: '16/9' } as React.CSSProperties,
+    delay: 0.28,
+    col: 'left',
+  },
+  {
     src: '/brand_banners/ukiyo5.jpg',
     alt: 'Ukiyo',
     label: 'UKIYO',
     style: { aspectRatio: '3/4' } as React.CSSProperties,
-    delay: 0.28,
+    delay: 0.38,
     col: 'right',
   },
   {
@@ -32,7 +40,7 @@ const mosaic = [
     alt: 'Rakh',
     label: 'RAKH',
     style: { aspectRatio: '3/2' } as React.CSSProperties,
-    delay: 0.38,
+    delay: 0.48,
     col: 'right',
   },
 ];
@@ -157,34 +165,39 @@ const Hero: React.FC = () => {
           >
             <div className="grid grid-cols-2 gap-2.5 max-w-sm mx-auto lg:max-w-none lg:ml-auto">
 
-              {/* Left column: single tall image */}
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: mosaic[0].delay }}
-                className="relative rounded-2xl overflow-hidden group cursor-pointer"
-                style={mosaic[0].style}
-              >
-                <img
-                  src={mosaic[0].src}
-                  alt={mosaic[0].alt}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{ background: 'linear-gradient(135deg, rgba(255,24,24,0.12) 0%, transparent 60%)' }}
-                />
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <span className="text-[9px] font-mono tracking-[0.28em] uppercase" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                    {mosaic[0].label}
-                  </span>
-                </div>
-              </motion.div>
+              {/* Left column: multiple images */}
+              <div className="flex flex-col gap-2.5">
+                {mosaic.filter(item => item.col === 'left').map((item) => (
+                  <motion.div
+                    key={item.alt}
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7, delay: item.delay }}
+                    className="relative rounded-2xl overflow-hidden group cursor-pointer"
+                    style={item.style}
+                  >
+                    <img
+                      src={item.src}
+                      alt={item.alt}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                    <div
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                      style={{ background: 'linear-gradient(135deg, rgba(255,24,24,0.12) 0%, transparent 60%)' }}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <span className="text-[9px] font-mono tracking-[0.28em] uppercase" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                        {item.label}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
 
-              {/* Right column: two images, offset for asymmetry */}
+              {/* Right column: multiple images, offset for asymmetry */}
               <div className="flex flex-col gap-2.5 mt-10">
-                {mosaic.slice(1).map((item) => (
+                {mosaic.filter(item => item.col === 'right').map((item) => (
                   <motion.div
                     key={item.alt}
                     initial={{ opacity: 0, y: 18 }}
