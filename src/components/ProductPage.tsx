@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, ChevronDown, Download } from 'lucide-react';
 import * as sellerApi from '../api/sellerApi';
 import { Product, Variant } from '../constants/types';
+import { useProbe, useTrackProductView, useProbeCommerce } from '../hooks/useProbe';
 
 const ProductPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -13,6 +14,11 @@ const ProductPage: React.FC = () => {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [mainImage, setMainImage] = useState<string>('');
+
+  // Probe analytics - track product view
+  useTrackProductView(productId, product?.categories?.[0]?.id);
+  const { track } = useProbe();
+  const { trackAddToCart } = useProbeCommerce();
 
   const downloadUrl = 'https://juno.com.pk/download';
   const qrCodeApiBase = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&bgcolor=0A0A0A&color=ffffff&data=';

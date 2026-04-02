@@ -71,6 +71,9 @@ const WorkDashboard = React.lazy(() => import("./components/work/WorkDashboard")
 const WorkProtectedRoute = React.lazy(() => import("./components/work/ProtectedRoute"));
 import { WorkAuthProvider } from './contexts/WorkAuthContext';
 
+// Probe Analytics
+import { useProbeAnalytics } from './hooks/useProbe';
+
 const AppShellFallback = () => (
   <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
     <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-white/65">
@@ -80,6 +83,9 @@ const AppShellFallback = () => (
 );
 
 function App() {
+  // Initialize Probe analytics for automatic page view and session tracking
+  useProbeAnalytics();
+  
   useEffect(() => {
     document.title = 'Juno - Home of Indie Brands';
     const titleElement = document.querySelector('title');
