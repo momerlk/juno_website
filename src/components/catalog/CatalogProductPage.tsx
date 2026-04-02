@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Search, Store, ShoppingBag, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Search, Store, ShoppingBag, Minus, Plus, Star, Users, Ruler } from 'lucide-react';
 import { Catalog, type CatalogProduct, type ProductVariant } from '../../api/api';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useProbe';
+import SizeGuideModal from './SizeGuideModal';
 
 const formatCurrency = (value?: number) =>
   `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
@@ -23,7 +24,12 @@ const CatalogProductPage: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [showAddedFeedback, setShowAddedFeedback] = useState(false);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
   const { addItem, setCartOpen } = useGuestCart();
+
+  const mainCTARef = useRef<HTMLDivElement>(null);
+  const [viewersCount] = useState(() => Math.floor(Math.random() * 15) + 3);
 
   useTrackProductView(productId, product?.categories?.[0]?.id);
 
@@ -103,6 +109,22 @@ const CatalogProductPage: React.FC = () => {
     }, 400);
   };
 
+  // Sticky bar visibility observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowStickyBar(!entry.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+
+    if (mainCTARef.current) {
+      observer.observe(mainCTARef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background pt-24 text-white">
@@ -174,6 +196,34 @@ const CatalogProductPage: React.FC = () => {
                 ) : null}
               </div>
 
+              {/* Social Proof */}
+              <div className="mt-4 flex flex-wrap items-center gap-4">
+                {product.rating && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          size={16}
+                          className={
+                            star <= Math.round(product.rating!)
+                              ? 'fill-yellow-400 text-yellow-400'
+                              : 'text-white/20'
+                          }
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm font-bold text-white/70">
+                      {product.rating.toFixed(1)} ({product.review_count || 0} reviews)
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm text-green-400">
+                  <Users size={16} />
+                  <span className="font-bold">{viewersCount} people are viewing this</span>
+                </div>
+              </div>
+
               <p className="mt-6 text-base text-neutral-300">{product.short_description || product.description}</p>
 
               <div className="mt-6 flex flex-wrap gap-2">
@@ -187,9 +237,18 @@ const CatalogProductPage: React.FC = () => {
 
             {asArray(product.options).length > 0 && (
               <div className="rounded-[2.2rem] border border-white/10 bg-white/[0.04] p-6 md:p-8">
-                <div className="mb-5 flex items-center gap-3">
-                  <Search size={16} className="text-primary" />
-                  <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-white/40">Product options</p>
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Search size={16} className="text-primary" />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-white/40">Product options</p>
+                  </div>
+                  <button
+                    onClick={() => setShowSizeGuide(true)}
+                    className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-primary transition-colors hover:text-white"
+                  >
+                    <Ruler size={14} />
+                    Size Guide
+                  </button>
                 </div>
                 <div className="space-y-5">
                   {asArray(product.options).map((option) => (
@@ -243,7 +302,7 @@ const CatalogProductPage: React.FC = () => {
             </div>
 
             {/* Add to Cart Section */}
-            <div className="rounded-[2.2rem] border border-white/10 bg-white/[0.04] p-6 md:p-8">
+            <div ref={mainCTARef} className="rounded-[2.2rem] border border-white/10 bg-white/[0.04] p-6 md:p-8">
               {/* Quantity Selector */}
               <div className="mb-5">
                 <p className="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-white/70">Quantity</p>
@@ -342,6 +401,38 @@ const CatalogProductPage: React.FC = () => {
           </section>
         )}
       </div>
+
+      {/* Sticky Add to Cart Bar (Mobile) */}
+      <AnimatePresence>
+        {showStickyBar && product?.inventory?.in_stock && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#0A0A0A]/95 backdrop-blur-xl p-4 lg:hidden"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/50">Total</p>
+                <p className="text-lg font-black text-white">
+                  {formatCurrency((selectedVariant?.price || product.pricing.discounted_price || product.pricing.price) * quantity)}
+                </p>
+              </div>
+              <button
+                onClick={handleAddToCart}
+                disabled={isAdding}
+                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-6 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white shadow-lg shadow-primary/20"
+              >
+                {isAdding ? 'Adding...' : 'Add to Bag'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Size Guide Modal */}
+      <SizeGuideModal isOpen={showSizeGuide} onClose={() => setShowSizeGuide(false)} />
     </div>
   );
 };

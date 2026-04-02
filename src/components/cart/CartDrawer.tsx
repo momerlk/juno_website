@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight } from 'lucide-react';
+import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGuestCart } from '../../contexts/GuestCartContext';
+import { Catalog, type CatalogProduct } from '../../api/api';
 
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
@@ -10,6 +11,27 @@ const formatCurrency = (value: number) =>
 const CartDrawer: React.FC = () => {
     const navigate = useNavigate();
     const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, syncState } = useGuestCart();
+    const [relatedProducts, setRelatedProducts] = useState<CatalogProduct[]>([]);
+
+    useEffect(() => {
+        // Load related products based on first cart item
+        const loadRelated = async () => {
+            if (optimisticCart.length === 0) {
+                setRelatedProducts([]);
+                return;
+            }
+
+            const firstItem = optimisticCart[0];
+            const response = await Catalog.getRelatedProducts(firstItem.product_id, 3);
+            if (response.ok) {
+                setRelatedProducts(response.body);
+            }
+        };
+
+        if (isCartOpen) {
+            loadRelated();
+        }
+    }, [optimisticCart, isCartOpen]);
 
     const handleCheckout = () => {
         setCartOpen(false);
@@ -173,6 +195,41 @@ const CartDrawer: React.FC = () => {
                                         <span className="text-sm font-bold uppercase tracking-[0.16em] text-white/60">Subtotal</span>
                                         <span className="text-2xl font-black text-white">{formatCurrency(cartTotal)}</span>
                                     </div>
+
+                                    {/* Related Products Upsell */}
+                                    {relatedProducts.length > 0 && (
+                                        <div className="mb-4 rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4">
+                                            <div className="mb-3 flex items-center gap-2">
+                                                <Sparkles size={16} className="text-primary" />
+                                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                                                    You May Also Like
+                                                </p>
+                                            </div>
+                                            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                                                {relatedProducts.map((product) => (
+                                                    <Link
+                                                        key={product.id}
+                                                        to={`/catalog/${product.id}`}
+                                                        className="flex-shrink-0 w-32"
+                                                    >
+                                                        <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
+                                                            <img
+                                                                src={product.images?.[0] || '/juno_app_icon.png'}
+                                                                alt={product.title}
+                                                                className="aspect-square w-full object-cover"
+                                                            />
+                                                        </div>
+                                                        <p className="mt-2 line-clamp-1 text-xs font-bold text-white/80">
+                                                            {product.title}
+                                                        </p>
+                                                        <p className="text-xs font-black text-primary">
+                                                            {formatCurrency(product.pricing.discounted_price || product.pricing.price)}
+                                                        </p>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Checkout Button */}
                                     <button

@@ -72,6 +72,7 @@ const BrandReelGraphic = React.lazy(() => import('./components/BrandReelGraphic'
 const CheckoutPage = React.lazy(() => import('./components/checkout/CheckoutPage'));
 const OrderConfirmationPage = React.lazy(() => import('./components/checkout/OrderConfirmationPage'));
 const OrderTrackingPage = React.lazy(() => import('./components/checkout/OrderTrackingPage'));
+const WishlistPage = React.lazy(() => import('./components/catalog/WishlistPage'));
 
 const WorkAuth = React.lazy(() => import("./components/work/WorkAuth"));
 const WorkDashboard = React.lazy(() => import("./components/work/WorkDashboard"));
@@ -120,7 +121,7 @@ function RoutedApp() {
               <GuestCartProvider>
               <div className="min-h-screen bg-background text-white">
               <ScrollToTop />
-              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Navbar />}
+              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && !window.location.pathname.startsWith('/catalog') && !window.location.pathname.startsWith('/checkout') && !window.location.pathname.startsWith('/track') && !window.location.pathname.startsWith('/wishlist') && !window.location.pathname.startsWith('/collections') && !window.location.pathname.startsWith('/drops') && <Navbar />}
               <Suspense fallback={<AppShellFallback />}>
               <Routes>
                   <Route path="/" element={
@@ -145,6 +146,7 @@ function RoutedApp() {
                 <Route path="/download" element={<DownloadRedirect />} />
                 <Route path="/catalog" element={<CatalogPage />} />
                 <Route path="/catalog/:productId" element={<CatalogProductPage />} />
+                <Route path="/wishlist" element={<WishlistPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/checkout/confirmation" element={<OrderConfirmationPage />} />
                 <Route path="/track" element={<OrderTrackingPage />} />
@@ -240,7 +242,7 @@ function RoutedApp() {
               </Routes>
               </Suspense>
               <CartDrawer />
-              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Footer />}
+              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && !window.location.pathname.startsWith('/catalog') && !window.location.pathname.startsWith('/checkout') && !window.location.pathname.startsWith('/track') && !window.location.pathname.startsWith('/wishlist') && !window.location.pathname.startsWith('/collections') && !window.location.pathname.startsWith('/drops') && <Footer />}
               </div>
               </GuestCartProvider>
             </JunoStudioProvider>
