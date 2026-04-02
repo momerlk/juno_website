@@ -27,7 +27,25 @@ export {
     getAuthToken,
     createEvent,
     type APIResponse,
+    type APIError,
 } from "./core";
+
+// Error handling exports
+export {
+    ErrorCode,
+    STATUS_TO_ERROR_CODE,
+    isAPIError,
+    isValidationError,
+    isAuthError,
+    isNotFoundError,
+    isConflictError,
+    isServerError,
+    getUserFriendlyMessage,
+    getErrorToastConfig,
+    handleAPIResponse,
+    retryRequest,
+    extractFieldErrors,
+} from "./errorHandling";
 
 // Shared utilities
 export {

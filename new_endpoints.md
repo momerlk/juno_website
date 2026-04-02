@@ -5,6 +5,144 @@
 
 ---
 
+## API Response Format
+
+All API responses follow a consistent format:
+
+### Success Response
+```json
+{
+    "success": true,
+    "data": {
+        // Actual response data
+    }
+}
+```
+
+### Error Response
+```json
+{
+    "success": false,
+    "error": {
+        "message": "Human-readable error message",
+        "code": "ERROR_CODE",
+        "details": { }
+    }
+}
+```
+
+The `request()` function automatically unwraps the `data` field on success and the `error` field on failure, so you work directly with the data/error objects.
+
+---
+
+## Error Handling
+
+### Error Codes
+
+The API uses standard error codes for programmatic handling:
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `INVALID_BODY` | 400 | Malformed JSON request body |
+| `BAD_REQUEST` | 400 | Validation failure, missing fields |
+| `UNAUTHORIZED` | 401 | Missing or invalid auth token |
+| `FORBIDDEN` | 403 | Authenticated user lacks permission |
+| `NOT_FOUND` | 404 | Resource not found |
+| `CONFLICT` | 409 | Resource already exists (e.g., duplicate email) |
+| `VALIDATION_ERROR` | 400 | Field validation failed |
+| `TOKEN_EXPIRED` | 401 | Auth token has expired |
+| `INTERNAL_ERROR` | 500 | Server error |
+| `SERVICE_UNAVAILABLE` | 503 | Service temporarily unavailable |
+
+### Error Handling Utilities
+
+```typescript
+import {
+    isValidationError,
+    isAuthError,
+    isNotFoundError,
+    getUserFriendlyMessage,
+    getErrorToastConfig,
+    handleAPIResponse,
+    extractFieldErrors,
+} from './api';
+
+// Basic error handling
+const resp = await Catalog.getProduct(id);
+if (!resp.ok) {
+    const error = resp.body as APIError;
+    
+    if (isNotFoundError(error)) {
+        // Handle 404
+    } else if (isAuthError(error)) {
+        // Handle 401 - redirect to login
+    } else if (isValidationError(error)) {
+        // Handle validation errors
+        const fieldErrors = extractFieldErrors(error);
+        // { email: "Email is required", password: "Too short" }
+    } else {
+        // Show generic error
+        alert(getUserFriendlyMessage(error));
+    }
+}
+
+// Toast integration
+if (!resp.ok) {
+    const toastConfig = getErrorToastConfig(resp.body);
+    toast.show(toastConfig.message, { 
+        type: toastConfig.type,
+        duration: toastConfig.duration 
+    });
+}
+
+// Callback-based handling
+await handleAPIResponse(
+    Commerce.checkout({ address_id, payment_method: 'cod' }),
+    (order) => {
+        // Success - navigate to confirmation
+        navigate(`/orders/${order.id}`);
+    },
+    (error) => {
+        // Error - show toast
+        showErrorToast(error);
+    }
+);
+```
+
+### Common Error Patterns
+
+```typescript
+// Form validation errors
+const resp = await Auth.Register(formData);
+if (!resp.ok && isValidationError(resp.body)) {
+    const fieldErrors = extractFieldErrors(resp.body);
+    setFormErrors(fieldErrors);
+}
+
+// Token expiration (auto-handled)
+// The API automatically attempts token refresh on 401.
+// If refresh fails, returns TOKEN_EXPIRED error.
+if (!resp.ok && resp.body.code === 'TOKEN_EXPIRED') {
+    localStorage.clear();
+    window.location.href = '/login';
+}
+
+// Not found handling
+const product = await Catalog.getProduct(id);
+if (!resp.ok && isNotFoundError(resp.body)) {
+    navigate('/404');
+}
+
+// Conflict handling (duplicate resources)
+const result = await Auth.Register(data);
+if (!resp.ok && isConflictError(resp.body)) {
+    // Email already exists
+    setFormError('email', 'An account with this email already exists');
+}
+```
+
+---
+
 ## Module Structure
 
 The API is now organized into focused, modular files for easy maintenance and selective importing:

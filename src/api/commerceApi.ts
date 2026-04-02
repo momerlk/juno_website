@@ -8,7 +8,7 @@
  * @module Commerce
  */
 
-import { request, APIResponse, API_BASE_URL } from "./core";
+import { request, APIResponse, API_BASE_URL, isAPIError } from "./core";
 import type {
     Cart,
     CartItem,
@@ -101,12 +101,24 @@ export namespace GuestCommerce {
         return headers;
     }
 
-    async function handleResponse<T>(resp: Response): Promise<APIResponse<T>> {
+    /**
+     * Handle guest commerce response with proper unwrapping
+     * 
+     * Uses the same response format as standard API: { success, data/error }
+     */
+    async function handleGuestResponse<T>(resp: Response): Promise<APIResponse<T>> {
         const body = await resp.json().catch(() => ({}));
+        
+        // Check for standard API response format
+        const isSuccess = resp.ok || (body && body.success === true);
+        
+        // Unwrap data field if present
+        const unwrappedBody = isSuccess && body?.data ? body.data : body;
+        
         return {
             status: resp.status,
-            ok: resp.ok,
-            body: resp.ok ? body : (body.error || body)
+            ok: isSuccess,
+            body: isSuccess ? unwrappedBody : (unwrappedBody?.error || unwrappedBody)
         };
     }
 
@@ -119,7 +131,7 @@ export namespace GuestCommerce {
     export async function getCart(guestCartId?: string): Promise<APIResponse<GuestCartResponse>> {
         const headers = getHeaders(guestCartId);
         const resp = await fetch(`${API_BASE_URL}${BASE_PATH}/cart`, { method: 'GET', headers });
-        return handleResponse<GuestCartResponse>(resp);
+        return handleGuestResponse<GuestCartResponse>(resp);
     }
 
     /**
@@ -139,7 +151,7 @@ export namespace GuestCommerce {
             headers,
             body: JSON.stringify(item)
         });
-        return handleResponse<GuestCartResponse>(resp);
+        return handleGuestResponse<GuestCartResponse>(resp);
     }
 
     /**
@@ -153,7 +165,7 @@ export namespace GuestCommerce {
             method: 'DELETE',
             headers
         });
-        return handleResponse<GuestCartResponse>(resp);
+        return handleGuestResponse<GuestCartResponse>(resp);
     }
 
     /**
@@ -173,7 +185,7 @@ export namespace GuestCommerce {
             headers,
             body: JSON.stringify(details)
         });
-        return handleResponse<GuestCartResponse>(resp);
+        return handleGuestResponse<GuestCartResponse>(resp);
     }
 
     /**
@@ -192,7 +204,7 @@ export namespace GuestCommerce {
             headers,
             body: JSON.stringify(payload)
         });
-        return handleResponse<ParentOrder>(resp);
+        return handleGuestResponse<ParentOrder>(resp);
     }
 
     /**
@@ -207,6 +219,6 @@ export namespace GuestCommerce {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        return handleResponse<ParentOrder[]>(resp);
+        return handleGuestResponse<ParentOrder[]>(resp);
     }
 }
