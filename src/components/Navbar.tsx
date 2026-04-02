@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Smartphone, ArrowRight } from 'lucide-react';
+import { Menu, X, Smartphone, ArrowRight, ShoppingBag, Store } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useGuestCart } from '../contexts/GuestCartContext';
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { itemCount, setCartOpen } = useGuestCart();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,12 +26,13 @@ const Navbar: React.FC = () => {
     { name: 'Ecosystem', href: '/#juno-app' },
     { name: 'Studio', href: '/#juno-studio' },
     { name: 'Blog', href: '/blog' },
+    { name: 'Shop', href: '/catalog' },
   ];
 
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`absolute top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled || isOpen ? 'py-4' : 'py-6'
         }`}
       >
@@ -69,6 +72,21 @@ const Navbar: React.FC = () => {
                 >
                   For Indie Brands
                 </a>
+                <button
+                  onClick={() => setCartOpen(true)}
+                  className="relative rounded-full border border-white/10 p-2.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  <ShoppingBag size={20} />
+                  {itemCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary text-[10px] font-bold text-white"
+                    >
+                      {itemCount > 9 ? '9+' : itemCount}
+                    </motion.span>
+                  )}
+                </button>
                 <a
                   href="/download"
                   className="px-5 py-2.5 rounded-full bg-white text-black font-bold text-sm transition-all hover:scale-105 hover:bg-neutral-200 flex items-center group"
@@ -122,6 +140,23 @@ const Navbar: React.FC = () => {
               </div>
 
               <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
+                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <span className="text-sm font-bold text-white">Shopping Bag</span>
+                  <button
+                    onClick={() => {
+                      setCartOpen(true);
+                      closeMenu();
+                    }}
+                    className="relative rounded-full border border-white/10 p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                  >
+                    <ShoppingBag size={20} />
+                    {itemCount > 0 && (
+                      <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary text-[10px] font-bold text-white">
+                        {itemCount > 9 ? '9+' : itemCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
                 <a
                   href="/download"
                   className="flex items-center justify-center w-full py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg shadow-lg shadow-primary/20"

@@ -1,8 +1,10 @@
 import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/landing/Hero';
 import Footer from './components/Footer';
+import { GuestCartProvider } from './contexts/GuestCartContext';
+import CartDrawer from './components/cart/CartDrawer';
 const JunoApp = React.lazy(() => import('./components/landing/JunoApp'));
 const Mission = React.lazy(() => import('./components/landing/Mission'));
 const DownloadSection = React.lazy(() => import('./components/landing/DownloadSection'));
@@ -62,9 +64,14 @@ const BlogIndexPage = React.lazy(() => import('./components/blog/BlogIndexPage')
 const BlogPostPage = React.lazy(() => import('./components/blog/BlogPostPage'));
 const WritePage = React.lazy(() => import('./components/blog/WritePage'));
 const ProductPage = React.lazy(() => import('./components/ProductPage'));
+const CatalogPage = React.lazy(() => import('./components/catalog/CatalogPage'));
+const CatalogProductPage = React.lazy(() => import('./components/catalog/CatalogProductPage'));
 const DownloadRedirect = React.lazy(() => import('./components/DownloadRedirect'));
 const ChapterFormPage = React.lazy(() => import('./components/chapter/ChapterFormPage'));
 const BrandReelGraphic = React.lazy(() => import('./components/BrandReelGraphic'));
+const CheckoutPage = React.lazy(() => import('./components/checkout/CheckoutPage'));
+const OrderConfirmationPage = React.lazy(() => import('./components/checkout/OrderConfirmationPage'));
+const OrderTrackingPage = React.lazy(() => import('./components/checkout/OrderTrackingPage'));
 
 const WorkAuth = React.lazy(() => import("./components/work/WorkAuth"));
 const WorkDashboard = React.lazy(() => import("./components/work/WorkDashboard"));
@@ -81,6 +88,16 @@ const AppShellFallback = () => (
     </div>
   </div>
 );
+
+const ScrollToTop: React.FC = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname, location.search]);
+
+  return null;
+};
 
 function RoutedApp() {
   // Initialize Probe analytics for automatic page view and session tracking
@@ -100,7 +117,9 @@ function RoutedApp() {
         <WorkAuthProvider>
           <AmbassadorAuthProvider>
             <JunoStudioProvider>
+              <GuestCartProvider>
               <div className="min-h-screen bg-background text-white">
+              <ScrollToTop />
               {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Navbar />}
               <Suspense fallback={<AppShellFallback />}>
               <Routes>
@@ -123,8 +142,13 @@ function RoutedApp() {
                   <Route path="/blog/:slug" element={<BlogPostPage />} />
                   <Route path="/write" element={<WritePage />} />
 
-                  <Route path="/download" element={<DownloadRedirect />} />
-                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/download" element={<DownloadRedirect />} />
+                <Route path="/catalog" element={<CatalogPage />} />
+                <Route path="/catalog/:productId" element={<CatalogProductPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="/checkout/confirmation" element={<OrderConfirmationPage />} />
+                <Route path="/track" element={<OrderTrackingPage />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/refund-policy" element={<RefundPolicy />} />
                   <Route path="/service-policy" element={<ShippingServicePolicy />} />
                   <Route path="/terms-and-conditions" element={<TermsConditions />} />
@@ -215,8 +239,10 @@ function RoutedApp() {
                   <Route path="/:brandName" element={<BrandPage />} />
               </Routes>
               </Suspense>
+              <CartDrawer />
               {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Footer />}
               </div>
+              </GuestCartProvider>
             </JunoStudioProvider>
           </AmbassadorAuthProvider>
         </WorkAuthProvider>
