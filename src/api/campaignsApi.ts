@@ -23,7 +23,7 @@ import type {
 // ============================================================================
 
 export namespace Campaigns {
-    const BASE_PATH = '/api/v2/admin/campaigns';
+    const BASE_PATH = '/admin/campaigns';
 
     function getAdminToken(): string | undefined {
         return localStorage.getItem('admin_token') ?? undefined;

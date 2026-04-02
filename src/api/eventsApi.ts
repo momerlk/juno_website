@@ -20,7 +20,7 @@ import type {
 // ============================================================================
 
 export namespace Events {
-    const BASE_PATH = '/api/v2/tournaments';
+    const BASE_PATH = '/tournaments';
 
     function getUserToken(): string | undefined {
         return localStorage.getItem('token') ?? undefined;

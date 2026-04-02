@@ -82,7 +82,7 @@ const AppShellFallback = () => (
   </div>
 );
 
-function App() {
+function RoutedApp() {
   // Initialize Probe analytics for automatic page view and session tracking
   useProbeAnalytics();
   
@@ -95,16 +95,15 @@ function App() {
   }, []);
 
   return (
-    <Router>
-      <AdminAuthProvider>
-        <SellerAuthProvider>
-          <WorkAuthProvider>
-            <AmbassadorAuthProvider>
-              <JunoStudioProvider>
-                <div className="min-h-screen bg-background text-white">
-                {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Navbar />}
-                <Suspense fallback={<AppShellFallback />}>
-                <Routes>
+    <AdminAuthProvider>
+      <SellerAuthProvider>
+        <WorkAuthProvider>
+          <AmbassadorAuthProvider>
+            <JunoStudioProvider>
+              <div className="min-h-screen bg-background text-white">
+              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Navbar />}
+              <Suspense fallback={<AppShellFallback />}>
+              <Routes>
                   <Route path="/" element={
                     <main>
                       <Hero />
@@ -214,15 +213,22 @@ function App() {
                   <Route path="/product/:productId" element={<ProductPage />} />
                   <Route path="/brand-reel" element={<BrandReelGraphic />} />
                   <Route path="/:brandName" element={<BrandPage />} />
-                </Routes>
-                </Suspense>
-                {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Footer />}
-                </div>
-              </JunoStudioProvider>
-            </AmbassadorAuthProvider>
-          </WorkAuthProvider>
-        </SellerAuthProvider>
-      </AdminAuthProvider>
+              </Routes>
+              </Suspense>
+              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && <Footer />}
+              </div>
+            </JunoStudioProvider>
+          </AmbassadorAuthProvider>
+        </WorkAuthProvider>
+      </SellerAuthProvider>
+    </AdminAuthProvider>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <RoutedApp />
     </Router>
   );
 }

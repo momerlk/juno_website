@@ -21,7 +21,7 @@ import type {
 // ============================================================================
 
 export namespace SellerAPI {
-    const BASE_PATH = '/api/v2/seller';
+    const BASE_PATH = '/seller';
 
     function getSellerToken(): string | undefined {
         return localStorage.getItem('seller_token') ?? 

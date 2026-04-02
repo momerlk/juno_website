@@ -32,7 +32,7 @@ import type {
 // ============================================================================
 
 export namespace Probe {
-    const BASE_PATH = '/api/v2/probe';
+    const BASE_PATH = '/probe';
 
     export interface ProbeDevice {
         device_id?: string;
@@ -102,7 +102,7 @@ export namespace Probe {
 // ============================================================================
 
 export namespace Analytics {
-    const BASE_PATH = '/api/v2/admin/probe';
+    const BASE_PATH = '/admin/probe';
 
     function buildTimeRangeParams(params?: TimeRangeParams & ComparisonParams): string {
         const searchParams = new URLSearchParams();

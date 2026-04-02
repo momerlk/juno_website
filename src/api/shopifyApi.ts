@@ -19,7 +19,7 @@ import type {
 // ============================================================================
 
 export namespace Shopify {
-    const BASE_PATH = '/api/v2/shopify';
+    const BASE_PATH = '/shopify';
 
     function getSellerToken(): string | undefined {
         return localStorage.getItem('seller_token') ?? 
@@ -104,7 +104,7 @@ export namespace Shopify {
      * Useful for manual re-sync or onboarding flow.
      */
     export async function adminSyncProducts(sellerId: string, token?: string): Promise<APIResponse<ShopifySyncResponse>> {
-        return request('/api/v2/admin/shopify/sync', 'POST', { seller_id: sellerId }, token || getAdminToken());
+        return request('/admin/shopify/sync', 'POST', { seller_id: sellerId }, token || getAdminToken());
     }
 
     /**
@@ -113,6 +113,6 @@ export namespace Shopify {
      * Triggers collection sync for a specific seller by admin.
      */
     export async function adminSyncCollections(sellerId: string, token?: string): Promise<APIResponse<ShopifyCollectionSyncResponse>> {
-        return request('/api/v2/admin/catalog/collections/shopify-sync', 'POST', { seller_id: sellerId }, token || getAdminToken());
+        return request('/admin/catalog/collections/shopify-sync', 'POST', { seller_id: sellerId }, token || getAdminToken());
     }
 }

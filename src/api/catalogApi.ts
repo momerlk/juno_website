@@ -24,7 +24,7 @@ import type {
 // ============================================================================
 
 export namespace Catalog {
-    const BASE_PATH = '/api/v2/catalog';
+    const BASE_PATH = '/catalog';
 
     /**
      * List products with optional filters
@@ -221,7 +221,7 @@ export namespace Catalog {
 // ============================================================================
 
 export namespace AdminCatalog {
-    const BASE_PATH = '/api/v2/admin/catalog';
+    const BASE_PATH = '/admin/catalog';
 
     function getAdminToken(): string | undefined {
         return localStorage.getItem('admin_token') ?? undefined;

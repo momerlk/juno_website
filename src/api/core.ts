@@ -85,14 +85,15 @@ export function getAuthToken() {
  * Returns empty object on parse failure, logs error in development mode.
  */
 async function parseBody(resp: Response): Promise<any> {
+    const text = await resp.text();
     try {
-        const text = await resp.text();
         if (!text) return {};
         return JSON.parse(text);
     } catch (e) {
         // Log parse errors in development for debugging
         if (import.meta.env.DEV) {
             console.warn('Failed to parse response:', resp.url, e);
+            console.warn('Raw response body:', text);
         }
         return {};
     }

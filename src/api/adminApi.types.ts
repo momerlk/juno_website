@@ -15,7 +15,7 @@ import type { Order } from "../constants/orders";
 // ============================================================================
 
 export namespace AdminAPI {
-    const BASE_PATH = '/api/v2/admin';
+    const BASE_PATH = '/admin';
 
     function getAdminToken(): string | undefined {
         return localStorage.getItem('admin_token') ?? undefined;

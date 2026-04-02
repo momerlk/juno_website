@@ -26,7 +26,7 @@ import type {
 // ============================================================================
 
 export namespace Commerce {
-    const BASE_PATH = '/api/v2/commerce';
+    const BASE_PATH = '/commerce';
 
     function getUserToken(): string | undefined {
         return localStorage.getItem('token') ?? undefined;
@@ -91,7 +91,7 @@ export namespace Commerce {
 // ============================================================================
 
 export namespace GuestCommerce {
-    const BASE_PATH = '/api/v2/commerce/guest';
+    const BASE_PATH = '/commerce/guest';
 
     function getHeaders(guestCartId?: string): Headers {
         const headers = new Headers();
