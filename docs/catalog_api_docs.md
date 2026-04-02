@@ -37,10 +37,14 @@ Returns full details for a single product.
 ```json
 {
   "id": "uuid",
+  "raw_id": "shopify-123",
+  "handle": "floral-lawn-suit",
   "title": "Floral Lawn Suit",
-  "description": "...",
+  "description": "Premium printed lawn suit with intricate floral motifs...",
+  "short_description": "Summer lawn edit",
   "seller_id": "uuid",
   "seller_name": "Khaadi",
+  "seller_logo": "https://cdn.example.com/logo.png",
   "categories": [{ "id": "...", "name": "Lawn", "slug": "lawn" }],
   "product_type": "Eastern",
   "pricing": {
@@ -51,12 +55,18 @@ Returns full details for a single product.
     "discount_value": 17,
     "discounted_price": 3500
   },
-  "images": ["https://cdn.example.com/img1.jpg"],
+  "images": ["https://cdn.example.com/img1.jpg", "https://cdn.example.com/img2.jpg"],
   "variants": [
     { "id": "...", "sku": "KH-001-S", "title": "Small", "options": {"Size": "S"}, "price": 3500, "available": true }
   ],
   "options": [{ "name": "Size", "values": ["S", "M", "L"] }],
+  "tags": ["summer", "lawn", "floral"],
   "inventory": { "in_stock": true, "available_quantity": 12 },
+  "shipping_details": { "free_shipping": false, "estimated_delivery_days": 5 },
+  "status": "active",
+  "created_at": "2026-03-01T10:00:00Z",
+  "updated_at": "2026-03-28T14:30:00Z",
+  "published_at": "2026-03-05T00:00:00Z",
   "rating": 4.5,
   "review_count": 23,
   "is_trending": false,
@@ -65,6 +75,46 @@ Returns full details for a single product.
 ```
 
 **Error `404`** — product not found.
+
+**Product Model Fields**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique product identifier (UUID) |
+| `raw_id` | string | External ID from source (e.g., Shopify) |
+| `handle` | string | URL-friendly slug |
+| `title` | string | Product display name |
+| `description` | string | Full product description |
+| `short_description` | string | Brief summary |
+| `seller_id` | string | Seller/brand ID |
+| `seller_name` | string | Seller/brand name |
+| `seller_logo` | string | Seller logo URL |
+| `categories` | array | Product categories |
+| `product_type` | string | Type: `Eastern`, `Western`, etc. |
+| `pricing` | object | Pricing details |
+| `pricing.price` | number | Current selling price |
+| `pricing.compare_at_price` | number | Original price (MSRP) |
+| `pricing.currency` | string | Currency code (e.g., `PKR`) |
+| `pricing.discounted` | boolean | Whether on sale |
+| `pricing.discount_value` | number | Discount percentage |
+| `pricing.discounted_price` | number | Price after discount |
+| `images` | string[] | Product image URLs |
+| `variants` | array | Product variants (sizes, colors) |
+| `options` | array | Configurable options |
+| `tags` | string[] | Search/discovery keywords |
+| `inventory` | object | Stock status |
+| `inventory.in_stock` | boolean | Availability flag |
+| `inventory.available_quantity` | int | Units available |
+| `shipping_details` | object | Shipping constraints |
+| `shipping_details.free_shipping` | boolean | Free shipping flag |
+| `status` | string | Lifecycle: `active`, `draft`, `archived` |
+| `created_at` | ISO 8601 | Creation timestamp |
+| `updated_at` | ISO 8601 | Last update timestamp |
+| `published_at` | ISO 8601 | Publication timestamp |
+| `rating` | number | Average user rating |
+| `review_count` | int | Total reviews |
+| `is_trending` | boolean | Trending flag |
+| `is_featured` | boolean | Featured flag |
 
 ---
 
@@ -148,6 +198,38 @@ Returns aggregated stats for a brand/seller.
 
 ---
 
+### Get Brand Storefront
+`GET /api/v2/catalog/brands/{id}/storefront`
+
+Returns guest-facing brand landing data for performance marketing and storefront pages.
+
+**Response `200`**
+```json
+{
+  "brand": {
+    "id": "seller-1",
+    "name": "Khaadi",
+    "business_name": "Khaadi Pakistan",
+    "description": "Seasonal prints and everyday staples.",
+    "logo_url": "https://...",
+    "banner_url": "https://..."
+  },
+  "featured_products": [
+    { "id": "p1", "title": "Printed Lawn Suit" }
+  ],
+  "collections": [
+    { "id": "c1", "title": "Summer Lawn", "slug": "summer-lawn" }
+  ],
+  "drops": [
+    { "id": "d1", "title": "Weekend Drop", "status": "announced" }
+  ],
+  "product_count": 142,
+  "average_rating": 4.2
+}
+```
+
+---
+
 ### Get Trending Searches
 `GET /api/v2/catalog/search/trending`
 
@@ -179,12 +261,266 @@ Returns type-ahead suggestions for a given prefix.
 
 **Response `200`**
 ```json
-["lawn suit", "lawn fabric", "lawn dupatta"]
+["lawn suit","lawn fabric","lawn dupatta"]
 ```
 
 ---
 
+### Get Popular Products
+`GET /api/v2/catalog/products/popular`
+
+Returns a ranked list of popular products for guest storefronts and landing pages.
+
+**Query Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `limit` | int | Maximum products to return (default: 12) |
+
+**Response `200`** — array of `Product` objects.
+
+---
+
+### Get Related Products
+`GET /api/v2/catalog/products/{id}/related`
+
+Returns a recommendation set related to the given product.
+
+**Query Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `limit` | int | Maximum products to return (default: 8) |
+
+**Response `200`** — array of `Product` objects.
+
+---
+
+## Collection Endpoints
+
+### List Collections
+`GET /api/v2/catalog/collections`
+
+Returns all curated product collections marked as active.
+
+**Response `200`** — array of `Collection` objects.
+
+---
+
+### Get Collection
+`GET /api/v2/catalog/collections/{idOrSlug}`
+
+Returns collection details and the first page of products.
+
+**Response `200`**
+```json
+{
+  "collection": {
+    "id": "uuid",
+    "title": "Summer Lawn",
+    "slug": "summer-lawn",
+    "description": "The finest lawn collection...",
+    "image_url": "https://...",
+    "product_ids": ["uuid-1", "uuid-2"]
+  },
+  "products": [
+    { "id": "uuid-1", "title": "...", "pricing": { ... } }
+  ]
+}
+```
+
+---
+
+## Drop Endpoints
+
+### List Drops
+`GET /api/v2/catalog/drops`
+
+Returns public drops. By default this excludes `draft` drops and includes announced, live, sold out, and ended drops.
+
+**Query Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `status` | string | Optional explicit status filter |
+| `seller_id` | string | Filter by seller |
+
+**Response `200`** — array of `Drop` objects.
+
+---
+
+### Get Drop
+`GET /api/v2/catalog/drops/{idOrSlug}`
+
+Returns a single drop with its products.
+
+**Response `200`**
+```json
+{
+  "drop": {
+    "id": "uuid",
+    "title": "Weekend Lawn Drop",
+    "slug": "weekend-lawn-drop",
+    "seller_id": "seller-1",
+    "status": "announced",
+    "product_ids": ["p1", "p2"],
+    "launch_at": "2026-04-05T18:00:00Z",
+    "reminder_count": 24,
+    "view_count": 153
+  },
+  "products": [
+    { "id": "p1", "title": "Printed Lawn Suit" }
+  ]
+}
+```
+
+This public detail endpoint increments the drop `view_count`.
+
+---
+
+### Set Drop Reminder
+`POST /api/v2/catalog/drops/{idOrSlug}/remind`
+
+Subscribes an authenticated user or guest to the drop launch reminder.
+
+**Body**
+```json
+{
+  "channel": "email",
+  "email": "guest@example.com"
+}
+```
+
+For `push`, supply an authenticated user or a guest identity such as `guest_id` or `expo_token`.
+
+---
+
+### Cancel Drop Reminder
+`DELETE /api/v2/catalog/drops/{idOrSlug}/remind`
+
+Cancels a reminder for the current authenticated user or for the guest identity supplied in the request body.
+
+**Body**
+```json
+{
+  "email": "guest@example.com"
+}
+```
+
+---
+
+## Seller Drop Endpoints
+
+Authenticated sellers can create and manage their own draft drops.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v2/seller/drops` | List seller drops |
+| `POST` | `/api/v2/seller/drops` | Create draft drop |
+| `GET` | `/api/v2/seller/drops/{id}` | Get seller drop |
+| `PUT` | `/api/v2/seller/drops/{id}` | Update seller draft drop |
+| `GET` | `/api/v2/seller/drops/{id}/analytics` | View seller drop analytics |
+
+---
+
+## Admin Drop Endpoints
+
+Authenticated admins can manage the full drop lifecycle.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v2/admin/catalog/drops` | List all drops |
+| `POST` | `/api/v2/admin/catalog/drops` | Create drop |
+| `GET` | `/api/v2/admin/catalog/drops/{id}` | Get drop |
+| `PUT` | `/api/v2/admin/catalog/drops/{id}` | Update drop |
+| `PATCH` | `/api/v2/admin/catalog/drops/{id}/status` | Change drop status |
+| `POST` | `/api/v2/admin/catalog/drops/{id}/products` | Replace or reorder drop products |
+| `GET` | `/api/v2/admin/catalog/drops/{id}/reminders` | List pending reminders |
+| `GET` | `/api/v2/admin/catalog/drops/{id}/analytics` | View denormalized drop metrics |
+
+---
+
+### Get Collection Products
+`GET /api/v2/catalog/collections/{idOrSlug}/products`
+
+Returns a paginated list of products belonging to a collection.
+
+**Query Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `page` | int | Page number (default: 1) |
+| `limit` | int | Items per page (default: 20) |
+
+**Response `200`** — array of `Product` objects.
+
+---
+
+## Admin Collection Endpoints
+
+### Create Collection
+`POST /api/v2/admin/catalog/collections`
+
+Auth: admin token required
+
+**Body**
+```json
+{
+  "title": "New Arrival",
+  "slug": "new-arrival",
+  "description": "Curated new arrivals",
+  "image_url": "https://...",
+  "product_ids": ["uuid-1", "uuid-2"],
+  "tags": ["new", "summer"],
+  "is_active": true,
+  "priority": 10
+}
+```
+
+**Response `201`** — `Collection` object.
+
+---
+
+### Update Collection
+`PUT /api/v2/admin/catalog/collections/{id}`
+
+Auth: admin token required
+
+PATCH-like semantics via PUT. All fields optional.
+
+**Response `200`** — `Collection` object.
+
+---
+
+### Delete Collection
+`DELETE /api/v2/admin/catalog/collections/{id}`
+
+Auth: admin token required
+
+Archives the collection by setting `is_active` to `false`.
+
+**Response `200`** `{ "message": "Collection deleted" }`
+
+---
+
+### Add Products to Collection
+`POST /api/v2/admin/catalog/collections/{id}/products`
+
+Auth: admin token required
+
+**Body**
+```json
+{
+  "product_ids": ["uuid-3", "uuid-4"]
+}
+```
+
+**Response `200`** `{ "message": "Products added to collection" }`
+
+---
+
 ## Error Responses
+
 
 | Code | Meaning |
 |------|---------|

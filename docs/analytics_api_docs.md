@@ -455,8 +455,6 @@ Nested schema notes:
 
 These endpoints are also available in the current module and reuse the following shapes:
 
-- `RetentionMetrics`
-- `UserSegment[]`
 - `SearchAnalyticsResponse`
 - `CategoryMetric[]`
 - `OperationalAnalyticsResponse`
@@ -465,14 +463,252 @@ These endpoints are also available in the current module and reuse the following
 - `LogisticsAnalyticsResponse`
 - `ProbeEvent[]` for `/real-time/events`
 
+---
+
+### Retention Cohorts Response
+
+Returned by `GET /api/v2/admin/probe/users/retention`.
+
+```json
+{
+  "cohorts": [
+    {
+      "cohort_date": "2026-03-01",
+      "size": 120,
+      "retention": [1.0, 0.45, 0.31, 0.22]
+    }
+  ],
+  "churn_rate": 0.19,
+  "stickiness": 0.31,
+  "resurrection_rate": 0.04
+}
+```
+
+Field descriptions:
+
+- `cohorts`: Array of retention cohorts
+- `cohort_date`: The date this cohort was acquired (e.g., first signup date)
+- `size`: Number of users in the cohort
+- `retention`: Array of retention rates for each subsequent period (Day 0, Day 1, Day 2, ...)
+- `churn_rate`: Overall churn rate for the period
+- `stickiness`: DAU/MAU ratio
+- `resurrection_rate`: Rate of previously churned users returning
+
+---
+
+### User Segments Response
+
+Returned by `GET /api/v2/admin/probe/users/segments`.
+
+```json
+[
+  {
+    "name": "new_users",
+    "count": 182,
+    "pct": 0.23
+  },
+  {
+    "name": "active_shoppers",
+    "count": 450,
+    "pct": 0.36
+  },
+  {
+    "name": "at_risk",
+    "count": 210,
+    "pct": 0.17
+  }
+]
+```
+
+Field descriptions:
+
+- `name`: Segment identifier
+- `count`: Number of users in this segment
+- `pct`: Percentage of total user base
+
+---
+
+### Search Analytics Response
+
+Returned by `GET /api/v2/admin/probe/search`.
+
+```json
+{
+  "top_queries": [
+    { "query": "black dress", "count": 82, "click_through_rate": 0.45 }
+  ],
+  "no_result_queries": [
+    { "query": "linen co-ord", "count": 6 }
+  ],
+  "search_to_purchase_rate": 0.11,
+  "avg_results_per_query": 24.5
+}
+```
+
+Field descriptions:
+
+- `top_queries`: Most frequent search queries with counts and CTR
+- `no_result_queries`: Queries that returned no results
+- `search_to_purchase_rate`: Percentage of searches resulting in a purchase
+- `avg_results_per_query`: Average number of results returned per search
+
+---
+
+### Category Metrics Response
+
+Returned by `GET /api/v2/admin/probe/commerce/categories`.
+
+```json
+[
+  {
+    "category": "Lawn",
+    "revenue": 220000,
+    "orders": 80,
+    "views": 4100,
+    "conversion_rate": 0.07,
+    "growth_rate": 0.12
+  }
+]
+```
+
+Field descriptions:
+
+- `category`: Category name
+- `revenue`: Total revenue from this category
+- `orders`: Number of orders
+- `views`: Total product views in this category
+- `conversion_rate`: Views to orders conversion rate
+- `growth_rate`: Period-over-period growth rate
+
+---
+
+### Operational Analytics Response
+
+Returned by `GET /api/v2/admin/probe/operations`.
+
+```json
+{
+  "total_bookings": 1250,
+  "status_breakdown": {
+    "pending": 45,
+    "confirmed": 180,
+    "shipped": 890,
+    "delivered": 120,
+    "cancelled": 15
+  },
+  "avg_fulfillment_time_hours": 36.5
+}
+```
+
+---
+
+### Seller Operations Response
+
+Returned by `GET /api/v2/admin/probe/operations/sellers`.
+
+```json
+{
+  "total_applications": 245,
+  "status_breakdown": {
+    "pending": 32,
+    "approved": 180,
+    "rejected": 28,
+    "suspended": 5
+  },
+  "approval_rate": 0.73
+}
+```
+
+---
+
+### Feedback Analytics Response
+
+Returned by `GET /api/v2/admin/probe/operations/feedback`.
+
+```json
+{
+  "total_volume": 156,
+  "category_breakdown": {
+    "product_quality": 45,
+    "shipping": 32,
+    "customer_service": 28,
+    "website": 51
+  },
+  "status_breakdown": {
+    "open": 42,
+    "in_progress": 38,
+    "resolved": 76
+  }
+}
+```
+
+---
+
+### Logistics Analytics Response
+
+Returned by `GET /api/v2/admin/probe/operations/logistics`.
+
+```json
+{
+  "total_bookings": 890,
+  "status_breakdown": {
+    "pending": 45,
+    "in_transit": 320,
+    "delivered": 500,
+    "returned": 25
+  },
+  "partner_breakdown": {
+    "trax": 340,
+    "leopards": 280,
+    "call Courier": 270
+  }
+}
+```
+
+---
+
+### Top Product
+
+Returned by `GET /api/v2/admin/probe/products`.
+
+```json
+[
+  {
+    "product_id": "prod_456",
+    "product_name": "Floral Lawn Suit",
+    "units_sold": 54,
+    "revenue": 189000,
+    "views": 2400,
+    "conversion_rate": 0.022
+  }
+]
+```
+
+---
+
+### Product Deep Dive Response
+
+Returned by `GET /api/v2/admin/probe/products/{id}`.
+
+```json
+{
+  "product_id": "prod_456",
+  "product_name": "Floral Lawn Suit",
+  "views": 2400,
+  "added_to_cart": 320,
+  "purchases": 54,
+  "revenue": 189000,
+  "conversion_rate": 0.022,
+  "cart_abandon_rate": 0.83,
+  "avg_time_on_page_seconds": 45.2,
+  "return_rate": 0.04
+}
+```
+
 Field highlights:
 
 - `RetentionCohort`: `{ cohort_date: string, size: int64, retention: float64[] }`
 - `QueryMetric`: `{ query: string, count: int64 }`
-- `CategoryMetric`: `{ category: string, revenue: float64, orders: int64, views: int64, conversion_rate: float64, growth_rate: float64 }`
-- `SellerOperationsResponse`: `{ total_applications: int64, status_breakdown: map[string]int64, approval_rate: float64 }`
-- `FeedbackAnalyticsResponse`: `{ total_volume: int64, category_breakdown: map[string]int64, status_breakdown: map[string]int64 }`
-- `LogisticsAnalyticsResponse`: `{ total_bookings: int64, status_breakdown: map[string]int64, partner_breakdown: map[string]int64 }`
 
 ---
 
@@ -626,6 +862,41 @@ Returns a current activity snapshot across sessions and events.
 - `limit` — optional recent event count to include inside `recent_events`
 
 **Response `200`**: [`RealTimeResponse`](#realtimeresponse)
+
+---
+
+### Product Rankings
+`GET /api/v2/admin/probe/products`
+
+Auth: admin token required
+
+Returns top products ranked by revenue or units sold.
+
+**Query params**
+
+- standard admin query params
+- `limit` — optional results limit (default 50)
+
+**Response `200`**: `TopProduct[]`
+
+---
+
+### Product Deep Dive
+`GET /api/v2/admin/probe/products/{id}`
+
+Auth: admin token required
+
+Returns comprehensive metrics for a specific product.
+
+**Path params**
+
+- `id` — product ID
+
+**Query params**
+
+- standard admin query params
+
+**Response `200`**: `ProductDeepDiveResponse`
 
 ---
 
