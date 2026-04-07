@@ -110,10 +110,13 @@ export async function uploadFileAndGetUrl(
     const response = await fetch(url, { method: 'POST', body: formData });
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP error ${response.status}: ${response.statusText}`);
+        throw new Error(err.error || err.data?.error || `HTTP error ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    if (data.success && data.file?.url) return data.file.url;
+    const result = await response.json();
+    // V2 API format: { success: true, data: { file: { url: "..." }, message: "..." } }
+    if (result.success && result.data?.file?.url) return result.data.file.url;
+    // Fallback for legacy format: { success: true, file: { url: "..." } }
+    if (result.success && result.file?.url) return result.file.url;
     throw new Error('Invalid response format or missing URL');
 }
