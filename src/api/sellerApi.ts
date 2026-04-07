@@ -138,7 +138,7 @@ export namespace Auth {
         };
         kyc_documents: {
             cnic_front: string;
-            cnic_back?: string;
+            cnic_back: string;
         };
         bank_details: {
             bank_name: string;

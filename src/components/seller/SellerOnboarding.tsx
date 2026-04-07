@@ -197,7 +197,7 @@ const SellerOnboarding: React.FC = () => {
       case 0: return !!(formData.email && formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && formData.password.length >= 8);
       case 1: return !!(formData.business_name && formData.business_details.business_type && formData.contact.contact_person_name && formData.contact.phone_number);
       case 2: return !!(formData.location.address && formData.location.city && formData.location.state && formData.location.postal_code);
-      case 3: return !!(formData.logo_url && formData.kyc_documents.cnic_front);
+      case 3: return !!(formData.logo_url && formData.kyc_documents.cnic_front && formData.kyc_documents.cnic_back);
       case 4: return !!(formData.bank_details.bank_name && formData.bank_details.account_title && formData.bank_details.account_number && formData.bank_details.iban);
       case 5: return formData.contract_agreed;
       default: return true;
@@ -248,7 +248,7 @@ const SellerOnboarding: React.FC = () => {
     },
     kyc_documents: {
       cnic_front: formData.kyc_documents.cnic_front!,
-      ...(formData.kyc_documents.cnic_back && { cnic_back: formData.kyc_documents.cnic_back }),
+      cnic_back: formData.kyc_documents.cnic_back!,
     },
     bank_details: {
       bank_name: formData.bank_details.bank_name, account_title: formData.bank_details.account_title,
@@ -605,7 +605,7 @@ const SellerOnboarding: React.FC = () => {
               <FileUploadField label="CNIC — Front" type="cnic_front" accept="image/*,.pdf"
                 hint="Clear photo or PDF" icon={<FileText size={22} />} required aspect="doc" />
               <FileUploadField label="CNIC — Back" type="cnic_back" accept="image/*,.pdf"
-                hint="Clear photo or PDF" icon={<FileText size={22} />} aspect="doc" />
+                hint="Clear photo or PDF" icon={<FileText size={22} />} required aspect="doc" />
             </div>
           </div>
         </div>
