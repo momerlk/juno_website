@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Product, Variant, Option, Pricing, SizingGuide, Inventory } from '../../constants/types';
 import * as api from '../../api/sellerApi';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
-import { X, Plus, Trash2, Upload, DollarSign, Tag, Image as ImageIcon, Paperclip, Settings2, Ruler, ArrowLeft, ArrowRight, Video, Loader } from 'lucide-react';
+import { X, Plus, Trash2, Upload, DollarSign, Paperclip, Settings2, Ruler, ArrowLeft, ArrowRight, Loader, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SizingGuideEditor from './SizingGuideEditor';
 import { productTypes, apparelTypes, productTypeToSizingGuide } from '../../constants/sizing';
@@ -61,16 +61,15 @@ const generateHandle = (title: string, brand: string): string => {
 const fieldClassName = 'mt-1 w-full rounded-[1.05rem] border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/22 focus:border-primary/35';
 const quickChipClassName = 'rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white/72 transition-colors hover:border-primary/30 hover:text-white';
 const sizePresets = ['XS, S, M, L, XL', 'S, M, L', '30, 32, 34, 36', 'One Size'];
-const suggestedTags = ['new-arrival', 'eid-edit', 'summer', 'festive', 'essentials', 'best-seller'];
-const editorSections = [
-    { id: 'basic-information', label: 'Basic', title: 'Basic Information' },
-    { id: 'media', label: 'Media', title: 'Media' },
-    { id: 'pricing', label: 'Pricing', title: 'Pricing' },
-    { id: 'options-variants', label: 'Variants', title: 'Options & Variants' },
-    { id: 'organization', label: 'Organization', title: 'Organization' },
-    { id: 'sizing-guide', label: 'Sizing', title: 'Sizing Guide' },
-];
-
+type ProfitData = {
+    brand_price: number;
+    effective_brand_price: number;
+    commission: number;
+    seller_payout: number;
+    cost_price: number;
+    profit: number;
+    margin_percent: number;
+};
 
 const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose }) => {
     const { seller } = useSellerAuth();
@@ -78,8 +77,13 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
     const [isSaving, setIsSaving] = useState(false);
     const [uploadingMedia, setUploadingMedia] = useState<'image' | 'video' | null>(null);
     const [tagInput, setTagInput] = useState('');
-    const [activeSection, setActiveSection] = useState('basic-information');
-    const contentRef = useRef<HTMLDivElement | null>(null);
+    const [showComparePrice, setShowComparePrice] = useState(false);
+    const [showUnitPrice, setShowUnitPrice] = useState(false);
+    const [showCostSection, setShowCostSection] = useState(false);
+    const [costPrice, setCostPrice] = useState<number | ''>('');
+    const [shippingIncluded, setShippingIncluded] = useState(false);
+    const [profitData, setProfitData] = useState<ProfitData | null>(null);
+    const [loadingProfit, setLoadingProfit] = useState(false);
 
     useEffect(() => {
         const defaultProductState: Partial<Product> = {
@@ -112,6 +116,16 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
             : defaultProductState;
 
         setFormData(initialState);
+        setShowComparePrice(Boolean(product?.pricing?.compare_at_price));
+        setShowUnitPrice(Boolean((product?.pricing as any)?.unit_price));
+        setShowCostSection(Boolean(product?.pricing && 'cost_price' in product.pricing && (product.pricing as any).cost_price));
+        setCostPrice(
+            product?.pricing && 'cost_price' in product.pricing && typeof (product.pricing as any).cost_price === 'number'
+                ? (product.pricing as any).cost_price
+                : ''
+        );
+        setShippingIncluded(Boolean(product?.pricing && 'shipping_included' in product.pricing && (product.pricing as any).shipping_included));
+        setProfitData(null);
         const nonGenderTags = initialState.tags?.filter(tag => !['male', 'female', 'unisex'].includes(tag.toLowerCase())) || [];
         setTagInput(nonGenderTags.join(', '));
         console.groupCollapsed('[inventory-debug] editor-init');
@@ -124,15 +138,22 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
     }, [product]);
 
     const generateVariantCombinations = useCallback((options: Option[] | null | undefined = []) => {
-        if (!options || options.length === 0 || options.every(o => o.values.length === 0)) return [];
+        const normalizedOptions = (options || [])
+            .map((option) => ({
+                ...option,
+                values: option.values.filter((value) => value.trim() !== ''),
+            }))
+            .filter((option) => option.name.trim() !== '');
+
+        if (!normalizedOptions.length || normalizedOptions.every((o) => o.values.length === 0)) return [];
         
         const combinations: Record<string, string>[] = [];
         const generate = (index: number, current: Record<string, string>) => {
-            if (index === options.length) {
+            if (index === normalizedOptions.length) {
                 if (Object.keys(current).length > 0) combinations.push(current);
                 return;
             }
-            const option = options[index];
+            const option = normalizedOptions[index];
             if (option.values.length === 0) {
                 generate(index + 1, current);
             } else {
@@ -147,6 +168,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
 
     useEffect(() => {
         const newCombinations = generateVariantCombinations(formData.options);
+        const basePrice = formData.pricing?.price || 0;
         
         const newVariants = newCombinations.map((combo, index) => {
             const title = Object.values(combo).join(' / ');
@@ -155,7 +177,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                 id: existingVariant?.id || `new_${Date.now()}_${index}`,
                 title,
                 options: combo,
-                price: existingVariant?.price || formData.pricing?.price || 0,
+                price: existingVariant?.price ?? basePrice,
                 inventory: existingVariant?.inventory || { quantity: 0 },
                 sku: existingVariant?.sku || '',
                 available: existingVariant?.available ?? true,
@@ -192,6 +214,47 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
         const { name, value, type, checked } = e.target;
         const val = type === 'checkbox' ? checked : parseFloat(value);
         setFormData(prev => ({ ...prev, pricing: { ...prev.pricing, [name]: val } as Pricing }));
+    };
+
+    const fetchProfit = async () => {
+        const price = formData.pricing?.price || 0;
+        const cp = typeof costPrice === 'number' ? costPrice : undefined;
+
+        if (cp === undefined || price <= 0) {
+            setProfitData(null);
+            return;
+        }
+
+        if (!product?.id || !seller?.token) {
+            setProfitData(null);
+            return;
+        }
+
+        setLoadingProfit(true);
+        try {
+            const res = await api.Seller.GetProductProfit(seller.token, product.id, { cost_price: cp });
+            if (res.ok && res.body) {
+                setProfitData(res.body as ProfitData);
+            } else {
+                setProfitData(null);
+            }
+        } catch (error) {
+            setProfitData(null);
+        } finally {
+            setLoadingProfit(false);
+        }
+    };
+
+    const handleShippingIncludedToggle = async () => {
+        const next = !shippingIncluded;
+        setShippingIncluded(next);
+        if (product?.id && seller?.token) {
+            try {
+                await api.Seller.UpdateProductPricing(seller.token, product.id, { shipping_included: next });
+            } catch (error) {
+                console.error('Failed to update shipping included state:', error);
+            }
+        }
     };
 
     const handleMediaUpload = async (file: File, mediaType: 'image' | 'video') => {
@@ -235,6 +298,40 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
     const handleOptionValueChange = (optionIndex: number, values: string[]) => {
         const newOptions = [...(formData.options || [])];
         newOptions[optionIndex].values = values;
+        setFormData(prev => ({ ...prev, options: newOptions }));
+    };
+
+    const handleOptionValueFieldChange = (optionIndex: number, valueIndex: number, newValue: string) => {
+        const newOptions = [...(formData.options || [])];
+        const values = [...newOptions[optionIndex].values];
+        values[valueIndex] = newValue;
+        newOptions[optionIndex] = { ...newOptions[optionIndex], values };
+        setFormData(prev => ({ ...prev, options: newOptions }));
+    };
+
+    const addOptionValueField = (optionIndex: number) => {
+        const newOptions = [...(formData.options || [])];
+        newOptions[optionIndex] = {
+            ...newOptions[optionIndex],
+            values: [...newOptions[optionIndex].values, ''],
+        };
+        setFormData(prev => ({ ...prev, options: newOptions }));
+    };
+
+    const removeOptionValueField = (optionIndex: number, valueIndex: number) => {
+        const newOptions = [...(formData.options || [])];
+        const values = newOptions[optionIndex].values.filter((_, i) => i !== valueIndex);
+        newOptions[optionIndex] = { ...newOptions[optionIndex], values };
+        setFormData(prev => ({ ...prev, options: newOptions }));
+    };
+
+    const moveOptionValue = (optionIndex: number, valueIndex: number, direction: 'up' | 'down') => {
+        const newOptions = [...(formData.options || [])];
+        const values = [...newOptions[optionIndex].values];
+        const targetIndex = direction === 'up' ? valueIndex - 1 : valueIndex + 1;
+        if (targetIndex < 0 || targetIndex >= values.length) return;
+        [values[valueIndex], values[targetIndex]] = [values[targetIndex], values[valueIndex]];
+        newOptions[optionIndex] = { ...newOptions[optionIndex], values };
         setFormData(prev => ({ ...prev, options: newOptions }));
     };
 
@@ -303,7 +400,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
     };
 
     const sizeOptionValues = useMemo(() => {
-        return formData.options?.find(opt => opt.name.toLowerCase() === 'size')?.values || [];
+        return formData.options?.find(opt => opt.name.toLowerCase() === 'size')?.values.filter((value) => value.trim() !== '') || [];
     }, [formData.options]);
 
     const runValidations = () => {
@@ -437,51 +534,28 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
     const isApparel = useMemo(() => apparelTypes.includes(formData.product_type || ''), [formData.product_type]);
     const editorMode = queueId ? 'Draft Editor' : product?.id ? 'Product Editor' : 'Create Product';
     const totalStock = useMemo(() => (formData.variants || []).reduce((sum, variant) => sum + (variant.inventory?.quantity || 0), 0), [formData.variants]);
-    const primaryPrice = useMemo(() => formData.variants?.find(variant => variant.is_default)?.price || formData.pricing?.price || 0, [formData.variants, formData.pricing?.price]);
     const hasSizing = Boolean(formData.sizing_guide?.size_chart && Object.keys(formData.sizing_guide.size_chart).length > 0);
     const sizeOption = useMemo(() => formData.options?.find((option) => option.name.toLowerCase() === 'size'), [formData.options]);
     const sizeCount = sizeOption?.values?.length || 0;
     const sizeFitReady = Boolean(formData.sizing_guide?.size_fit?.trim());
-    const visibleSections = useMemo(
-        () => editorSections.filter((section) => section.id !== 'sizing-guide' || isApparel),
-        [isApparel],
-    );
+    const pricingPreview = useMemo(() => {
+        const sellingPrice = formData.pricing?.price || 0;
+        const cp = typeof costPrice === 'number' ? costPrice : 0;
+        const displayPrice = shippingIncluded ? sellingPrice : sellingPrice + 99;
+        const commission = Math.round(displayPrice * 0.175);
+        const payout = displayPrice - commission;
+        const profit = payout - cp;
+        const margin = payout > 0 ? ((profit / payout) * 100).toFixed(1) : '0.0';
 
-    const jumpToSection = useCallback((sectionId: string) => {
-        const container = contentRef.current;
-        if (!container) return;
-        const target = container.querySelector<HTMLElement>(`#${sectionId}`);
-        if (!target) return;
-        const top = target.offsetTop - 12;
-        container.scrollTo({ top, behavior: 'smooth' });
-        setActiveSection(sectionId);
-    }, []);
-
-    useEffect(() => {
-        const container = contentRef.current;
-        if (!container) return;
-
-        const handleScroll = () => {
-            const sections = visibleSections
-                .map((section) => {
-                    const element = container.querySelector<HTMLElement>(`#${section.id}`);
-                    if (!element) return null;
-                    return {
-                        id: section.id,
-                        distance: Math.abs(element.offsetTop - container.scrollTop - 20),
-                    };
-                })
-                .filter(Boolean) as Array<{ id: string; distance: number }>;
-
-            if (sections.length === 0) return;
-            sections.sort((a, b) => a.distance - b.distance);
-            setActiveSection(sections[0].id);
+        return {
+            displayPrice,
+            commission,
+            payout,
+            cost: cp,
+            profit,
+            margin,
         };
-
-        handleScroll();
-        container.addEventListener('scroll', handleScroll);
-        return () => container.removeEventListener('scroll', handleScroll);
-    }, [visibleSections]);
+    }, [formData.pricing?.price, costPrice, shippingIncluded]);
 
     return (
         <motion.div
@@ -503,395 +577,708 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
             </div>
 
             <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-                <div ref={contentRef} className="min-h-0 overflow-y-auto px-4 py-5 sm:px-6">
-                    <div className="mx-auto max-w-5xl space-y-6">
-                        <div className="rounded-[1.8rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.14),transparent_34%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5">
-                            <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary/75">Product Setup</p>
-                            <h3 className="mt-2 text-2xl font-black uppercase tracking-[-0.04em] text-white">
-                                {queueId ? 'Fix What Matters And Publish' : product?.id ? 'Edit Product Details' : 'Create A Product'}
-                            </h3>
-                            <p className="mt-2 max-w-2xl text-sm text-white/58">
-                                Work top to bottom. Start with the product details, then add photos, price, stock, and sizing.
-                            </p>
-                            <div className="mt-4 flex flex-wrap gap-2">
-                                {[
-                                    { label: primaryPrice > 0 ? `Price: Rs ${primaryPrice.toLocaleString()}` : 'Price not set' },
-                                    { label: `${formData.variants?.length || 0} variants` },
-                                    { label: `${totalStock} in stock` },
-                                    { label: isApparel ? (hasSizing ? 'Sizing ready' : 'Sizing pending') : 'Sizing optional' },
-                                ].map((item) => (
-                                    <span key={item.label} className="rounded-full border border-white/10 bg-black/25 px-3 py-2 text-xs font-semibold text-white/70">
-                                        {item.label}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3">
-                            <div className="flex gap-2 overflow-x-auto pb-1">
-                                {visibleSections.map((section) => (
-                                    <button
-                                        key={section.id}
-                                        type="button"
-                                        onClick={() => jumpToSection(section.id)}
-                                        className={`whitespace-nowrap rounded-full border px-3 py-2 text-xs font-black uppercase tracking-[0.08em] transition-colors ${
-                                            activeSection === section.id
-                                                ? 'border-primary/30 bg-primary text-white'
-                                                : 'border-white/10 bg-black/25 text-white/65'
-                                        }`}
-                                    >
-                                        {section.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <Section id="basic-information" title="Basic Information" eyebrow="Step 1" icon={<Paperclip size={18} />}>
-                            <div className="space-y-5">
-                                <div>
-                                    <label htmlFor="title" className="block text-sm font-medium text-neutral-300">Product title</label>
-                                    <input
-                                        type="text"
-                                        name="title"
-                                        id="title"
-                                        value={formData.title || ''}
-                                        onChange={handleChange}
-                                        className={fieldClassName}
-                                        placeholder="Classic lawn kurta, cropped denim jacket, embroidered waistcoat..."
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="description" className="block text-sm font-medium text-neutral-300">Description</label>
-                                    <textarea
-                                        name="description"
-                                        id="description"
-                                        value={formData.description || ''}
-                                        onChange={handleChange}
-                                        className={`${fieldClassName} h-28`}
-                                        placeholder="Explain the fabric, fit, and what makes this piece worth buying."
-                                    />
-                                </div>
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label htmlFor="product_type" className="block text-sm font-medium text-neutral-300">Product type</label>
-                                        <select name="product_type" id="product_type" value={formData.product_type || ''} onChange={handleChange} className={fieldClassName} required>
-                                            <option value="" className="bg-neutral-900">Select a type</option>
-                                            {productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="gender" className="block text-sm font-medium text-neutral-300">Gender</label>
-                                        <select id="gender" value={currentGender} onChange={handleGenderChange} className={fieldClassName} required>
-                                            <option value="" className="bg-neutral-900">Select gender</option>
-                                            <option value="male" className="bg-neutral-900">Male</option>
-                                            <option value="female" className="bg-neutral-900">Female</option>
-                                            <option value="unisex" className="bg-neutral-900">Unisex</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/45">Quick setup</p>
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        {['Eastern', 'Western', 'Accessories', 'Footwear'].map((type) => (
-                                            <button key={type} type="button" onClick={() => setFormData(prev => ({ ...prev, product_type: type }))} className={quickChipClassName}>
-                                                {type}
-                                            </button>
-                                        ))}
-                                        {['female', 'male', 'unisex'].map((gender) => (
-                                            <button key={gender} type="button" onClick={() => handleGenderChange({ target: { value: gender } } as React.ChangeEvent<HTMLSelectElement>)} className={quickChipClassName}>
-                                                {gender}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </Section>
-
-                        <Section id="media" title="Media" eyebrow="Step 2" icon={<ImageIcon size={18} />}>
-                            <div className="space-y-5">
-                                <div className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
-                                    <h4 className="text-base font-black uppercase tracking-[-0.03em] text-white">Product photos</h4>
-                                    <p className="mt-1 text-sm text-white/55">Upload clear images first. The first image becomes the cover image customers see.</p>
-                                    <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                                        <AnimatePresence>
-                                            {formData.images?.map((url, index) => (
-                                                <motion.div layout key={url} className="relative overflow-hidden rounded-[1.1rem] border border-white/10 bg-black/30">
-                                                    <img src={getShopifyThumbnail(url)} loading="lazy" alt={`Product image ${index + 1}`} className="h-32 w-full object-cover" />
-                                                    <div className="absolute left-3 top-3 rounded-full bg-black/70 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.16em] text-white/80">
-                                                        {index === 0 ? 'Cover' : `Image ${index + 1}`}
-                                                    </div>
-                                                    <div className="border-t border-white/10 bg-black/55 p-2">
-                                                        <div className="flex items-center justify-between gap-1">
-                                                            <button type="button" onClick={() => handleReorderImage(index, 'left')} className="rounded-lg border border-white/10 bg-white/[0.04] p-2 text-white/80 transition-colors hover:bg-white/[0.08] disabled:opacity-40" disabled={index === 0}>
-                                                                <ArrowLeft size={14} />
-                                                            </button>
-                                                            <button type="button" onClick={() => handleRemoveImage(index)} className="rounded-lg border border-red-500/20 bg-red-500/10 p-2 text-red-300 transition-colors hover:bg-red-500/20">
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                            <button type="button" onClick={() => handleReorderImage(index, 'right')} className="rounded-lg border border-white/10 bg-white/[0.04] p-2 text-white/80 transition-colors hover:bg-white/[0.08] disabled:opacity-40" disabled={index === (formData.images?.length || 0) - 1}>
-                                                                <ArrowRight size={14} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            ))}
-                                        </AnimatePresence>
-                                        <label htmlFor="image-upload" className={`flex h-32 cursor-pointer flex-col items-center justify-center rounded-[1.1rem] border-2 border-dashed border-white/10 bg-white/[0.03] p-4 text-center text-neutral-400 transition-colors ${uploadingMedia ? 'cursor-not-allowed' : 'hover:border-primary/50 hover:bg-primary/5 hover:text-primary'}`}>
-                                            {uploadingMedia === 'image' ? (
-                                                <>
-                                                    <Loader className="animate-spin" size={22} />
-                                                    <span className="mt-2 text-xs font-semibold">Uploading image...</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Upload size={22} />
-                                                    <span className="mt-2 text-sm font-semibold">Add image</span>
-                                                    <span className="mt-1 text-xs text-white/40">JPEG, PNG, WEBP</span>
-                                                </>
-                                            )}
-                                            <input id="image-upload" type="file" accept="image/*" onChange={(e) => e.target.files && handleMediaUpload(e.target.files[0], 'image')} className="hidden" disabled={uploadingMedia !== null} />
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
-                                    <h4 className="text-base font-black uppercase tracking-[-0.03em] text-white">Optional product video</h4>
-                                    <p className="mt-1 text-sm text-white/55">Add a short video only if it helps explain movement, fabric, or styling.</p>
-                                    <div className="mt-4">
-                                        {formData.video_url ? (
-                                            <div className="max-w-sm overflow-hidden rounded-[1.1rem] border border-white/10 bg-black/30">
-                                                <video src={formData.video_url} className="h-40 w-full bg-black object-cover" controls />
-                                                <div className="flex justify-end border-t border-white/10 p-3">
-                                                    <button type="button" onClick={() => setFormData(p => ({ ...p, video_url: '' }))} className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/20">
-                                                        Remove video
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <label htmlFor="video-upload" className={`flex h-32 max-w-sm cursor-pointer flex-col items-center justify-center rounded-[1.1rem] border-2 border-dashed border-white/10 bg-white/[0.03] p-4 text-center text-neutral-400 transition-colors ${uploadingMedia ? 'cursor-not-allowed' : 'hover:border-primary/50 hover:bg-primary/5 hover:text-primary'}`}>
-                                                {uploadingMedia === 'video' ? (
-                                                    <>
-                                                        <Loader className="animate-spin" size={22} />
-                                                        <span className="mt-2 text-xs font-semibold">Uploading video...</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Video size={22} />
-                                                        <span className="mt-2 text-sm font-semibold">Add video</span>
-                                                        <span className="mt-1 text-xs text-white/40">Short product reel or fit clip</span>
-                                                    </>
-                                                )}
-                                                <input id="video-upload" type="file" accept="video/*" onChange={(e) => e.target.files && handleMediaUpload(e.target.files[0], 'video')} className="hidden" disabled={uploadingMedia !== null} />
+                <div className="min-h-0 overflow-y-auto px-4 py-5 sm:px-6">
+                    <div className="mx-auto max-w-6xl">
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px] lg:items-start">
+                            <div className="space-y-5" id="main-col">
+                                <Section id="content" title="Product" eyebrow="Step 1" icon={<Paperclip size={16} />}>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label htmlFor="title" className="mb-1 block text-xs font-medium text-neutral-400">
+                                                Title
                                             </label>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </Section>
-
-                        <Section id="pricing" title="Pricing" eyebrow="Step 3" icon={<DollarSign size={18} />}>
-                            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-                                <div className="space-y-4">
-                                    <div>
-                                        <label htmlFor="price" className="block text-sm font-medium text-neutral-300">Selling price (PKR)</label>
-                                        <input type="number" name="price" id="price" value={formData.pricing?.price || ''} onChange={handlePricingChange} className={fieldClassName} required />
-                                        <p className="mt-2 text-xs text-white/45">This is the price shoppers will pay.</p>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="compare_at_price" className="block text-sm font-medium text-neutral-300">Original price (optional)</label>
-                                        <input type="number" name="compare_at_price" id="compare_at_price" value={formData.pricing?.compare_at_price || ''} onChange={handlePricingChange} className={fieldClassName} />
-                                        <p className="mt-2 text-xs text-white/45">Use this only if the item is on sale and you want to show a struck-through original price.</p>
-                                    </div>
-                                </div>
-                                <div className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/45">Pricing summary</p>
-                                    <div className="mt-4 space-y-3 text-sm">
-                                        <div className="flex items-center justify-between text-white/70">
-                                            <span>Live price</span>
-                                            <span className="font-semibold text-white">{primaryPrice > 0 ? `Rs ${primaryPrice.toLocaleString()}` : 'Not set'}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-white/70">
-                                            <span>Variants</span>
-                                            <span className="font-semibold text-white">{formData.variants?.length || 0}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-white/70">
-                                            <span>Total stock</span>
-                                            <span className="font-semibold text-white">{totalStock}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </Section>
-
-                        <Section id="options-variants" title="Options & Variants" eyebrow="Step 4" icon={<Settings2 size={18} />}>
-                            <div className="space-y-5">
-                                <div className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/45">Quick presets</p>
-                                    <p className="mt-1 text-sm text-white/55">Use a preset if this product only needs standard size or color options.</p>
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        <button type="button" onClick={() => setPresetOption('Size', ['S', 'M', 'L'])} className={quickChipClassName}>Size S-M-L</button>
-                                        <button type="button" onClick={() => setPresetOption('Size', ['XS', 'S', 'M', 'L', 'XL'])} className={quickChipClassName}>Size XS-XL</button>
-                                        <button type="button" onClick={() => setPresetOption('Color', ['Black', 'White'])} className={quickChipClassName}>Color Black/White</button>
-                                    </div>
-                                </div>
-
-                                {formData.options?.map((opt, index) => (
-                                    <div key={index} className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
-                                        <div className="grid gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)_auto]">
-                                            <input type="text" placeholder="Option name, for example Size" value={opt.name} onChange={e => handleOptionChange(index, e.target.value)} className="w-full rounded-[0.95rem] border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-primary/35" />
-                                            <input type="text" placeholder="Option values, separated by commas" value={opt.values.join(', ')} onChange={e => handleOptionValueChange(index, e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="w-full rounded-[0.95rem] border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-primary/35" />
-                                            <button type="button" onClick={() => removeOption(index)} className="rounded-[0.95rem] border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/20">
-                                                Remove
-                                            </button>
-                                        </div>
-                                        {opt.name.toLowerCase() === 'size' && (
-                                            <div className="mt-3 flex flex-wrap gap-2">
-                                                {sizePresets.map((preset) => (
-                                                    <button
-                                                        key={preset}
-                                                        type="button"
-                                                        onClick={() => handleOptionValueChange(index, preset.split(',').map(item => item.trim()))}
-                                                        className={quickChipClassName}
-                                                    >
-                                                        {preset}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-
-                                <button type="button" onClick={addOption} className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white/78 transition-colors hover:text-white">
-                                    <Plus size={16} />
-                                    <span>Add another option</span>
-                                </button>
-
-                                {formData.variants && formData.variants.length > 0 && (
-                                    <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
-                                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                                            <div>
-                                                <h4 className="text-base font-black uppercase tracking-[-0.03em] text-white">Variant pricing and stock</h4>
-                                                <p className="mt-1 text-sm text-white/55">Edit each variant only if it differs from the base product.</p>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const price = formData.pricing?.price || 0;
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        variants: prev.variants?.map((variant) => ({ ...variant, price })) || [],
-                                                    }));
-                                                }}
-                                                className={quickChipClassName}
-                                            >
-                                                Apply base price to all
-                                            </button>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {formData.variants.map(variant => (
-                                                <div key={variant.id} className="grid gap-4 rounded-[1.1rem] border border-white/10 bg-black/25 p-4 md:grid-cols-[minmax(0,1.2fr)_10rem_10rem]">
-                                                    <div>
-                                                        <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Variant</p>
-                                                        <p className="mt-2 truncate text-sm font-semibold text-neutral-300" title={variant.title}>{variant.title}</p>
-                                                    </div>
-                                                    <div>
-                                                        <label className="mb-1 block text-xs text-neutral-500">Price</label>
-                                                        <input type="number" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} className="w-full rounded-[0.9rem] border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-primary/35" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="mb-1 block text-xs text-neutral-500">Stock</label>
-                                                        <input type="number" value={variant.inventory?.quantity || 0} onChange={e => handleVariantChange(variant.id, 'quantity', e.target.value)} className="w-full rounded-[0.9rem] border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-primary/35" />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </Section>
-
-                        <Section id="organization" title="Organization" eyebrow="Step 5" icon={<Tag size={18} />}>
-                            <div>
-                                <label htmlFor="tags" className="block text-sm font-medium text-neutral-300">Tags</label>
-                                <input
-                                    type="text"
-                                    id="tags"
-                                    value={tagInput}
-                                    onChange={(e) => setTagInput(e.target.value)}
-                                    onBlur={(e) => handleTagChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                                    className={fieldClassName}
-                                    placeholder="summer, new-arrival, sale"
-                                />
-                                <p className="mt-2 text-xs text-white/45">Use a few clean tags to keep products grouped correctly.</p>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {suggestedTags.map((tag) => (
-                                        <button key={tag} type="button" onClick={() => addSuggestedTag(tag)} className={quickChipClassName}>
-                                            {tag}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </Section>
-
-                        {isApparel ? (
-                            <div id="sizing-guide" className="scroll-mt-24 space-y-5">
-                                <Section title="Sizing Guide" eyebrow="Step 6" icon={<Ruler size={18} />}>
-                                    <div className="space-y-5">
-                                        <div className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
-                                            <h4 className="text-base font-black uppercase tracking-[-0.03em] text-white">How to fill this section</h4>
-                                            <div className="mt-3 grid gap-3 md:grid-cols-3">
-                                                <div className="rounded-[1rem] border border-white/10 bg-white/[0.03] p-3">
-                                                    <p className="text-sm font-semibold text-white">1. Confirm sizes</p>
-                                                    <p className="mt-1 text-xs leading-relaxed text-white/50">{sizeCount > 0 ? `${sizeCount} sizes are already available from your variants.` : 'Add a Size option under Variants first.'}</p>
-                                                </div>
-                                                <div className="rounded-[1rem] border border-white/10 bg-white/[0.03] p-3">
-                                                    <p className="text-sm font-semibold text-white">2. Add fit notes</p>
-                                                    <p className="mt-1 text-xs leading-relaxed text-white/50">Keep it simple: true to size, relaxed fit, slim fit, or oversized.</p>
-                                                </div>
-                                                <div className="rounded-[1rem] border border-white/10 bg-white/[0.03] p-3">
-                                                    <p className="text-sm font-semibold text-white">3. Fill only useful measurements</p>
-                                                    <p className="mt-1 text-xs leading-relaxed text-white/50">Buyers usually need chest, length, waist, or inseam. Skip anything unnecessary.</p>
-                                                </div>
-                                            </div>
-                                            <div className="mt-4 flex flex-wrap gap-2">
-                                                <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/70">
-                                                    {sizeCount || 'No'} sizes detected
-                                                </span>
-                                                <span className={`rounded-full border px-3 py-2 text-xs font-semibold ${sizeFitReady ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300' : 'border-yellow-400/20 bg-yellow-500/10 text-yellow-300'}`}>
-                                                    {sizeFitReady ? 'Fit notes ready' : 'Fit notes missing'}
-                                                </span>
-                                                <span className={`rounded-full border px-3 py-2 text-xs font-semibold ${hasSizing ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300' : 'border-yellow-400/20 bg-yellow-500/10 text-yellow-300'}`}>
-                                                    {hasSizing ? 'Chart started' : 'Chart not filled'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
-                                            <SizingGuideEditor
-                                                value={formData.sizing_guide}
-                                                onChange={handleSizingGuideUpdate}
-                                                productType={formData.product_type}
-                                                availableSizes={sizeOptionValues}
+                                            <input
+                                                type="text"
+                                                name="title"
+                                                id="title"
+                                                value={formData.title || ''}
+                                                onChange={handleChange}
+                                                className={fieldClassName}
+                                                placeholder="Classic lawn kurta, cropped denim jacket..."
+                                                required
                                             />
+                                        </div>
+
+                                        <div>
+                                            <label htmlFor="description" className="mb-1 block text-xs font-medium text-neutral-400">
+                                                Description
+                                            </label>
+                                            <textarea
+                                                name="description"
+                                                id="description"
+                                                value={formData.description || ''}
+                                                onChange={handleChange}
+                                                className={`${fieldClassName} h-28 resize-none`}
+                                                placeholder="Explain the fabric, fit, and what makes this piece worth buying."
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <p className="mb-2 text-xs font-medium text-neutral-400">Media</p>
+                                            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                                                <AnimatePresence>
+                                                    {formData.images?.map((url, index) => (
+                                                        <motion.div layout key={url} className="relative overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                                                            <img src={getShopifyThumbnail(url)} loading="lazy" alt={`Product image ${index + 1}`} className="h-24 w-full object-cover" />
+                                                            {index === 0 && (
+                                                                <div className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-white/80">
+                                                                    Cover
+                                                                </div>
+                                                            )}
+                                                            <div className="flex items-center justify-between gap-0.5 border-t border-white/10 bg-black/55 px-1.5 py-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleReorderImage(index, 'left')}
+                                                                    disabled={index === 0}
+                                                                    className="rounded-md border border-white/10 bg-white/[0.04] p-1 text-white/80 disabled:opacity-30 hover:bg-white/[0.08]"
+                                                                >
+                                                                    <ArrowLeft size={11} />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveImage(index)}
+                                                                    className="rounded-md border border-red-500/20 bg-red-500/10 p-1 text-red-300 hover:bg-red-500/20"
+                                                                >
+                                                                    <Trash2 size={11} />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleReorderImage(index, 'right')}
+                                                                    disabled={index === (formData.images?.length || 0) - 1}
+                                                                    className="rounded-md border border-white/10 bg-white/[0.04] p-1 text-white/80 disabled:opacity-30 hover:bg-white/[0.08]"
+                                                                >
+                                                                    <ArrowRight size={11} />
+                                                                </button>
+                                                            </div>
+                                                        </motion.div>
+                                                    ))}
+                                                </AnimatePresence>
+                                                <label
+                                                    htmlFor="image-upload"
+                                                    className={`flex h-24 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/10 bg-white/[0.03] text-center text-neutral-400 transition-colors ${uploadingMedia ? 'cursor-not-allowed' : 'hover:border-primary/50 hover:bg-primary/5 hover:text-primary'}`}
+                                                >
+                                                    {uploadingMedia === 'image' ? (
+                                                        <>
+                                                            <Loader className="animate-spin" size={18} />
+                                                            <span className="mt-1 text-[10px]">Uploading...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Upload size={18} />
+                                                            <span className="mt-1 text-[10px] font-medium">Add photo</span>
+                                                        </>
+                                                    )}
+                                                    <input
+                                                        id="image-upload"
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={(e) => e.target.files && handleMediaUpload(e.target.files[0], 'image')}
+                                                        className="hidden"
+                                                        disabled={uploadingMedia !== null}
+                                                    />
+                                                </label>
+                                            </div>
+                                            <p className="mt-1.5 text-[11px] text-white/35">First image is the cover. Drag to reorder.</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label htmlFor="product_type" className="mb-1 block text-xs font-medium text-neutral-400">
+                                                    Category
+                                                </label>
+                                                <select
+                                                    name="product_type"
+                                                    id="product_type"
+                                                    value={formData.product_type || ''}
+                                                    onChange={handleChange}
+                                                    className={fieldClassName}
+                                                    required
+                                                >
+                                                    <option value="" className="bg-neutral-900">Select category</option>
+                                                    {productTypes.map((type) => (
+                                                        <option key={type} value={type} className="bg-neutral-900">{type}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label htmlFor="gender" className="mb-1 block text-xs font-medium text-neutral-400">
+                                                    Gender
+                                                </label>
+                                                <select
+                                                    id="gender"
+                                                    value={currentGender}
+                                                    onChange={handleGenderChange}
+                                                    className={fieldClassName}
+                                                    required
+                                                >
+                                                    <option value="" className="bg-neutral-900">Select gender</option>
+                                                    <option value="male" className="bg-neutral-900">Male</option>
+                                                    <option value="female" className="bg-neutral-900">Female</option>
+                                                    <option value="unisex" className="bg-neutral-900">Unisex</option>
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                 </Section>
-                            </div>
-                        ) : (
-                            <div id="sizing-guide" className="scroll-mt-24 rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-5">
-                                <p className="text-sm font-semibold text-white">Sizing guide not required</p>
-                                <p className="mt-2 text-sm text-white/50">Sizing appears for apparel product types. Select an apparel type if this product needs measurements.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
 
-                <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-white/10 bg-black/70 px-6 py-4 backdrop-blur-xl">
-                    <button type="button" onClick={onClose} className="rounded-xl px-5 py-2 text-neutral-300 transition-colors hover:bg-white/10 hover:text-white">Cancel</button>
-                    <button type="submit" disabled={isSaving} className="rounded-xl border border-primary/30 bg-primary px-5 py-2 font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50">
-                        {isSaving ? 'Saving...' : 'Save Product'}
-                    </button>
+                                <Section id="pricing" title="Pricing" eyebrow="Step 2" icon={<DollarSign size={16} />}>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label htmlFor="price" className="mb-1 block text-xs font-medium text-neutral-400">
+                                                Price <span className="font-normal text-white/30">(PKR)</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                name="price"
+                                                id="price"
+                                                value={formData.pricing?.price || ''}
+                                                onChange={handlePricingChange}
+                                                className={fieldClassName}
+                                                placeholder="0"
+                                                required
+                                            />
+                                        </div>
+
+                                        {showComparePrice && (
+                                            <div>
+                                                <label htmlFor="compare_at_price" className="mb-1 block text-xs font-medium text-neutral-400">
+                                                    Compare-at price <span className="font-normal text-white/30">(original / struck-through)</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="compare_at_price"
+                                                    id="compare_at_price"
+                                                    value={formData.pricing?.compare_at_price || ''}
+                                                    onChange={handlePricingChange}
+                                                    className={fieldClassName}
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {showUnitPrice && (
+                                            <div>
+                                                <label htmlFor="unit_price" className="mb-1 block text-xs font-medium text-neutral-400">
+                                                    Unit price <span className="font-normal text-white/30">(price per unit for bulk listings)</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="unit_price"
+                                                    id="unit_price"
+                                                    value={(formData.pricing as any)?.unit_price || ''}
+                                                    onChange={handlePricingChange}
+                                                    className={fieldClassName}
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="flex flex-wrap gap-2">
+                                            {!showComparePrice && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowComparePrice(true)}
+                                                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                >
+                                                    + Compare-at price
+                                                </button>
+                                            )}
+                                            {!showUnitPrice && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowUnitPrice(true)}
+                                                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                >
+                                                    + Unit price
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/25 px-4 py-3">
+                                            <div>
+                                                <p className="text-xs font-medium text-white/80">Shipping included in price</p>
+                                                <p className="mt-0.5 text-[11px] text-white/40">
+                                                    Juno adds Rs. 99 shipping to each product. If this is on, Rs. 99 will be deducted from your listed price, plus commission.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleShippingIncludedToggle}
+                                                className={`relative h-5 w-9 rounded-full transition-colors ${shippingIncluded ? 'bg-primary' : 'bg-white/10'}`}
+                                                aria-pressed={shippingIncluded}
+                                            >
+                                                <span
+                                                    className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${shippingIncluded ? 'translate-x-4' : 'translate-x-0'}`}
+                                                />
+                                            </button>
+                                        </div>
+
+                                        {!showCostSection ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCostSection(true)}
+                                                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/50 transition-colors hover:border-primary/20 hover:text-white/80"
+                                            >
+                                                <span className="rounded-sm bg-white/10 px-1 py-0.5 text-[9px] uppercase tracking-wider">Cost</span>
+                                                Add cost price to see profit & margin
+                                            </button>
+                                        ) : (
+                                            <div className="space-y-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-xs font-semibold uppercase tracking-widest text-white/60">Cost & Profit</p>
+                                                    <p className="text-[10px] text-white/30">Not shown to customers</p>
+                                                </div>
+
+                                                <div>
+                                                    <label htmlFor="cost_price" className="mb-1 block text-xs font-medium text-neutral-400">
+                                                        Cost price <span className="font-normal text-white/30">(PKR)</span>
+                                                    </label>
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="number"
+                                                            id="cost_price"
+                                                            value={costPrice}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                setCostPrice(value === '' ? '' : parseFloat(value));
+                                                                if (value === '') {
+                                                                    setProfitData(null);
+                                                                }
+                                                            }}
+                                                            onBlur={fetchProfit}
+                                                            className={fieldClassName}
+                                                            placeholder="What you paid to make or source this"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {loadingProfit && (
+                                                    <div className="flex items-center gap-2 text-[11px] text-white/40">
+                                                        <Loader size={12} className="animate-spin" />
+                                                        Calculating...
+                                                    </div>
+                                                )}
+
+                                                {(typeof costPrice === 'number' && (formData.pricing?.price || 0) > 0 && !loadingProfit) && (() => {
+                                                    const displayValues = profitData
+                                                        ? {
+                                                            displayPrice: pricingPreview.displayPrice,
+                                                            commission: profitData.commission,
+                                                            payout: profitData.seller_payout,
+                                                            cost: profitData.cost_price,
+                                                            profit: profitData.profit,
+                                                            margin: (profitData.margin_percent ?? 0).toFixed(1),
+                                                        }
+                                                        : pricingPreview;
+
+                                                    return (
+                                                        <div className="space-y-2">
+                                                            <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                                                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                                                                    <p className="text-white/40">Display price</p>
+                                                                    <p className="mt-1 font-semibold text-white">Rs {displayValues.displayPrice.toLocaleString()}</p>
+                                                                    {!shippingIncluded && <p className="text-[10px] text-white/30">incl. Rs 99 buffer</p>}
+                                                                </div>
+                                                                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                                                                    <p className="text-white/40">Commission (17.5%)</p>
+                                                                    <p className="mt-1 font-semibold text-white">- Rs {displayValues.commission.toLocaleString()}</p>
+                                                                </div>
+                                                                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                                                                    <p className="text-white/40">Your payout</p>
+                                                                    <p className="mt-1 font-semibold text-white">Rs {displayValues.payout.toLocaleString()}</p>
+                                                                </div>
+                                                                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                                                                    <p className="text-white/40">Cost price</p>
+                                                                    <p className="mt-1 font-semibold text-white">- Rs {displayValues.cost.toLocaleString()}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className={`flex items-center justify-between rounded-xl border p-3 ${displayValues.profit >= 0 ? 'border-emerald-400/20 bg-emerald-500/10' : 'border-red-400/20 bg-red-500/10'}`}>
+                                                                <div>
+                                                                    <p className="text-[10px] uppercase tracking-wider text-white/50">Profit</p>
+                                                                    <p className={`mt-0.5 text-lg font-black ${displayValues.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                        Rs {displayValues.profit.toLocaleString()}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="text-[10px] uppercase tracking-wider text-white/50">Margin</p>
+                                                                    <p className={`mt-0.5 text-lg font-black ${displayValues.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                        {displayValues.margin}%
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-center text-[10px] text-white/25">
+                                                                Profit = payout after 17.5% commission {!shippingIncluded ? '+ Rs 99 shipping buffer ' : ''}minus your cost
+                                                            </p>
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {!product?.id && (
+                                                    <p className="text-[11px] text-white/35">
+                                                        Save the product first to get a live profit calculation from the API.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </Section>
+
+                                <Section id="shipping" title="Shipping" eyebrow="Step 3" icon={<Package size={16} />}>
+                                    <div>
+                                        <label htmlFor="weight" className="mb-1 block text-xs font-medium text-neutral-400">
+                                            Product weight <span className="font-normal text-white/30">(grams)</span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="weight"
+                                            id="weight"
+                                            value={(formData as any).weight || ''}
+                                            onChange={handleChange}
+                                            className={fieldClassName}
+                                            placeholder="e.g. 350"
+                                        />
+                                        <p className="mt-1.5 text-[11px] text-white/35">
+                                            Used to calculate shipping rates accurately.
+                                        </p>
+                                    </div>
+                                </Section>
+
+                                <Section id="options-variants" title="Variants" eyebrow="Step 4" icon={<Settings2 size={16} />}>
+                                    <div className="space-y-5">
+                                        {(!formData.options || formData.options.length === 0) && (
+                                            <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={addOption}
+                                                    className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/60 transition-colors hover:border-primary/30 hover:text-primary"
+                                                >
+                                                    <Plus size={22} />
+                                                </button>
+                                                <p className="mt-3 text-xs text-white/40">Add an option like size or color</p>
+                                                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPresetOption('Size', ['S', 'M', 'L'])}
+                                                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                    >
+                                                        Size S / M / L
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPresetOption('Size', ['XS', 'S', 'M', 'L', 'XL'])}
+                                                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                    >
+                                                        Size XS / S / M / L / XL
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPresetOption('Color', ['Black', 'White'])}
+                                                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                    >
+                                                        Color Black / White
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {formData.options && formData.options.length > 0 && formData.options.map((opt, optionIndex) => {
+                                            const displayValues = opt.values.length === 0
+                                                ? ['']
+                                                : opt.values[opt.values.length - 1] === ''
+                                                    ? opt.values
+                                                    : [...opt.values, ''];
+
+                                            return (
+                                                <div key={optionIndex} className="space-y-3 rounded-2xl border border-white/10 bg-black/25 p-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex-1">
+                                                            <label className="mb-1 block text-[11px] text-white/40">Option name</label>
+                                                            <input
+                                                                type="text"
+                                                                placeholder="e.g. Size, Color, Material"
+                                                                value={opt.name}
+                                                                onChange={e => handleOptionChange(optionIndex, e.target.value)}
+                                                                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-primary/35"
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeOption(optionIndex)}
+                                                            className="mt-5 rounded-xl border border-red-500/20 bg-red-500/10 p-2 text-red-300 transition-colors hover:bg-red-500/20"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="mb-2 block text-[11px] text-white/40">Option values</label>
+                                                        <div className="space-y-2">
+                                                            <AnimatePresence initial={false}>
+                                                                {displayValues.map((val, valueIndex) => {
+                                                                    const isLastField = valueIndex === displayValues.length - 1;
+                                                                    const isOnlyField = displayValues.length === 1;
+
+                                                                    return (
+                                                                        <motion.div
+                                                                            key={`${optionIndex}-${valueIndex}`}
+                                                                            initial={{ opacity: 0, height: 0 }}
+                                                                            animate={{ opacity: 1, height: 'auto' }}
+                                                                            exit={{ opacity: 0, height: 0 }}
+                                                                            transition={{ duration: 0.15 }}
+                                                                            className="flex items-center gap-2"
+                                                                        >
+                                                                            {!isLastField && (
+                                                                                <div className="flex flex-col gap-0.5">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => moveOptionValue(optionIndex, valueIndex, 'up')}
+                                                                                        disabled={valueIndex === 0}
+                                                                                        className="rounded-md border border-white/10 bg-white/[0.03] p-0.5 text-white/40 transition-colors hover:text-white disabled:opacity-20"
+                                                                                    >
+                                                                                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                                                                                            <path d="M5 2L9 8H1L5 2Z" fill="currentColor" />
+                                                                                        </svg>
+                                                                                    </button>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => moveOptionValue(optionIndex, valueIndex, 'down')}
+                                                                                        disabled={valueIndex >= displayValues.length - 2}
+                                                                                        className="rounded-md border border-white/10 bg-white/[0.03] p-0.5 text-white/40 transition-colors hover:text-white disabled:opacity-20"
+                                                                                    >
+                                                                                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                                                                                            <path d="M5 8L1 2H9L5 8Z" fill="currentColor" />
+                                                                                        </svg>
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+
+                                                                            <input
+                                                                                type="text"
+                                                                                value={val}
+                                                                                placeholder={isLastField ? 'Add value...' : ''}
+                                                                                onChange={e => handleOptionValueFieldChange(optionIndex, valueIndex, e.target.value)}
+                                                                                onBlur={e => {
+                                                                                    if (isLastField && e.target.value !== '') {
+                                                                                        addOptionValueField(optionIndex);
+                                                                                    }
+                                                                                }}
+                                                                                className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-primary/35"
+                                                                            />
+
+                                                                            {!isLastField && !isOnlyField && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => removeOptionValueField(optionIndex, valueIndex)}
+                                                                                    className="rounded-xl border border-white/10 bg-white/[0.03] p-1.5 text-white/30 transition-colors hover:border-red-400/20 hover:text-red-400"
+                                                                                >
+                                                                                    <X size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </motion.div>
+                                                                    );
+                                                                })}
+                                                            </AnimatePresence>
+                                                        </div>
+                                                    </div>
+
+                                                    {opt.name.toLowerCase() === 'size' && (
+                                                        <div className="mt-1 flex flex-wrap gap-2">
+                                                            {sizePresets.map((preset) => (
+                                                                <button
+                                                                    key={preset}
+                                                                    type="button"
+                                                                    onClick={() => handleOptionValueChange(optionIndex, preset.split(',').map(item => item.trim()))}
+                                                                    className={quickChipClassName}
+                                                                >
+                                                                    {preset}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+
+                                        {formData.options && formData.options.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={addOption}
+                                                className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-medium text-white/60 transition-colors hover:text-white"
+                                            >
+                                                <Plus size={14} />
+                                                Add another option
+                                            </button>
+                                        )}
+
+                                        {formData.variants && formData.variants.length > 0 && (
+                                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                                                <div className="grid grid-cols-[1fr_120px_120px] gap-3 border-b border-white/10 px-4 py-2.5">
+                                                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/30">Variant</p>
+                                                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/30">Price (PKR)</p>
+                                                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/30">Qty</p>
+                                                </div>
+                                                <div className="divide-y divide-white/[0.06]">
+                                                    {formData.variants.map(variant => (
+                                                        <div key={variant.id} className="grid grid-cols-[1fr_120px_120px] items-center gap-3 px-4 py-3">
+                                                            <p className="truncate text-sm text-neutral-300" title={variant.title}>
+                                                                {variant.title}
+                                                            </p>
+                                                            <input
+                                                                type="number"
+                                                                value={variant.price}
+                                                                onChange={e => handleVariantChange(variant.id, 'price', e.target.value)}
+                                                                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-primary/35"
+                                                            />
+                                                            <input
+                                                                type="number"
+                                                                value={variant.inventory?.quantity || 0}
+                                                                onChange={e => handleVariantChange(variant.id, 'quantity', e.target.value)}
+                                                                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-primary/35"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="flex items-center justify-between border-t border-white/10 bg-black/20 px-4 py-3">
+                                                    <p className="text-xs text-white/40">Total inventory</p>
+                                                    <p className="text-sm font-semibold text-white">{totalStock} units</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </Section>
+
+                                {isApparel ? (
+                                    <div id="sizing-guide" className="scroll-mt-24 space-y-5">
+                                        <Section title="Sizing Guide" eyebrow="Step 5" icon={<Ruler size={16} />}>
+                                            <div className="space-y-4">
+                                                <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Buyer Confidence</p>
+                                                            <h4 className="mt-1 text-sm font-semibold text-white">Keep sizing practical and easy to trust.</h4>
+                                                        </div>
+                                                        <p className="text-[11px] text-white/35">Only include measurements shoppers actually use.</p>
+                                                    </div>
+                                                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                                                            <p className="text-[11px] font-medium text-white/75">Sizes</p>
+                                                            <p className="mt-1 text-[11px] leading-relaxed text-white/45">
+                                                                {sizeCount > 0 ? `${sizeCount} sizes are ready from your variants.` : 'Add a Size option in Variants first.'}
+                                                            </p>
+                                                        </div>
+                                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                                                            <p className="text-[11px] font-medium text-white/75">Fit notes</p>
+                                                            <p className="mt-1 text-[11px] leading-relaxed text-white/45">Use short language like true to size, relaxed, slim, or oversized.</p>
+                                                        </div>
+                                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                                                            <p className="text-[11px] font-medium text-white/75">Measurements</p>
+                                                            <p className="mt-1 text-[11px] leading-relaxed text-white/45">Chest, length, waist, or inseam usually matter most. Skip the noise.</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-4 flex flex-wrap gap-2">
+                                                        <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-medium text-white/65">
+                                                            {sizeCount || 'No'} sizes detected
+                                                        </span>
+                                                        <span className={`rounded-full border px-3 py-2 text-[11px] font-medium ${sizeFitReady ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300' : 'border-yellow-400/20 bg-yellow-500/10 text-yellow-300'}`}>
+                                                            {sizeFitReady ? 'Fit notes ready' : 'Fit notes missing'}
+                                                        </span>
+                                                        <span className={`rounded-full border px-3 py-2 text-[11px] font-medium ${hasSizing ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300' : 'border-yellow-400/20 bg-yellow-500/10 text-yellow-300'}`}>
+                                                            {hasSizing ? 'Chart started' : 'Chart not filled'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                                    <SizingGuideEditor
+                                                        value={formData.sizing_guide}
+                                                        onChange={handleSizingGuideUpdate}
+                                                        productType={formData.product_type}
+                                                        availableSizes={sizeOptionValues}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </Section>
+                                    </div>
+                                ) : (
+                                    <div id="sizing-guide" className="scroll-mt-24 rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-5">
+                                        <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Step 5</p>
+                                        <p className="mt-2 text-sm font-semibold text-white">Sizing guide not required</p>
+                                        <p className="mt-1 text-[11px] text-white/45">Sizing appears for apparel product types. Select an apparel category if this product needs measurements.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-4 lg:sticky lg:top-6" id="sidebar-col">
+                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                    <p className="mb-3 text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Status</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`h-2 w-2 rounded-full ${product?.id ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
+                                        <span className="text-sm font-semibold text-white">
+                                            {product?.id ? 'Active' : 'Draft'}
+                                        </span>
+                                    </div>
+                                    {queueId && (
+                                        <p className="mt-2 text-[11px] text-white/40">In review queue. Save to update.</p>
+                                    )}
+                                </div>
+
+                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                    <p className="mb-3 text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Publishing</p>
+                                    <div className="space-y-2 text-[11px] text-white/50">
+                                        <div className="flex items-center justify-between">
+                                            <span>Juno Catalog</span>
+                                            <span className={`font-semibold ${product?.id ? 'text-emerald-400' : 'text-white/30'}`}>
+                                                {product?.id ? 'Listed' : 'Pending approval'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span>Discovery feed</span>
+                                            <span className={`font-semibold ${product?.id ? 'text-emerald-400' : 'text-white/30'}`}>
+                                                {product?.id ? 'Eligible' : '—'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                    <p className="mb-3 text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Organisation</p>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="mb-1 block text-[11px] text-white/45">Tags</label>
+                                            <input
+                                                type="text"
+                                                value={tagInput}
+                                                onChange={(e) => setTagInput(e.target.value)}
+                                                onBlur={(e) => handleTagChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                                                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-white outline-none transition-colors placeholder:text-white/20 focus:border-primary/35"
+                                                placeholder="summer, new-arrival"
+                                            />
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {['new-arrival', 'eid-edit', 'summer', 'festive', 'essentials', 'best-seller'].map((tag) => (
+                                                <button
+                                                    key={tag}
+                                                    type="button"
+                                                    onClick={() => addSuggestedTag(tag)}
+                                                    className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                >
+                                                    {tag}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                                >
+                                    {isSaving ? 'Saving...' : product?.id ? 'Save Changes' : 'Submit for Review'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </form>
         </motion.div>

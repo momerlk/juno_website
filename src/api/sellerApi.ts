@@ -198,6 +198,26 @@ export namespace Seller {
     return await request(`/seller/products/${product.id}`, "PUT", product, token);
   }
 
+  export async function UpdateProductPricing(
+    token: string,
+    productId: string,
+    data: { shipping_included?: boolean; cost_price?: number }
+  ): Promise<APIResponse<any>> {
+    return await request(`/seller/products/${productId}/pricing`, "PUT", data, token);
+  }
+
+  export async function GetProductProfit(
+    token: string,
+    productId: string,
+    params: { cost_price?: number; subscription_fee?: number }
+  ): Promise<APIResponse<any>> {
+    const query = new URLSearchParams();
+    if (params.cost_price !== undefined) query.set('cost_price', String(params.cost_price));
+    if (params.subscription_fee !== undefined) query.set('subscription_fee', String(params.subscription_fee));
+    const qs = query.toString();
+    return await request(`/seller/products/${productId}/profit${qs ? `?${qs}` : ''}`, 'GET', undefined, token);
+  }
+
   export async function DeleteProduct(token : string, productId : string) : Promise<APIResponse<any>>{
     return await request(`/seller/products/${productId}`, "DELETE", undefined, token);
   }
