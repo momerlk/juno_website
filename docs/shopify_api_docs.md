@@ -112,6 +112,16 @@ Auth: seller token required
 
 Fetches all products from the connected Shopify store and enqueues them in the seller moderation queue.
 
+**Pricing behavior:** When syncing, the pricing engine automatically computes:
+- `pricing.brand_price` = raw Shopify variant price
+- `pricing.price` = `brand_price + 99` (display price with shipping buffer, default `shipping_included=false`)
+- `pricing.commission_rate` = `0.175`
+- `pricing.seller_payout` = calculated from effective brand price
+- `pricing.shipping_included` = preserved from existing product if re-syncing
+- `pricing.cost_price` = preserved from existing product if re-syncing
+- `seller_city` = seller's city from their profile
+- Variant prices are also set to `brand_price + 99`
+
 **Response `200`**: `ProductSyncResponse`
 
 **Common errors**

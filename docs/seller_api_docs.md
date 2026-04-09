@@ -106,12 +106,17 @@ Same `seller` object shown above, without the top-level `token`.
     "categories": [{ "id": "cat-1", "name": "Lawn", "slug": "lawn" }],
     "product_type": "Eastern",
     "pricing": {
-      "price": 3500,
+      "price": 3599,
       "compare_at_price": 4200,
       "currency": "PKR",
       "discounted": true,
       "discount_value": 17,
-      "discounted_price": 3500
+      "discounted_price": 3500,
+      "brand_price": 3500,
+      "shipping_included": false,
+      "commission_rate": 0.175,
+      "seller_payout": 2887.5,
+      "cost_price": 2000
     },
     "images": ["https://cdn.example.com/img1.jpg"],
     "variants": [
@@ -120,7 +125,8 @@ Same `seller` object shown above, without the top-level `token`.
         "sku": "RF-001-S",
         "title": "Small",
         "options": { "Size": "S" },
-        "price": 3500,
+        "price": 3599,
+        "brand_price": 3500,
         "available": true
       }
     ],
@@ -964,6 +970,103 @@ Auth: seller token required
 **Common errors**
 - `401 UNAUTHORIZED` — missing or invalid seller token
 - `404 NOT_FOUND` — product not found
+
+---
+
+## Pricing Endpoints
+
+These endpoints let sellers manage pricing configuration and calculate profit/margin on their products.
+
+### Update Product Pricing
+`PUT /api/v2/seller/products/{id}/pricing`
+
+Auth: seller token required
+
+Updates a product's `shipping_included` and/or `cost_price` settings, then recomputes the display price, seller payout, variant prices, and discount fields.
+
+**Pointer semantics:** Omitted fields (`null`/missing) are preserved. Only explicitly provided fields are changed.
+
+**Body**
+```json
+{
+  "shipping_included": true,
+  "cost_price": 1200.00
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `shipping_included` | boolean | No | True if brand embedded Rs.99 shipping buffer in their listed price |
+| `cost_price` | number | No | Seller's purchase/production cost (PKR) |
+
+**Response `200`**
+```json
+{ "message": "Pricing updated" }
+```
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — product not found
+
+**Side effects:**
+- Recalculates `Pricing.Price` (display price shown to customers)
+- Recalculates `Pricing.SellerPayout`
+- Recalculates all `Variants[*].Price`
+- Recomputes `Discounted`, `DiscountedPrice`, `DiscountValue` from the new display price
+
+---
+
+### Get Product Profit
+`GET /api/v2/seller/products/{id}/profit?cost_price=X&subscription_fee=Y`
+
+Auth: seller token required
+
+Returns a breakdown of commission, seller payout, profit, and margin for a product. Query parameters are optional — if omitted, the stored `cost_price` from the product is used.
+
+**Query parameters**
+- `cost_price` — optional, seller's purchase cost in PKR (explicit `0` is respected)
+- `subscription_fee` — optional, monthly platform subscription fee in PKR
+
+**Response `200`**
+```json
+{
+  "brand_price": 3500.0,
+  "effective_brand_price": 3500.0,
+  "commission": 612.5,
+  "seller_payout": 2887.5,
+  "cost_price": 2000.0,
+  "monthly_subscription_fee": 500.0,
+  "profit": 387.5,
+  "margin_percent": 19.375
+}
+```
+
+**With `shipping_included = true` (brand_price = 3500):**
+```json
+{
+  "brand_price": 3500.0,
+  "effective_brand_price": 3401.0,
+  "commission": 595.175,
+  "seller_payout": 2805.825,
+  "cost_price": 2000.0,
+  "monthly_subscription_fee": 500.0,
+  "profit": 305.825,
+  "margin_percent": 15.291
+}
+```
+
+**Common errors**
+- `400 INVALID_QUERY` — `cost_price` or `subscription_fee` is not a valid number
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — product not found
+
+**Formula reference:**
+- `effective_brand_price` = `brand_price` (if `shipping_included=false`) or `brand_price - 99` (if `shipping_included=true`, floored at 0)
+- `commission` = `effective_brand_price × 0.175`
+- `seller_payout` = `effective_brand_price × 0.825`
+- `profit` = `effective_brand_price - commission - cost_price - subscription_fee`
+- `margin_percent` = `(profit / cost_price) × 100` (0 if `cost_price` = 0)
 
 ---
 

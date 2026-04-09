@@ -56,9 +56,9 @@ Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` 
   "customer_name": "Sara Ahmed",
   "customer_phone": "+923001234567",
   "customer_email": "sara@example.com",
-  "total_amount": 7500,
-  "shipping_fee": 200,
-  "subtotal": 7300,
+  "total_amount": 7599,
+  "shipping_fee": 99,
+  "subtotal": 7500,
   "status": "pending",
   "payment_method": "cod",
   "address_id": "address-1",
@@ -208,6 +208,13 @@ Creates a parent transaction from the current cart and splits it into seller-spe
 
 `address_id` and `payment_method` are required.
 
+**Shipping fee calculation:** The `shipping_fee` in the response is computed using the city-aware Juno shipping formula:
+1. Each brand's shipment is classified as within-city (Rs. 130) or outside-city (Rs. 220) by comparing the seller's city vs the buyer's delivery address city.
+2. A subsidy pool of Rs. 99 × total quantity is subtracted from total logistics cost.
+3. The net cost is mapped to a fixed bucket: ≤100→99 | ≤200→149 | ≤300→199 | >300→249.
+4. A Rs. 60 surcharge is added per additional brand beyond the first.
+5. If any product in the cart lacks `seller_city` (legacy products), the old flat formula (`200 × brand_count`) is used instead to avoid overcharging.
+
 **Response `201`**: `ParentOrder`
 
 **Common errors**
@@ -338,7 +345,7 @@ Header:
 
 `X-Guest-Cart-Id: guest:uuid`
 
-The guest cart must already contain saved guest checkout details.
+The guest cart must already contain saved guest checkout details. The buyer's city from `guest_checkout_details.city` is used for the city-aware shipping formula.
 
 **Body**
 ```json
@@ -346,6 +353,8 @@ The guest cart must already contain saved guest checkout details.
   "payment_method": "cod"
 }
 ```
+
+**Shipping fee:** Computed using the same city-aware formula as authenticated checkout (see Checkout endpoint above). Buyer city comes from the saved `guest_checkout_details.city`.
 
 **Response `201`**: `ParentOrder`
 
