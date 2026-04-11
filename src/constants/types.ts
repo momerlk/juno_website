@@ -48,6 +48,8 @@ export interface Product {
   customization_options?: CustomizationOption[];
 
   is_ready_to_wear: boolean;
+
+  seller_city?: string; // City where this brand ships from
   wash_care?: string;
   return_eligibility: boolean;
 
@@ -137,6 +139,12 @@ export interface Pricing {
   discount_type?: string;
   discount_value?: number;
   discounted_price?: number;
+  // Additional pricing fields from catalog API
+  brand_price?: number; // Raw brand/seller price before shipping buffer
+  shipping_included?: boolean; // True if brand embedded Rs.99 shipping buffer
+  commission_rate?: number; // Juno's commission rate (0.175 = 17.5%)
+  seller_payout?: number; // Amount transferred to brand after commission
+  cost_price?: number; // Seller's purchase/production cost
 }
 
 export interface Attribute {
@@ -160,7 +168,7 @@ export interface CustomizationOption {
   required: boolean;
 }
 
-export type QueueStatus = 'queued' | 'validation_pending' | 'enrichment_pending' | 'ready' | 'failed';
+export type QueueStatus = 'queued' | 'validation_pending' | 'enrichment_pending' | 'ready' | 'failed' | 'synced' | 'embedding_pending' | 'promoted';
 
 export interface QueueItem {
   id: string;

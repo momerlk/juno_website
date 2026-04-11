@@ -6,8 +6,10 @@ Route auth:
 - `GET /api/v2/shopify/callback` — public
 - `GET /api/v2/shopify/auth` — seller auth required
 - `POST /api/v2/shopify/sync` — seller auth required
+- `POST /api/v2/shopify/collections/sync` — seller auth required
 - `GET /api/v2/shopify/status` — seller auth required
 - `DELETE /api/v2/shopify/disconnect` — seller auth required
+- `POST /api/v2/shopify/scrape` — seller auth required
 
 Protected routes require `Authorization: Bearer <seller_token>`.
 
@@ -16,19 +18,21 @@ Protected routes require `Authorization: Bearer <seller_token>`.
 ## Shared Response Schemas
 
 ### `ConnectionStatus`
+
+The `ConnectionStatus` response includes the shop domain, scopes, and install date when connected. Connections can have status `"active"` (OAuth-based) or `"public"` (scrape-based, no access token). When no connection exists:
+```json
+{
+  "connected": false
+}
+```
+
+When connected:
 ```json
 {
   "connected": true,
   "shop": "yourstore.myshopify.com",
-  "scopes": "read_products,write_products",
+  "scopes": "read_products,read_inventory",
   "installed_at": "2026-03-28T14:30:00Z"
-}
-```
-
-When no connection exists:
-```json
-{
-  "connected": false
 }
 ```
 
@@ -170,6 +174,39 @@ Auth: admin token required
 
 ---
 
+### Scrape Products
+`POST /api/v2/shopify/scrape`
+
+Auth: seller token required
+
+Fetches all published products from any public Shopify storefront using the `/products.json` endpoint. No Shopify app install or OAuth required. The store URL is saved so future re-syncs don't require re-entering the URL. If `shop_url` is omitted, the previously saved public connection is used for a re-sync.
+
+**Body** (optional for re-sync)
+```json
+{ "shop_url": "yourstore.myshopify.com" }
+```
+
+- `shop_url` — Shopify store domain (e.g. `yourstore.myshopify.com` or a custom Shopify domain like `yourbrand.com`). Omit this field to re-sync using the previously saved public connection.
+
+**Pricing behavior:** When scraping, the pricing engine automatically computes:
+- `pricing.brand_price` = raw Shopify variant price
+- `pricing.price` = `brand_price + 99` (display price with shipping buffer, default `shipping_included=false`)
+- `pricing.commission_rate` = `0.175`
+- `pricing.seller_payout` = calculated from effective brand price
+- `pricing.shipping_included` = preserved from existing product if re-syncing
+- `pricing.cost_price` = preserved from existing product if re-syncing
+- `seller_city` = seller's city from their profile
+- Variant prices are also set to `brand_price + 99`
+
+**Response `200`**: `ProductSyncResponse`
+
+**Common errors**
+- `400` — invalid shop domain
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — no public connection found for re-sync, or storefront not accessible
+
+---
+
 ### Get Connection Status
 `GET /api/v2/shopify/status`
 
@@ -204,6 +241,8 @@ Removes the seller's Shopify connection record and stored access token.
 | Code | Meaning |
 |------|---------|
 | `400 MISSING_SHOP` | Missing `shop` query parameter |
-| `400` | Invalid OAuth/sync request |
+| `400` | Invalid request body, shop domain, or sync request |
 | `401 UNAUTHORIZED` | Missing or invalid seller token |
+| `401` | Invalid HMAC signature or OAuth state mismatch |
 | `404 NOT_FOUND` | Shopify connection not found |
+| `404` | Storefront not accessible or no public connection for re-sync |

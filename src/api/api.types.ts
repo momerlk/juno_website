@@ -651,6 +651,8 @@ export interface ShopifyConnectionStatus {
     shop?: string;
     scopes?: string;
     installed_at?: string;
+    // Connection type: "active" (OAuth-based) or "public" (scrape-based, no access token)
+    connection_type?: 'active' | 'public';
 }
 
 export interface ShopifySyncResponse {

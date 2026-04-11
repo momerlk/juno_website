@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle, ArrowRight, Zap } from 'lucide-react';
 
 const ShopifySuccess: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const shop = searchParams.get('shop');
+  const method = searchParams.get('method'); // 'oauth' or 'scrape'
+  const count = searchParams.get('count'); // product count from scrape
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -14,6 +16,9 @@ const ShopifySuccess: React.FC = () => {
     }, 5000);
     return () => clearTimeout(timer);
   }, [navigate]);
+
+  const isSuccessOAuth = method === 'oauth';
+  const isSuccessScrape = method === 'scrape';
 
   return (
     <section className="min-h-screen flex items-center justify-center px-4">
@@ -30,18 +35,37 @@ const ShopifySuccess: React.FC = () => {
           className="flex justify-center"
         >
           <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-            <CheckCircle size={40} className="text-emerald-400" />
+            {isSuccessScrape ? (
+              <Zap size={40} className="text-emerald-400" />
+            ) : (
+              <CheckCircle size={40} className="text-emerald-400" />
+            )}
           </div>
         </motion.div>
 
         <div className="space-y-2">
-          <h1 className="text-2xl font-black text-white">Shopify Connected</h1>
+          <h1 className="text-2xl font-black text-white">
+            {isSuccessOAuth ? 'Shopify Connected' : isSuccessScrape ? 'Products Imported' : 'Success'}
+          </h1>
           {shop && (
             <p className="text-sm font-mono text-emerald-400">{shop}</p>
           )}
-          <p className="text-sm text-neutral-400">
-            Your store is now linked to Juno. You can sync your products from the dashboard.
-          </p>
+          {isSuccessOAuth && (
+            <p className="text-sm text-neutral-400">
+              Your store is now linked to Juno. You can sync your products from the dashboard.
+            </p>
+          )}
+          {isSuccessScrape && (
+            <p className="text-sm text-neutral-400">
+              {count ? `${count} products` : 'Your products'} have been imported to your draft queue. 
+              Review and publish them from the inventory section.
+            </p>
+          )}
+          {!method && (
+            <p className="text-sm text-neutral-400">
+              Your action completed successfully.
+            </p>
+          )}
         </div>
 
         <button

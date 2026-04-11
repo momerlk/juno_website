@@ -48,12 +48,17 @@ Returns full details for a single product.
   "categories": [{ "id": "...", "name": "Lawn", "slug": "lawn" }],
   "product_type": "Eastern",
   "pricing": {
-    "price": 3500,
-    "compare_at_price": 4200,
+    "price": 3599,
+    "compare_at_price": 4299,
     "currency": "PKR",
     "discounted": true,
     "discount_value": 17,
-    "discounted_price": 3500
+    "discounted_price": 3599,
+    "brand_price": 3500,
+    "shipping_included": false,
+    "commission_rate": 0.175,
+    "seller_payout": 2887.5,
+    "cost_price": 2000
   },
   "images": ["https://cdn.example.com/img1.jpg", "https://cdn.example.com/img2.jpg"],
   "variants": [
@@ -92,12 +97,17 @@ Returns full details for a single product.
 | `categories` | array | Product categories |
 | `product_type` | string | Type: `Eastern`, `Western`, etc. |
 | `pricing` | object | Pricing details |
-| `pricing.price` | number | Current selling price |
+| `pricing.price` | number | Current selling price (display price shown to customers) |
 | `pricing.compare_at_price` | number | Original price (MSRP) |
 | `pricing.currency` | string | Currency code (e.g., `PKR`) |
 | `pricing.discounted` | boolean | Whether on sale |
 | `pricing.discount_value` | number | Discount percentage |
 | `pricing.discounted_price` | number | Price after discount |
+| `pricing.brand_price` | number | Raw brand/seller price before the Rs.99 shipping buffer markup |
+| `pricing.shipping_included` | boolean | True if brand embedded the Rs.99 shipping buffer in their listed price |
+| `pricing.commission_rate` | number | Juno's commission rate (constant: 0.175 = 17.5%) |
+| `pricing.seller_payout` | number | Amount transferred to the brand after commission deduction |
+| `pricing.cost_price` | number | Seller's purchase/production cost (for profit calculation only) |
 | `images` | string[] | Product image URLs |
 | `variants` | array | Product variants (sizes, colors) |
 | `options` | array | Configurable options |
@@ -115,6 +125,7 @@ Returns full details for a single product.
 | `review_count` | int | Total reviews |
 | `is_trending` | boolean | Trending flag |
 | `is_featured` | boolean | Featured flag |
+| `seller_city` | string | City where this brand ships from (used for within-city vs outside-city shipping classification) |
 
 ---
 
@@ -516,6 +527,30 @@ Auth: admin token required
 ```
 
 **Response `200`** `{ "message": "Products added to collection" }`
+
+---
+
+## Product Deletion
+
+Product deletion is handled through the **Seller module**, not the Catalog module. Sellers can delete their own products via:
+
+### Delete Product
+`DELETE /api/v2/seller/products/{id}`
+
+Auth: seller token required
+
+Deletes a product from the catalog and cleans up associated queue items.
+
+**Response `200`** `{ "message": "Product deleted successfully" }`
+
+**Error `404`** — product not found.
+
+**Error `401`** — not your product.
+
+**Implementation Notes:**
+- When a product is deleted, the system also attempts to delete any associated queue item from the `products_queue` collection
+- This prevents orphaned queue items from accumulating when products are removed
+- Queue items that were promoted to the catalog share the same ID as the product, so cleanup is straightforward
 
 ---
 

@@ -85,9 +85,29 @@ export namespace Shopify {
     }
 
     /**
+     * Scrape products from public Shopify store
+     *
+     * Fetches all published products from any public Shopify storefront
+     * using the /products.json endpoint. No OAuth required.
+     *
+     * If shopUrl is omitted, the previously saved public connection is used.
+     *
+     * Pricing behavior:
+     * - brand_price = raw Shopify variant price
+     * - price = brand_price + 99 (shipping buffer)
+     * - commission_rate = 0.175
+     * - seller_payout = calculated from effective brand price
+     */
+    export async function scrapeProducts(token?: string, shopUrl?: string): Promise<APIResponse<ShopifySyncResponse>> {
+        const body = shopUrl ? { shop_url: shopUrl } : {};
+        return request(`${BASE_PATH}/scrape`, 'POST', body, token || getSellerToken());
+    }
+
+    /**
      * Disconnect Shopify
-     * 
+     *
      * Removes the seller's Shopify connection record and stored access token.
+     * Works for both OAuth and public (scrape-based) connections.
      */
     export async function disconnect(token?: string): Promise<APIResponse<{ message: string }>> {
         return request(`${BASE_PATH}/disconnect`, 'DELETE', undefined, token || getSellerToken());

@@ -667,6 +667,8 @@ export namespace Shopify {
         shop?: string;
         scopes?: string;
         installed_at?: string;
+        // Connection type: "active" (OAuth-based) or "public" (scrape-based, no access token)
+        connection_type?: 'active' | 'public';
     }
 
     export interface SyncResponse {
@@ -687,6 +689,11 @@ export namespace Shopify {
     // Syncs products from the already-connected Shopify store (no params needed after OAuth)
     export async function Sync(token: string): Promise<APIResponse<SyncResponse>> {
         return await request("/shopify/sync", "POST", {}, token);
+    }
+    // Scrapes products from public Shopify store (no OAuth required)
+    export async function Scrape(token: string, shopUrl?: string): Promise<APIResponse<SyncResponse>> {
+        const body = shopUrl ? { shop_url: shopUrl } : {};
+        return await request("/shopify/scrape", "POST", body, token);
     }
     export async function Disconnect(token: string): Promise<APIResponse<any>> {
         return await request("/shopify/disconnect", "DELETE", undefined, token);

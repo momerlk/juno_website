@@ -10,11 +10,13 @@ import {
   RefreshCw,
   Sparkles,
   Trophy,
+  Zap,
 } from 'lucide-react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 import { Order } from '../../constants/orders';
 import { OrderStatusBadge } from './OrderStatusBadge';
+import ShopifyScrape from './ShopifyScrape';
 
 const fadeUp = {
   initial: { opacity: 0, y: 18 },
@@ -28,11 +30,13 @@ const SellerHome: React.FC = () => {
 
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [shopifyShop, setShopifyShop] = useState<string | undefined>(undefined);
+  const [shopifyConnectionType, setShopifyConnectionType] = useState<'active' | 'public' | undefined>(undefined);
   const [shopifyLoading, setShopifyLoading] = useState(false);
   const [shopifyShopInput, setShopifyShopInput] = useState('');
   const [shopifyActionLoading, setShopifyActionLoading] = useState(false);
   const [shopifyMessage, setShopifyMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [shopifyAuthUrl, setShopifyAuthUrl] = useState<string | null>(null);
+  const [shopifyTab, setShopifyTab] = useState<'oauth' | 'scrape'>('scrape');
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [liveTournaments, setLiveTournaments] = useState<any[]>([]);
@@ -81,6 +85,7 @@ const SellerHome: React.FC = () => {
         if (res.ok) {
           setShopifyConnected(Boolean(res.body?.connected));
           setShopifyShop(res.body?.shop);
+          setShopifyConnectionType(res.body?.connection_type);
         }
       } finally {
         setShopifyLoading(false);
@@ -168,9 +173,22 @@ const SellerHome: React.FC = () => {
         </div>
 
         <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.25em] text-white/30">
-            <Globe size={12} />
-            Shopify Sync
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.25em] text-white/30">
+              <Globe size={12} />
+              Product Import
+            </div>
+            {shopifyConnected && (
+              <div className="flex items-center gap-2">
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.15em] ${
+                  shopifyConnectionType === 'active'
+                    ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300'
+                    : 'border-blue-400/20 bg-blue-500/10 text-blue-300'
+                }`}>
+                  {shopifyConnectionType === 'active' ? 'OAuth' : 'Public'}
+                </span>
+              </div>
+            )}
           </div>
 
           {shopifyLoading ? (
@@ -183,7 +201,11 @@ const SellerHome: React.FC = () => {
               <div className="rounded-[1.3rem] border border-emerald-400/20 bg-emerald-500/10 p-4">
                 <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-emerald-300">Connected</p>
                 <p className="mt-3 text-lg font-black uppercase tracking-[0.03em] text-white">{shopifyShop ?? 'Store Connected'}</p>
-                <p className="mt-2 text-sm text-white/60">Use sync to refresh your draft queue.</p>
+                <p className="mt-2 text-sm text-white/60">
+                  {shopifyConnectionType === 'active' 
+                    ? 'OAuth-based connection. Use sync to refresh your draft queue.' 
+                    : 'Public connection via scraping. Use scrape to import products.'}
+                </p>
               </div>
               {shopifyMessage && (
                 <p className={`mt-3 text-sm ${shopifyMessage.type === 'success' ? 'text-emerald-300' : 'text-red-300'}`}>
@@ -191,14 +213,26 @@ const SellerHome: React.FC = () => {
                 </p>
               )}
               <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  onClick={handleShopifySync}
-                  disabled={shopifyActionLoading}
-                  className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white disabled:opacity-60"
-                >
-                  {shopifyActionLoading ? <Loader size={15} className="animate-spin" /> : <RefreshCw size={15} />}
-                  Sync Products
-                </button>
+                {shopifyConnectionType === 'active' && (
+                  <button
+                    onClick={handleShopifySync}
+                    disabled={shopifyActionLoading}
+                    className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white disabled:opacity-60"
+                  >
+                    {shopifyActionLoading ? <Loader size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                    Sync Products
+                  </button>
+                )}
+                {shopifyConnectionType === 'public' && (
+                  <button
+                    onClick={() => setShopifyTab('scrape')}
+                    disabled={shopifyActionLoading}
+                    className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white disabled:opacity-60"
+                  >
+                    <Zap size={15} />
+                    Scrape Products
+                  </button>
+                )}
                 <button
                   onClick={handleShopifyDisconnect}
                   disabled={shopifyActionLoading}
@@ -211,44 +245,88 @@ const SellerHome: React.FC = () => {
             </div>
           ) : (
             <div className="mt-5">
-              <p className="max-w-xl text-sm leading-relaxed text-white/60">Connect Shopify to import products faster.</p>
-              {shopifyMessage && <p className="mt-3 text-sm text-red-300">{shopifyMessage.text}</p>}
-              {shopifyAuthUrl ? (
-                <div className="mt-4 rounded-[1.3rem] border border-primary/20 bg-primary/10 p-4">
-                  <p className="text-sm text-white/75">Your auth link is ready. Open it and approve the connection.</p>
-                  <a
-                    href={shopifyAuthUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white"
-                  >
-                    <ArrowRight size={15} />
-                    Open Shopify Auth
-                  </a>
-                </div>
+              {/* Tab selector */}
+              <div className="mb-4 flex gap-2 rounded-full border border-white/10 bg-black/20 p-1">
+                <button
+                  onClick={() => setShopifyTab('scrape')}
+                  className={`flex-1 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+                    shopifyTab === 'scrape'
+                      ? 'bg-primary text-white'
+                      : 'text-white/50 hover:text-white/75'
+                  }`}
+                >
+                  <Zap size={14} className="inline mr-1 -mt-0.5" />
+                  Quick Scrape
+                </button>
+                <button
+                  onClick={() => setShopifyTab('oauth')}
+                  className={`flex-1 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+                    shopifyTab === 'oauth'
+                      ? 'bg-primary text-white'
+                      : 'text-white/50 hover:text-white/75'
+                  }`}
+                >
+                  <Link2 size={14} className="inline mr-1 -mt-0.5" />
+                  OAuth Connect
+                </button>
+              </div>
+
+              {shopifyMessage && (
+                <p className={`mb-3 text-sm ${shopifyMessage.type === 'success' ? 'text-emerald-300' : 'text-red-300'}`}>
+                  {shopifyMessage.text}
+                </p>
+              )}
+
+              {shopifyTab === 'scrape' ? (
+                <ShopifyScrape onScrapeComplete={(count) => {
+                  setShopifyMessage({ 
+                    type: 'success', 
+                    text: `Successfully scraped ${count} product${count !== 1 ? 's' : ''}. Check your draft queue.` 
+                  });
+                }} />
               ) : (
-                <div className="mt-4 flex flex-col gap-3">
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase tracking-[0.22em] text-white/25">
-                      https://
-                    </span>
-                    <input
-                      type="text"
-                      placeholder="your-store.myshopify.com"
-                      value={shopifyShopInput}
-                      onChange={(e) => setShopifyShopInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleShopifyConnect()}
-                      className="w-full rounded-[1.2rem] border border-white/10 bg-black/30 py-4 pl-[5.5rem] pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/18 focus:border-primary/35"
-                    />
-                  </div>
-                  <button
-                    onClick={handleShopifyConnect}
-                    disabled={!shopifyShopInput.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white/80 disabled:opacity-45"
-                  >
-                    <Link2 size={15} />
-                    Generate Connect Link
-                  </button>
+                <div className="mt-4">
+                  <p className="max-w-xl text-sm leading-relaxed text-white/60">
+                    Connect Shopify via OAuth for automatic sync and inventory updates.
+                  </p>
+                  {shopifyAuthUrl ? (
+                    <div className="mt-4 rounded-[1.3rem] border border-primary/20 bg-primary/10 p-4">
+                      <p className="text-sm text-white/75">Your auth link is ready. Open it and approve the connection.</p>
+                      <a
+                        href={shopifyAuthUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white"
+                      >
+                        <ArrowRight size={15} />
+                        Open Shopify Auth
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="mt-4 flex flex-col gap-3">
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase tracking-[0.22em] text-white/25">
+                          https://
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="your-store.myshopify.com"
+                          value={shopifyShopInput}
+                          onChange={(e) => setShopifyShopInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleShopifyConnect()}
+                          className="w-full rounded-[1.2rem] border border-white/10 bg-black/30 py-4 pl-[5.5rem] pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/18 focus:border-primary/35"
+                        />
+                      </div>
+                      <button
+                        onClick={handleShopifyConnect}
+                        disabled={!shopifyShopInput.trim()}
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white/80 disabled:opacity-45"
+                      >
+                        <Link2 size={15} />
+                        Generate Connect Link
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
