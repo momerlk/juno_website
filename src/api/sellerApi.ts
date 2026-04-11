@@ -309,7 +309,7 @@ export namespace Seller {
           return await request(`/seller/queue/${id}`, "GET", undefined, token);
       }
       export async function Create(token: string, product: Product): Promise<APIResponse<any>> {
-          return await request("/seller/products", "POST", { product }, token);
+          return await request("/seller/products", "POST", product, token);
       }
       export async function Update(token: string, id: string, data: any): Promise<APIResponse<any>> {
           return await request(`/seller/queue/${id}`, "PUT", data, token);
