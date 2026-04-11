@@ -105,6 +105,14 @@ Same `seller` object shown above, without the top-level `token`.
     "seller_logo": "https://cdn.example.com/logo.png",
     "categories": [{ "id": "cat-1", "name": "Lawn", "slug": "lawn" }],
     "product_type": "Eastern",
+    "enrichment": {
+      "product_type": "Eastern",
+      "gender": "Female",
+      "sizing_guide": {
+        "S": { "chest": 86, "waist": 68 },
+        "M": { "chest": 91, "waist": 73 }
+      }
+    },
     "pricing": {
       "price": 3599,
       "compare_at_price": 4200,
@@ -150,7 +158,8 @@ Same `seller` object shown above, without the top-level `token`.
     "product_type": "Eastern",
     "gender": "Female",
     "sizing_guide": {
-      "S": { "chest": 86, "waist": 68 }
+      "S": { "chest": 86, "waist": 68 },
+      "M": { "chest": 91, "waist": 73 }
     }
   },
   "embeddings": [0.12, -0.34, 0.56],
@@ -159,6 +168,12 @@ Same `seller` object shown above, without the top-level `token`.
   "updated_at": "2026-03-28T15:00:00Z"
 }
 ```
+
+**Note on Enrichment Data:** The `enrichment` field appears in **two places**:
+- **Top-level** (`queue_item.enrichment`): The queue's authoritative source for enrichment data
+- **Nested** (`queue_item.product.enrichment`): Mirrored inside the product object for visibility
+
+When creating a product with enrichment data, both fields are automatically populated. When using the enrich endpoint, both fields are updated together.
 
 ### `DraftResponse`
 ```json
@@ -505,6 +520,26 @@ Adds a product to the moderation queue. The authenticated seller ID is injected 
 
 **Body**: catalog product payload
 
+To include enrichment data (sizing guide, product type, gender) at creation time, include the `enrichment` field in the product:
+
+```json
+{
+  "title": "Floral Lawn Suit",
+  "seller_id": "uuid",
+  "pricing": { "price": 3500 },
+  "images": ["https://cdn.example.com/img1.jpg"],
+  "variants": [],
+  "enrichment": {
+    "product_type": "Eastern",
+    "gender": "Female",
+    "sizing_guide": {
+      "S": { "chest": 86, "waist": 68 },
+      "M": { "chest": 91, "waist": 73 }
+    }
+  }
+}
+```
+
 **Response `201`**: `ProductsQueue`
 
 **Common errors**
@@ -595,6 +630,44 @@ Queue status flow:
 Auth: seller token required
 
 **Response `200`**: array of `ProductsQueue`
+
+---
+
+### Update Queue Product
+`PUT /api/v2/seller/queue/{id}`
+
+Auth: seller token required
+
+Updates the product details of a queued item. Preserves the queue status, seller information, and any existing enrichment data.
+
+**Body**: catalog product payload (same schema as Create Product)
+
+```json
+{
+  "title": "Updated Floral Lawn Suit",
+  "description": "Updated description",
+  "pricing": { "price": 3800 },
+  "images": ["https://cdn.example.com/img1.jpg"],
+  "variants": [
+    {
+      "id": "var-1",
+      "sku": "RF-001-S",
+      "title": "Small",
+      "options": { "Size": "S" },
+      "price": 3800,
+      "available": true
+    }
+  ],
+  "tags": ["summer", "lawn"]
+}
+```
+
+**Response `200`**: `ProductsQueue`
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — queue item not found
 
 ---
 

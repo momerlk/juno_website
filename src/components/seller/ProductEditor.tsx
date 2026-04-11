@@ -492,27 +492,46 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
             let response;
             if (queueId) {
                 // Updating an existing queue item
-                 response = await api.Seller.Queue.Update(seller.token, queueId, { product: payload });
-                 // Keep queue enrichment aligned with documented API flow when required fields exist.
-                 const gender = payload.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
-                 if (payload.product_type && gender) {
-                    await api.Seller.Queue.Enrich(seller.token, queueId, {
-                        product_type: payload.product_type,
-                        gender,
-                        sizing_guide: payload.sizing_guide?.size_chart || {},
-                    });
-                 }
+                // Per API spec: PUT /seller/queue/{id} takes catalog product payload directly
+                const gender = payload.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
+                
+                // Build update payload with enrichment if available
+                const queueUpdatePayload = {
+                    ...payload,
+                    // Include enrichment so both queue_item.enrichment and
+                    // queue_item.product.enrichment are updated together
+                    ...(payload.product_type && gender ? {
+                        enrichment: {
+                            product_type: payload.product_type,
+                            gender,
+                            sizing_guide: payload.sizing_guide || {},
+                        }
+                    } : {}),
+                };
+                
+                response = await api.Seller.Queue.Update(seller.token, queueId, queueUpdatePayload);
             } else if (product && product.id) {
                 // Updating an active product
                 response = await api.Seller.UpdateProduct(seller.token, { ...payload, id: product.id });
             } else {
                 // Creating a new product -> Goes to Queue
+                // Include enrichment data per API spec so both queue_item.enrichment and
+                // queue_item.product.enrichment are populated automatically
+                const gender = payload.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
                 const createPayload = {
                     ...payload,
                     handle: generateHandle(payload.title || '', seller?.user?.business_name || ''),
                     status: 'queued', // Default to queued
                     seller_name: seller?.user?.business_name,
                     seller_logo: seller?.user?.logo_url,
+                    // Include enrichment if we have the data
+                    ...(payload.product_type && gender ? {
+                        enrichment: {
+                            product_type: payload.product_type,
+                            gender,
+                            sizing_guide: payload.sizing_guide || {},
+                        }
+                    } : {}),
                 };
                 response = await api.Seller.Queue.Create(seller.token, createPayload as Product);
             }

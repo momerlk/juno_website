@@ -72,7 +72,14 @@ const getQueueIssues = (product: Product, item: QueueItem) => {
     const gender = product.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
     if (!gender) missingFields.push('Gender');
     const requiresSizing = Boolean(product.options?.find(option => option.name.toLowerCase() === 'size')?.values?.length);
-    if (requiresSizing && (!product.sizing_guide || !product.sizing_guide.size_chart || Object.keys(product.sizing_guide.size_chart).length === 0)) {
+    // Check sizing guide from multiple locations per API spec:
+    // - product.sizing_guide (legacy/direct location)
+    // - product.enrichment?.sizing_guide (mirrored location)
+    // - item.enrichment?.sizing_guide (top-level authoritative location)
+    const sizingGuide = product.sizing_guide?.size_chart 
+        || (product as any).enrichment?.sizing_guide 
+        || (item as any).enrichment?.sizing_guide;
+    if (requiresSizing && (!sizingGuide || Object.keys(sizingGuide).length === 0)) {
         missingFields.push('Sizing Guide');
     }
     const apiErrors = item.errors || [];
@@ -903,7 +910,7 @@ const ManageInventory: React.FC = () => {
             if (!product) return;
 
             const updatedData: Partial<Product> = {};
-            
+
             if (attributes.product_type) {
                 updatedData.product_type = attributes.product_type;
             }
@@ -916,16 +923,35 @@ const ManageInventory: React.FC = () => {
             if (Object.keys(updatedData).length === 0) return;
 
             const finalProduct = { ...product, ...updatedData };
-            
+
             if (activeTab === 'active') {
                 return api.Seller.UpdateProduct(seller.token!, finalProduct);
             } else {
-                return api.Seller.Queue.Update(seller.token!, queueId!, { product: finalProduct });
+                // Per API spec: PUT /seller/queue/{id} takes catalog product payload directly
+                // Include enrichment to update both queue_item.enrichment and queue_item.product.enrichment
+                const qItem = queueItems.find(item => item.id === id);
+                const existingEnrichment = (qItem as any)?.enrichment || (qItem?.product as any)?.enrichment || {};
+                const hasProductType = attributes.product_type || existingEnrichment.product_type || finalProduct.product_type;
+                const hasGender = attributes.gender || existingEnrichment.gender || finalProduct.tags?.find((t: string) => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
+                
+                const queueUpdatePayload = {
+                    ...finalProduct,
+                    // Include enrichment if we have the data
+                    ...(hasProductType && hasGender ? {
+                        enrichment: {
+                            product_type: hasProductType,
+                            gender: hasGender,
+                            sizing_guide: finalProduct.sizing_guide || existingEnrichment.sizing_guide || {},
+                        }
+                    } : {}),
+                };
+                
+                return api.Seller.Queue.Update(seller.token!, queueId!, queueUpdatePayload);
             }
         });
 
         await Promise.all(updates);
-        
+
         setSelectedProductIds(new Set());
         if (activeTab === 'active') fetchAllProducts();
         else fetchQueueItems();

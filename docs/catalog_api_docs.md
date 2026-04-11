@@ -96,6 +96,11 @@ Returns full details for a single product.
 | `seller_logo` | string | Seller logo URL |
 | `categories` | array | Product categories |
 | `product_type` | string | Type: `Eastern`, `Western`, etc. |
+| `gender` | string | Target gender: `Male`, `Female`, `Unisex` |
+| `enrichment` | object | Seller-supplied metadata (see below) |
+| `enrichment.product_type` | string | Targeted product type |
+| `enrichment.gender` | string | Target gender |
+| `enrichment.sizing_guide` | object | Category-specific sizing information |
 | `pricing` | object | Pricing details |
 | `pricing.price` | number | Current selling price (display price shown to customers) |
 | `pricing.compare_at_price` | number | Original price (MSRP) |
