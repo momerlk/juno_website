@@ -681,6 +681,35 @@ Auth: seller token required
 
 ---
 
+### Reject Product
+`POST /api/v2/seller/queue/{id}/reject`
+
+Auth: seller token required
+
+Rejects a product from the moderation queue. Sets the queue item status to `failed` and optionally records a rejection reason.
+
+**Body** (optional)
+```json
+{
+  "reason": "Product images are low quality"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `reason` | string | No | Explanation for why the product was rejected |
+
+**Response `200`**
+```json
+{ "message": "Product rejected and removed from queue" }
+```
+
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `404 NOT_FOUND` — queue item not found
+
+---
+
 ## Inventory
 
 ### Bulk Update Inventory

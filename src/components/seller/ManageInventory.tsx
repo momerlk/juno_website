@@ -83,9 +83,9 @@ const QueueItemCard: React.FC<{
     item: QueueItem; 
     selected: boolean;
     onSelect: (id: string, shift: boolean) => void;
-    onEdit: (product: Product, queueId: string) => void; 
-    onPromote: (id: string) => void; 
-    onReject: (id: string) => void; 
+    onEdit: (product: Product, queueId: string) => void;
+    onPromote: (id: string) => void;
+    onReject: (id: string, reason?: string) => void;
 }> = ({ item, selected, onSelect, onEdit, onPromote, onReject }) => {
     const product = item.product;
     const isReady = item.status === 'ready';
@@ -161,11 +161,12 @@ const QueueItemCard: React.FC<{
                             <UploadCloud size={12} /> Publish
                         </button>
                     )}
-                     <button 
+                     <button
                         onClick={() => {
-                            const reason = prompt("Reason for discarding?");
-                            if (reason) onReject(item.id);
-                        }} 
+                            const reason = prompt("Reason for discarding? (optional)");
+                            // Call reject regardless of reason - it's optional per API spec
+                            onReject(item.id, reason || undefined);
+                        }}
                         className="p-1.5 rounded-lg hover:bg-red-500/20 text-neutral-400 hover:text-red-500 transition-colors"
                         title="Discard"
                     >
@@ -181,9 +182,9 @@ const QueueItemListItem: React.FC<{
     item: QueueItem; 
     selected: boolean;
     onSelect: (id: string, shift: boolean) => void;
-    onEdit: (product: Product, queueId: string) => void; 
-    onPromote: (id: string) => void; 
-    onReject: (id: string) => void; 
+    onEdit: (product: Product, queueId: string) => void;
+    onPromote: (id: string) => void;
+    onReject: (id: string, reason?: string) => void;
 }> = ({ item, selected, onSelect, onEdit, onPromote, onReject }) => {
     const product = item.product;
     const isReady = item.status === 'ready';
@@ -236,11 +237,12 @@ const QueueItemListItem: React.FC<{
                         <UploadCloud size={12} /> Publish
                     </button>
                 )}
-                 <button 
+                 <button
                     onClick={() => {
-                        const reason = prompt("Reason for discarding?");
-                        if (reason) onReject(item.id);
-                    }} 
+                        const reason = prompt("Reason for discarding? (optional)");
+                        // Call reject regardless of reason - it's optional per API spec
+                        onReject(item.id, reason || undefined);
+                    }}
                     className="p-2 rounded-lg hover:bg-red-500/20 text-neutral-400 hover:text-red-500 transition-colors"
                     title="Discard"
                 >
@@ -942,13 +944,22 @@ const ManageInventory: React.FC = () => {
         }
     };
 
-    const handleRejectQueueItemWithReason = async (id: string, reason: string = "Discarded by seller") => {
+    const handleRejectQueueItemWithReason = async (id: string, reason?: string) => {
         if (!seller?.token) return;
-        const response = await api.Seller.Queue.Reject(seller.token, id, reason);
-        if (response.ok) {
-            fetchQueueItems();
-        } else {
-            alert("Failed to discard item.");
+        try {
+            const response = await api.Seller.Queue.Reject(seller.token, id, reason || "Discarded by seller");
+            if (response.ok) {
+                await fetchQueueItems();
+            } else {
+                const errorMsg = typeof response.body === 'object' && response.body?.message 
+                    ? response.body.message 
+                    : "Failed to discard item.";
+                alert(`Rejection failed: ${errorMsg}`);
+                console.error('Reject response:', response);
+            }
+        } catch (error) {
+            console.error('Error rejecting item:', error);
+            alert("An error occurred while rejecting the item.");
         }
     }
 
@@ -1202,14 +1213,14 @@ const ManageInventory: React.FC = () => {
                     {viewMode === 'grid' ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
                             {paginatedQueueItems.length > 0 ? paginatedQueueItems.map(item => (
-                                <QueueItemCard 
-                                    key={item.id} 
-                                    item={item} 
+                                <QueueItemCard
+                                    key={item.id}
+                                    item={item}
                                     selected={selectedProductIds.has(item.id)}
                                     onSelect={handleSelectProduct}
                                     onEdit={handleOpenEditorForQueue}
                                     onPromote={handlePromoteQueueItem}
-                                    onReject={(id) => handleRejectQueueItemWithReason(id)}
+                                    onReject={(id, reason) => handleRejectQueueItemWithReason(id, reason)}
                                 />
                             )) : (
                                 <div className="col-span-full text-center py-20 glass-panel border-dashed border-white/20">
@@ -1222,14 +1233,14 @@ const ManageInventory: React.FC = () => {
                     ) : (
                         <div className="space-y-4 mt-4">
                             {paginatedQueueItems.length > 0 ? paginatedQueueItems.map(item => (
-                                <QueueItemListItem 
-                                    key={item.id} 
-                                    item={item} 
+                                <QueueItemListItem
+                                    key={item.id}
+                                    item={item}
                                     selected={selectedProductIds.has(item.id)}
                                     onSelect={handleSelectProduct}
                                     onEdit={handleOpenEditorForQueue}
                                     onPromote={handlePromoteQueueItem}
-                                    onReject={(id) => handleRejectQueueItemWithReason(id)}
+                                    onReject={(id, reason) => handleRejectQueueItemWithReason(id, reason)}
                                 />
                             )) : (
                                 <div className="text-center py-20 glass-panel border-dashed border-white/20 mt-4">

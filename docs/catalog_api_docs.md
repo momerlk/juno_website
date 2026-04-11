@@ -552,6 +552,24 @@ Deletes a product from the catalog and cleans up associated queue items.
 - This prevents orphaned queue items from accumulating when products are removed
 - Queue items that were promoted to the catalog share the same ID as the product, so cleanup is straightforward
 
+### Reject Product from Queue
+`POST /api/v2/seller/queue/{id}/reject`
+
+Auth: seller token required
+
+Rejects a product from the moderation queue without deleting it from the catalog. Sets the queue item status to `failed`.
+
+**Request Body** (optional)
+```json
+{
+  "reason": "Product images are low quality"
+}
+```
+
+**Response `200`** `{ "message": "Product rejected and removed from queue" }`
+
+**Error `404`** — queue item not found.
+
 ---
 
 ## Error Responses
