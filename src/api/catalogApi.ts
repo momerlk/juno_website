@@ -17,6 +17,7 @@ import type {
     UpdateDropRequest,
     BrandStorefront,
     TrendingSearch,
+    GenderOverview,
 } from "./api.types";
 
 // ============================================================================
@@ -89,7 +90,7 @@ export namespace Catalog {
 
     /**
      * Get popular products
-     * 
+     *
      * Returns ranked list of popular products for guest storefronts
      * and landing pages.
      */
@@ -99,8 +100,44 @@ export namespace Catalog {
     }
 
     /**
+     * Get gender overview
+     *
+     * Returns paginated product list and brand list for a gender category.
+     * Men includes products tagged male or unisex. Women includes products tagged female or unisex.
+     */
+    export async function getGenderOverview(
+        gender: 'men' | 'women',
+        params?: {
+            page?: number;
+            limit?: number;
+            sort?: 'price' | 'created_at';
+            order?: 'asc' | 'desc';
+            min_price?: number;
+            max_price?: number;
+            category?: string;
+        }
+    ): Promise<APIResponse<GenderOverview>> {
+        // Only include defined parameters
+        const searchParams = new URLSearchParams();
+        if (params) {
+            if (params.page !== undefined) searchParams.set('page', String(params.page));
+            if (params.limit !== undefined) searchParams.set('limit', String(params.limit));
+            if (params.sort !== undefined) searchParams.set('sort', params.sort);
+            if (params.order !== undefined) searchParams.set('order', params.order);
+            if (params.min_price !== undefined) searchParams.set('min_price', String(params.min_price));
+            if (params.max_price !== undefined) searchParams.set('max_price', String(params.max_price));
+            if (params.category !== undefined) searchParams.set('category', params.category);
+        }
+        
+        const qp = searchParams.toString() ? `?${searchParams.toString()}` : '';
+        const endpoint = `${BASE_PATH}/gender/${gender}${qp}`;
+        console.log('[Catalog.getGenderOverview] Calling endpoint:', endpoint);
+        return request(endpoint, 'GET', undefined, undefined, true);
+    }
+
+    /**
      * Get related products
-     * 
+     *
      * Returns recommendation set related to the given product.
      */
     export async function getRelatedProducts(productId: string, limit?: number): Promise<APIResponse<CatalogProduct[]>> {

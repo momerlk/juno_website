@@ -14,7 +14,8 @@ const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value
 const getProductImage = (product: Partial<CatalogProduct>) => asArray(product.images)[0] || '/juno_app_icon.png';
 
 const CatalogProductPage: React.FC = () => {
-  const { productId } = useParams<{ productId: string }>();
+  const { productId, genderOrId } = useParams<{ productId?: string; genderOrId?: string }>();
+  const actualProductId = productId || genderOrId || '';
   const [product, setProduct] = useState<CatalogProduct | null>(null);
   const [related, setRelated] = useState<CatalogProduct[]>([]);
   const [selectedImage, setSelectedImage] = useState('');
@@ -31,11 +32,11 @@ const CatalogProductPage: React.FC = () => {
   const mainCTARef = useRef<HTMLDivElement>(null);
   const [viewersCount] = useState(() => Math.floor(Math.random() * 15) + 3);
 
-  useTrackProductView(productId, product?.categories?.[0]?.id);
+  useTrackProductView(actualProductId, product?.categories?.[0]?.id);
 
   useEffect(() => {
     const loadProduct = async () => {
-      if (!productId) {
+      if (!actualProductId) {
         setError('Product not found.');
         setIsLoading(false);
         return;
@@ -44,10 +45,18 @@ const CatalogProductPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
+      console.log('[CatalogProductPage] Loading product:', actualProductId);
+
       const [productResponse, relatedResponse] = await Promise.all([
-        Catalog.getProduct(productId),
-        Catalog.getRelatedProducts(productId, 4),
+        Catalog.getProduct(actualProductId),
+        Catalog.getRelatedProducts(actualProductId, 4),
       ]);
+
+      console.log('[CatalogProductPage] Product API response:', {
+        ok: productResponse.ok,
+        status: productResponse.status,
+        body: productResponse.body,
+      });
 
       if (!productResponse.ok) {
         setError((productResponse.body as { message?: string }).message ?? 'Could not load this product.');
@@ -68,7 +77,7 @@ const CatalogProductPage: React.FC = () => {
     };
 
     loadProduct();
-  }, [productId]);
+  }, [actualProductId]);
 
   const selectedVariant = useMemo<ProductVariant | undefined>(() => {
     if (!product) return undefined;

@@ -23,6 +23,7 @@ Returns a paginated list of products with optional filters via query parameters.
 | `order` | string | Sort direction: `asc` or `desc` |
 | `page` | int | Page number (default: 1) |
 | `limit` | int | Items per page (default: 20) |
+| `tags` | string | Comma-separated tags to filter by (e.g. `male,unisex`) |
 
 **Response `200`** — array of `Product` objects.
 
@@ -294,6 +295,79 @@ Returns a ranked list of popular products for guest storefronts and landing page
 | `limit` | int | Maximum products to return (default: 12) |
 
 **Response `200`** — array of `Product` objects.
+
+---
+
+### Get Gender Overview
+`GET /api/v2/catalog/gender/{gender}`
+
+Returns a paginated product list and brand list for a gender category. No authentication required.
+
+Men includes products tagged `male` or `unisex`. Women includes products tagged `female` or `unisex`.
+
+The brands array only includes brands that have at least one product in the returned (filtered) product set. The `total` field reflects the full count of matching products across all pages, not just the current page length.
+
+**Path Parameters**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `gender` | string | yes | Gender category: `men` or `women` |
+
+**Query Parameters** (all optional)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `page` | int | Page number (default: 1) |
+| `limit` | int | Items per page (default: 20) |
+| `sort` | string | Sort field: `price` or `created_at` |
+| `order` | string | Sort direction: `asc` or `desc` |
+| `min_price` | number | Minimum price |
+| `max_price` | number | Maximum price |
+| `category` | string | Filter by category ID |
+
+**Response `200`**
+```json
+{
+  "gender": "men",
+  "products": [
+    {
+      "id": "uuid",
+      "title": "Product Name",
+      "seller_name": "Brand Name",
+      "seller_logo": "https://...",
+      "pricing": { "price": 2500, "currency": "PKR" },
+      "images": ["https://..."],
+      "tags": ["male"],
+      "status": "active"
+    }
+  ],
+  "brands": [
+    { "id": "uuid", "name": "Brand Name" }
+  ],
+  "total": 42
+}
+```
+
+**Response `400`** — invalid gender value
+```json
+{
+  "code": "BAD_REQUEST",
+  "message": "gender must be 'men' or 'women'"
+}
+```
+
+**Tag Mapping**
+
+| URL path param | Tags sent to MongoDB `$in` filter |
+|---|---|
+| `men` | `["male", "unisex"]` |
+| `women` | `["female", "unisex"]` |
+| anything else | returns 400 Bad Request |
+
+**Edge Cases**
+- No products found for a gender → returns `products: []`, `brands: []`, `total: 0` (not 404)
+- Additional filters (category, price, etc.) are applied to both products and brands, ensuring consistency
+- Only brands from active sellers are included (same seller status check as the product listing)
 
 ---
 

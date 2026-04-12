@@ -95,6 +95,9 @@ export type {
     UpdateDropRequest,
     BrandStorefront,
     TrendingSearch,
+    GenderOverview,
+    GenderOverviewProduct,
+    GenderBrand,
     
     // Campaign types
     Campaign,

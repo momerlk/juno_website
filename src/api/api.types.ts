@@ -268,6 +268,34 @@ export interface CatalogProduct {
     is_featured?: boolean;
 }
 
+export interface GenderOverviewProduct {
+    id: string;
+    title: string;
+    seller_name: string;
+    seller_logo: string;
+    pricing: {
+        price: number;
+        currency: string;
+        discounted: boolean;
+        discounted_price: number;
+    };
+    images: string[];
+    tags: string[];
+    status: string;
+}
+
+export interface GenderBrand {
+    id: string;
+    name: string;
+}
+
+export interface GenderOverview {
+    gender: string;
+    products: GenderOverviewProduct[];
+    brands: GenderBrand[];
+    total: number;
+}
+
 export interface FilterOptions {
     sizes: string[];
     price_ranges: { min: number; max: number }[];

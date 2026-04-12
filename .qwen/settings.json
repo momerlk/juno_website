@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npx *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(curl *)",
+      "Bash(jq *)",
+      "Bash(lsof *)"
     ]
   },
   "$version": 3

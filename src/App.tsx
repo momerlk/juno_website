@@ -66,6 +66,9 @@ const WritePage = React.lazy(() => import('./components/blog/WritePage'));
 const ProductPage = React.lazy(() => import('./components/ProductPage'));
 const CatalogPage = React.lazy(() => import('./components/catalog/CatalogPage'));
 const CatalogProductPage = React.lazy(() => import('./components/catalog/CatalogProductPage'));
+const GenderLandingPage = React.lazy(() => import('./components/catalog/gender/GenderLandingPage'));
+const GenderCatalogPage = React.lazy(() => import('./components/catalog/gender/GenderCatalogPage'));
+const GenderOrProductRouter = React.lazy(() => import('./components/catalog/GenderOrProductRouter'));
 const DownloadRedirect = React.lazy(() => import('./components/DownloadRedirect'));
 const ChapterFormPage = React.lazy(() => import('./components/chapter/ChapterFormPage'));
 const BrandReelGraphic = React.lazy(() => import('./components/BrandReelGraphic'));
@@ -144,8 +147,11 @@ function RoutedApp() {
                   <Route path="/write" element={<WritePage />} />
 
                 <Route path="/download" element={<DownloadRedirect />} />
-                <Route path="/catalog" element={<CatalogPage />} />
-                <Route path="/catalog/:productId" element={<CatalogProductPage />} />
+                
+                {/* Gender-based catalog navigation */}
+                <Route path="/catalog" element={<GenderLandingPage />} />
+                <Route path="/catalog/:genderOrId" element={<GenderOrProductRouter />} />
+                
                 <Route path="/wishlist" element={<WishlistPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/checkout/confirmation" element={<OrderConfirmationPage />} />
