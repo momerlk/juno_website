@@ -18,6 +18,7 @@ import {
 import { Catalog, type CatalogProduct, type ProductVariant } from '../../api/api';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useProbe';
+import CatalogNavbar from './CatalogNavbar';
 import SizeGuideModal from './SizeGuideModal';
 
 const formatCurrency = (value?: number) =>
@@ -31,8 +32,9 @@ const getProductImage = (product: Partial<CatalogProduct>) =>
 const SkeletonPulse = 'animate-pulse rounded-lg bg-white/[0.06]';
 
 const ProductSkeleton: React.FC = () => (
-    <div className="relative min-h-screen overflow-hidden bg-[#050505] pb-24 pt-20 text-white">
-        <div className="relative mx-auto max-w-7xl px-4 md:px-6">
+    <div className="relative min-h-screen overflow-hidden bg-[#050505] pb-24 text-white">
+        <CatalogNavbar />
+        <div className="relative mx-auto max-w-7xl px-4 md:px-6 pt-8">
             <div className={`mb-8 h-5 w-36 ${SkeletonPulse}`} />
             <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:gap-12">
                 {/* Left column — image */}
@@ -241,7 +243,8 @@ const CatalogProductPage: React.FC = () => {
     }
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-[#050505] pb-24 pt-20 text-white">
+        <div className="relative min-h-screen overflow-hidden bg-[#050505] pb-24 text-white">
+            <CatalogNavbar />
             <div className="pointer-events-none absolute inset-0">
                 <div className="absolute left-0 top-0 h-[32rem] w-[32rem] bg-primary/12 blur-[170px]" />
                 <div className="absolute bottom-0 right-0 h-[30rem] w-[30rem] bg-secondary/12 blur-[180px]" />

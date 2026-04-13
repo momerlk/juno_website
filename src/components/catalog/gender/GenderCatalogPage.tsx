@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { Catalog } from '../../../api/api';
 import type { GenderOverview, GenderBrand } from '../../../api/api.types';
+import CatalogNavbar from '../CatalogNavbar';
 import GenderHeader from './GenderHeader';
 import ProductGrid from './ProductGrid';
 import BrandList from './BrandList';
@@ -88,7 +89,7 @@ const GenderCatalogPage: React.FC = () => {
 
     if (!validGender) {
         return (
-            <div className="min-h-screen bg-[#050505] px-4 pb-16 pt-28 text-white md:px-6">
+            <div className="min-h-screen bg-[#050505] px-4 pb-16 pt-8 text-white md:px-6">
                 <div className="mx-auto max-w-7xl border border-red-500/20 bg-red-500/5 p-8 text-center">
                     <p
                         className="text-3xl uppercase text-white"
@@ -105,13 +106,14 @@ const GenderCatalogPage: React.FC = () => {
     const activeBrandName = filteredOverview?.brands.find((item) => item.id === brand)?.name;
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-[#050505] pb-16 pt-24 text-white">
+        <div className="relative min-h-screen overflow-hidden bg-[#050505] pb-16 text-white">
+            <CatalogNavbar />
             <div className="pointer-events-none absolute inset-0">
                 <div className="absolute left-[-12%] top-8 h-[30rem] w-[30rem] rounded-full bg-white/[0.035] blur-[170px]" />
                 <div className="absolute bottom-[-10%] right-[-8%] h-[28rem] w-[28rem] rounded-full bg-white/[0.02] blur-[180px]" />
             </div>
 
-            <div className="relative mx-auto max-w-7xl px-4 md:px-6">
+            <div className="relative mx-auto max-w-7xl px-4 pt-8 md:px-6">
                 <GenderHeader gender={validGender} />
 
                 {activeBrandName ? (
