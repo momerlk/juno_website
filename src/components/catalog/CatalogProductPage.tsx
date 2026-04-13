@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -27,6 +27,50 @@ const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value
 const getProductImage = (product: Partial<CatalogProduct>) =>
     asArray(product.images)[0] || '/juno_app_icon.png';
 
+/* ── Skeleton (zero-CLS placeholder that reserves full layout) ── */
+const SkeletonPulse = 'animate-pulse rounded-lg bg-white/[0.06]';
+
+const ProductSkeleton: React.FC = () => (
+    <div className="relative min-h-screen overflow-hidden bg-[#050505] pb-24 pt-20 text-white">
+        <div className="relative mx-auto max-w-7xl px-4 md:px-6">
+            <div className={`mb-8 h-5 w-36 ${SkeletonPulse}`} />
+            <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:gap-12">
+                {/* Left column — image */}
+                <div className="space-y-5">
+                    <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#101011]">
+                        <div className={`absolute inset-4 ${SkeletonPulse}`} />
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 md:grid-cols-5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className={`aspect-square ${SkeletonPulse}`} />
+                        ))}
+                    </div>
+                </div>
+                {/* Right column — details */}
+                <div className="space-y-8">
+                    <div className="space-y-5">
+                        <div className={`h-4 w-44 ${SkeletonPulse}`} />
+                        <div className={`mt-4 h-14 w-full max-w-lg ${SkeletonPulse}`} />
+                        <div className={`mt-4 h-9 w-48 ${SkeletonPulse}`} />
+                        <div className={`mt-5 h-6 w-56 ${SkeletonPulse}`} />
+                    </div>
+                    <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+                        <div className="space-y-3">
+                            <div className={`h-4 w-28 ${SkeletonPulse}`} />
+                            <div className={`mt-2 h-20 w-full ${SkeletonPulse}`} />
+                        </div>
+                        <div className={`h-44 rounded-[1.8rem] ${SkeletonPulse}`} />
+                    </div>
+                    <div className={`h-8 w-full ${SkeletonPulse}`} />
+                    <div className={`h-52 rounded-[2.1rem] ${SkeletonPulse}`} />
+                    <div className={`h-36 rounded-[2.2rem] ${SkeletonPulse}`} />
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+/* ── Main component ── */
 const CatalogProductPage: React.FC = () => {
     const { productId, genderOrId } = useParams<{ productId?: string; genderOrId?: string }>();
     const actualProductId = productId || genderOrId || '';
@@ -49,6 +93,8 @@ const CatalogProductPage: React.FC = () => {
     useTrackProductView(actualProductId, product?.categories?.[0]?.id);
 
     useEffect(() => {
+        let cancelled = false;
+
         const loadProduct = async () => {
             if (!actualProductId) {
                 setError('Product not found.');
@@ -59,44 +105,54 @@ const CatalogProductPage: React.FC = () => {
             setIsLoading(true);
             setError(null);
 
-            const [productResponse, relatedResponse] = await Promise.all([
-                Catalog.getProduct(actualProductId),
-                Catalog.getRelatedProducts(actualProductId, 4),
-            ]);
+            try {
+                const [productResponse, relatedResponse] = await Promise.all([
+                    Catalog.getProduct(actualProductId),
+                    Catalog.getRelatedProducts(actualProductId, 4),
+                ]);
 
-            if (!productResponse.ok) {
-                setError(
-                    (productResponse.body as { message?: string }).message ??
-                        'Could not load this product.'
+                if (cancelled) return;
+
+                if (!productResponse.ok) {
+                    setError(
+                        (productResponse.body as { message?: string }).message ??
+                            'Could not load this product.'
+                    );
+                    setProduct(null);
+                    setRelated([]);
+                    setIsLoading(false);
+                    return;
+                }
+
+                const nextProduct = productResponse.body;
+                setProduct(nextProduct);
+                setSelectedImage(getProductImage(nextProduct));
+                setSelectedOptions(
+                    Object.fromEntries(
+                        asArray(nextProduct.options).map((option) => [
+                            option.name,
+                            asArray(option.values)[0] ?? '',
+                        ])
+                    )
                 );
-                setProduct(null);
-                setRelated([]);
+                setRelated(
+                    relatedResponse.ok
+                        ? asArray(relatedResponse.body).filter((item) => item.id !== nextProduct.id)
+                        : []
+                );
+                setQuantity(1);
+                setShowAddedFeedback(false);
                 setIsLoading(false);
-                return;
+            } catch {
+                if (!cancelled) {
+                    setError('Could not load this product.');
+                    setIsLoading(false);
+                }
             }
-
-            const nextProduct = productResponse.body;
-            setProduct(nextProduct);
-            setSelectedImage(getProductImage(nextProduct));
-            setSelectedOptions(
-                Object.fromEntries(
-                    asArray(nextProduct.options).map((option) => [
-                        option.name,
-                        asArray(option.values)[0] ?? '',
-                    ])
-                )
-            );
-            setRelated(
-                relatedResponse.ok
-                    ? asArray(relatedResponse.body).filter((item) => item.id !== nextProduct.id)
-                    : []
-            );
-            setQuantity(1);
-            setShowAddedFeedback(false);
-            setIsLoading(false);
         };
 
         loadProduct();
+        return () => { cancelled = true; };
     }, [actualProductId]);
 
     const selectedVariant = useMemo<ProductVariant | undefined>(() => {
@@ -121,7 +177,7 @@ const CatalogProductPage: React.FC = () => {
     const description = product?.short_description || product?.description;
     const eta = product?.shipping_details?.estimated_delivery_days;
 
-    const handleAddToCart = () => {
+    const handleAddToCart = useCallback(() => {
         if (!product || !selectedVariant) return;
 
         setIsAdding(true);
@@ -138,7 +194,7 @@ const CatalogProductPage: React.FC = () => {
         window.setTimeout(() => {
             setCartOpen(true);
         }, 350);
-    };
+    }, [product, selectedVariant, quantity, currentPrice, addItem, setCartOpen]);
 
     useEffect(() => {
         if (!showAddedFeedback) return;
@@ -159,23 +215,18 @@ const CatalogProductPage: React.FC = () => {
         return () => observer.disconnect();
     }, []);
 
-    if (isLoading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-[#050505] pt-24 text-white">
-                <div className="rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-bold uppercase tracking-[0.24em] text-white/60">
-                    Loading product
-                </div>
-            </div>
-        );
+    /* Show skeleton during load — reserves full page layout so CLS stays ~0 */
+    if (isLoading || !product) {
+        return <ProductSkeleton />;
     }
 
-    if (error || !product) {
+    if (error) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#050505] px-4 pt-24 text-white">
                 <div className="max-w-xl rounded-[2rem] border border-red-500/20 bg-red-500/5 p-10 text-center">
                     <p className="text-2xl font-black uppercase text-white">Product unavailable</p>
                     <p className="mt-3 text-sm text-red-100/80">
-                        {error ?? 'We couldn’t find this product.'}
+                        {error}
                     </p>
                     <Link
                         to="/catalog"
@@ -207,12 +258,8 @@ const CatalogProductPage: React.FC = () => {
                 </button>
 
                 <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:gap-12">
-                    <motion.section
-                        initial={{ opacity: 0, x: -26 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.45 }}
-                        className="space-y-5"
-                    >
+                    {/* ── Left: Image Gallery ── */}
+                    <section className="space-y-5">
                         <div className="relative overflow-hidden bg-[#101011]">
                             <div className="absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.01)_0%,rgba(0,0,0,0.03)_25%,rgba(0,0,0,0.50)_100%)]" />
                             <div className="absolute left-5 top-5 z-20 flex flex-wrap gap-2">
@@ -225,9 +272,13 @@ const CatalogProductPage: React.FC = () => {
                                     </span>
                                 ) : null}
                             </div>
+                            {/* LCP image — eager, high priority, decoding async */}
                             <img
                                 src={selectedImage || getProductImage(product)}
                                 alt={product.title}
+                                loading="eager"
+                                fetchpriority="high"
+                                decoding="async"
                                 className="aspect-[3/4] w-full object-cover"
                             />
                             <div className="absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 p-5 md:p-6">
@@ -275,6 +326,8 @@ const CatalogProductPage: React.FC = () => {
                                             <img
                                                 src={image}
                                                 alt={`${product.title} ${imageIndex + 1}`}
+                                                loading="lazy"
+                                                decoding="async"
                                                 className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                             />
                                             <div
@@ -289,14 +342,10 @@ const CatalogProductPage: React.FC = () => {
                                 })}
                             </div>
                         ) : null}
-                    </motion.section>
+                    </section>
 
-                    <motion.section
-                        initial={{ opacity: 0, x: 26 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.45, delay: 0.05 }}
-                        className="space-y-8"
-                    >
+                    {/* ── Right: Product Details ── */}
+                    <section className="space-y-8">
                         <div>
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
@@ -568,7 +617,7 @@ const CatalogProductPage: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                    </motion.section>
+                    </section>
                 </div>
 
                 {related.length > 0 ? (
@@ -590,6 +639,8 @@ const CatalogProductPage: React.FC = () => {
                                         <img
                                             src={getProductImage(item)}
                                             alt={item.title}
+                                            loading="lazy"
+                                            decoding="async"
                                             className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-105"
                                         />
                                         <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.55))]" />
