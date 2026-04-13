@@ -1,5 +1,10 @@
 # Project Overview
 
+## Context Navigation
+1. ALWAYS query the knowledge graph first
+2. Only read raw files if I explicitly say so
+3. Use graphify-out/wiki/index.md
+
 Juno is the premier curated marketplace for Pakistan's independent labels. The platform is designed to prioritize **indie brands** and their stories as the primary discovery mechanism, with AI-driven features and a "swipe-to-shop" interface serving as secondary tools for conversion.
 
 The application serves as the main ecosystem hub, connecting shoppers with original creators through a unified experience.
