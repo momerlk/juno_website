@@ -98,8 +98,7 @@ const CatalogHero: React.FC<CatalogHeroProps> = ({ onFilterChange }) => {
                 <motion.div
                     initial={{ opacity: 0, y: 24 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden rounded-[2.4rem] bg-black"
-                    style={{ minHeight: '280px' }}
+                    className="relative overflow-hidden rounded-[2.4rem] bg-black min-h-[380px] md:min-h-[280px]"
                 >
                     {/* Grain texture overlay for editorial feel */}
                     <div
@@ -135,7 +134,7 @@ const CatalogHero: React.FC<CatalogHeroProps> = ({ onFilterChange }) => {
                                         style={{
                                             fontFamily: 'Montserrat, sans-serif',
                                             fontWeight: 900,
-                                            fontSize: 'clamp(2.8rem, 6vw, 6rem)',
+                                            fontSize: 'clamp(1.8rem, 6vw, 6rem)',
                                         }}
                                     >
                                         {liveDrop.title}
@@ -150,25 +149,27 @@ const CatalogHero: React.FC<CatalogHeroProps> = ({ onFilterChange }) => {
 
                                     {/* Countdown timer */}
                                     {timeLeft && (
-                                        <div className="mt-6 inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3">
+                                        <div className="mt-6 flex w-fit flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 md:flex-row md:items-center md:gap-4 md:px-5">
                                             <div className="flex items-center gap-2">
                                                 <Clock size={14} className="text-white/40" />
                                                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
                                                     Ends in
                                                 </span>
                                             </div>
-                                            {[
-                                                { val: timeLeft.hours, label: 'H' },
-                                                { val: timeLeft.minutes, label: 'M' },
-                                                { val: timeLeft.seconds, label: 'S' },
-                                            ].map(({ val, label }) => (
-                                                <div key={label} className="flex items-baseline gap-1">
-                                                    <span className="text-2xl font-black text-white" style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900 }}>
-                                                        {String(val).padStart(2, '0')}
-                                                    </span>
-                                                    <span className="text-[10px] font-bold text-white/30">{label}</span>
-                                                </div>
-                                            ))}
+                                            <div className="flex items-baseline gap-4">
+                                                {[
+                                                    { val: timeLeft.hours, label: 'H' },
+                                                    { val: timeLeft.minutes, label: 'M' },
+                                                    { val: timeLeft.seconds, label: 'S' },
+                                                ].map(({ val, label }) => (
+                                                    <div key={label} className="flex items-baseline gap-1">
+                                                        <span className="text-2xl font-black text-white" style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900 }}>
+                                                            {String(val).padStart(2, '0')}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-white/30">{label}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -202,7 +203,7 @@ const CatalogHero: React.FC<CatalogHeroProps> = ({ onFilterChange }) => {
                                         style={{
                                             fontFamily: 'Montserrat, sans-serif',
                                             fontWeight: 900,
-                                            fontSize: 'clamp(2.8rem, 6vw, 6rem)',
+                                            fontSize: 'clamp(1.8rem, 6vw, 6rem)',
                                         }}
                                     >
                                         {featuredCollection.title}

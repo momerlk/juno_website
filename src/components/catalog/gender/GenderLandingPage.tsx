@@ -6,10 +6,10 @@ const GenderLandingPage: React.FC = () => {
     const [hoveredSide, setHoveredSide] = useState<'men' | 'women' | null>(null);
 
     return (
-        <div className="relative flex min-h-screen w-full overflow-hidden bg-black">
+        <div className="relative flex min-h-screen w-full flex-col overflow-hidden bg-black md:flex-row">
             {/* ── WOMEN SIDE ─────────────────────────────────────── */}
             <motion.div
-                className="relative flex-1 overflow-hidden cursor-pointer"
+                className="relative flex-1 cursor-pointer overflow-hidden"
                 animate={{
                     flex: hoveredSide === 'women' ? 1.35 : hoveredSide === 'men' ? 0.65 : 1,
                 }}
@@ -30,67 +30,83 @@ const GenderLandingPage: React.FC = () => {
                     {/* Dark gradient overlay — stronger at bottom */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
 
-                    {/* Right edge fade to blend with men's side */}
-                    <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-r from-transparent to-black/60" />
+                    {/* Right edge fade — desktop only (men's side is to the right) */}
+                    <div className="absolute inset-y-0 right-0 hidden w-16 bg-gradient-to-r from-transparent to-black/60 md:block" />
+
+                    {/* Bottom edge fade — mobile only (men's side is below) */}
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-black/60 md:hidden" />
 
                     {/* Top-left corner label */}
-                    <div className="absolute left-8 top-8">
-                        <p className="text-[10px] font-mono tracking-[0.32em] uppercase text-white/35">
+                    <div className="absolute left-6 top-6 md:left-8 md:top-8">
+                        <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
                             Juno / Women
                         </p>
                     </div>
 
-                    {/* Centre content */}
-                    <div className="absolute inset-0 flex flex-col items-start justify-end pb-16 pl-10">
-                        {/* Eyebrow text */}
+                    {/* Content */}
+                    <div className="absolute inset-0 flex flex-col items-start justify-end pb-10 pl-7 md:pb-16 md:pl-10">
+                        {/* Eyebrow */}
                         <motion.p
-                            className="mb-3 text-[10px] font-mono tracking-[0.32em] uppercase text-white/35"
+                            className="mb-3 font-mono text-[10px] uppercase tracking-[0.32em] text-white/35"
                             animate={{ opacity: hoveredSide === 'women' ? 1 : 0.5 }}
                             transition={{ duration: 0.3 }}
                         >
                             The Feminine Revolution
                         </motion.p>
 
-                        {/* Main headline — split into two lines */}
+                        {/* Headline */}
                         <h2
                             className="leading-none text-white"
-                            style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(3.4rem, 6.5vw, 6.2rem)' }}
+                            style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontWeight: 900,
+                                fontSize: 'clamp(2.4rem, 6.5vw, 6.2rem)',
+                            }}
                         >
                             <span className="block">Women</span>
                         </h2>
 
-                        {/* Italic serif sub-headline */}
+                        {/* Italic sub-headline */}
                         <p
-                            className="mt-3 text-lg italic text-white/70"
+                            className="mt-3 text-base italic text-white/70 md:text-lg"
                             style={{ fontFamily: 'Instrument Serif, serif', fontWeight: 300 }}
                         >
                             Wear what you mean
                         </p>
 
-                        {/* CTA pill — only fully visible on hover */}
-                        <motion.div
-                            className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/30 px-6 py-3"
-                            animate={{
-                                opacity: hoveredSide === 'women' ? 1 : 0,
-                                y: hoveredSide === 'women' ? 0 : 12,
-                            }}
-                            transition={{ duration: 0.3 }}
-                        >
+                        {/* CTA — always visible on mobile, hover-only on desktop */}
+                        <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-white/30 px-5 py-2.5 md:hidden">
                             <span className="text-sm font-bold uppercase tracking-[0.22em] text-white">
                                 Shop Women
                             </span>
                             <span className="text-white/60">→</span>
-                        </motion.div>
+                        </div>
+
+                        <div className="hidden md:block">
+                            <motion.div
+                                className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/30 px-6 py-3"
+                                animate={{
+                                    opacity: hoveredSide === 'women' ? 1 : 0,
+                                    y: hoveredSide === 'women' ? 0 : 12,
+                                }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <span className="text-sm font-bold uppercase tracking-[0.22em] text-white">
+                                    Shop Women
+                                </span>
+                                <span className="text-white/60">→</span>
+                            </motion.div>
+                        </div>
                     </div>
                 </Link>
             </motion.div>
 
-            {/* ── DIVIDER LINE ───────────────────────────────────── */}
-            <div className="absolute inset-y-0 left-1/2 z-10 w-px -translate-x-1/2 bg-white/20" />
+            {/* ── DIVIDER — desktop only ──────────────────────────── */}
+            <div className="absolute inset-y-0 left-1/2 z-10 hidden w-px -translate-x-1/2 bg-white/20 md:block" />
 
             {/* ── MEN SIDE ───────────────────────────────────────── */}
             <motion.div
-                className="relative flex-1 overflow-hidden cursor-pointer"
+                className="relative flex-1 cursor-pointer overflow-hidden"
                 animate={{
                     flex: hoveredSide === 'men' ? 1.35 : hoveredSide === 'women' ? 0.65 : 1,
                 }}
@@ -111,83 +127,80 @@ const GenderLandingPage: React.FC = () => {
                     {/* Dark gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
 
-                    {/* Left edge fade */}
-                    <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-l from-transparent to-black/60" />
+                    {/* Left edge fade — desktop only (women's side is to the left) */}
+                    <div className="absolute inset-y-0 left-0 hidden w-16 bg-gradient-to-l from-transparent to-black/60 md:block" />
+
+                    {/* Top edge fade — mobile only (women's side is above) */}
+                    <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-t from-transparent to-black/60 md:hidden" />
 
                     {/* Top-right corner label */}
-                    <div className="absolute right-8 top-8">
-                        <p className="text-[10px] font-mono tracking-[0.32em] uppercase text-white/35">
+                    <div className="absolute right-6 top-6 md:right-8 md:top-8">
+                        <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
                             Juno / Men
                         </p>
                     </div>
 
-                    {/* Centre content — right-aligned */}
-                    <div className="absolute inset-0 flex flex-col items-end justify-end pb-16 pr-10">
-                        {/* Eyebrow text */}
+                    {/* Content — right-aligned on desktop, left-aligned on mobile */}
+                    <div className="absolute inset-0 flex flex-col items-start justify-end pb-10 pl-7 md:items-end md:pb-16 md:pl-0 md:pr-10">
+                        {/* Eyebrow */}
                         <motion.p
-                            className="mb-3 text-[10px] font-mono tracking-[0.32em] uppercase text-white/35"
+                            className="mb-3 font-mono text-[10px] uppercase tracking-[0.32em] text-white/35 md:text-right"
                             animate={{ opacity: hoveredSide === 'men' ? 1 : 0.5 }}
                             transition={{ duration: 0.3 }}
                         >
                             New Wave Menswear
                         </motion.p>
 
-                        {/* Main headline */}
+                        {/* Headline */}
                         <h2
-                            className="leading-none text-white text-right"
-                            style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(3.4rem, 6.5vw, 6.2rem)' }}
+                            className="leading-none text-white md:text-right"
+                            style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontWeight: 900,
+                                fontSize: 'clamp(2.4rem, 6.5vw, 6.2rem)',
+                            }}
                         >
                             <span className="block">Men</span>
                         </h2>
 
-                        {/* Italic serif sub-headline */}
+                        {/* Italic sub-headline */}
                         <p
-                            className="mt-3 text-lg italic text-white/70 text-right"
+                            className="mt-3 text-base italic text-white/70 md:text-right md:text-lg"
                             style={{ fontFamily: 'Instrument Serif, serif', fontWeight: 300 }}
                         >
                             Dressed with intent
                         </p>
 
-                        {/* CTA pill */}
-                        <motion.div
-                            className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/30 px-6 py-3"
-                            animate={{
-                                opacity: hoveredSide === 'men' ? 1 : 0,
-                                y: hoveredSide === 'men' ? 0 : 12,
-                            }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <span className="text-white/60">←</span>
+                        {/* CTA — always visible on mobile, hover-only on desktop */}
+                        <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-white/30 px-5 py-2.5 md:hidden">
                             <span className="text-sm font-bold uppercase tracking-[0.22em] text-white">
                                 Shop Men
                             </span>
-                        </motion.div>
+                            <span className="text-white/60">→</span>
+                        </div>
+
+                        <div className="hidden md:block">
+                            <motion.div
+                                className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/30 px-6 py-3"
+                                animate={{
+                                    opacity: hoveredSide === 'men' ? 1 : 0,
+                                    y: hoveredSide === 'men' ? 0 : 12,
+                                }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <span className="text-white/60">←</span>
+                                <span className="text-sm font-bold uppercase tracking-[0.22em] text-white">
+                                    Shop Men
+                                </span>
+                            </motion.div>
+                        </div>
                     </div>
                 </Link>
             </motion.div>
 
-            {/* ── CENTRE BADGE (always visible) ───────────────────── */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                <motion.div
-                    className="flex flex-col items-center gap-2"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.4, duration: 0.5 }}
-                >
-                    <img
-                        src="/juno_logos/icon+text_white.png"
-                        alt="Juno"
-                        className="h-8 w-auto object-contain opacity-90"
-                    />
-                    <p className="text-[10px] font-mono tracking-[0.32em] uppercase text-white/35">
-                        Select your world
-                    </p>
-                </motion.div>
-            </div>
-
             {/* ── PAGE ENTER ANIMATION OVERLAY ────────────────────── */}
             <motion.div
-                className="pointer-events-none absolute inset-0 bg-black z-30"
+                className="pointer-events-none absolute inset-0 z-30 bg-black"
                 initial={{ opacity: 1 }}
                 animate={{ opacity: 0 }}
                 transition={{ duration: 0.7, ease: 'easeOut' }}
