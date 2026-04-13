@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Catalog } from '../../../api/api';
 import type { GenderOverview, GenderOverviewProduct, GenderBrand } from '../../../api/api.types';
@@ -136,23 +136,71 @@ const GenderCatalogPage: React.FC = () => {
                     </div>
                 )}
 
-                <div className="flex gap-8">
-                    {/* Sidebar */}
-                    <aside className="w-56 flex-shrink-0">
-                        {!isLoading && overview && (
-                            <BrandList brands={overview.brands} gender={validGender} />
-                        )}
-                    </aside>
+                <div>
+                    {/* Mobile brand filter chips — only on < lg */}
+                    {!isLoading && overview && overview.brands.length > 0 && (
+                        <div className="mb-4 lg:hidden">
+                            <MobileBrandChips brands={overview.brands} gender={validGender} />
+                        </div>
+                    )}
 
-                    {/* Main content */}
-                    <main className="flex-1">
-                        <ProductGrid
-                            products={overview?.products ?? []}
-                            isLoading={isLoading}
-                        />
-                    </main>
+                    <div className="flex gap-8">
+                        {/* Sidebar — desktop only */}
+                        <aside className="hidden lg:block w-56 flex-shrink-0">
+                            {!isLoading && overview && (
+                                <BrandList brands={overview.brands} gender={validGender} />
+                            )}
+                        </aside>
+
+                        {/* Main content */}
+                        <main className="flex-1 min-w-0">
+                            <ProductGrid
+                                products={overview?.products ?? []}
+                                isLoading={isLoading}
+                            />
+                        </main>
+                    </div>
                 </div>
             </div>
+        </div>
+    );
+};
+
+const MobileBrandChips: React.FC<{ brands: GenderBrand[]; gender: 'men' | 'women' }> = ({
+    brands,
+    gender,
+}) => {
+    const [searchParams] = useSearchParams();
+    const activeBrandId = searchParams.get('brand');
+
+    return (
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <Link
+                to={`/catalog/${gender}`}
+                className={`flex-shrink-0 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition-all ${
+                    !activeBrandId
+                        ? 'border-primary bg-gradient-to-r from-primary to-secondary text-white'
+                        : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-white/20 hover:text-white'
+                }`}
+            >
+                All
+            </Link>
+            {brands.map((brand) => {
+                const isActive = activeBrandId === brand.id;
+                return (
+                    <Link
+                        key={brand.id}
+                        to={`/catalog/${gender}?brand=${brand.id}`}
+                        className={`flex-shrink-0 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition-all ${
+                            isActive
+                                ? 'border-primary bg-gradient-to-r from-primary to-secondary text-white'
+                                : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-white/20 hover:text-white'
+                        }`}
+                    >
+                        {brand.name}
+                    </Link>
+                );
+            })}
         </div>
     );
 };

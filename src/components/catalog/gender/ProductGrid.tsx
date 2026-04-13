@@ -1,16 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, ArrowRight } from 'lucide-react';
 import type { GenderOverviewProduct } from '../../../api/api.types';
 
 type Props = {
     products: GenderOverviewProduct[];
     isLoading?: boolean;
 };
-
-const formatPrice = (price: number) =>
-    `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(price)}`;
 
 const ProductGrid: React.FC<Props> = ({ products, isLoading = false }) => {
     if (isLoading) {
@@ -54,47 +51,105 @@ const ProductCard: React.FC<{ product: GenderOverviewProduct; index: number }> =
     product,
     index,
 }) => {
+    const [isHovered, setIsHovered] = useState(false);
     const image = product.images?.[0] ?? '';
+    const secondImage = product.images?.[1] ?? '';
     const price = product.pricing.discounted
-        ? product.pricing.discounted_price
+        ? (product.pricing.discounted_price ?? product.pricing.price)
         : product.pricing.price;
+    const comparePrice = product.pricing.compare_at_price;
+    const discountPct = comparePrice && comparePrice > price
+        ? Math.round(((comparePrice - price) / comparePrice) * 100)
+        : 0;
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05, duration: 0.3 }}
+            transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.18) }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className="h-full"
         >
-            <Link to={`/catalog/${product.id}`} className="group block">
+            <Link
+                to={`/catalog/${product.id}`}
+                className="group flex h-full flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-xl hover:shadow-black/40"
+            >
                 {/* Image */}
-                <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-white/5">
+                <div className="relative aspect-[3/4] overflow-hidden bg-black/40">
                     {image ? (
-                        <img
-                            src={image}
-                            alt={product.title}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            loading="lazy"
-                        />
+                        <>
+                            <img
+                                src={image}
+                                alt={product.title}
+                                loading="lazy"
+                                className={`h-full w-full object-cover transition-all duration-700 ${
+                                    isHovered && secondImage ? 'scale-110 opacity-0' : 'scale-100 opacity-100'
+                                }`}
+                            />
+                            {secondImage && (
+                                <img
+                                    src={secondImage}
+                                    alt={product.title}
+                                    loading="lazy"
+                                    className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 ${
+                                        isHovered ? 'scale-100 opacity-100' : 'scale-110 opacity-0'
+                                    }`}
+                                />
+                            )}
+                        </>
                     ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-white/10">
-                            <ShoppingBag size={48} className="text-white/20" />
+                        <div className="flex h-full w-full items-center justify-center bg-white/5">
+                            <ShoppingBag size={40} className="text-white/20" />
                         </div>
                     )}
 
-                    {product.pricing.discounted && (
-                        <span className="absolute left-2 top-2 rounded-full bg-red-500 px-2.5 py-1 text-xs font-bold text-white">
-                            Sale
+                    {/* Discount badge */}
+                    {discountPct > 0 && (
+                        <span className="absolute left-3 top-3 rounded-full bg-red-500 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white shadow-lg shadow-red-500/30">
+                            -{discountPct}%
                         </span>
                     )}
+
+                    {/* Gradient scrim for text legibility on hover */}
+                    <div className={`absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
                 </div>
 
                 {/* Info */}
-                <div className="mt-2 space-y-1">
-                    <p className="text-xs text-neutral-400">{product.seller_name}</p>
-                    <p className="line-clamp-1 text-sm font-medium text-white">{product.title}</p>
-                    <p className="text-sm font-bold text-white">
-                        {formatPrice(price)}
+                <div className="flex flex-1 flex-col gap-1.5 p-3.5 md:p-4">
+                    <p
+                        className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary/80"
+                        style={{ fontFamily: 'Instrument Serif, serif' }}
+                    >
+                        {product.seller_name}
                     </p>
+                    <h3
+                        className="line-clamp-2 text-white"
+                        style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontWeight: 900,
+                            fontSize: 'clamp(0.95rem, 1.8vw, 1.2rem)',
+                            lineHeight: 1.1,
+                        }}
+                    >
+                        {product.title}
+                    </h3>
+                    <div className="mt-auto flex items-end justify-between gap-2 border-t border-white/10 pt-3">
+                        <div>
+                            <p className="text-base font-black text-white md:text-lg">
+                                Rs {new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(price)}
+                            </p>
+                            {comparePrice && comparePrice > price && (
+                                <p className="text-xs text-neutral-500 line-through">
+                                    Rs {new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(comparePrice)}
+                                </p>
+                            )}
+                        </div>
+                        <ArrowRight
+                            size={14}
+                            className="mb-0.5 text-white/40 transition-transform group-hover:translate-x-1 group-hover:text-white/70"
+                        />
+                    </div>
                 </div>
             </Link>
         </motion.div>

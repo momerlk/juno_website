@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Clock, Sparkles, TrendingUp, ShoppingBag, Flame } from 'lucide-react';
+import { ArrowRight, Clock, Flame } from 'lucide-react';
 import { Catalog, type Collection, type Drop } from '../../api/api';
 
 interface CatalogHeroProps {
@@ -92,115 +92,140 @@ const CatalogHero: React.FC<CatalogHeroProps> = ({ onFilterChange }) => {
     }
 
     return (
-        <div className="mt-20 space-y-6 md:space-y-8">
-            {/* Hero Banner - Collection or Drop */}
+        <div className="mt-20 space-y-5 md:space-y-6">
+            {/* ── HERO BANNER ────────────────────────────────────── */}
             {(featuredCollection || liveDrop) && (
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 24 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-gradient-to-br from-primary/20 via-secondary/10 to-transparent"
+                    className="relative overflow-hidden rounded-[2.4rem] bg-black"
+                    style={{ minHeight: '280px' }}
                 >
-                    {/* Decorative Background Elements */}
-                    <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-                    <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-secondary/10 blur-3xl" />
+                    {/* Grain texture overlay for editorial feel */}
+                    <div
+                        className="pointer-events-none absolute inset-0 z-10 opacity-[0.04]"
+                        style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`,
+                        }}
+                    />
+
+                    {/* Red-pink gradient background mesh */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-transparent to-secondary/20" />
+                    <div className="absolute -right-32 -top-32 h-80 w-80 rounded-full bg-primary/15 blur-[100px]" />
+                    <div className="absolute -bottom-20 left-1/3 h-60 w-60 rounded-full bg-secondary/15 blur-[80px]" />
 
                     {liveDrop ? (
-                        <Link
-                            to={`/drops/${liveDrop.slug}`}
-                            className="relative block p-6 md:p-10 lg:p-12"
-                        >
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/20 animate-pulse">
-                                            <div className="h-3 w-3 rounded-full bg-red-500" />
-                                        </div>
-                                        <span className="text-xs font-bold uppercase tracking-[0.2em] text-red-400">
-                                            Live Now
+                        <Link to={`/drops/${liveDrop.slug}`} className="relative z-20 block p-8 md:p-12 lg:p-16 group">
+                            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+                                <div>
+                                    {/* Live pill */}
+                                    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-1.5">
+                                        <span className="relative flex h-2 w-2">
+                                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                                            <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                                        </span>
+                                        <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-red-400">
+                                            Live Drop
                                         </span>
                                     </div>
-                                    <h2 className="text-3xl md:text-5xl font-black uppercase tracking-[-0.04em] text-white">
+
+                                    {/* Drop title in Montserrat Black */}
+                                    <h2
+                                        className="leading-none text-white"
+                                        style={{
+                                            fontFamily: 'Montserrat, sans-serif',
+                                            fontWeight: 900,
+                                            fontSize: 'clamp(2.8rem, 6vw, 6rem)',
+                                        }}
+                                    >
                                         {liveDrop.title}
                                     </h2>
-                                    <p className="mt-3 text-sm md:text-base text-white/70">
+
+                                    <p
+                                        className="mt-3 text-base italic text-white/50"
+                                        style={{ fontFamily: 'Instrument Serif, serif', fontWeight: 300 }}
+                                    >
                                         {liveDrop.product_ids?.length || 0} exclusive pieces from independent labels
                                     </p>
 
-                                    {/* Countdown Timer */}
+                                    {/* Countdown timer */}
                                     {timeLeft && (
-                                        <div className="mt-6 flex items-center gap-4">
-                                            <div className="flex items-center gap-2 text-white/60">
-                                                <Clock size={16} />
-                                                <span className="text-xs font-bold uppercase tracking-[0.16em]">
+                                        <div className="mt-6 inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <Clock size={14} className="text-white/40" />
+                                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
                                                     Ends in
                                                 </span>
                                             </div>
-                                            <div className="flex gap-2">
-                                                <div className="flex flex-col items-center rounded-xl bg-white/10 px-3 py-2">
-                                                    <span className="text-lg font-black text-white">
-                                                        {String(timeLeft.hours).padStart(2, '0')}
+                                            {[
+                                                { val: timeLeft.hours, label: 'H' },
+                                                { val: timeLeft.minutes, label: 'M' },
+                                                { val: timeLeft.seconds, label: 'S' },
+                                            ].map(({ val, label }) => (
+                                                <div key={label} className="flex items-baseline gap-1">
+                                                    <span className="text-2xl font-black text-white" style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900 }}>
+                                                        {String(val).padStart(2, '0')}
                                                     </span>
-                                                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-white/50">
-                                                        H
-                                                    </span>
+                                                    <span className="text-[10px] font-bold text-white/30">{label}</span>
                                                 </div>
-                                                <div className="flex flex-col items-center rounded-xl bg-white/10 px-3 py-2">
-                                                    <span className="text-lg font-black text-white">
-                                                        {String(timeLeft.minutes).padStart(2, '0')}
-                                                    </span>
-                                                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-white/50">
-                                                        M
-                                                    </span>
-                                                </div>
-                                                <div className="flex flex-col items-center rounded-xl bg-white/10 px-3 py-2">
-                                                    <span className="text-lg font-black text-white">
-                                                        {String(timeLeft.seconds).padStart(2, '0')}
-                                                    </span>
-                                                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-white/50">
-                                                        S
-                                                    </span>
-                                                </div>
-                                            </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="flex items-center gap-3 text-white">
-                                    <span className="text-sm font-bold uppercase tracking-[0.16em]">
+                                <div className="flex items-center gap-3 rounded-full border border-white/20 bg-white/5 px-6 py-3 transition-all group-hover:bg-white/10 group-hover:border-white/30 self-start md:self-auto">
+                                    <span
+                                        className="text-sm font-bold uppercase tracking-[0.2em] text-white"
+                                        style={{ fontFamily: 'Instrument Serif, serif' }}
+                                    >
                                         Shop Drop
                                     </span>
-                                    <ArrowRight size={20} className="transition-transform group-hover:translate-x-2" />
+                                    <ArrowRight size={16} className="text-white transition-transform group-hover:translate-x-1" />
                                 </div>
                             </div>
                         </Link>
                     ) : featuredCollection ? (
                         <Link
                             to={`/catalog?collection=${featuredCollection.id}`}
-                            className="relative block p-6 md:p-10 lg:p-12 group"
+                            className="relative z-20 block p-8 md:p-12 lg:p-16 group"
                         >
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Sparkles size={16} className="text-primary" />
-                                        <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
-                                            Featured Collection
-                                        </span>
-                                    </div>
-                                    <h2 className="text-3xl md:text-5xl font-black uppercase tracking-[-0.04em] text-white">
+                            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+                                <div>
+                                    <p
+                                        className="mb-4 text-[11px] font-bold uppercase tracking-[0.3em] text-white/40"
+                                    >
+                                        Featured Collection
+                                    </p>
+
+                                    <h2
+                                        className="leading-none text-white"
+                                        style={{
+                                            fontFamily: 'Montserrat, sans-serif',
+                                            fontWeight: 900,
+                                            fontSize: 'clamp(2.8rem, 6vw, 6rem)',
+                                        }}
+                                    >
                                         {featuredCollection.title}
                                     </h2>
+
                                     {featuredCollection.description && (
-                                        <p className="mt-3 text-sm md:text-base text-white/70 line-clamp-2">
+                                        <p
+                                            className="mt-3 max-w-lg text-base italic text-white/50 line-clamp-2"
+                                            style={{ fontFamily: 'Instrument Serif, serif', fontWeight: 300 }}
+                                        >
                                             {featuredCollection.description}
                                         </p>
                                     )}
                                 </div>
 
-                                <div className="flex items-center gap-3 text-white group-hover:translate-x-2 transition-transform">
-                                    <span className="text-sm font-bold uppercase tracking-[0.16em]">
+                                <div className="flex items-center gap-3 rounded-full border border-white/20 bg-white/5 px-6 py-3 transition-all group-hover:bg-white/10 group-hover:border-white/30 self-start md:self-auto">
+                                    <span
+                                        className="text-sm font-bold uppercase tracking-[0.2em] text-white"
+                                        style={{ fontFamily: 'Instrument Serif, serif' }}
+                                    >
                                         Explore
                                     </span>
-                                    <ArrowRight size={20} />
+                                    <ArrowRight size={16} className="text-white transition-transform group-hover:translate-x-1" />
                                 </div>
                             </div>
                         </Link>
@@ -208,31 +233,32 @@ const CatalogHero: React.FC<CatalogHeroProps> = ({ onFilterChange }) => {
                 </motion.div>
             )}
 
-            {/* Trending Searches Ribbon */}
+            {/* ── TRENDING SEARCHES ──────────────────────────────── */}
             {trendingSearches.length > 0 && (
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-5 md:p-6"
+                    transition={{ delay: 0.12 }}
+                    className="rounded-[1.8rem] border border-white/8 bg-white/[0.025] px-6 py-5"
                 >
-                    <div className="flex items-center gap-2 mb-4">
-                        <Flame size={18} className="text-primary" />
-                        <p className="text-sm font-bold uppercase tracking-[0.18em] text-white/60">
-                            Trending Searches
+                    <div className="mb-4 flex items-center gap-2">
+                        <Flame size={16} className="text-primary" />
+                        <p
+                            className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/40"
+                        >
+                            Trending Now
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {trendingSearches.map((search, index) => (
                             <motion.button
                                 key={search.term}
-                                initial={{ opacity: 0, scale: 0.9 }}
+                                initial={{ opacity: 0, scale: 0.85 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: index * 0.05 }}
+                                transition={{ delay: index * 0.04 }}
                                 onClick={() => handleTrendingClick(search.term)}
-                                className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white/70 transition-all hover:border-primary hover:bg-primary/20 hover:text-white"
+                                className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/60 transition-all hover:border-primary/50 hover:bg-primary/10 hover:text-white"
                             >
-                                <ShoppingBag size={14} className="text-white/40 group-hover:text-primary transition-colors" />
                                 {search.term}
                             </motion.button>
                         ))}

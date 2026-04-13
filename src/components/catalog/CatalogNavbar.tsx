@@ -9,7 +9,6 @@ import {
     Heart,
     ArrowRight,
     Store,
-    Tag,
     TrendingUp,
 } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
@@ -105,6 +104,8 @@ const CatalogNavbar: React.FC = () => {
 
     const navLinks = [
         { name: 'Home', href: '/' },
+        { name: 'Women', href: '/catalog/women' },
+        { name: 'Men', href: '/catalog/men' },
         { name: 'Collections', href: '/collections' },
         { name: 'Drops', href: '/drops' },
         { name: 'Wishlist', href: '/wishlist', icon: Heart },
@@ -265,16 +266,26 @@ const CatalogNavbar: React.FC = () => {
                         {/* Desktop Nav Links */}
                         {isCatalogPage && (
                             <div className="hidden md:flex items-center space-x-1 mt-3 pt-3 border-t border-white/10">
-                                {navLinks.map((link) => (
-                                    <Link
-                                        key={link.name}
-                                        to={link.href}
-                                        className="px-4 py-2 text-sm font-medium text-neutral-300 hover:text-white rounded-full hover:bg-white/5 transition-all duration-300 flex items-center gap-2"
-                                    >
-                                        {link.icon && <link.icon size={14} />}
-                                        {link.name}
-                                    </Link>
-                                ))}
+                                {navLinks.map((link) => {
+                                    const isGender = link.name === 'Women' || link.name === 'Men';
+                                    const isActive = location.pathname === link.href;
+                                    return (
+                                        <Link
+                                            key={link.name}
+                                            to={link.href}
+                                            className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 flex items-center gap-2 ${
+                                                isGender
+                                                    ? isActive
+                                                        ? 'bg-gradient-to-r from-primary to-secondary text-white font-bold tracking-wide'
+                                                        : 'text-white font-bold tracking-wide border border-white/20 hover:border-white/40 hover:bg-white/5'
+                                                    : 'text-neutral-300 hover:text-white hover:bg-white/5'
+                                            }`}
+                                        >
+                                            {link.icon && <link.icon size={14} />}
+                                            {link.name}
+                                        </Link>
+                                    );
+                                })}
                                 <div className="flex-1" />
                                 <Link
                                     to="/seller"

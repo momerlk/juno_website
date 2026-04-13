@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check, Search, Store, ShoppingBag, Minus, Plus, Star, Users, Ruler } from 'lucide-react';
 import { Catalog, type CatalogProduct, type ProductVariant } from '../../api/api';
@@ -28,6 +28,7 @@ const CatalogProductPage: React.FC = () => {
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const { addItem, setCartOpen } = useGuestCart();
+  const navigate = useNavigate();
 
   const mainCTARef = useRef<HTMLDivElement>(null);
   const [viewersCount] = useState(() => Math.floor(Math.random() * 15) + 3);
@@ -160,10 +161,13 @@ const CatalogProductPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background pb-20 pt-24 text-white">
       <div className="container mx-auto px-4">
-        <Link to="/catalog" className="mb-8 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-white/60 transition-colors hover:text-white">
+        <button
+          onClick={() => (window.history.length > 2 ? navigate(-1) : navigate('/catalog'))}
+          className="mb-8 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-white/60 transition-colors hover:text-white"
+        >
           <ArrowLeft size={14} />
-          Back to catalog
-        </Link>
+          Back
+        </button>
 
         <div className="grid gap-10 xl:grid-cols-[0.95fr_1.05fr]">
           <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">

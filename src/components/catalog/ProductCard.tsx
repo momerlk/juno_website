@@ -227,7 +227,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <div className="flex flex-1 flex-col p-4 md:p-5">
                     <div className="min-h-[80px]">
                         <div className="flex items-start justify-between gap-3">
-                            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+                            <p
+                                className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary/80"
+                                style={{ fontFamily: 'Instrument Serif, serif', letterSpacing: '0.25em' }}
+                            >
                                 {product.seller_name || 'Juno Label'}
                             </p>
                             {/* Rating */}
@@ -240,7 +243,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                 </div>
                             )}
                         </div>
-                        <h2 className="mt-2 line-clamp-2 text-lg md:text-xl font-black uppercase tracking-[-0.03em] text-white">
+                        <h2
+                            className="mt-1 line-clamp-2 text-white"
+                            style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontWeight: 900,
+                                fontSize: 'clamp(1.15rem, 2.2vw, 1.5rem)',
+                                lineHeight: 1.05,
+                                letterSpacing: '0.01em',
+                            }}
+                        >
                             {product.title}
                         </h2>
                     </div>

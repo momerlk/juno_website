@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Layers, Store } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Catalog, type CatalogProduct, type Collection as CollectionType } from '../../api/api';
 import ProductCard from './ProductCard';
 
@@ -59,16 +59,16 @@ const CatalogDiscovery: React.FC<CatalogDiscoveryProps> = ({ onProductClick }) =
             {popularProducts.length > 0 && (
                 <section>
                     <div className="mb-6 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Sparkles size={20} className="text-primary" />
-                            <div>
-                                <p className="text-sm font-bold uppercase tracking-[0.18em] text-white/60">
-                                    Discovery
-                                </p>
-                                <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-white">
-                                    Popular Right Now
-                                </h2>
-                            </div>
+                        <div>
+                            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">
+                                Discovery
+                            </p>
+                            <h2
+                                className="leading-none text-white"
+                                style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
+                            >
+                                Popular Right Now
+                            </h2>
                         </div>
                         <Link
                             to="/catalog?sort=newest"
@@ -106,16 +106,16 @@ const CatalogDiscovery: React.FC<CatalogDiscoveryProps> = ({ onProductClick }) =
             {/* Collections Grid Section */}
             {collections.length > 0 && (
                 <section>
-                    <div className="mb-6 flex items-center gap-3">
-                        <Layers size={20} className="text-primary" />
-                        <div>
-                            <p className="text-sm font-bold uppercase tracking-[0.18em] text-white/60">
-                                Curated
-                            </p>
-                            <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-white">
-                                Shop by Collection
-                            </h2>
-                        </div>
+                    <div className="mb-6">
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">
+                            Curated
+                        </p>
+                        <h2
+                            className="leading-none text-white"
+                            style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
+                        >
+                            Shop by Collection
+                        </h2>
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -132,16 +132,16 @@ const CatalogDiscovery: React.FC<CatalogDiscoveryProps> = ({ onProductClick }) =
 
             {/* Brand Shortcuts */}
             <section>
-                <div className="mb-6 flex items-center gap-3">
-                    <Store size={20} className="text-primary" />
-                    <div>
-                        <p className="text-sm font-bold uppercase tracking-[0.18em] text-white/60">
-                            Brands
-                        </p>
-                        <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-white">
-                            Shop by Brand
-                        </h2>
-                    </div>
+                <div className="mb-6">
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">
+                        Brands
+                    </p>
+                    <h2
+                        className="leading-none text-white"
+                        style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
+                    >
+                        Shop by Brand
+                    </h2>
                 </div>
 
                 <BrandShortcuts />
@@ -163,13 +163,16 @@ const CollectionCard: React.FC<{ collection: CollectionType; index: number }> = 
         >
             <Link
                 to={`/catalog?collection=${collection.id}`}
-                className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 transition-all hover:-translate-y-1 hover:border-white/20"
+                className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-primary/10 via-black to-secondary/10 p-6 transition-all hover:-translate-y-1 hover:border-primary/30"
             >
                 <div className="relative z-10">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
                         Collection
                     </p>
-                    <h3 className="mt-2 text-xl md:text-2xl font-black uppercase tracking-[-0.03em] text-white">
+                    <h3
+                        className="mt-2 leading-none text-white"
+                        style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(1.8rem, 3vw, 2.4rem)' }}
+                    >
                         {collection.title}
                     </h3>
                     {collection.description && (
