@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Smartphone, Apple } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Apple, Smartphone } from 'lucide-react';
 import { trackDownloadVisit } from '../api/chapterApi';
 
 const DownloadRedirect: React.FC = () => {
   const [os, setOs] = useState<'android' | 'ios' | 'other'>('other');
   const [countdown, setCountdown] = useState(3);
 
-  const iosUrl = "https://apps.apple.com/pk/app/juno-swipe-to-shop/id6751541492";
-  const androidUrl = "https://play.google.com/store/apps/details?id=com.junonow.app";
-  const whatsappUrl = "https://wa.me/923158972405";
+  const iosUrl = 'https://apps.apple.com/pk/app/juno-swipe-to-shop/id6751541492';
+  const androidUrl = 'https://play.google.com/store/apps/details?id=com.junonow.app';
+  const whatsappUrl = 'https://wa.me/923158972405';
 
   useEffect(() => {
     const trackVisit = async () => {
@@ -18,20 +18,22 @@ const DownloadRedirect: React.FC = () => {
         try {
           const ipResponse = await fetch('https://api.ipify.org?format=json');
           if (!ipResponse.ok) return;
+
           const ipData = await ipResponse.json();
-          
           const userAgent = navigator.userAgent || navigator.vendor;
           let currentOs = 'other';
+
           if (/android/i.test(userAgent)) currentOs = 'android';
           else if (/iPad|iPhone|iPod/.test(userAgent)) currentOs = 'ios';
 
           await trackDownloadVisit(ipData.ip, currentOs);
           localStorage.setItem('hasVisitedDownloadPage', 'true');
         } catch (e) {
-          console.error("Tracking error:", e);
+          console.error('Tracking error:', e);
         }
       }
     };
+
     trackVisit();
   }, []);
 
@@ -49,11 +51,11 @@ const DownloadRedirect: React.FC = () => {
 
     if (targetOs !== 'other') {
       const redirectUrl = targetOs === 'ios' ? iosUrl : androidUrl;
-      
+
       const timer = setInterval(() => {
-        setCountdown(prev => prev > 0 ? prev - 1 : 0);
+        setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
-      
+
       const redirectTimeout = setTimeout(() => {
         window.location.href = redirectUrl;
       }, 3000);
@@ -65,67 +67,104 @@ const DownloadRedirect: React.FC = () => {
     }
   }, []);
 
-  return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden flex flex-col justify-center items-center p-4">
-      {/* Background Elements */}
-      <div className="absolute inset-0 z-0 opacity-20">
-        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-secondary rounded-full blur-[120px]" />
-      </div>
+  const storeUrl = os === 'ios' ? iosUrl : androidUrl;
+  const storeName = os === 'ios' ? 'App Store' : 'Play Store';
 
-      <div className="relative z-10 w-full max-w-lg">
+  return (
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4 py-10 text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,59,92,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(255,122,89,0.14),transparent_30%)]" />
+
+      <div className="relative z-10 w-full max-w-md">
         <AnimatePresence mode="wait">
           {os !== 'other' ? (
             <motion.div
               key="redirecting"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-neutral-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl text-center"
+              exit={{ opacity: 0, y: -16 }}
+              className="rounded-[28px] border border-white/10 bg-white/[0.05] p-8 text-center shadow-2xl backdrop-blur-xl"
             >
-              <div className="bg-white/10 p-4 rounded-full inline-block mb-6">
-                {os === 'ios' ? <Apple size={48} className="text-white" /> : <Smartphone size={48} className="text-primary" />}
+              <img
+                src="/juno_logos/icon+text_white.png"
+                alt="Juno"
+                className="mx-auto mb-8 h-9 w-auto"
+              />
+
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-secondary">
+                {os === 'ios' ? <Apple size={30} className="text-white" /> : <Smartphone size={30} className="text-white" />}
               </div>
-              <h1 className="text-3xl font-bold mb-4">Opening {os === 'ios' ? 'App Store' : 'Play Store'}...</h1>
-              <p className="text-neutral-400 mb-8">
-                Redirecting you to Juno in {countdown} seconds.
+
+              <p className="mb-3 text-xs uppercase tracking-[0.28em] text-white/45">
+                Redirecting
               </p>
-              <div className="flex justify-center">
-                <div className="w-16 h-16 rounded-full border-4 border-white/10 border-t-primary animate-spin" />
+              <h1 className="text-3xl font-black tracking-tight text-white">
+                Opening {storeName}
+              </h1>
+              <p className="mt-4 text-base leading-7 text-white/65">
+                Taking you to Juno in {countdown} second{countdown === 1 ? '' : 's'}.
+              </p>
+
+              <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${((3 - countdown) / 3) * 100}%` }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                />
               </div>
-              <a 
-                href={os === 'ios' ? iosUrl : androidUrl}
-                className="mt-8 inline-block text-primary hover:text-primary-light transition-colors text-sm font-medium underline"
+
+              <a
+                href={storeUrl}
+                className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-bold text-black transition-colors hover:bg-neutral-100"
               >
-                Click here if you aren't redirected automatically
+                Open manually
               </a>
             </motion.div>
           ) : (
             <motion.div
               key="other"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-neutral-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl text-center"
+              exit={{ opacity: 0, y: -16 }}
+              className="rounded-[28px] border border-white/10 bg-white/[0.05] p-8 shadow-2xl backdrop-blur-xl"
             >
-              <h1 className="text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Get Juno</h1>
-              <p className="text-neutral-400 mb-8 text-lg">
-                Discover and shop Pakistan's most exciting indie brands. Available on iOS and Android.
+              <img
+                src="/juno_logos/icon+text_white.png"
+                alt="Juno"
+                className="mb-8 h-9 w-auto"
+              />
+
+              <p className="text-xs uppercase tracking-[0.28em] text-white/45">
+                Download the app
+              </p>
+              <h1 className="mt-3 text-4xl font-black tracking-tight text-white">
+                Get Juno
+              </h1>
+              <p className="mt-4 max-w-sm text-base leading-7 text-white/65">
+                Discover Pakistan&apos;s indie brands on iOS and Android.
               </p>
 
-              <div className="grid gap-4">
-                <a 
+              <div className="mt-8 grid gap-3">
+                <a
                   href={iosUrl}
-                  className="flex items-center justify-center gap-3 bg-white text-black font-bold py-4 rounded-xl hover:bg-neutral-200 transition-colors"
+                  className="flex items-center justify-center gap-3 rounded-2xl bg-white px-5 py-4 font-bold text-black transition-colors hover:bg-neutral-100"
                 >
-                  <Apple size={24} />
+                  <img
+                    src="/apple_logo.png"
+                    alt="Apple"
+                    className="h-5 w-5 object-contain"
+                  />
                   Download for iOS
                 </a>
-                <a 
+                <a
                   href={androidUrl}
-                  className="flex items-center justify-center gap-3 bg-white/10 text-white font-bold py-4 rounded-xl border border-white/10 hover:bg-white/20 transition-colors"
+                  className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 font-bold text-white transition-colors hover:bg-white/10"
                 >
-                  <Smartphone size={24} />
+                  <img
+                    src="/play_store.png"
+                    alt="Google Play"
+                    className="h-5 w-5 object-contain"
+                  />
                   Download for Android
                 </a>
               </div>
@@ -133,16 +172,12 @@ const DownloadRedirect: React.FC = () => {
           )}
         </AnimatePresence>
 
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 text-center"
-        >
-          <p className="text-neutral-500 text-sm">
-            Having trouble? <a href={whatsappUrl} className="text-primary hover:underline">Contact Support</a>
-          </p>
-        </motion.div>
+        <p className="mt-6 text-center text-sm text-white/45">
+          Having trouble?{' '}
+          <a href={whatsappUrl} className="font-medium text-primary transition-colors hover:text-secondary">
+            Contact Support
+          </a>
+        </p>
       </div>
     </div>
   );
