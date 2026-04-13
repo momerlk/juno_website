@@ -118,7 +118,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         >
             <Link
                 to={`/catalog/${product.id}`}
-                className="group relative flex h-full flex-col overflow-hidden rounded-[2.15rem] border border-white/10 bg-[#0f0f10] transition-all duration-500 hover:-translate-y-2 hover:border-white/20 hover:shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
+                className="group relative flex h-full flex-col overflow-hidden border border-white/10 bg-[#0f0f10] transition-all duration-500 hover:-translate-y-2 hover:border-white/20 hover:shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
             >
                 <div className="pointer-events-none absolute inset-0">
                     <div className="absolute -left-14 top-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl transition-opacity duration-500 group-hover:opacity-90" />
@@ -182,13 +182,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         </div>
                     ) : null}
 
-                    <div className="absolute inset-x-4 bottom-4 z-10 flex items-end justify-between gap-3">
-                        <div className="max-w-[70%] rounded-[1.4rem] border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-xl">
+                    <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-3 p-4">
+                        <div className="max-w-[70%]">
                             <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/35">
                                 {product.seller_name || 'Juno Label'}
                             </p>
                             <h2
-                                className="mt-2 line-clamp-2 text-white"
+                                className="mt-1 line-clamp-2 text-white"
                                 style={{
                                     fontFamily: 'Montserrat, sans-serif',
                                     fontWeight: 900,
@@ -201,7 +201,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                             </h2>
                             {categoryLabel ? (
                                 <p
-                                    className="mt-2 text-sm text-white/72"
+                                    className="mt-1 text-sm text-white/72"
                                     style={{ fontFamily: 'Instrument Serif, serif' }}
                                 >
                                     {categoryLabel}
@@ -225,19 +225,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     </div>
                 </div>
 
-                <div className="relative flex flex-1 flex-col px-5 pb-5 pt-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                        {accentTags.slice(0, 2).map((tag) => (
-                            <span
-                                key={tag}
-                                className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/62"
-                            >
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-
-                    <div className="mt-4 flex items-end justify-between gap-3 border-t border-white/10 pt-4">
+                <div className="relative flex flex-1 flex-col px-5 pb-5 pt-3">
+                    <div className="mt-2 flex items-end justify-between gap-3">
                         <div>
                             <div className="flex items-center gap-3">
                                 <p className="text-[1.45rem] font-black tracking-[-0.04em] text-white">
@@ -249,12 +238,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                     </p>
                                 ) : null}
                             </div>
-                            <p
-                                className="mt-1 text-sm text-white/55"
-                                style={{ fontFamily: 'Instrument Serif, serif' }}
-                            >
-                                Curated for statement dressing
-                            </p>
                         </div>
 
                         {showQuickAdd && !isSoldOut ? (

@@ -211,10 +211,10 @@ const CatalogProductPage: React.FC = () => {
                         initial={{ opacity: 0, x: -26 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.45 }}
-                        className="space-y-4"
+                        className="space-y-5"
                     >
-                        <div className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#101011]">
-                            <div className="absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.04)_30%,rgba(0,0,0,0.58)_100%)]" />
+                        <div className="relative overflow-hidden bg-[#101011]">
+                            <div className="absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.01)_0%,rgba(0,0,0,0.03)_25%,rgba(0,0,0,0.50)_100%)]" />
                             <div className="absolute left-5 top-5 z-20 flex flex-wrap gap-2">
                                 <span className="rounded-full border border-white/12 bg-black/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.24em] text-white/80 backdrop-blur-md">
                                     {product.product_type || 'Curated Piece'}
@@ -228,22 +228,22 @@ const CatalogProductPage: React.FC = () => {
                             <img
                                 src={selectedImage || getProductImage(product)}
                                 alt={product.title}
-                                className="aspect-[4/5] w-full object-cover"
+                                className="aspect-[3/4] w-full object-cover"
                             />
                             <div className="absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 p-5 md:p-6">
-                                <div className="max-w-md rounded-[1.6rem] border border-white/10 bg-black/35 px-4 py-4 backdrop-blur-xl">
+                                <div className="max-w-md">
                                     <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
                                         {product.seller_name || 'Juno Label'}
                                     </p>
                                     <p
-                                        className="mt-2 text-base text-white/75"
+                                        className="mt-1 text-base text-white/75"
                                         style={{ fontFamily: 'Instrument Serif, serif' }}
                                     >
                                         {product.categories?.[0]?.name || 'Independent label'}
                                     </p>
                                 </div>
                                 {product.rating ? (
-                                    <div className="hidden rounded-[1.3rem] border border-white/10 bg-black/35 px-4 py-3 text-right backdrop-blur-xl sm:block">
+                                    <div className="hidden text-right sm:block">
                                         <div className="flex items-center justify-end gap-1.5 text-amber-300">
                                             <Star size={14} className="fill-current" />
                                             <span className="text-sm font-bold text-white">
@@ -259,17 +259,17 @@ const CatalogProductPage: React.FC = () => {
                         </div>
 
                         {imageGallery.length > 1 ? (
-                            <div className="grid grid-cols-4 gap-3 md:grid-cols-5">
+                            <div className="grid grid-cols-4 gap-2 md:grid-cols-5">
                                 {imageGallery.map((image, imageIndex) => {
                                     const isActive = selectedImage === image;
                                     return (
                                         <button
                                             key={image}
                                             onClick={() => setSelectedImage(image)}
-                                            className={`group relative overflow-hidden rounded-[1.35rem] border transition-all ${
+                                            className={`group relative overflow-hidden border transition-all ${
                                                 isActive
                                                     ? 'border-primary shadow-[0_0_0_1px_rgba(255,24,24,0.5)]'
-                                                    : 'border-white/10 hover:border-white/25'
+                                                    : 'border-transparent hover:border-white/20'
                                             }`}
                                         >
                                             <img
@@ -281,7 +281,7 @@ const CatalogProductPage: React.FC = () => {
                                                 className={`absolute inset-0 ${
                                                     isActive
                                                         ? 'bg-[linear-gradient(180deg,transparent,rgba(255,24,24,0.28))]'
-                                                        : 'bg-black/15'
+                                                        : 'bg-black/10'
                                                 }`}
                                             />
                                         </button>
@@ -295,140 +295,136 @@ const CatalogProductPage: React.FC = () => {
                         initial={{ opacity: 0, x: 26 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.45, delay: 0.05 }}
-                        className="space-y-6"
+                        className="space-y-8"
                     >
-                        <div className="overflow-hidden rounded-[2.3rem] border border-white/10 bg-white/[0.04]">
-                            <div className="border-b border-white/10 px-6 py-5 md:px-8">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
-                                        Juno / Product Story
+                        <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
+                                    Juno / Product Story
+                                </span>
+                                {product.is_featured ? (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/80">
+                                        <Sparkles size={11} />
+                                        Featured
                                     </span>
-                                    {product.is_featured ? (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/80">
-                                            <Sparkles size={11} />
-                                            Featured
-                                        </span>
-                                    ) : null}
-                                </div>
-
-                                <h1
-                                    className="mt-4 text-white"
-                                    style={{
-                                        fontFamily: 'Montserrat, sans-serif',
-                                        fontWeight: 900,
-                                        fontSize: 'clamp(2.6rem,5vw,5rem)',
-                                        lineHeight: 0.88,
-                                        letterSpacing: '-0.05em',
-                                        textTransform: 'uppercase',
-                                    }}
-                                >
-                                    {product.title}
-                                </h1>
-
-                                <div className="mt-4 flex flex-wrap items-end gap-x-4 gap-y-2">
-                                    <p className="text-[2.1rem] font-black tracking-[-0.05em] text-white md:text-[2.5rem]">
-                                        {formatCurrency(currentPrice)}
-                                    </p>
-                                    {compareAt ? (
-                                        <p className="pb-1 text-lg text-white/30 line-through">
-                                            {formatCurrency(compareAt)}
-                                        </p>
-                                    ) : null}
-                                    {discountPercentage > 0 ? (
-                                        <p
-                                            className="pb-1 text-lg text-white/80"
-                                            style={{ fontFamily: 'Instrument Serif, serif' }}
-                                        >
-                                            marked down for this drop
-                                        </p>
-                                    ) : null}
-                                </div>
-
-                                <div className="mt-5 flex flex-wrap items-center gap-4">
-                                    {product.rating ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-1 text-amber-300">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <Star
-                                                        key={star}
-                                                        size={15}
-                                                        className={
-                                                            star <= Math.round(product.rating)
-                                                                ? 'fill-current'
-                                                                : 'text-white/18'
-                                                        }
-                                                    />
-                                                ))}
-                                            </div>
-                                            <span className="text-sm font-bold text-white/72">
-                                                {product.rating.toFixed(1)} rating
-                                            </span>
-                                        </div>
-                                    ) : null}
-                                    {product.shipping_details?.free_shipping ? (
-                                        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/75">
-                                            <Truck size={15} className="text-primary" />
-                                            <span>Free shipping available</span>
-                                        </div>
-                                    ) : null}
-                                </div>
+                                ) : null}
                             </div>
 
-                            <div className="grid gap-6 px-6 py-6 md:px-8 md:py-7">
-                                <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-                                    <div>
-                                        <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
-                                            Editorial note
-                                        </p>
-                                        <p
-                                            className="mt-3 text-lg leading-8 text-white/78"
-                                            style={{ fontFamily: 'Instrument Serif, serif' }}
-                                        >
-                                            {description || 'A strong silhouette from Pakistan’s independent fashion underground.'}
-                                        </p>
-                                    </div>
+                            <h1
+                                className="mt-4 text-white"
+                                style={{
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    fontWeight: 900,
+                                    fontSize: 'clamp(2.6rem,5vw,5rem)',
+                                    lineHeight: 0.88,
+                                    letterSpacing: '-0.05em',
+                                    textTransform: 'uppercase',
+                                }}
+                            >
+                                {product.title}
+                            </h1>
 
-                                    <div className="rounded-[1.8rem] border border-white/10 bg-black/20 p-5">
-                                        <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
-                                            Drop details
-                                        </p>
-                                        <div className="mt-4 space-y-3 text-sm text-white/75">
-                                            <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
-                                                <span>Brand</span>
-                                                <span className="font-semibold text-white">
-                                                    {product.seller_name || 'Juno Label'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
-                                                <span>Availability</span>
-                                                <span className="font-semibold text-white">
-                                                    {product.inventory?.in_stock ? 'In stock' : 'Sold out'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between gap-4">
-                                                <span>Estimated delivery</span>
-                                                <span className="font-semibold text-white">
-                                                    {eta ? `${eta} day${eta > 1 ? 's' : ''}` : 'On request'}
-                                                </span>
-                                            </div>
+                            <div className="mt-4 flex flex-wrap items-end gap-x-4 gap-y-2">
+                                <p className="text-[2.1rem] font-black tracking-[-0.05em] text-white md:text-[2.5rem]">
+                                    {formatCurrency(currentPrice)}
+                                </p>
+                                {compareAt ? (
+                                    <p className="pb-1 text-lg text-white/30 line-through">
+                                        {formatCurrency(compareAt)}
+                                    </p>
+                                ) : null}
+                                {discountPercentage > 0 ? (
+                                    <p
+                                        className="pb-1 text-lg text-white/80"
+                                        style={{ fontFamily: 'Instrument Serif, serif' }}
+                                    >
+                                        marked down for this drop
+                                    </p>
+                                ) : null}
+                            </div>
+
+                            <div className="mt-5 flex flex-wrap items-center gap-4">
+                                {product.rating ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1 text-amber-300">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <Star
+                                                    key={star}
+                                                    size={15}
+                                                    className={
+                                                        star <= Math.round(product.rating)
+                                                            ? 'fill-current'
+                                                            : 'text-white/18'
+                                                    }
+                                                />
+                                            ))}
                                         </div>
+                                        <span className="text-sm font-bold text-white/72">
+                                            {product.rating.toFixed(1)} rating
+                                        </span>
                                     </div>
-                                </div>
-
-                                {asArray(product.tags).length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {asArray(product.tags).slice(0, 8).map((tag) => (
-                                            <span
-                                                key={tag}
-                                                className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/62"
-                                            >
-                                                {tag}
-                                            </span>
-                                        ))}
+                                ) : null}
+                                {product.shipping_details?.free_shipping ? (
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/75">
+                                        <Truck size={15} className="text-primary" />
+                                        <span>Free shipping available</span>
                                     </div>
                                 ) : null}
                             </div>
                         </div>
+
+                        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+                            <div>
+                                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
+                                    Editorial note
+                                </p>
+                                <p
+                                    className="mt-3 text-lg leading-8 text-white/78"
+                                    style={{ fontFamily: 'Instrument Serif, serif' }}
+                                >
+                                    {description || "A strong silhouette from Pakistan's independent fashion underground."}
+                                </p>
+                            </div>
+
+                            <div className="rounded-[1.8rem] border border-white/10 bg-black/20 p-5">
+                                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
+                                    Drop details
+                                </p>
+                                <div className="mt-4 space-y-3 text-sm text-white/75">
+                                    <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                                        <span>Brand</span>
+                                        <span className="font-semibold text-white">
+                                            {product.seller_name || 'Juno Label'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                                        <span>Availability</span>
+                                        <span className="font-semibold text-white">
+                                            {product.inventory?.in_stock ? 'In stock' : 'Sold out'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span>Estimated delivery</span>
+                                        <span className="font-semibold text-white">
+                                            {eta ? `${eta} day${eta > 1 ? 's' : ''}` : 'On request'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {asArray(product.tags).length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                                {asArray(product.tags).slice(0, 8).map((tag) => (
+                                    <span
+                                        key={tag}
+                                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/62"
+                                    >
+                                        {tag}
+                                    </span>
+                                ))}
+                            </div>
+                        ) : null}
 
                         {asArray(product.options).length > 0 ? (
                             <div className="rounded-[2.1rem] border border-white/10 bg-white/[0.04] p-6 md:p-7">
@@ -588,7 +584,7 @@ const CatalogProductPage: React.FC = () => {
                                 <Link
                                     key={item.id}
                                     to={`/catalog/${item.id}`}
-                                    className="group overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] transition-all duration-300 hover:-translate-y-1.5 hover:border-white/20"
+                                    className="group overflow-hidden border border-white/10 bg-white/[0.04] transition-all duration-300 hover:-translate-y-1.5 hover:border-white/20"
                                 >
                                     <div className="relative overflow-hidden">
                                         <img
