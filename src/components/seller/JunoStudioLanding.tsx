@@ -403,10 +403,11 @@ const JunoStudioLanding: React.FC = () => {
               transition={{ duration: 0.8 }}
             >
 
-              {/* Badge */}
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8">
-                <span className="w-2 h-2 rounded-full bg-primary mr-2 animate-pulse" />
-                <span className="text-xs font-mono text-neutral-300 tracking-[0.2em] uppercase">Pakistan&apos;s First Swipe-to-Shop · Now Live</span>
+              {/* Institutional Badge */}
+              <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md mb-8">
+                <img src="/dark_logos/nic.png" alt="NIC Lahore" className="h-6 brightness-0 invert opacity-80" />
+                <div className="w-px h-5 bg-white/15" />
+                <span className="text-xs font-mono text-neutral-300 tracking-[0.2em] uppercase">Backed by NIC Lahore &amp; Ministry of IT</span>
               </div>
 
               <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.85] mb-6 uppercase">
@@ -415,14 +416,16 @@ const JunoStudioLanding: React.FC = () => {
               </h1>
 
               <p className="text-lg md:text-xl text-neutral-400 font-light italic mb-10 max-w-lg mx-auto leading-relaxed">
-                A marketplace for indie fashion brands.
+                Pakistan's home for indie fashion brands. Built for founders, by founders.
               </p>
 
               {/* Social proof stats */}
               <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16 mb-12">
                 {([
+                  { value: '2,000+', label: 'Active Users' },
                   { value: '50+', label: 'Indie Labels' },
-                  { value: '12.5%', label: 'Commission Only' },
+                  { value: '17.5%', label: 'Commission Only' },
+                  { value: 'Zero', label: 'Hidden or Upfront Fees' },
                 ] as { value: string; label: string }[]).map((stat, i) => (
                   <div key={i} className="text-center">
                     <p className="text-3xl md:text-4xl font-black text-white tracking-tighter">{stat.value}</p>
@@ -506,6 +509,74 @@ const JunoStudioLanding: React.FC = () => {
           })()}
         </section>
 
+        {/* Institutional Trust + Data Section */}
+        <section className="py-24 border-b border-white/5">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-16">
+              <span className="text-primary font-black uppercase tracking-[0.3em] text-sm mb-4 block">Why Juno</span>
+              <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase leading-none">
+                THE ONLY PLATFORM <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic">BUILT FOR YOU</span>
+              </h2>
+              <p className="text-neutral-400 font-light italic mt-4 max-w-xl mx-auto text-sm leading-relaxed">
+                30,000 user-to-product interactions give us unmatched insight into what Pakistan's youngest generation actually wants to buy. No other platform has this data.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+              {([
+                { value: '85%', label: 'Users aged 18 to 26', sub: 'Youngest buyer base in Pakistan' },
+                { value: '30K', label: 'User-Product Interactions', sub: 'Unmatched behavioral data' },
+                { value: 'NIC', label: 'Lahore Backed', sub: 'Plus Ministry of IT support' },
+                { value: '3x', label: 'Growth Channels', sub: 'App, campaigns, and campuses' },
+              ] as { value: string; label: string; sub: string }[]).map((item, i) => (
+                <div
+                  key={i}
+                  className="p-8 rounded-2xl border border-white/[0.07] bg-white/[0.02] flex flex-col gap-2"
+                >
+                  <p className="text-5xl font-black tracking-tighter text-white">{item.value}</p>
+                  <p className="text-xs font-black uppercase tracking-tighter text-white">{item.label}</p>
+                  <p className="text-xs text-neutral-500 font-light leading-relaxed">{item.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Growth Channels */}
+            <div
+              className="grid grid-cols-1 md:grid-cols-3 overflow-hidden rounded-2xl"
+              style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.01)' }}
+            >
+              {([
+                {
+                  number: '01',
+                  title: 'The App',
+                  desc: 'A swipe-to-shop experience that puts your brand campaign front and center for thousands of active shoppers.',
+                },
+                {
+                  number: '02',
+                  title: 'Marketing Campaigns',
+                  desc: 'Juno runs curated campaigns on the website and social channels that spotlight the brands inside the platform.',
+                },
+                {
+                  number: '03',
+                  title: 'Campus Chapters',
+                  desc: 'Active chapters across Pakistan\'s top universities bring Juno directly to the 18 to 26 age group that drives your sales.',
+                },
+              ] as { number: string; title: string; desc: string }[]).map((item, i) => (
+                <div
+                  key={i}
+                  className="p-8 border-b md:border-b-0 md:border-r last:border-r-0 flex flex-col gap-3"
+                  style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                >
+                  <span className="text-[10px] font-mono tracking-[0.3em] text-primary/60">{item.number}</span>
+                  <h4 className="text-sm font-black text-white uppercase tracking-tighter">{item.title}</h4>
+                  <p className="text-xs text-neutral-400 font-light leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Process Section - MOVED UP */}
         <section className="py-48 overflow-hidden bg-white/5">
           <div className="container mx-auto px-6">
@@ -526,10 +597,10 @@ const JunoStudioLanding: React.FC = () => {
                     title="Onboard your stock"
                     description="Sync your catalogue in minutes. Our team helps you optimize listings for visual discovery."
                   />
-                  <ProcessStep 
+                  <ProcessStep
                     number="03"
                     title="Scale the drop"
-                    description="Reach our community of 10,000+ thoughtful shoppers. Watch your narrative convert into growth."
+                    description="Reach 2,000+ active shoppers, 85% aged 18 to 26. Watch your narrative convert into real growth across three channels."
                   />
                 </div>
               </div>
@@ -578,18 +649,18 @@ const JunoStudioLanding: React.FC = () => {
 
         {/* Visual Narrative Section */}
         <section className="py-32 container mx-auto px-6 overflow-hidden">
-          <StorySection 
+          <StorySection
             subtitle="The Supply Chain"
             title="Logistics"
-            description="Focus on your craft, not the courier. Smartlane-managed riders pick up from your warehouse daily. We handle carrier assignment, tracking, and returns — all at a flat 12.5% commission."
+            description="Focus on your craft, not the courier. We work with multiple courier partners so a pickup happens even if you have a single order on the load sheet. Zero delay in order processing. Our sizing feature reduces returns before they happen."
             side="left"
             graphic={<LogisticsGraphic />}
           />
           
-          <StorySection 
+          <StorySection
             subtitle="The Discovery"
             title="AI-Driven"
-            description="Our app prioritizes stories over stock photos. Your brand campaign imagery is featured front-and-center, powered by a recommendation engine that understands style DNA."
+            description="Your campaign imagery goes full-screen in front of 2,000 active shoppers, 85% aged 18 to 26. Our recommendation engine has processed 30,000 interactions and understands exactly what this generation wants. No other platform in Pakistan has this."
             side="right"
             graphic={<AIGraphic />}
           />
@@ -613,7 +684,7 @@ const JunoStudioLanding: React.FC = () => {
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic">BY DESIGN</span>
               </h2>
               <p className="text-neutral-400 font-light italic mt-4 max-w-md mx-auto text-sm leading-relaxed">
-                We take less so you keep more. Our commission is the lowest in Pakistan — by a long way.
+                17.5% commission. Zero upfront cost. Laam charges 30% plus Rs 25,000 before you sell a single thing.
               </p>
             </div>
 
@@ -625,14 +696,14 @@ const JunoStudioLanding: React.FC = () => {
               {([
                 {
                   tag: 'Commission',
-                  value: '12.5%',
-                  sub: 'vs. up to 30% on other platforms',
+                  value: '17.5%',
+                  sub: 'Laam charges 30% commission plus Rs 25,000 upfront. We charge nothing upfront.',
                   highlight: true,
                 },
                 {
-                  tag: 'Ad Spend Required',
+                  tag: 'Upfront Cost',
                   value: 'Zero.',
-                  sub: 'AI surfaces your brand to the right buyers automatically',
+                  sub: 'No listing fees, no setup fees, no lock-in. Join as an additional sales channel at zero risk.',
                   highlight: false,
                   gradient: true,
                 },
@@ -666,18 +737,18 @@ const JunoStudioLanding: React.FC = () => {
               {([
                 {
                   icon: <Truck size={16} />,
-                  title: 'End-to-End Logistics',
-                  desc: 'Smartlane-managed couriers pick up from your warehouse daily. Daily load sheets, airway bills, full tracking — handled.',
+                  title: 'Multi-Courier Logistics',
+                  desc: 'We work with multiple courier partners to guarantee pickup even when you have a single order. No delays, no minimum volume requirements.',
                 },
                 {
                   icon: <Smartphone size={16} />,
-                  title: 'Swipe-to-Shop Discovery',
-                  desc: 'Buyers swipe through your campaign imagery full-screen. Our AI learns their preferences and surfaces your products intelligently.',
+                  title: 'Shopify Integration',
+                  desc: 'Connect your existing Shopify store in minutes. Your catalog syncs automatically so you manage everything from one place.',
                 },
                 {
                   icon: <Users size={16} />,
-                  title: 'Founder-to-Founder Support',
-                  desc: 'Direct WhatsApp access to the Juno founders. We help you optimize listings, plan drops, and grow — not just list and forget.',
+                  title: 'Returns and Customer Service',
+                  desc: 'World-class customer service and a structured return system. Our sizing feature reduces return rates before they happen.',
                 },
               ] as { icon: React.ReactNode; title: string; desc: string }[]).map((item, i) => (
                 <div
@@ -716,10 +787,11 @@ const JunoStudioLanding: React.FC = () => {
               {/* Feature manifest list */}
               <div className="divide-y divide-white/[0.06]">
                 {([
-                  { icon: <Layers size={18} />, title: 'Unified Inventory', desc: 'Direct connection to your existing Shopify or custom stacks. One source of truth for all sales channels.' },
-                  { icon: <BarChart size={18} />, title: 'Style Analytics', desc: 'Understand which aesthetics convert. Track saves, shares, and profile deep-dives by your audience.' },
-                  { icon: <Palette size={18} />, title: 'Campaign Tools', desc: 'Rich media tools to showcase the craft and purpose behind your collections front-and-center.' },
-                  { icon: <Settings size={18} />, title: 'Automated Ops', desc: 'Automated AWB generation, delivery booking, and payout reconciliation — zero admin overhead.' },
+                  { icon: <Layers size={18} />, title: 'Unified Inventory', desc: 'Connect your existing Shopify store or add products directly. One source of truth for all your sales channels.' },
+                  { icon: <BarChart size={18} />, title: 'Style Analytics', desc: 'Track saves, profile visits, browsing demographics, and which aesthetics convert. Built around brand story data, not spreadsheets.' },
+                  { icon: <Palette size={18} />, title: 'Campaign Tools', desc: 'Rich media tools to showcase the craft and purpose behind your collections. Your campaign imagery goes full-screen.' },
+                  { icon: <Package size={18} />, title: 'Sizing and Returns', desc: 'Built-in size guides reduce returns before they happen. Backed by a structured return system and world-class customer support.' },
+                  { icon: <Settings size={18} />, title: 'Automated Ops', desc: 'Automated AWB generation, delivery booking, and payout reconciliation. Zero admin overhead.' },
                 ] as { icon: React.ReactNode; title: string; desc: string }[]).map((item, i) => (
                   <div
                     key={i}
