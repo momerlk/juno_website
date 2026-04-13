@@ -53,7 +53,6 @@ const ProductCard: React.FC<{ product: GenderOverviewProduct; index: number }> =
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const image = product.images?.[0] ?? '';
-    const secondImage = product.images?.[1] ?? '';
     const price = product.pricing.discounted
         ? (product.pricing.discounted_price ?? product.pricing.price)
         : product.pricing.price;
@@ -67,87 +66,60 @@ const ProductCard: React.FC<{ product: GenderOverviewProduct; index: number }> =
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.18) }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
             className="h-full"
         >
             <Link
                 to={`/catalog/${product.id}`}
-                className="group flex h-full flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-xl hover:shadow-black/40"
+                className="group flex h-full flex-col overflow-hidden border border-white/10 bg-white/[0.04] transition-all duration-300 hover:-translate-y-1.5 hover:border-white/20"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
             >
-                {/* Image */}
-                <div className="relative aspect-[3/4] overflow-hidden bg-black/40">
+                <div className="relative overflow-hidden bg-black/40">
                     {image ? (
-                        <>
-                            <img
-                                src={image}
-                                alt={product.title}
-                                loading="lazy"
-                                className={`h-full w-full object-cover transition-all duration-700 ${
-                                    isHovered && secondImage ? 'scale-110 opacity-0' : 'scale-100 opacity-100'
-                                }`}
-                            />
-                            {secondImage && (
-                                <img
-                                    src={secondImage}
-                                    alt={product.title}
-                                    loading="lazy"
-                                    className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 ${
-                                        isHovered ? 'scale-100 opacity-100' : 'scale-110 opacity-0'
-                                    }`}
-                                />
-                            )}
-                        </>
+                        <img
+                            src={image}
+                            alt={product.title}
+                            loading="lazy"
+                            className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
                     ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-white/5">
+                        <div className="flex aspect-[4/5] w-full items-center justify-center bg-white/5">
                             <ShoppingBag size={40} className="text-white/20" />
                         </div>
                     )}
 
-                    {/* Discount badge */}
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.55))]" />
+
                     {discountPct > 0 && (
-                        <span className="absolute left-3 top-3 rounded-full bg-red-500 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white shadow-lg shadow-red-500/30">
-                            -{discountPct}%
+                        <span className="absolute left-3 top-3 rounded-full border border-primary/40 bg-primary/85 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-white">
+                            Save {discountPct}%
                         </span>
                     )}
-
-                    {/* Gradient scrim for text legibility on hover */}
-                    <div className={`absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
                 </div>
 
-                {/* Info */}
-                <div className="flex flex-1 flex-col gap-1.5 p-3.5 md:p-4">
-                    <p
-                        className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary/80"
-                        style={{ fontFamily: 'Instrument Serif, serif' }}
-                    >
+                <div className="flex flex-1 flex-col p-4">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
                         {product.seller_name}
                     </p>
-                    <h3
-                        className="line-clamp-2 text-white"
-                        style={{
-                            fontFamily: 'Montserrat, sans-serif',
-                            fontWeight: 900,
-                            fontSize: 'clamp(0.95rem, 1.8vw, 1.2rem)',
-                            lineHeight: 1.1,
-                        }}
-                    >
+                    <h3 className="mt-2 line-clamp-2 text-xl font-black uppercase tracking-[-0.04em] text-white">
                         {product.title}
                     </h3>
-                    <div className="mt-auto flex items-end justify-between gap-2 border-t border-white/10 pt-3">
+                    <div className="mt-4 flex items-center justify-between">
                         <div>
-                            <p className="text-base font-black text-white md:text-lg">
+                            <p className="text-lg font-bold text-white">
                                 Rs {new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(price)}
                             </p>
                             {comparePrice && comparePrice > price && (
-                                <p className="text-xs text-neutral-500 line-through">
+                                <p className="text-sm text-white/30 line-through">
                                     Rs {new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(comparePrice)}
                                 </p>
                             )}
                         </div>
                         <ArrowRight
-                            size={14}
-                            className="mb-0.5 text-white/40 transition-transform group-hover:translate-x-1 group-hover:text-white/70"
+                            size={15}
+                            className={`text-white/65 transition-transform duration-300 ${
+                                isHovered ? 'translate-x-1.5' : ''
+                            }`}
                         />
                     </div>
                 </div>

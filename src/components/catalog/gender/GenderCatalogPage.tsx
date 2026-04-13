@@ -29,6 +29,7 @@ const GenderCatalogPage: React.FC = () => {
     const category = searchParams.get('category') || undefined;
 
     useEffect(() => {
+
         console.log('GenderCatalogPage - useEffect triggered');
         console.log('GenderCatalogPage - genderOrId from useParams:', genderOrId);
         console.log('GenderCatalogPage - validGender:', validGender);
