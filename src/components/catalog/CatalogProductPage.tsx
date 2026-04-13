@@ -14,7 +14,6 @@ import {
     Star,
     Store,
     Truck,
-    Users,
 } from 'lucide-react';
 import { Catalog, type CatalogProduct, type ProductVariant } from '../../api/api';
 import { useGuestCart } from '../../contexts/GuestCartContext';
@@ -46,7 +45,6 @@ const CatalogProductPage: React.FC = () => {
     const navigate = useNavigate();
 
     const mainCTARef = useRef<HTMLDivElement>(null);
-    const [viewersCount] = useState(() => Math.floor(Math.random() * 15) + 3);
 
     useTrackProductView(actualProductId, product?.categories?.[0]?.id);
 
@@ -367,10 +365,6 @@ const CatalogProductPage: React.FC = () => {
                                             </span>
                                         </div>
                                     ) : null}
-                                    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/75">
-                                        <Users size={15} className="text-green-400" />
-                                        <span>{viewersCount} people viewing now</span>
-                                    </div>
                                     {product.shipping_details?.free_shipping ? (
                                         <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/75">
                                             <Truck size={15} className="text-primary" />
@@ -499,44 +493,6 @@ const CatalogProductPage: React.FC = () => {
                                 </div>
                             </div>
                         ) : null}
-
-                        <div className="grid gap-4 sm:grid-cols-3">
-                            <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.04] p-5">
-                                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
-                                    Stock
-                                </p>
-                                <p className="mt-3 text-xl font-black text-white">
-                                    {product.inventory?.available_quantity ?? 0}
-                                </p>
-                                <p className="mt-1 text-sm text-white/52">
-                                    units currently visible
-                                </p>
-                            </div>
-                            <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.04] p-5">
-                                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
-                                    Label
-                                </p>
-                                <p className="mt-3 text-xl font-black text-white">
-                                    {product.seller_name}
-                                </p>
-                                <p className="mt-1 text-sm text-white/52">
-                                    independent brand on Juno
-                                </p>
-                            </div>
-                            <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.04] p-5">
-                                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
-                                    Delivery
-                                </p>
-                                <p className="mt-3 text-xl font-black text-white">
-                                    {eta ? `${eta} days` : 'On request'}
-                                </p>
-                                <p className="mt-1 text-sm text-white/52">
-                                    {product.shipping_details?.free_shipping
-                                        ? 'free shipping eligible'
-                                        : 'standard shipping applies'}
-                                </p>
-                            </div>
-                        </div>
 
                         <div
                             ref={mainCTARef}
