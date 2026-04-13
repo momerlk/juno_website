@@ -170,7 +170,7 @@ Replace only the **return JSX** section. Find the `return (` statement (around l
                                         </span>
                                     </div>
 
-                                    {/* Drop title in Bebas Neue */}
+                                    {/* Drop title in Montserrat Black */}
                                     <h2
                                         className="leading-none text-white"
                                         style={{
@@ -204,7 +204,7 @@ Replace only the **return JSX** section. Find the `return (` statement (around l
                                                 { val: timeLeft.seconds, label: 'S' },
                                             ].map(({ val, label }) => (
                                                 <div key={label} className="flex items-baseline gap-1">
-                                                    <span className="text-2xl font-black text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                                                    <span className="text-2xl font-black text-white" style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900 }}>
                                                         {String(val).padStart(2, '0')}
                                                     </span>
                                                     <span className="text-[10px] font-bold text-white/30">{label}</span>
@@ -347,7 +347,7 @@ Replace with:
         </p>
         <h2
             className="leading-none text-white"
-            style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 'clamp(2rem, 4vw, 3rem)' }}
+            style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
         >
             Popular Right Now
         </h2>
@@ -379,7 +379,7 @@ Replace with:
     </p>
     <h2
         className="leading-none text-white"
-        style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 'clamp(2rem, 4vw, 3rem)' }}
+        style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
     >
         Shop by Collection
     </h2>
@@ -411,7 +411,7 @@ Replace with:
     </p>
     <h2
         className="leading-none text-white"
-        style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 'clamp(2rem, 4vw, 3rem)' }}
+        style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
     >
         Shop by Brand
     </h2>
@@ -447,7 +447,7 @@ Replace with:
 ```tsx
 <h3
     className="mt-2 leading-none text-white"
-    style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 'clamp(1.8rem, 3vw, 2.4rem)' }}
+    style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(1.8rem, 3vw, 2.4rem)' }}
 >
     {collection.title}
 </h3>
@@ -494,7 +494,8 @@ Replace with:
 <h2
     className="mt-1 line-clamp-2 text-white"
     style={{
-        fontFamily: 'Bebas Neue, sans-serif',
+        fontFamily: 'Montserrat, sans-serif',
+        fontWeight: 900,
         fontSize: 'clamp(1.15rem, 2.2vw, 1.5rem)',
         lineHeight: 1.05,
         letterSpacing: '0.01em',
@@ -517,18 +518,18 @@ Replace with:
 ### CatalogHero banner
 - Minimum height `280px`
 - Grain texture: inline SVG `feTurbulence` data URI, `opacity-[0.04]`
-- Collection title: Bebas Neue, `clamp(2.8rem, 6vw, 6rem)`
-- Description: Cormorant Garamond italic, weight 300
-- Countdown: Bebas Neue digits, Cormorant labels
+- Collection title: Montserrat Black (fontWeight 900), `clamp(2.8rem, 6vw, 6rem)`
+- Description: Instrument Serif italic, weight 300
+- Countdown: Montserrat Black digits, Inter labels
 
 ### CatalogDiscovery section headers
-- All three sections: Bebas Neue `clamp(2rem, 4vw, 3rem)`, `leading-none`
+- All three sections: Montserrat Black (fontWeight 900) `clamp(2rem, 4vw, 3.5rem)`, `leading-none`
 - Eyebrow label: `text-[10px]`, `tracking-[0.3em]`, `text-white/30`
 - Remove all Lucide icons from section headers (Sparkles, Layers, Store)
 
 ### ProductCard typography
-- Seller name: Cormorant Garamond, `text-[10px]`, `tracking-[0.25em]`, `text-primary/80`
-- Product title: Bebas Neue, `clamp(1.15rem, 2.2vw, 1.5rem)`, `line-height: 1.05`
+- Seller name: Instrument Serif, `text-[10px]`, `tracking-[0.25em]`, `text-primary/80`
+- Product title: Montserrat Black (fontWeight 900), `clamp(1.15rem, 2.2vw, 1.5rem)`, `line-height: 1.05`
 
 ---
 
@@ -542,18 +543,18 @@ Replace with:
 ### Hero banner
 - Dark base with red-pink gradient light mesh — no solid background fill
 - Grain texture overlay for editorial magazine feel
-- Collection title in Bebas Neue — large, condensed, dramatic
-- Descriptive text in Cormorant Garamond italic — elegant contrast
+- Collection title in Montserrat Black (900) — large, tight, dramatic
+- Descriptive text in Instrument Serif italic — editorial contrast
 - CTA pill: ghost button style (border + slight blur), slides right on hover
 
 ### Discovery sections
-- Section labels: all-caps tiny eyebrow + Bebas Neue headline
+- Section labels: all-caps tiny eyebrow (font-mono) + Montserrat Black headline
 - No Lucide icons in section headers (removed)
 - CollectionCard: gradient border tint using primary/secondary instead of pure white
 
 ### Product cards
 - Seller name: editorial typewriter feel (Cormorant + wide tracking)
-- Product title: condensed Bebas Neue — fashion editorial not retail
+- Product title: Montserrat Black (900) — fashion editorial not retail
 
 ---
 
@@ -570,12 +571,12 @@ Replace with:
 ## 10. Testing Instructions
 
 1. Open `http://localhost:5173/catalog`
-2. Verify Bebas Neue and Cormorant Garamond fonts load (check network tab — no 404 on font URLs)
-3. Check the catalog hero section: if a collection or drop exists, headline should be in Bebas Neue, large, dramatic
+2. Verify Montserrat and Instrument Serif fonts load (check network tab — no 404 on font URLs)
+3. Check the catalog hero section: if a collection or drop exists, headline should be in Montserrat Black (900), large, tight
 4. Check desktop navbar sub-row: "Women" and "Men" pills should appear between Home and Collections
 5. Click "Women" pill — should navigate to `/catalog/women`, pill should show gradient active state
-6. On discovery mode, verify section headings ("Popular Right Now", "Shop by Collection") are in Bebas Neue
-7. Verify product cards: seller name in Cormorant/small, product title in Bebas Neue condensed
+6. On discovery mode, verify section headings ("Popular Right Now", "Shop by Collection") are in Montserrat Black
+7. Verify product cards: seller name in Instrument Serif/small, product title in Montserrat Black condensed
 8. Check mobile (375px): no overflow, product grid still 2 columns, all fonts readable
 
 ---
@@ -584,11 +585,11 @@ Replace with:
 
 - [ ] "Women" and "Men" nav pills appear in desktop catalog navbar
 - [ ] Active gender pill shows gradient (primary → secondary)
-- [ ] Hero banner uses Bebas Neue for headline, Cormorant for description
-- [ ] Discovery section headers use Bebas Neue
-- [ ] CollectionCard uses Bebas Neue for title, gradient border tint
-- [ ] ProductCard seller name: Cormorant, wide tracking
-- [ ] ProductCard title: Bebas Neue, condensed
+- [ ] Hero banner uses Montserrat Black (900) for headline, Instrument Serif italic for description
+- [ ] Discovery section headers use Montserrat Black (900)
+- [ ] CollectionCard uses Montserrat Black (900) for title, gradient border tint
+- [ ] ProductCard seller name: Instrument Serif, wide tracking
+- [ ] ProductCard title: Montserrat Black (900), condensed
 - [ ] No broken layout on mobile
 - [ ] No new npm dependencies added
 - [ ] No console errors
