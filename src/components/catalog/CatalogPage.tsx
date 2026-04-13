@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Loader2, Search, SlidersHorizontal, X, ShoppingBag, Check } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { Catalog, type CatalogProduct } from '../../api/api';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import CatalogNavbar from './CatalogNavbar';
@@ -13,8 +12,6 @@ type SortValue = 'newest' | 'price_asc' | 'price_desc';
 type CatalogCategoryOption = { id: string; name: string; slug?: string };
 
 const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
-const formatCurrency = (value?: number) =>
-    `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
 
 // Product diversification algorithm - separates similar products
 const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
@@ -128,7 +125,7 @@ const CatalogPage: React.FC = () => {
     useEffect(() => {
         const loadFilters = async () => {
             const response = await Catalog.getFilters();
-            if (!response.ok) return;
+            if (!response.ok || !('categories' in response.body)) return;
             setCategories(asArray(response.body.categories));
         };
 
@@ -176,7 +173,7 @@ const CatalogPage: React.FC = () => {
             if (response.ok) {
                 let nextProducts = asArray(response.body);
 
-                if (!debouncedQuery && !categoryId && !collectionId && !sellerId && !color && !size && nextProducts.length === 0) {
+                if (!debouncedQuery && !categoryId && !collectionId && !sellerId && nextProducts.length === 0) {
                     const fallback = await Catalog.getPopularProducts(48);
                     if (fallback.ok) nextProducts = asArray(fallback.body);
                 }
@@ -226,13 +223,6 @@ const CatalogPage: React.FC = () => {
     }, [hasMore, isLoading]);
 
     const activeCategory = categories.find((item) => item.id === categoryId);
-
-    const updateSearchParam = (key: string, value: string) => {
-        const next = new URLSearchParams(searchParams);
-        if (value) next.set(key, value);
-        else next.delete(key);
-        setSearchParams(next);
-    };
 
     const clearFilters = () => {
         const next = new URLSearchParams(searchParams);
