@@ -170,7 +170,7 @@ const CatchyProducts: React.FC = () => {
               <span className="text-sm font-bold text-neutral-300 tracking-wider uppercase">The Catchy Edit</span>
             </div>
             <h2 className="text-5xl md:text-7xl font-black text-white mb-4 tracking-tighter">
-              The <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic py-2 px-3">Drop Board</span>
+              The <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary italic py-2 px-3">Catalog</span>
             </h2>
             <p className="text-xl text-neutral-400 font-light italic max-w-2xl leading-relaxed">
               What the community is wearing — and the story behind why.
@@ -269,10 +269,10 @@ const CatchyProducts: React.FC = () => {
           className="text-center mt-12"
         >
           <a
-            href="/download"
+            href="/catalog"
             className="inline-flex items-center px-12 py-6 rounded-full bg-white text-black font-black text-xl hover:bg-neutral-200 hover:scale-105 transition-all shadow-2xl shadow-white/10 group"
           >
-            Join the Community
+            Explore The Catalog
             <ArrowRight size={24} className="ml-2 transition-transform group-hover:translate-x-1" />
           </a>
         </motion.div>

@@ -57,7 +57,6 @@ import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
 const BrandPage = React.lazy(() => import('./components/BrandPage'));
 const BrandsSection = React.lazy(() => import('./components/landing/BrandsSection'));
 const BrandShowcase = React.lazy(() => import('./components/landing/BrandShowcase'));
-const BrandSpotlight = React.lazy(() => import('./components/landing/BrandSpotlight'));
 const CatchyProducts = React.lazy(() => import('./components/landing/CatchyProducts'));
 const TestimonialsSection = React.lazy(() => import('./components/landing/TestimonialsSection'));
 const BlogIndexPage = React.lazy(() => import('./components/blog/BlogIndexPage'));
@@ -130,7 +129,6 @@ function RoutedApp() {
                   <Route path="/" element={
                     <main>
                       <Hero />
-                      <BrandSpotlight />
                       <CatchyProducts />
                       <BrandShowcase />
                       <BrandsSection />
