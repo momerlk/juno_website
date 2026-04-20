@@ -1,8 +1,11 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { request } from '../api/core';
+import { Auth } from '../api/adminApi';
 
 interface Admin {
-  name: "Admin";
+  id: string;
+  email: string;
+  name: string;
+  role: string;
 }
 
 interface AdminAuthContextType {
@@ -10,7 +13,7 @@ interface AdminAuthContextType {
   admin: Admin | null;
   token: string | null;
   isLoading: boolean;
-  login: (password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -23,23 +26,31 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     const storedToken = localStorage.getItem('admin_token');
+    const storedAdmin = localStorage.getItem('admin_user');
     if (storedToken) {
       setToken(storedToken);
-      setAdmin({ name: 'Admin' });
+      if (storedAdmin) {
+        setAdmin(JSON.parse(storedAdmin));
+      } else {
+        setAdmin({ id: '', email: '', name: 'Admin', role: 'admin' });
+      }
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (password: string) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const resp = await request(`/auth/admin-login?password=${encodeURIComponent(password)}`, 'GET', undefined, undefined, true);
+      const resp = await Auth.Login(email, password);
       if (!resp.ok) throw new Error('Login failed');
-      const data = resp.body as any;
+      
+      const data = resp.body as Auth.LoginResponse;
       if (!data.token) throw new Error('Token not found in response');
+      
       localStorage.setItem('admin_token', data.token);
+      localStorage.setItem('admin_user', JSON.stringify(data.admin));
       setToken(data.token);
-      setAdmin({ name: 'Admin' });
+      setAdmin(data.admin);
     } catch (error) {
       console.error('Admin login failed:', error);
       throw error;
@@ -49,9 +60,10 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const logout = () => {
+    Auth.Logout();
     setAdmin(null);
     setToken(null);
-    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
   };
 
   return (

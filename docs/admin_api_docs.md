@@ -7,6 +7,7 @@ Auth:
 - Send `Authorization: Bearer <admin_token>`.
 
 Router coverage:
+- `POST /api/v2/admin/auth/login`
 - `GET /api/v2/admin/health`
 - `GET /api/v2/admin/orders`
 - `PUT /api/v2/admin/orders/{orderID}`
@@ -22,6 +23,33 @@ Router coverage:
 ---
 
 ## Shared Response Schemas
+
+### `Admin`
+```json
+{
+  "id": "uuid",
+  "email": "admin@juno.api",
+  "name": "Admin Name",
+  "role": "admin",
+  "created_at": "2026-03-29T10:30:00Z",
+  "updated_at": "2026-03-29T10:30:00Z"
+}
+```
+
+### `AdminAuthResponse`
+```json
+{
+  "token": "jwt_token_here",
+  "admin": {
+    "id": "uuid",
+    "email": "admin@juno.api",
+    "name": "Admin Name",
+    "role": "admin",
+    "created_at": "2026-03-29T10:30:00Z",
+    "updated_at": "2026-03-29T10:30:00Z"
+  }
+}
+```
 
 ### `HealthResponse`
 ```json
@@ -44,6 +72,26 @@ Router coverage:
 ```
 
 The same schema is used for rejection/suspension responses, with `message` changed accordingly.
+
+---
+
+## Authentication
+
+### Admin Login
+`POST /api/v2/admin/auth/login`
+
+**Body**
+```json
+{
+  "email": "omer@juno",
+  "password": "OmerPakistan12#"
+}
+```
+
+**Response `200`**: `AdminAuthResponse`
+
+**Common errors**
+- `401 UNAUTHORIZED` — invalid credentials
 
 ---
 
@@ -330,11 +378,42 @@ Returns all waitlist entries.
 
 ---
 
+---
+
 ## Cross-Module Admin Endpoints
 
-Additional admin-protected routes are documented in their own modules:
-- [Notifications module](../notifications/docs.md)
-- [Ambassador module](../ambassador/docs.md)
+While this document covers core platform administration, specialized admin features are documented within their respective modules:
+
+### Admin Catalog
+Management of collections and drops for discovery.
+- `POST /api/v2/admin/catalog/collections` — Create discovery collection
+- `GET /api/v2/admin/catalog/drops` — List all seller drops
+- `PATCH /api/v2/admin/catalog/drops/{id}/status` — Approve/Live status
+- Documentation: [Catalog Admin Docs](../catalog/docs.md)
+
+### Admin Campaigns
+Marketing and acquisition campaign management.
+- `POST /api/v2/admin/campaigns` — Create new marketing campaign
+- `GET /api/v2/admin/campaigns/{id}/metrics` — Performance tracking
+- Documentation: [Campaigns Docs](../campaigns/docs.md)
+
+### Admin Analytics (Probe Engine)
+Comprehensive platform-wide business intelligence and real-time monitoring across 23 modules.
+- `GET /admin/probe/overview` — Platform KPIs (DAU, Revenue, Orders, Conversion)
+- `GET /admin/probe/real-time` — Live event stream and concurrent user activity
+- `GET /admin/probe/users` — Acquisition funnels, retention cohorts, and user segments
+- `GET /admin/probe/commerce` — Sales analytics, category performance, and conversion funnels
+- `GET /admin/probe/operations` — Operational health (seller onboarding, logistics performance)
+- Documentation: [Probe Analytics Docs](../analytics/docs.md)
+
+
+### Notifications
+- `POST /api/v2/admin/notifications/broadcast` — Send to all users
+- Documentation: [Notifications Docs](../notifications/docs.md)
+
+### Ambassador
+- `POST /api/v2/admin/ambassador/tasks` — Assign tasks to ambassadors
+- Documentation: [Ambassador Docs](../ambassador/docs.md)
 
 ---
 

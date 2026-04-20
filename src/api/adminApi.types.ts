@@ -45,13 +45,13 @@ export namespace AdminAPI {
     }
 
     /**
-     * Approve seller
+     * Approve or Suspend seller
      * 
-     * Transitions seller from pending to approved status.
-     * Enables seller to list products and access full dashboard.
+     * Transitions seller from pending to approved status if approved is true,
+     * or suspends the seller if false.
      */
-    export async function approveSeller(sellerId: string): Promise<APIResponse<any>> {
-        return request(`${BASE_PATH}/sellers/${sellerId}/approve`, 'PUT', {}, getAdminToken());
+    export async function approveSeller(sellerId: string, approved: boolean = true, note: string = "KYC verified"): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${sellerId}/approve`, 'PUT', { approved, note }, getAdminToken());
     }
 
     /**

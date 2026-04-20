@@ -8,7 +8,8 @@ const AdminDashboard: React.FC = () => {
   const location = useLocation();
 
   const getTitle = () => {
-    const sortedNav = [...navigation].sort((a, b) => b.href.length - a.href.length);
+    const allItems = navigation.flatMap(group => group.items);
+    const sortedNav = [...allItems].sort((a, b) => b.href.length - a.href.length);
     const currentRoute = sortedNav.find(item => location.pathname.startsWith(item.href));
     return currentRoute ? currentRoute.name : 'Dashboard';
   };

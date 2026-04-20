@@ -88,7 +88,7 @@ const ManageSellers: React.FC = () => {
   const handleReject = async (id: string) => {
       if (window.confirm("Are you sure you want to reject this seller?")) {
           try {
-              const response = await updateSeller(id, { status: 'rejected' });
+              const response = await approveSeller(id, false, "Rejected by admin");
               if (response.ok) {
                   alert("Seller rejected.");
                   fetchSellers();

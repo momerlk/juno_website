@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { motion } from 'framer-motion';
-import { Lock } from 'lucide-react';
+import { Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const AdminAuth: React.FC = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isLoading } = useAdminAuth();
@@ -15,10 +16,10 @@ const AdminAuth: React.FC = () => {
     setError('');
 
     try {
-      await login(password);
+      await login(email, password);
       navigate('/admin');
     } catch (err) {
-      setError('Authentication failed. Please check your password.');
+      setError('Authentication failed. Please check your credentials.');
     }
   };
 
@@ -38,15 +39,27 @@ const AdminAuth: React.FC = () => {
       >
         <div className="text-center">
           <h2 className="mt-2 text-3xl font-extrabold text-white">
-            Admin Login
+            Admin Portal
           </h2>
           <p className="mt-2 text-sm text-neutral-400">
-            Enter the admin password to continue
+            Sign in to access administration tools
           </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm">
+          <div className="rounded-md shadow-sm space-y-4">
+            <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={20} />
+                <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="glass-input w-full pl-10"
+                    placeholder="Admin Email"
+                />
+            </div>
             <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={20} />
                 <input
@@ -56,7 +69,7 @@ const AdminAuth: React.FC = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="glass-input w-full pl-10"
-                    placeholder="Enter Admin Password"
+                    placeholder="Admin Password"
                 />
             </div>
           </div>

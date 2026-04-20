@@ -48,6 +48,15 @@ const SystemTools = React.lazy(() => import('./components/admin/SystemTools'));
 const SalesFunnel = React.lazy(() => import('./components/admin/SalesFunnel'));
 const AmbassadorTasks = React.lazy(() => import('./components/admin/AmbassadorTasks'));
 
+// Admin Catalog & Campaigns
+const ManageCollections = React.lazy(() => import('./components/admin/ManageCollections'));
+const ManageDrops = React.lazy(() => import('./components/admin/ManageDrops'));
+const ManageCampaigns = React.lazy(() => import('./components/admin/ManageCampaigns'));
+
+// Probe Analytics
+const ProbeRealTime = React.lazy(() => import('./components/admin/ProbeRealTime'));
+const ProbeCommerce = React.lazy(() => import('./components/admin/ProbeCommerce'));
+const ProbeUsers = React.lazy(() => import('./components/admin/ProbeUsers'));
 
 const AmbassadorAuth = React.lazy(() => import("./components/ambassador/AmbassadorAuth"));
 const AmbassadorDashboard = React.lazy(() => import("./components/ambassador/AmbassadorDashboard"));
@@ -192,20 +201,31 @@ function RoutedApp() {
 
                   <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}>
                     <Route index element={<PlatformStats />} />
+                    
+                    {/* Probe Engine */}
+                    <Route path="probe/real-time" element={<ProbeRealTime />} />
+                    <Route path="probe/commerce" element={<ProbeCommerce />} />
+                    <Route path="probe/users" element={<ProbeUsers />} />
+
+                    {/* Catalog */}
+                    <Route path="catalog/collections" element={<ManageCollections />} />
+                    <Route path="catalog/drops" element={<ManageDrops />} />
+
+                    {/* Marketing */}
+                    <Route path="campaigns" element={<ManageCampaigns />} />
+
+                    {/* Operations */}
                     <Route path="orders" element={<AdminManageOrders />} />
                     <Route path="sellers" element={<ManageSellers />} />
                     <Route path="users" element={<ManageUsers />} />
+                    <Route path="products" element={<ManageProducts />} />
+                    
                     <Route path="invites" element={<ManageInvites />} />
                     <Route path="locations" element={<LocationMap />} />
                     <Route path="delivery" element={<DeliveryCoverage />} />
-                    <Route path="interactions" element={<InteractionAnalytics />} />
-                    <Route path="product-performance" element={<ProductPerformance />} />
                     <Route path="notifications" element={<ManageNotifications />} />
-                    <Route path="products" element={<ManageProducts />} />
-                    <Route path="funnel" element={<SalesFunnel />} />
                     <Route path="system" element={<SystemTools />} />
                     <Route path="api-status" element={<ApiStatus />} />
-                    <Route path="chapter-forms" element={<ChapterForms />} />
                     <Route path="ambassador-tasks" element={<AmbassadorTasks />} />
                   </Route>
                   <Route path="/admin/login" element={<AdminAuth />} />

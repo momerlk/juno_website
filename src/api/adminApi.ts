@@ -22,35 +22,36 @@ function isError(body: any): body is APIError {
 export namespace Auth {
     export interface LoginResponse {
         token: string;
-        refresh_token?: string;
-        user?: {
+        admin: {
             id: string;
+            email: string;
             name: string;
-            email?: string;
             role: string;
+            created_at: string;
+            updated_at: string;
         };
     }
 
-    export async function Login(phone_number: string, password: string): Promise<APIResponse<LoginResponse>> {
-        const resp = await request<LoginResponse>("/auth/login", "POST", { phone_number, password }, undefined, true);
-        if (resp.ok && !isError(resp.body) && resp.body?.token) {
-            localStorage.setItem('admin_token', resp.body.token);
+    export async function Login(email: string, password: string): Promise<APIResponse<LoginResponse>> {
+        const resp = await request<LoginResponse>("/admin/auth/login", "POST", { email, password }, undefined, true);
+        if (resp.ok && !isError(resp.body) && (resp.body as LoginResponse).token) {
+            localStorage.setItem('admin_token', (resp.body as LoginResponse).token);
         }
         return resp;
     }
 
     export async function GetProfile(): Promise<APIResponse<any>> {
-        return request("/me", "GET", undefined, getToken());
+        return request("/admin/me", "GET", undefined, getToken());
     }
 
     export async function ChangePassword(old_password: string, new_password: string): Promise<APIResponse<any>> {
-        return request("/auth/change-password", "POST", { old_password, new_password }, getToken());
+        return request("/admin/auth/change-password", "POST", { old_password, new_password }, getToken());
     }
 
     export async function Refresh(refresh_token: string): Promise<APIResponse<LoginResponse>> {
-        const resp = await request<LoginResponse>("/auth/refresh", "POST", { refresh_token }, undefined, true);
-        if (resp.ok && !isError(resp.body) && resp.body?.token) {
-            localStorage.setItem('admin_token', resp.body.token);
+        const resp = await request<LoginResponse>("/admin/auth/refresh", "POST", { refresh_token }, undefined, true);
+        if (resp.ok && !isError(resp.body) && (resp.body as LoginResponse).token) {
+            localStorage.setItem('admin_token', (resp.body as LoginResponse).token);
         }
         return resp;
     }
@@ -84,7 +85,8 @@ export const adminGetAllSellers  = (): Promise<APIResponse<any[]>> => request('/
 export const adminGetAllInteractions = (): Promise<APIResponse<any[]>> => request('/admin/interactions', 'GET', undefined, getToken());
 
 export const getSellerDetails = (sellerId: string): Promise<APIResponse<any>> => request(`/admin/sellers/${sellerId}`, 'GET', undefined, getToken());
-export const approveSeller    = (sellerId: string): Promise<APIResponse<any>> => request(`/admin/sellers/${sellerId}/approve`, 'PUT', {}, getToken());
+export const approveSeller    = (sellerId: string, approved: boolean = true, note: string = "KYC verified"): Promise<APIResponse<any>> => 
+    request(`/admin/sellers/${sellerId}/approve`, 'PUT', { approved, note }, getToken());
 export const updateSeller     = (sellerId: string, data: any): Promise<APIResponse<any>> => request(`/admin/sellers/${sellerId}`, 'PUT', data, getToken());
 
 export const getAllUsers          = (): Promise<APIResponse<any[]>> => request('/admin/users', 'GET', undefined, getToken());

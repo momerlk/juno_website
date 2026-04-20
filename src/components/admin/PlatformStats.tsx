@@ -181,7 +181,7 @@ const PlatformStats: React.FC = () => {
       if (failures.length) {
         throw new Error('One or more analytics endpoints failed. Confirm admin auth and backend readiness.');
       }
-
+      
       setOverview(overviewResp.body);
       setUsers(usersResp.body);
       setCommerce(commerceResp.body);
