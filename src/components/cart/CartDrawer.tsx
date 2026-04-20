@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight, Sparkles } from 'lucide-react';
+import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight, Zap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Catalog, type CatalogProduct } from '../../api/api';
@@ -8,29 +8,31 @@ import { Catalog, type CatalogProduct } from '../../api/api';
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
 
+const addDays = (date: Date, days: number) => {
+    const d = new Date(date);
+    d.setDate(d.getDate() + days);
+    return d;
+};
+const fmtDay = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+const FREE_SHIPPING_THRESHOLD = 5000;
+
 const CartDrawer: React.FC = () => {
     const navigate = useNavigate();
     const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, syncState } = useGuestCart();
     const [relatedProducts, setRelatedProducts] = useState<CatalogProduct[]>([]);
 
     useEffect(() => {
-        // Load related products based on first cart item
         const loadRelated = async () => {
             if (optimisticCart.length === 0) {
                 setRelatedProducts([]);
                 return;
             }
-
             const firstItem = optimisticCart[0];
             const response = await Catalog.getRelatedProducts(firstItem.product_id, 3);
-            if (response.ok) {
-                setRelatedProducts(response.body);
-            }
+            if (response.ok) setRelatedProducts(response.body);
         };
-
-        if (isCartOpen) {
-            loadRelated();
-        }
+        if (isCartOpen) loadRelated();
     }, [optimisticCart, isCartOpen]);
 
     const handleCheckout = () => {
@@ -42,6 +44,12 @@ const CartDrawer: React.FC = () => {
         setCartOpen(false);
         navigate('/catalog');
     };
+
+    const today = new Date();
+    const deliveryStart = addDays(today, 2);
+    const deliveryEnd = addDays(today, 4);
+    const remainingForFreeShip = Math.max(0, FREE_SHIPPING_THRESHOLD - cartTotal);
+    const freeShipProgress = Math.min((cartTotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
 
     return (
         <AnimatePresence>
@@ -62,213 +70,267 @@ const CartDrawer: React.FC = () => {
                         initial={{ x: '100%' }}
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
                         className="fixed right-0 top-0 z-[61] h-full w-full max-w-md"
                     >
-                        <div className="flex h-full flex-col bg-[#0A0A0A] text-white shadow-2xl">
+                        <div className="relative flex h-full flex-col overflow-hidden bg-[#050505] text-white shadow-[0_0_80px_rgba(0,0,0,0.9)]">
+
+                            {/* Ambient */}
+                            <div className="pointer-events-none absolute inset-0">
+                                <div className="absolute -top-20 -right-20 h-[20rem] w-[20rem] rounded-full bg-primary/10 blur-[120px]" />
+                                <div className="absolute bottom-0 -left-20 h-[18rem] w-[18rem] rounded-full bg-secondary/08 blur-[140px]" />
+                            </div>
+
                             {/* Header */}
-                            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                    <ShoppingBag size={20} className="text-primary" />
-                                    <h2 className="text-lg font-black uppercase tracking-[-0.02em]">Your Bag</h2>
+                            <div className="relative z-10 flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
+                                <div className="flex items-center gap-2.5">
+                                    <ShoppingBag size={18} className="text-white" />
+                                    <h2 className="text-base font-black uppercase tracking-[-0.02em]" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                                        Your Bag
+                                    </h2>
                                     {itemCount > 0 && (
-                                        <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-bold">
+                                        <span className="rounded-md bg-primary px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-white">
                                             {itemCount}
                                         </span>
                                     )}
                                 </div>
                                 <button
                                     onClick={() => setCartOpen(false)}
-                                    className="rounded-full border border-white/10 p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/60 transition-all hover:border-white/25 hover:bg-white/[0.06] hover:text-white"
+                                    aria-label="Close"
                                 >
-                                    <X size={20} />
+                                    <X size={16} />
                                 </button>
                             </div>
 
-                            {/* Cart Items */}
-                            <div className="flex-1 overflow-y-auto px-6 py-4">
+                            {/* Scrollable body */}
+                            <div className="relative z-10 flex-1 overflow-y-auto">
                                 {optimisticCart.length === 0 ? (
-                                    <div className="flex h-full flex-col items-center justify-center text-center">
-                                        <ShoppingBag size={64} className="mb-4 text-white/20" />
-                                        <p className="text-xl font-black uppercase text-white/60">Your bag is empty</p>
-                                        <p className="mt-2 text-sm text-white/40">Discover unique pieces from Pakistan's indie brands</p>
+                                    <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                                        <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.03]">
+                                            <ShoppingBag size={32} className="text-white/30" />
+                                        </div>
+                                        <p className="mt-5 text-xl font-black uppercase tracking-[-0.02em] text-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                                            Your bag is empty
+                                        </p>
+                                        <p className="mt-2 max-w-[18rem] text-sm text-white/50" style={{ fontFamily: 'Instrument Serif, serif' }}>
+                                            Discover pieces from Pakistan's indie labels.
+                                        </p>
                                         <button
                                             onClick={handleContinueShopping}
-                                            className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-6 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white"
+                                            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-black transition-all hover:bg-neutral-200"
                                         >
-                                            Explore Catalog
-                                            <ArrowRight size={14} />
+                                            Explore catalog
+                                            <ArrowRight size={13} />
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="space-y-4">
-                                        {optimisticCart.map((item, index) => (
-                                            <motion.div
-                                                key={`${item.product_id}-${item.variant_id}`}
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: index * 0.05 }}
-                                                className="flex gap-4 rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4"
-                                            >
-                                                {/* Product Image */}
-                                                <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-[1.2rem] border border-white/10 bg-white/5">
-                                                    {item.image_url ? (
-                                                        <img
-                                                            src={item.image_url}
-                                                            alt={item.product_title || 'Product'}
-                                                            className="h-full w-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="flex h-full w-full items-center justify-center bg-white/5">
-                                                            <ShoppingBag size={24} className="text-white/20" />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                    <div className="px-5 py-4">
+                                        {/* Delivery promise */}
+                                        <div className="mb-4 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3.5 py-2.5">
+                                            <p className="text-[11px] text-white/70">
+                                                Order will arrive on{' '}
+                                                <span className="font-bold text-white">
+                                                    {fmtDay(deliveryStart)} — {fmtDay(deliveryEnd)}
+                                                </span>
+                                            </p>
+                                        </div>
 
-                                                {/* Product Details */}
-                                                <div className="flex flex-1 flex-col">
-                                                    <div className="flex-1">
-                                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                                                            {item.seller_name || 'Juno Label'}
-                                                        </p>
-                                                        <h3 className="mt-1 line-clamp-2 text-sm font-black uppercase tracking-[-0.02em] text-white">
-                                                            {item.product_title || 'Product'}
-                                                        </h3>
-                                                        {item.variant_title && (
-                                                            <p className="mt-1 text-xs text-white/50">{item.variant_title}</p>
+                                        {/* Items */}
+                                        <div className="space-y-3">
+                                            {optimisticCart.map((item, index) => (
+                                                <motion.div
+                                                    key={`${item.product_id}-${item.variant_id}`}
+                                                    initial={{ opacity: 0, y: 8 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: Math.min(index * 0.035, 0.18) }}
+                                                    className="flex gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3 transition-colors hover:border-white/15"
+                                                >
+                                                    {/* Image */}
+                                                    <div className="h-24 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-[#0d0d0e]">
+                                                        {item.image_url ? (
+                                                            <img
+                                                                src={item.image_url}
+                                                                alt={item.product_title || 'Product'}
+                                                                className="h-full w-full object-cover"
+                                                                loading="lazy"
+                                                            />
+                                                        ) : (
+                                                            <div className="flex h-full w-full items-center justify-center">
+                                                                <ShoppingBag size={22} className="text-white/20" />
+                                                            </div>
                                                         )}
                                                     </div>
 
-                                                    <div className="mt-3 flex items-center justify-between">
-                                                        {/* Quantity Stepper */}
-                                                        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1">
-                                                            <button
-                                                                onClick={() => updateQuantity(item.product_id, item.variant_id, item.quantity - 1)}
-                                                                className="rounded-full p-1 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-                                                            >
-                                                                <Minus size={14} />
-                                                            </button>
-                                                            <span className="w-6 text-center text-sm font-bold">{item.quantity}</span>
-                                                            <button
-                                                                onClick={() => updateQuantity(item.product_id, item.variant_id, item.quantity + 1)}
-                                                                className="rounded-full p-1 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-                                                            >
-                                                                <Plus size={14} />
-                                                            </button>
+                                                    {/* Details */}
+                                                    <div className="flex flex-1 flex-col">
+                                                        <div className="flex-1">
+                                                            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-white/40">
+                                                                {item.seller_name || 'Juno Label'}
+                                                            </p>
+                                                            <h3 className="mt-1 line-clamp-2 text-[13px] font-black uppercase leading-tight tracking-[-0.02em] text-white"
+                                                                style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                                                                {item.product_title || 'Product'}
+                                                            </h3>
+                                                            {item.variant_title && (
+                                                                <p className="mt-0.5 text-[11px] text-white/45">{item.variant_title}</p>
+                                                            )}
                                                         </div>
 
-                                                        {/* Price & Remove */}
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-sm font-black text-white">
-                                                                {formatCurrency(item.price * item.quantity)}
-                                                            </span>
-                                                            <button
-                                                                onClick={() => removeItem(item.product_id, item.variant_id)}
-                                                                className="rounded-full border border-white/10 p-1.5 text-white/40 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                        <div className="mt-2.5 flex items-center justify-between">
+                                                            {/* Stepper */}
+                                                            <div className="inline-flex items-center overflow-hidden rounded-lg border border-white/10 bg-black/30">
+                                                                <button
+                                                                    onClick={() => updateQuantity(item.product_id, item.variant_id, item.quantity - 1)}
+                                                                    className="flex h-7 w-7 items-center justify-center text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
+                                                                >
+                                                                    <Minus size={12} />
+                                                                </button>
+                                                                <span className="w-7 text-center text-xs font-black text-white">{item.quantity}</span>
+                                                                <button
+                                                                    onClick={() => updateQuantity(item.product_id, item.variant_id, item.quantity + 1)}
+                                                                    className="flex h-7 w-7 items-center justify-center text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
+                                                                >
+                                                                    <Plus size={12} />
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-black text-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                                                                    {formatCurrency(item.price * item.quantity)}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => removeItem(item.product_id, item.variant_id)}
+                                                                    className="flex h-7 w-7 items-center justify-center rounded-md text-white/35 transition-all hover:bg-red-500/10 hover:text-red-400"
+                                                                    aria-label="Remove"
+                                                                >
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                </motion.div>
+                                            ))}
+                                        </div>
+
+                                        {/* Upsell */}
+                                        {relatedProducts.length > 0 && (
+                                            <div className="mt-5">
+                                                <p className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
+                                                    Complete the look
+                                                </p>
+                                                <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+                                                    {relatedProducts.map((product) => (
+                                                        <Link
+                                                            key={product.id}
+                                                            to={`/catalog/${product.id}`}
+                                                            onClick={() => setCartOpen(false)}
+                                                            className="group w-28 shrink-0"
+                                                        >
+                                                            <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d0e] transition-all group-hover:border-white/20">
+                                                                <img
+                                                                    src={product.images?.[0] || '/juno_app_icon.png'}
+                                                                    alt={product.title}
+                                                                    className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                                                    loading="lazy"
+                                                                />
+                                                            </div>
+                                                            <p className="mt-1.5 line-clamp-1 text-[11px] font-bold text-white/80">{product.title}</p>
+                                                            <p className="text-[11px] font-black text-white">
+                                                                {formatCurrency(product.pricing.discounted_price || product.pricing.price)}
+                                                            </p>
+                                                        </Link>
+                                                    ))}
                                                 </div>
-                                            </motion.div>
-                                        ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
 
                             {/* Footer */}
                             {optimisticCart.length > 0 && (
-                                <div className="border-t border-white/10 px-6 py-5">
-                                    {/* Sync Indicator */}
+                                <div className="relative z-10 border-t border-white/[0.08] bg-[#050505]/90 px-5 pt-4 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur-xl">
+
+                                    {/* Free shipping progress */}
+                                    {remainingForFreeShip > 0 ? (
+                                        <div className="mb-4">
+                                            <div className="mb-1.5 flex items-center justify-between text-[10px]">
+                                                <span className="font-bold uppercase tracking-[0.18em] text-white/55">
+                                                    Add {formatCurrency(remainingForFreeShip)} for free shipping
+                                                </span>
+                                                <span className="font-mono font-bold text-white/40">
+                                                    {Math.round(freeShipProgress)}%
+                                                </span>
+                                            </div>
+                                            <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${freeShipProgress}%` }}
+                                                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                                                    className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
+                                                />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="mb-4 flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                                            Free shipping unlocked
+                                        </div>
+                                    )}
+
+                                    {/* Sync indicator */}
                                     {syncState !== 'idle' && (
-                                        <div className="mb-3 flex items-center justify-center gap-2">
-                                            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-                                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
-                                                {syncState === 'syncing' ? 'Syncing...' : syncState === 'error' ? 'Sync error' : 'Saving...'}
+                                        <div className="mb-2 flex items-center justify-center gap-1.5">
+                                            <div className="h-1 w-1 animate-pulse rounded-full bg-primary" />
+                                            <span className="text-[9px] font-bold uppercase tracking-[0.24em] text-white/40">
+                                                {syncState === 'syncing' ? 'Syncing…' : syncState === 'error' ? 'Sync error' : 'Saving…'}
                                             </span>
                                         </div>
                                     )}
 
                                     {/* Subtotal */}
-                                    <div className="mb-4 flex items-center justify-between">
-                                        <span className="text-sm font-bold uppercase tracking-[0.16em] text-white/60">Subtotal</span>
-                                        <span className="text-2xl font-black text-white">{formatCurrency(cartTotal)}</span>
+                                    <div className="mb-3 flex items-baseline justify-between">
+                                        <span className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white/45">
+                                            Subtotal
+                                        </span>
+                                        <span className="text-2xl font-black text-white" style={{ fontFamily: 'Montserrat, sans-serif', letterSpacing: '-0.04em' }}>
+                                            {formatCurrency(cartTotal)}
+                                        </span>
                                     </div>
 
-                                    {/* Related Products Upsell */}
-                                    {relatedProducts.length > 0 && (
-                                        <div className="mb-4 rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4">
-                                            <div className="mb-3 flex items-center gap-2">
-                                                <Sparkles size={16} className="text-primary" />
-                                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">
-                                                    You May Also Like
-                                                </p>
-                                            </div>
-                                            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                                                {relatedProducts.map((product) => (
-                                                    <Link
-                                                        key={product.id}
-                                                        to={`/catalog/${product.id}`}
-                                                        className="flex-shrink-0 w-32"
-                                                    >
-                                                        <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
-                                                            <img
-                                                                src={product.images?.[0] || '/juno_app_icon.png'}
-                                                                alt={product.title}
-                                                                className="aspect-square w-full object-cover"
-                                                            />
-                                                        </div>
-                                                        <p className="mt-2 line-clamp-1 text-xs font-bold text-white/80">
-                                                            {product.title}
-                                                        </p>
-                                                        <p className="text-xs font-black text-primary">
-                                                            {formatCurrency(product.pricing.discounted_price || product.pricing.price)}
-                                                        </p>
-                                                    </Link>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Checkout Button */}
-                                    <button
+                                    {/* Checkout CTA */}
+                                    <motion.button
+                                        whileTap={{ scale: 0.985 }}
                                         onClick={handleCheckout}
-                                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-6 py-4 text-sm font-bold uppercase tracking-[0.2em] text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] hover:shadow-primary/30"
+                                        className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-primary to-secondary py-4 text-sm font-black uppercase tracking-[0.22em] text-white shadow-[0_14px_36px_rgba(220,10,40,0.36)] transition-all hover:shadow-[0_18px_44px_rgba(220,10,40,0.5)]"
                                     >
-                                        Checkout
-                                        <ArrowRight size={16} />
-                                    </button>
+                                        <span className="relative z-10 inline-flex items-center justify-center gap-2.5">
+                                            <Zap size={15} className="fill-white" />
+                                            Checkout · {formatCurrency(cartTotal)}
+                                        </span>
+                                        <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-[shimmer_2.8s_ease-in-out_infinite]" />
+                                    </motion.button>
 
-                                    {/* Continue Shopping */}
                                     <button
                                         onClick={handleContinueShopping}
-                                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-xs font-bold uppercase tracking-[0.16em] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                                        className="mt-2.5 w-full py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white/45 transition-colors hover:text-white"
                                     >
-                                        Continue Shopping
+                                        Continue shopping
                                     </button>
-
-                                    {/* Free Shipping Progress */}
-                                    {cartTotal < 5000 && cartTotal > 0 && (
-                                        <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-3 text-center">
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
-                                                Add {formatCurrency(5000 - cartTotal)} more for free shipping
-                                            </p>
-                                            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${Math.min((cartTotal / 5000) * 100, 100)}%` }}
-                                                    className="h-full bg-gradient-to-r from-primary to-secondary"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>
                     </motion.div>
                 </>
             )}
+
+            <style>{`
+                @keyframes shimmer {
+                    0% { transform: translateX(0%); }
+                    60%, 100% { transform: translateX(400%); }
+                }
+            `}</style>
         </AnimatePresence>
     );
 };
