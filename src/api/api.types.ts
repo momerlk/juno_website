@@ -443,7 +443,29 @@ export interface BudgetConfig {
     total_budget?: number;
     total_spent?: number;
     currency_code?: string;
+    ad_spend_to_date?: number;
+    impression_lower?: number;
+    impression_upper?: number;
     last_spent_date?: string;
+}
+
+export interface MetaInputsRequest {
+    ad_spend_to_date: number;
+    impressions: number;
+    clicks: number;
+    impression_lower: number;
+    impression_upper: number;
+}
+
+export interface PublicCampaignResponse {
+    campaign: Campaign;
+    products: any[];
+    metrics: CampaignMetrics;
+}
+
+export interface PublicCampaignProductResponse {
+    campaign: Pick<Campaign, 'id' | 'slug' | 'name'>;
+    product: any;
 }
 
 export interface Campaign {

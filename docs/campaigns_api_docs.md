@@ -301,6 +301,61 @@ Validate and resolve campaign landing page configuration. Returns the target res
 
 ---
 
+### Update Meta Inputs
+`PATCH /api/v2/admin/campaigns/{id}/meta-inputs`
+
+Update real-time performance data from Meta (spend, impressions, clicks) and recompute KPIs. Admin only.
+
+**Request Body**
+```json
+{
+  "ad_spend_to_date": 125000,
+  "impressions": 450000,
+  "clicks": 9800,
+  "impression_lower": 400000,
+  "impression_upper": 600000
+}
+```
+
+**Response `200`**: [`Campaign`](#campaign)
+
+---
+
+### Get Public Campaign
+`GET /api/v2/campaigns/slug/{slug}`
+
+Public endpoint for website landing pages. Returns active campaign details, resolved product list, and recomputed metrics.
+
+**Response `200`**
+```json
+{
+  "campaign": { ... },
+  "products": [ ... ],
+  "metrics": { ... }
+}
+```
+
+**Error `404`** — Campaign not found or not active
+
+---
+
+### Get Public Campaign Product
+`GET /api/v2/campaigns/slug/{slug}/products/{product_id}`
+
+Public endpoint for campaign-scoped product view. Only returns if product is part of the campaign.
+
+**Response `200`**
+```json
+{
+  "campaign": { "id": "...", "slug": "...", "name": "..." },
+  "product": { ... }
+}
+```
+
+**Error `404`** — Campaign not active or product not in campaign
+
+---
+
 ## Data Models
 
 ### Campaign Status Lifecycle
@@ -362,7 +417,7 @@ draft ──► active ──► paused ──► active (loop)
 | `custom_css` | string | Custom CSS |
 | `metadata` | object | Arbitrary metadata |
 
-### BudgetConfig
+### `BudgetConfig`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -370,7 +425,11 @@ draft ──► active ──► paused ──► active (loop)
 | `total_budget` | number | Total campaign budget |
 | `total_spent` | number | Amount spent so far |
 | `currency_code` | string | Currency (e.g., `PKR`) |
+| `ad_spend_to_date` | number | Real-time Meta ad spend |
+| `impression_lower` | int | Forecast lower bound impressions |
+| `impression_upper` | int | Forecast upper bound impressions |
 | `last_spent_date` | ISO 8601 | Last spend update time |
+
 
 ---
 

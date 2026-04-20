@@ -85,6 +85,10 @@ const OrderConfirmationPage = React.lazy(() => import('./components/checkout/Ord
 const OrderTrackingPage = React.lazy(() => import('./components/checkout/OrderTrackingPage'));
 const WishlistPage = React.lazy(() => import('./components/catalog/WishlistPage'));
 
+// Campaign Pages
+const CampaignLandingPage = React.lazy(() => import('./components/campaign/CampaignLandingPage'));
+const CampaignProductPage = React.lazy(() => import('./components/campaign/CampaignProductPage'));
+
 const WorkAuth = React.lazy(() => import("./components/work/WorkAuth"));
 const WorkDashboard = React.lazy(() => import("./components/work/WorkDashboard"));
 const WorkProtectedRoute = React.lazy(() => import("./components/work/ProtectedRoute"));
@@ -115,6 +119,21 @@ function RoutedApp() {
   // Initialize Probe analytics for automatic page view and session tracking
   useProbeAnalytics();
   
+  const isCampaignPath = window.location.pathname.split('/').some(s => s.endsWith('-campaign'));
+  const isExcludedPath = window.location.pathname.startsWith('/seller') || 
+                         window.location.pathname.startsWith('/studio') || 
+                         window.location.pathname.startsWith('/admin') || 
+                         window.location.pathname.startsWith('/ambassador') || 
+                         window.location.pathname.startsWith('/work') || 
+                         window.location.pathname.startsWith('/brand-reel') || 
+                         window.location.pathname.startsWith('/catalog') || 
+                         window.location.pathname.startsWith('/checkout') || 
+                         window.location.pathname.startsWith('/track') || 
+                         window.location.pathname.startsWith('/wishlist') || 
+                         window.location.pathname.startsWith('/collections') || 
+                         window.location.pathname.startsWith('/drops') ||
+                         isCampaignPath;
+
   useEffect(() => {
     document.title = 'Juno - Home of Indie Brands';
     const titleElement = document.querySelector('title');
@@ -132,7 +151,7 @@ function RoutedApp() {
               <GuestCartProvider>
               <div className="min-h-screen bg-background text-white">
               <ScrollToTop />
-              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && !window.location.pathname.startsWith('/catalog') && !window.location.pathname.startsWith('/checkout') && !window.location.pathname.startsWith('/track') && !window.location.pathname.startsWith('/wishlist') && !window.location.pathname.startsWith('/collections') && !window.location.pathname.startsWith('/drops') && <Navbar />}
+              {!isExcludedPath && <Navbar />}
               <Suspense fallback={<AppShellFallback />}>
               <Routes>
                   <Route path="/" element={
@@ -262,11 +281,16 @@ function RoutedApp() {
                   
                   <Route path="/product/:productId" element={<ProductPage />} />
                   <Route path="/brand-reel" element={<BrandReelGraphic />} />
+
+                  {/* Campaign Routes */}
+                  <Route path="/:campaignSlug" element={<CampaignLandingPage />} />
+                  <Route path="/:campaignSlug/:productId" element={<CampaignProductPage />} />
+
                   <Route path="/:brandName" element={<BrandPage />} />
               </Routes>
               </Suspense>
               <CartDrawer />
-              {!window.location.pathname.startsWith('/seller') && !window.location.pathname.startsWith('/studio') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/ambassador') && !window.location.pathname.startsWith('/work') && !window.location.pathname.startsWith('/brand-reel') && !window.location.pathname.startsWith('/catalog') && !window.location.pathname.startsWith('/checkout') && !window.location.pathname.startsWith('/track') && !window.location.pathname.startsWith('/wishlist') && !window.location.pathname.startsWith('/collections') && !window.location.pathname.startsWith('/drops') && <Footer />}
+              {!isExcludedPath && <Footer />}
               </div>
               </GuestCartProvider>
             </JunoStudioProvider>

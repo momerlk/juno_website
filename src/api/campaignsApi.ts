@@ -16,6 +16,9 @@ import type {
     UpdateCampaignRequest,
     ChangeCampaignStatusRequest,
     LandingTargetResponse,
+    MetaInputsRequest,
+    PublicCampaignResponse,
+    PublicCampaignProductResponse,
 } from "./api.types";
 
 // ============================================================================
@@ -124,5 +127,21 @@ export namespace Campaigns {
      */
     export async function resolveLandingTarget(id: string): Promise<APIResponse<LandingTargetResponse>> {
         return request(`${BASE_PATH}/${id}/landing`, 'GET', undefined, getAdminToken());
+    }
+
+    export async function updateMetaInputs(id: string, data: MetaInputsRequest): Promise<APIResponse<Campaign>> {
+        return request(`${BASE_PATH}/${id}/meta-inputs`, 'PATCH', data, getAdminToken());
+    }
+}
+
+export namespace PublicCampaigns {
+    const BASE_PATH = '/campaigns/slug';
+
+    export async function getPublicCampaign(slug: string): Promise<APIResponse<PublicCampaignResponse>> {
+        return request(`${BASE_PATH}/${slug}`, 'GET');
+    }
+
+    export async function getPublicCampaignProduct(slug: string, productId: string): Promise<APIResponse<PublicCampaignProductResponse>> {
+        return request(`${BASE_PATH}/${slug}/products/${productId}`, 'GET');
     }
 }

@@ -10,6 +10,7 @@ interface ProductCardProps {
     index?: number;
     onQuickAdd?: (product: CatalogProduct) => void;
     showQuickAdd?: boolean;
+    to?: string;
 }
 
 const formatCurrency = (value?: number) =>
@@ -25,6 +26,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     index = 0,
     onQuickAdd,
     showQuickAdd = true,
+    to,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [isWishlisted, setIsWishlisted] = useState(false);
@@ -107,6 +109,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
         );
     };
 
+    const targetUrl = to || `/catalog/${product.id}`;
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -117,7 +121,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             onMouseLeave={() => setIsHovered(false)}
         >
             <Link
-                to={`/catalog/${product.id}`}
+                to={targetUrl}
                 className="group relative flex h-full flex-col overflow-hidden border border-white/10 bg-[#0f0f10] transition-all duration-500 hover:-translate-y-2 hover:border-white/20 hover:shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
             >
                 <div className="pointer-events-none absolute inset-0">
