@@ -7,8 +7,8 @@
 
 export const api_urls = {
     testing: "http://localhost:8080/api/v2",
-    production: "https://apijuno-3oztvkyxua-em.a.run.app/api/v2",
-    recsystem: "https://junorecsys-710509977105.asia-south2.run.app/api/v2",
+    production: "https://api.junonow.shop/api/v2",
+    recsystem: "https://recsys.junonow.shop/api/v2",
 };
 
 // Environment-aware API URL configuration
