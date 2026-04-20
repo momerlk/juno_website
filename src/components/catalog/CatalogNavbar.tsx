@@ -9,7 +9,12 @@ interface SearchSuggestion {
     keyword: string;
 }
 
-const CatalogNavbar: React.FC = () => {
+interface CatalogNavbarProps {
+    homeHref?: string;
+    onSearch?: (query: string) => void;
+}
+
+const CatalogNavbar: React.FC<CatalogNavbarProps> = ({ homeHref = '/', onSearch }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
@@ -20,8 +25,6 @@ const CatalogNavbar: React.FC = () => {
     const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
     const { itemCount, setCartOpen } = useGuestCart();
     const searchInputRef = useRef<HTMLInputElement>(null);
-
-    const isCatalogPage = location.pathname.startsWith('/catalog');
 
     useEffect(() => {
         const stored = localStorage.getItem('juno_recent_searches');
@@ -57,18 +60,15 @@ const CatalogNavbar: React.FC = () => {
         const updated = [query, ...recentSearches.filter((s) => s !== query)].slice(0, 5);
         setRecentSearches(updated);
         localStorage.setItem('juno_recent_searches', JSON.stringify(updated));
-        navigate(`/catalog?q=${encodeURIComponent(query)}`);
+        
+        if (onSearch) {
+            onSearch(query);
+        } else {
+            navigate(`/catalog?q=${encodeURIComponent(query)}`);
+        }
         setSearchOpen(false);
         setSearchQuery('');
     };
-
-    const navLinks = [
-        { name: 'Home', href: '/' },
-        { name: 'Women', href: '/catalog/women' },
-        { name: 'Men', href: '/catalog/men' },
-        { name: 'Collections', href: '/collections' },
-        { name: 'Drops', href: '/drops' },
-    ];
 
     return (
         <>
@@ -78,7 +78,7 @@ const CatalogNavbar: React.FC = () => {
 
                         {/* Logo */}
                         <Link
-                            to={isCatalogPage ? '/catalog' : '/#home'}
+                            to={homeHref}
                             className="shrink-0"
                             onClick={() => setIsOpen(false)}
                         >
@@ -89,52 +89,16 @@ const CatalogNavbar: React.FC = () => {
                             />
                         </Link>
 
-                        {/* Desktop nav links */}
-                        <div className="hidden items-center gap-1 md:flex">
-                            {navLinks.map((link) => {
-                                const isGender = link.name === 'Women' || link.name === 'Men';
-                                const isActive = location.pathname === link.href;
-                                return (
-                                    <Link
-                                        key={link.name}
-                                        to={link.href}
-                                        className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                                            isGender && isActive
-                                                ? 'bg-gradient-to-r from-primary to-secondary text-white'
-                                                : isGender
-                                                ? 'border border-white/15 text-white hover:border-white/30 hover:bg-white/5'
-                                                : 'text-white/55 hover:text-white'
-                                        }`}
-                                    >
-                                        {link.name}
-                                    </Link>
-                                );
-                            })}
-                        </div>
-
                         {/* Actions */}
                         <div className="flex items-center gap-2">
                             {/* Search */}
-                            {isCatalogPage && (
-                                <button
-                                    onClick={() => setSearchOpen(true)}
-                                    className="rounded-full p-2 text-white/55 transition-colors hover:bg-white/8 hover:text-white"
-                                    aria-label="Search"
-                                >
-                                    <Search size={20} />
-                                </button>
-                            )}
-
-                            {/* Wishlist */}
-                            {isCatalogPage && (
-                                <Link
-                                    to="/wishlist"
-                                    className="hidden rounded-full p-2 text-white/55 transition-colors hover:bg-white/8 hover:text-white md:block"
-                                    aria-label="Wishlist"
-                                >
-                                    <Heart size={20} />
-                                </Link>
-                            )}
+                            <button
+                                onClick={() => setSearchOpen(true)}
+                                className="rounded-full p-2 text-white/55 transition-colors hover:bg-white/8 hover:text-white"
+                                aria-label="Search"
+                            >
+                                <Search size={20} />
+                            </button>
 
                             {/* Cart */}
                             <button
@@ -147,20 +111,11 @@ const CatalogNavbar: React.FC = () => {
                                     <motion.span
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
-                                        className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary text-[9px] font-bold text-white"
+                                        className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary text-[9px] font-bold text-white shadow-glow-primary"
                                     >
                                         {itemCount > 9 ? '9+' : itemCount}
                                     </motion.span>
                                 )}
-                            </button>
-
-                            {/* Mobile menu toggle */}
-                            <button
-                                className="rounded-full p-2 text-white/55 transition-colors hover:bg-white/8 hover:text-white md:hidden"
-                                onClick={() => setIsOpen(!isOpen)}
-                                aria-label="Toggle menu"
-                            >
-                                {isOpen ? <X size={18} /> : <Menu size={18} />}
                             </button>
                         </div>
                     </div>

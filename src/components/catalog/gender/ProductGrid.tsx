@@ -7,12 +7,13 @@ import type { GenderOverviewProduct } from '../../../api/api.types';
 type Props = {
     products: GenderOverviewProduct[];
     isLoading?: boolean;
+    basePath?: string;
 };
 
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
 
-const ProductGrid: React.FC<Props> = ({ products, isLoading = false }) => {
+const ProductGrid: React.FC<Props> = ({ products, isLoading = false, basePath = 'catalog' }) => {
     if (isLoading) {
         return (
             <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-3">
@@ -52,15 +53,16 @@ const ProductGrid: React.FC<Props> = ({ products, isLoading = false }) => {
     return (
         <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-3">
             {products.map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
+                <ProductCard key={product.id} product={product} index={index} basePath={basePath} />
             ))}
         </div>
     );
 };
 
-const ProductCard: React.FC<{ product: GenderOverviewProduct; index: number }> = ({
+const ProductCard: React.FC<{ product: GenderOverviewProduct; index: number; basePath: string }> = ({
     product,
     index,
+    basePath,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const image = product.images?.[0] ?? '';
@@ -81,7 +83,7 @@ const ProductCard: React.FC<{ product: GenderOverviewProduct; index: number }> =
             className="h-full"
         >
             <Link
-                to={`/catalog/${product.id}`}
+                to={`/${basePath}/${product.id}`}
                 className="group flex h-full flex-col overflow-hidden border border-white/10 bg-white/[0.04] transition-all duration-300 hover:-translate-y-1.5 hover:border-white/20"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
