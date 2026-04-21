@@ -323,7 +323,7 @@ const CampaignProductPage: React.FC = () => {
 
                             {/* Thumbnail strip — bigger, touch-friendly */}
                             {imageGallery.length > 1 ? (
-                                <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+                                <div className="flex gap-2.5 overflow-x-auto pt-1 pb-2 -mx-1 px-1 scrollbar-none">
                                     {imageGallery.map((image, i) => {
                                         const active = selectedImageIdx === i;
                                         return (
@@ -332,7 +332,7 @@ const CampaignProductPage: React.FC = () => {
                                                 onClick={() => setSelectedImageIdx(i)}
                                                 className={`relative shrink-0 overflow-hidden rounded-xl transition-all w-[82px] md:w-[96px] ${
                                                     active
-                                                        ? 'ring-2 ring-white'
+                                                        ? 'ring-2 ring-inset ring-white'
                                                         : 'opacity-55 hover:opacity-95'
                                                 }`}
                                             >
