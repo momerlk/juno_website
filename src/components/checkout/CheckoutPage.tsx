@@ -45,6 +45,7 @@ const CheckoutPage: React.FC = () => {
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
@@ -134,6 +135,8 @@ const CheckoutPage: React.FC = () => {
                 trackCheckoutComplete(order.id, order.total_amount);
             }
 
+            setIsSuccess(true);
+
             if (formData.phone_number) {
                 localStorage.setItem(STORAGE_KEYS.LAST_CHECKOUT_PHONE, formData.phone_number);
             }
@@ -166,13 +169,13 @@ const CheckoutPage: React.FC = () => {
     };
 
     useEffect(() => {
-        if (optimisticCart.length === 0 && !isSubmitting) {
+        if (optimisticCart.length === 0 && !isSubmitting && !isSuccess) {
             const timeoutId = setTimeout(() => {
                 navigate('/catalog');
             }, 1000);
             return () => clearTimeout(timeoutId);
         }
-    }, [optimisticCart.length, navigate, isSubmitting]);
+    }, [optimisticCart.length, navigate, isSubmitting, isSuccess]);
 
     const shippingFee = cartTotal >= FREE_SHIPPING_THRESHOLD ? 0 : 199;
     const orderTotal = cartTotal + shippingFee;
