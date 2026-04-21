@@ -54,6 +54,7 @@ export namespace Probe {
         type: string;
         product_id?: string;
         category_id?: string;
+        campaign_id?: string;
         timestamp?: string;
         properties?: Record<string, any>;
         context?: ProbeEventContext;
@@ -69,6 +70,7 @@ export namespace Probe {
     export interface SessionHeartbeatRequest {
         session_id: string;
         user_id?: string;
+        campaign_id?: string;
         device?: ProbeDevice;
         timestamp?: string;
         screen_name?: string;

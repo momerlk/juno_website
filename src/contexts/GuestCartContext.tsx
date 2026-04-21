@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { GuestCommerce } from '../api/commerceApi';
 import type { GuestCart, GuestCartResponse, CartItem } from '../api/api.types';
+import { useProbeCommerce } from '../hooks/useProbe';
 
 // ============================================================================
 // Types
@@ -109,6 +110,9 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [syncState, setSyncState] = useState<SyncState>('idle');
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [guestCartId, setGuestCartId] = useState<string | null>(null);
+    
+    // Analytics
+    const { trackAddToCart, trackRemoveFromCart, trackCartView } = useProbeCommerce();
     
     // Initialize cart from localStorage/cookie on mount
     useEffect(() => {
@@ -234,6 +238,9 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
         price: number,
         metadata?: Partial<OptimisticCartItem>
     ) => {
+        // Track analytics
+        trackAddToCart(product_id, quantity, price);
+
         setOptimisticCart((prev) => {
             const existingIndex = prev.findIndex(
                 (item) => item.product_id === product_id && item.variant_id === variant_id
@@ -269,6 +276,9 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
     
     // Remove item from cart
     const removeItem = useCallback((product_id: string, variant_id: string) => {
+        // Track analytics
+        trackRemoveFromCart(product_id);
+
         setOptimisticCart((prev) =>
             prev.filter((item) => !(item.product_id === product_id && item.variant_id === variant_id))
         );
@@ -345,7 +355,14 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
             updated_at: new Date().toISOString(),
         };
         saveToStorage(STORAGE_KEYS.CART_SNAPSHOT, snapshot);
-    }, [optimisticCart, guestCartId, persistedCart]);
+
+        // Track cart view when items change and cart is open
+        if (isCartOpen) {
+            const total = optimisticCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            const count = optimisticCart.reduce((sum, item) => sum + item.quantity, 0);
+            trackCartView(count, total);
+        }
+    }, [optimisticCart, guestCartId, persistedCart, isCartOpen, trackCartView]);
     
     // Derived values
     const itemCount = useMemo(

@@ -5,6 +5,7 @@ import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, Loader2, Zap, Truc
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { GuestCommerce } from '../../api/commerceApi';
 import type { GuestCheckoutDetails } from '../../api/api.types';
+import { useProbeCommerce } from '../../hooks/useProbe';
 
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
@@ -29,6 +30,7 @@ const FREE_SHIPPING_THRESHOLD = 5000;
 const CheckoutPage: React.FC = () => {
     const navigate = useNavigate();
     const { optimisticCart, cartTotal, itemCount, clearCart, guestCartId, syncState } = useGuestCart();
+    const { trackCheckoutStart, trackCheckoutComplete } = useProbeCommerce();
 
     const [formData, setFormData] = useState<GuestCheckoutDetails>({
         full_name: '',
@@ -47,6 +49,9 @@ const CheckoutPage: React.FC = () => {
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
     useEffect(() => {
+        // Track checkout start
+        trackCheckoutStart(cartTotal, itemCount);
+
         const savedDraft = localStorage.getItem(STORAGE_KEYS.CHECKOUT_DRAFT);
         if (savedDraft) {
             try {
@@ -123,6 +128,11 @@ const CheckoutPage: React.FC = () => {
             if (!checkoutResponse.ok) throw new Error('Failed to place order');
 
             const order = checkoutResponse.body;
+
+            // Track checkout completion
+            if (order) {
+                trackCheckoutComplete(order.id, order.total_amount);
+            }
 
             if (formData.phone_number) {
                 localStorage.setItem(STORAGE_KEYS.LAST_CHECKOUT_PHONE, formData.phone_number);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, RefreshCw, AlertCircle, TrendingUp } from 'lucide-react';
+import { Plus, RefreshCw, AlertCircle, TrendingUp, BarChart2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Campaigns } from '../../api/campaignsApi';
 import { Campaign, MetaInputsRequest } from '../../api/api.types';
 import CreateCampaignModal from './CreateCampaignModal';
@@ -197,6 +198,13 @@ const ManageCampaigns: React.FC = () => {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-2">
+                        <Link
+                          to={`/admin/campaigns/${camp.id}`}
+                          className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                        >
+                          <BarChart2 size={11} />
+                          View
+                        </Link>
                         {camp.status === 'draft' && (
                           <button
                             onClick={() => handleStatusChange(camp.id, 'active')}

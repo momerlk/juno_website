@@ -47,11 +47,15 @@ export type ProbeEventType =
     | 'checkout.start'
     | 'checkout.complete'
     | 'checkout.abandon'
+    | 'order.placed'
     // Interaction events
     | 'interaction.like'
     | 'interaction.dislike'
     | 'interaction.save'
-    | 'interaction.share';
+    | 'interaction.share'
+    // Campaign events
+    | 'click'
+    | 'drops.reminder';
 
 export interface ProbeEventProperties {
     [key: string]: any;
@@ -63,6 +67,7 @@ export interface ProbeEventContext {
     source?: string;
     user_agent?: string;
     ip_address?: string;
+    campaign_id?: string;
 }
 
 // ============================================================================
@@ -72,6 +77,7 @@ export interface ProbeEventContext {
 interface SessionData {
     sessionId: string;
     userId?: string;
+    campaignId?: string;
     startTime: number;
     lastActivity: number;
     pageCount: number;
@@ -119,6 +125,7 @@ function getOrCreateSession(): SessionData {
     const newSession: SessionData = {
         sessionId: generateSessionId(),
         userId: undefined,
+        campaignId: localStorage.getItem('juno_active_campaign') || undefined,
         startTime: Date.now(),
         lastActivity: Date.now(),
         pageCount: 0,
@@ -130,6 +137,7 @@ function getOrCreateSession(): SessionData {
     // Track session start
     trackEvent('session.start', {
         start_time: new Date().toISOString(),
+        campaign_id: newSession.campaignId,
     }, newSession);
     
     return newSession;
@@ -171,6 +179,8 @@ let eventQueue: Array<{
     context?: ProbeEventContext;
     productId?: string;
     categoryId?: string;
+    campaignId?: string;
+    timestamp: string;
 }> = [];
 
 let flushTimer: NodeJS.Timeout | null = null;
@@ -188,18 +198,42 @@ export function trackEvent(
 ): void {
     const currentSession = session || getOrCreateSession();
     
+    // Auto-inject campaign ID if present in session or localStorage
+    const activeCampaignId = currentSession.campaignId || localStorage.getItem('juno_active_campaign');
+    
+    const finalProperties = {
+        ...properties,
+        ...(activeCampaignId ? { campaign_id: activeCampaignId } : {}),
+    };
+
+    const finalContext = {
+        ...context,
+        ...(activeCampaignId ? { campaign_id: activeCampaignId } : {}),
+    };
+    
     const event: typeof eventQueue[number] = {
         type,
-        properties,
-        context,
+        properties: finalProperties,
+        context: finalContext,
         productId,
         categoryId,
+        campaignId: activeCampaignId || undefined,
+        timestamp: new Date().toISOString(),
     };
     
     eventQueue.push(event);
     
-    // Flush immediately for important events
-    if (type === 'checkout.complete' || type === 'session.start') {
+    // Flush immediately for critical lifecycle/campaign events
+    const isCritical = [
+        'session.start', 
+        'session.end', 
+        'checkout.complete', 
+        'order.placed', 
+        'click', 
+        'checkout.start'
+    ].includes(type);
+
+    if (isCritical) {
         flushEvents(currentSession);
     } else {
         // Batch other events
@@ -236,7 +270,8 @@ async function flushEvents(session: SessionData): Promise<void> {
                 type: event.type,
                 product_id: event.productId,
                 category_id: event.categoryId,
-                timestamp: new Date().toISOString(),
+                campaign_id: event.campaignId,
+                timestamp: event.timestamp,
                 properties: event.properties,
                 context: event.context,
             })),
@@ -295,12 +330,14 @@ async function getDeviceInfo(): Promise<Probe.ProbeDevice> {
 async function sendHeartbeat(session: SessionData, screenName?: string): Promise<void> {
     try {
         const device = await getDeviceInfo();
+        const currentScreen = screenName || getScreenNameFromLocation(window.location);
         
         await Probe.heartbeat({
             session_id: session.sessionId,
             user_id: session.userId,
+            campaign_id: session.campaignId,
             device,
-            screen_name: screenName,
+            screen_name: currentScreen,
             page_count: session.pageCount,
             metadata: {
                 url: window.location.href,
@@ -334,10 +371,37 @@ export function useProbeAnalytics(): void {
     const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const previousScreenRef = useRef<string>('');
     
-    // Initialize session on mount
+    // Lifecycle management (Init session & campaign once)
     useEffect(() => {
+        // Campaign detection
+        const params = new URLSearchParams(window.location.search);
+        const campaignId = extractCampaignId(location);
+
+        if (campaignId) {
+            localStorage.setItem('juno_active_campaign', campaignId);
+            
+            // If session already exists in storage, update its campaign ID
+            const session = getSessionData();
+            if (session && !session.campaignId) {
+                session.campaignId = campaignId;
+                saveSessionData(session);
+            }
+        }
+
+        // Initialize session (tracks session.start)
         sessionRef.current = getOrCreateSession();
         
+        // Track initial click if landing with campaign context
+        if (campaignId) {
+            trackEvent('click', {
+                campaign_id: campaignId,
+                source: params.get('utm_source') || 'organic',
+                medium: params.get('utm_medium') || 'direct',
+                content: params.get('utm_content') || undefined,
+                term: params.get('utm_term') || undefined,
+            }, sessionRef.current);
+        }
+
         // Start heartbeat interval
         heartbeatIntervalRef.current = setInterval(() => {
             if (sessionRef.current) {
@@ -362,7 +426,7 @@ export function useProbeAnalytics(): void {
                 flushEvents(sessionRef.current);
             }
         };
-    }, []);
+    }, []); // Only run once on mount
     
     // Track page views
     useEffect(() => {
@@ -370,6 +434,7 @@ export function useProbeAnalytics(): void {
         
         const screenName = getScreenNameFromLocation(location);
         const previousScreen = previousScreenRef.current;
+        const campaignId = extractCampaignId(location) || localStorage.getItem('juno_active_campaign');
         
         // Track screen exit
         if (previousScreen) {
@@ -387,19 +452,32 @@ export function useProbeAnalytics(): void {
         sessionRef.current = addScreenToHistory(sessionRef.current, screenName);
         sessionRef.current = updateSessionActivity(sessionRef.current);
         
-        // Track screen view
-        trackEvent('screen.view', {
+        // Screen view properties
+        const screenProps: any = {
             screen_name: screenName,
             path: location.pathname,
             search: location.search,
-        }, sessionRef.current, {
+        };
+
+        // Add campaign slug for attribution on landing pages
+        if (screenName === 'campaign_landing') {
+            screenProps.slug = location.pathname.split('/')[2];
+        }
+
+        if (campaignId) {
+            screenProps.campaign_id = campaignId;
+        }
+        
+        // Track screen view
+        trackEvent('screen.view', screenProps, sessionRef.current, {
             screen_name: screenName,
             referrer: previousScreen,
             source: getTrafficSource(),
+            campaign_id: campaignId || undefined,
         });
         
         previousScreenRef.current = screenName;
-    }, [location]);
+    }, [location.pathname, location.search]); // Trigger on URL changes
 }
 
 /**
@@ -507,7 +585,7 @@ export function useProbeCommerce(): {
     trackAddToCart: (productId: string, quantity?: number, price?: number) => void;
     trackRemoveFromCart: (productId: string) => void;
     trackCartView: (itemCount?: number, total?: number) => void;
-    trackCheckoutStart: (total?: number) => void;
+    trackCheckoutStart: (total?: number, itemCount?: number) => void;
     trackCheckoutComplete: (orderId: string, total: number) => void;
     trackCheckoutAbandon: (step?: string, total?: number) => void;
 } {
@@ -547,11 +625,12 @@ export function useProbeCommerce(): {
         });
     }, []);
     
-    const trackCheckoutStart = useCallback((total?: number) => {
+    const trackCheckoutStart = useCallback((total?: number, itemCount?: number) => {
         sessionRef.current = sessionRef.current || getOrCreateSession();
         
         trackEvent('checkout.start', {
             total,
+            item_count: itemCount,
             started_at: new Date().toISOString(),
         }, sessionRef.current!, {
             screen_name: 'checkout',
@@ -614,6 +693,7 @@ export function useProbe(): {
         properties?: ProbeEventProperties,
         context?: ProbeEventContext
     ) => void;
+    trackDropReminder: (dropId: string) => void;
     session: SessionData | null;
 } {
     const sessionRef = useRef<SessionData | null>(null);
@@ -629,9 +709,19 @@ export function useProbe(): {
     ) => {
         trackEvent(type, properties, sessionRef.current!, context);
     }, []);
+
+    const trackDropReminder = useCallback((dropId: string) => {
+        trackEvent('drops.reminder', {
+            drop_id: dropId,
+            signed_up_at: new Date().toISOString(),
+        }, sessionRef.current!, {
+            screen_name: 'drop_detail',
+        });
+    }, []);
     
     return {
         track,
+        trackDropReminder,
         session: sessionRef.current,
     };
 }
@@ -640,12 +730,29 @@ export function useProbe(): {
 // Helper Functions
 // ============================================================================
 
+function extractCampaignId(location: any): string | null {
+    const params = new URLSearchParams(location.search);
+    
+    // 1. Check UTM parameter
+    const utmCampaign = params.get('utm_campaign');
+    if (utmCampaign) return utmCampaign;
+    
+    // 2. Check campaign slug pattern (/c/slug)
+    if (location.pathname.startsWith('/c/')) {
+        return location.pathname.split('/')[2];
+    }
+    
+    // 3. Fallback to generic campaign parameter
+    return params.get('campaign');
+}
+
 function getScreenNameFromLocation(location: Location): string {
     const path = location.pathname;
     
     if (path === '/') return 'home';
     if (path.startsWith('/product/')) return 'product_detail';
     if (path.startsWith('/brand/')) return 'brand_page';
+    if (path.startsWith('/c/')) return 'campaign_landing';
     if (path.startsWith('/blog/')) return 'blog_post';
     if (path === '/blog') return 'blog_index';
     if (path.startsWith('/seller') || path.startsWith('/studio')) return 'seller_portal';

@@ -130,6 +130,7 @@ export interface ProbeEvent {
     seller_id?: string;
     product_id?: string;
     category_id?: string;
+    campaign_id?: string;
     timestamp: string;
     server_time: string;
     properties?: Record<string, any>;

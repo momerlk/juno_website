@@ -52,6 +52,7 @@ const AmbassadorTasks = React.lazy(() => import('./components/admin/AmbassadorTa
 const ManageCollections = React.lazy(() => import('./components/admin/ManageCollections'));
 const ManageDrops = React.lazy(() => import('./components/admin/ManageDrops'));
 const ManageCampaigns = React.lazy(() => import('./components/admin/ManageCampaigns'));
+const CampaignDetail = React.lazy(() => import('./components/admin/CampaignDetail'));
 
 // Probe Analytics
 const ProbeRealTime = React.lazy(() => import('./components/admin/ProbeRealTime'));
@@ -232,6 +233,7 @@ function RoutedApp() {
 
                     {/* Marketing */}
                     <Route path="campaigns" element={<ManageCampaigns />} />
+                    <Route path="campaigns/:id" element={<CampaignDetail />} />
 
                     {/* Operations */}
                     <Route path="orders" element={<AdminManageOrders />} />

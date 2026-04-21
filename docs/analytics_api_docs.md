@@ -1,17 +1,50 @@
-# Analytics Module - Phase 2 Completed 
+# Probe Analytics Engine
 
-Probe is the platform analytics and event-ingestion module. It handles:
+Probe is the platform analytics and event-ingestion engine. It provides high-performance, write-heavy behavioral tracking and multi-domain business intelligence.
 
-- client-side event ingestion
-- session heartbeat tracking
-- server-side event emission used by other modules
-- admin analytics dashboards and drill-down APIs
+## Core Capabilities
 
-Route groups and auth:
+- **Client-Side Event Ingestion**: High-throughput batch ingestion for mobile and web.
+- **Session Lifecycle Management**: Automatic heartbeat tracking and session reconstruction.
+- **Internal Event Emission**: Native Go interface (`EventEmitter`) for server-side modules.
+- **Platform Analytics (Admin)**: Full visibility into user growth, engagement, and commerce health.
+- **Seller Analytics**: Actionable business intelligence and growth signals for brands.
+- **Real-Time Stream**: Live activity monitoring and event debugging.
 
-- `POST /api/v2/probe/events/ingest` — public client ingestion
-- `POST /api/v2/probe/sessions/heartbeat` — public client heartbeat
-- `GET /api/v2/admin/probe/*` — admin auth required via `Authorization: Bearer <admin_token>`
+## Integration
+
+### Probe SDK
+The Probe SDK is the recommended way to track client-side behavior. It handles batching, offline queuing, and automatic session tracking.
+- [Mobile SDK (Expo/React Native)](../../../probe_sdk/INTEGRATION_GUIDE.md#mobile-sdk-exporeact-native)
+- [Web SDK (React.js)](../../../probe_sdk/INTEGRATION_GUIDE.md#web-sdk-reactjs)
+
+### Internal Event Emission
+Other Go modules emit events by injecting the `analytics.EventEmitter` interface. This ensures transactionally accurate analytics for server-side actions (e.g., successful orders).
+Currently wired modules:
+- `identity`: Auth lifecycle (`auth.signup`, `auth.login`)
+- `commerce`: Order lifecycle (`order.placed`, `order.cancelled`, etc.)
+- `catalog`: Discovery signals (`product.view`, `search.query`)
+- `interactions`: Social engagement (`interaction.like`)
+- `closet`: Intent signals (`product.add_to_closet`)
+
+## Security & Reliability
+
+- **Rate Limiting**: Ingest and Heartbeat endpoints are protected by a sliding-window rate limiter (Redis-backed in production).
+- **IP Protection**: Full support for `X-Forwarded-For` and `X-Real-IP` behind trusted proxies.
+- **Graceful Shutdown**: Buffered event channels are flushed to MongoDB during process termination to prevent data loss.
+- **Retention Tiers**:
+  - Raw Events (`probe_events`): 30 days (Time-series storage).
+  - Sessions (`probe_sessions`): 90 days.
+  - Pre-aggregated Metrics (`probe_metrics`): 2 years.
+
+---
+
+## Route Groups and Auth
+
+- `POST /api/v2/probe/events/ingest` — Public (Client Ingestion)
+- `POST /api/v2/probe/sessions/heartbeat` — Public (Heartbeat)
+- `GET /api/v2/admin/probe/*` — Admin Auth Required
+- `GET /api/v2/seller/probe/*` — Seller Auth Required
 
 ---
 
@@ -140,6 +173,527 @@ Most `GET /api/v2/admin/probe/*` endpoints accept:
 | `granularity` | `string` | no | One of `hourly`, `daily`, `weekly`, `monthly`. Defaults to `daily` |
 | `compare` | `string` | no | Currently supported: `previous_period` |
 | `limit` | `integer` | no | Used by real-time endpoints. Defaults to `100` |
+
+### Seller Query Parameters
+
+Most `GET /api/v2/seller/probe/*` endpoints accept the same parameters as admin endpoints, but are automatically scoped to the authenticated seller. The `seller_id` is extracted from the JWT token.
+
+| Query Param | Type | Required | Notes |
+|------|------|----------|------|
+| `start_time` | `string<RFC3339>` | no | Defaults to `end_time - 30 days` |
+| `end_time` | `string<RFC3339>` | no | Defaults to current UTC time |
+| `granularity` | `string` | no | One of `hourly`, `daily`, `weekly`, `monthly`. Defaults to `daily` |
+| `compare` | `string` | no | Currently supported: `previous_period` |
+| `limit` | `integer` | no | Used by product list endpoints. Defaults to `50` |
+
+---
+
+## Seller Analytics Response Schemas
+
+### `SellerOverviewResponse`
+
+Returned by `GET /api/v2/seller/probe/overview`.
+
+```json
+{
+  "revenue": 125000.0,
+  "revenue_change_pct": 15.3,
+  "orders": 48,
+  "orders_change_pct": 12.5,
+  "products_listed": 32,
+  "profile_views": 1240,
+  "followers": 89,
+  "conversion_rate": 0.045,
+  "health_score": 78,
+  "revenue_trend": [{ "x_value": "2026-03-01", "y_value": 4200 }],
+  "orders_trend": [{ "x_value": "2026-03-01", "y_value": 2 }]
+}
+```
+
+Field descriptions:
+
+- `revenue`: Total revenue in the period
+- `revenue_change_pct`: Percentage change vs previous period (if `compare=previous_period`)
+- `orders`: Total orders in the period
+- `orders_change_pct`: Percentage change vs previous period
+- `products_listed`: Active product count
+- `profile_views`: Seller profile page views
+- `followers`: Total followers
+- `conversion_rate`: Orders / product views
+- `health_score`: Composite health score (0-100) based on conversion rate, AOV, return rate, fulfillment speed, catalog freshness
+- `revenue_trend`: Revenue time series
+- `orders_trend`: Orders time series
+
+---
+
+### `SellerSalesResponse`
+
+Returned by `GET /api/v2/seller/probe/sales`.
+
+```json
+{
+  "total_revenue": 125000.0,
+  "revenue_trend": [{ "x_value": "2026-03-01", "y_value": 4200 }],
+  "total_orders": 48,
+  "orders_trend": [{ "x_value": "2026-03-01", "y_value": 2 }],
+  "average_order_value": 2604.17,
+  "fulfillment_speed_hours": 18.5,
+  "cancellation_rate": 0.04,
+  "return_rate": 0.03,
+  "repeat_order_rate": 0.25
+}
+```
+
+Field descriptions:
+
+- `total_revenue`: Total GMV in the period
+- `revenue_trend`: Daily revenue time series
+- `total_orders`: Order count
+- `orders_trend`: Daily orders time series
+- `average_order_value`: Revenue / orders
+- `fulfillment_speed_hours`: Average time from order to shipped
+- `cancellation_rate`: Cancelled orders / total orders
+- `return_rate`: Returned orders / delivered orders
+- `repeat_order_rate`: Orders from customers with 2+ orders / total orders
+
+---
+
+### `SellerProductMetric`
+
+Represents a single product's performance in the product list response.
+
+```json
+{
+  "product_id": "prod_456",
+  "product_name": "Floral Lawn Suit",
+  "impressions": 8400,
+  "views": 2400,
+  "cart_adds": 320,
+  "purchases": 54,
+  "revenue": 189000,
+  "conversion_rate": 0.022,
+  "likes": 145,
+  "closet_saves": 89,
+  "shares": 23,
+  "return_rate": 0.04
+}
+```
+
+Field descriptions:
+
+- `product_id`: Product identifier
+- `product_name`: Product name from catalog
+- `impressions`: Times product appeared in feeds/search results
+- `views`: Product detail page views
+- `cart_adds`: Times added to cart
+- `purchases`: Units sold
+- `revenue`: Total revenue from this product
+- `conversion_rate`: Purchases / views
+- `likes`: Interaction likes count
+- `closet_saves`: Times added to user closets
+- `shares`: Times product was shared
+- `return_rate`: Returned orders / purchases
+
+---
+
+### `ProductPerformanceSummary`
+
+Aggregate insights across a seller's products.
+
+```json
+{
+  "total_impressions": 45000,
+  "total_views": 12400,
+  "avg_conversion_rate": 0.028,
+  "best_performer_id": "prod_456",
+  "needs_attention_ids": ["prod_789", "prod_012"]
+}
+```
+
+Field descriptions:
+
+- `total_impressions`: Sum of all product impressions
+- `total_views`: Sum of all product views
+- `avg_conversion_rate`: Average conversion rate across products
+- `best_performer_id`: Product ID with highest revenue
+- `needs_attention_ids`: Products with high views but low conversion
+
+---
+
+### `SellerProductPerformanceResponse`
+
+Returned by `GET /api/v2/seller/probe/products`.
+
+```json
+{
+  "products": [
+    {
+      "product_id": "prod_456",
+      "product_name": "Floral Lawn Suit",
+      "impressions": 8400,
+      "views": 2400,
+      "cart_adds": 320,
+      "purchases": 54,
+      "revenue": 189000,
+      "conversion_rate": 0.022,
+      "likes": 145,
+      "closet_saves": 89,
+      "shares": 23,
+      "return_rate": 0.04
+    }
+  ],
+  "summary": {
+    "total_impressions": 45000,
+    "total_views": 12400,
+    "avg_conversion_rate": 0.028,
+    "best_performer_id": "prod_456",
+    "needs_attention_ids": ["prod_789"]
+  }
+}
+```
+
+---
+
+### `SellerProductDetailResponse`
+
+Returned by `GET /api/v2/seller/probe/products/{id}`.
+
+```json
+{
+  "product_id": "prod_456",
+  "product_name": "Floral Lawn Suit",
+  "impressions": 8400,
+  "views": 2400,
+  "views_trend": [{ "x_value": "2026-03-01", "y_value": 120 }],
+  "cart_adds": 320,
+  "purchases": 54,
+  "revenue": 189000,
+  "conversion_rate": 0.022,
+  "cart_abandon_rate": 0.83,
+  "likes": 145,
+  "closet_saves": 89,
+  "shares": 23,
+  "return_rate": 0.04,
+  "revenue_per_view": 78.75,
+  "traffic_sources": {
+    "search": 820,
+    "browse": 1557,
+    "share": 23
+  }
+}
+```
+
+Field descriptions:
+
+- `product_id`: Product identifier
+- `product_name`: Product name from catalog
+- `impressions`: Total product impressions
+- `views`: Total product views
+- `views_trend`: Daily views time series
+- `cart_adds`: Total cart additions
+- `purchases`: Units sold
+- `revenue`: Total revenue
+- `conversion_rate`: Purchases / views
+- `cart_abandon_rate`: 1 - (purchases / cart_adds)
+- `likes`: Interaction count
+- `closet_saves`: Closet save count
+- `shares`: Share count
+- `return_rate`: Return rate
+- `revenue_per_view`: Revenue / views
+- `traffic_sources`: Breakdown by source (search, browse, share)
+
+---
+
+### `SellerInventoryMetric`
+
+Represents a single product's inventory health.
+
+```json
+{
+  "product_id": "prod_456",
+  "product_name": "Floral Lawn Suit",
+  "stock_level": 12,
+  "sell_through_rate": 0.68,
+  "days_of_inventory": 7,
+  "is_dead_stock": false,
+  "needs_restock": true
+}
+```
+
+---
+
+### `SellerInventoryResponse`
+
+Returned by `GET /api/v2/seller/probe/inventory`.
+
+```json
+{
+  "total_products": 32,
+  "active_products": 28,
+  "dead_stock_count": 4,
+  "restock_alerts": [
+    {
+      "product_id": "prod_456",
+      "product_name": "Floral Lawn Suit",
+      "stock_level": 12,
+      "sell_through_rate": 0.68,
+      "days_of_inventory": 7,
+      "is_dead_stock": false,
+      "needs_restock": true
+    }
+  ],
+  "inventory_turnover": 0.45,
+  "avg_days_of_inventory": 18.5
+}
+```
+
+Field descriptions:
+
+- `total_products`: Total product count
+- `active_products`: Products with stock > 0
+- `dead_stock_count`: Products with 0 sales in period and stock > 0
+- `restock_alerts`: Products trending toward stockout
+- `inventory_turnover`: Average sell-through rate
+- `avg_days_of_inventory`: Average days until stockout at current velocity
+
+---
+
+### `SellerCustomerMetric`
+
+Represents a single customer's purchasing behavior.
+
+```json
+{
+  "customer_id": "user_123",
+  "order_count": 5,
+  "total_spend": 24500.0,
+  "last_order_date": "2026-03-28T14:20:00Z"
+}
+```
+
+---
+
+### `CustomerSegment`
+
+Represents a group of customers with shared characteristics.
+
+```json
+{
+  "name": "Loyal",
+  "count": 12,
+  "pct": 0.25,
+  "avg_spend": 4800.0
+}
+```
+
+Segment definitions:
+
+- `One-time`: Customers with exactly 1 order
+- `Occasional`: Customers with 2-3 orders
+- `Loyal`: Customers with 4+ orders
+
+---
+
+### `SellerCustomerInsightsResponse`
+
+Returned by `GET /api/v2/seller/probe/customers`.
+
+```json
+{
+  "total_customers": 48,
+  "new_customers": 32,
+  "returning_customers": 16,
+  "repeat_purchase_rate": 0.25,
+  "top_customers": [
+    {
+      "customer_id": "user_123",
+      "order_count": 5,
+      "total_spend": 24500.0,
+      "last_order_date": "2026-03-28T14:20:00Z"
+    }
+  ],
+  "segments": [
+    { "name": "One-time", "count": 24, "pct": 0.50, "avg_spend": 1200.0 },
+    { "name": "Occasional", "count": 12, "pct": 0.25, "avg_spend": 3500.0 },
+    { "name": "Loyal", "count": 12, "pct": 0.25, "avg_spend": 4800.0 }
+  ],
+  "geographic_distribution": {
+    "Lahore": 18,
+    "Karachi": 12,
+    "Islamabad": 10,
+    "Rawalpindi": 8
+  },
+  "customer_trend": [{ "x_value": "2026-03-01", "y_value": 2 }]
+}
+```
+
+Field descriptions:
+
+- `total_customers`: Unique buyers in period
+- `new_customers`: First-time buyers
+- `returning_customers`: Repeat buyers
+- `repeat_purchase_rate`: Repeat buyers / total customers
+- `top_customers`: Top 10 customers by spend
+- `segments`: Customer segmentation breakdown
+- `geographic_distribution`: Customer count by city
+- `customer_trend`: Daily customer acquisition time series
+
+---
+
+### `OptimizationSignal`
+
+Represents an actionable insight for a seller.
+
+```json
+{
+  "type": "warning",
+  "category": "conversion",
+  "title": "High views, low conversion",
+  "description": "Product gets lots of views but few purchases — consider adjusting price or improving photos",
+  "product_id": "prod_789",
+  "priority": 1
+}
+```
+
+Signal types:
+
+- `type`: `warning`, `opportunity`, or `success`
+- `category`: `pricing`, `inventory`, `engagement`, `conversion`, `returns`
+- `priority`: `1` (high), `2` (medium), `3` (low)
+
+---
+
+### `BenchmarkValue`
+
+Compares seller performance against platform averages.
+
+```json
+{
+  "seller": 0.045,
+  "platform_avg": 0.038,
+  "percentile": 0
+}
+```
+
+---
+
+### `SellerBenchmarks`
+
+Holds all benchmark comparisons for a seller.
+
+```json
+{
+  "conversion_rate": {
+    "seller": 0.045,
+    "platform_avg": 0.038,
+    "percentile": 0
+  },
+  "aov": {
+    "seller": 2604.17,
+    "platform_avg": 2717.04,
+    "percentile": 0
+  },
+  "fulfillment_time": {
+    "seller": 18.5,
+    "platform_avg": 24.0,
+    "percentile": 0
+  },
+  "return_rate": {
+    "seller": 0.03,
+    "platform_avg": 0.04,
+    "percentile": 0
+  },
+  "growth_rate": {
+    "seller": 0.15,
+    "platform_avg": 0.12,
+    "percentile": 0
+  }
+}
+```
+
+Note: Lower is better for `fulfillment_time` and `return_rate`.
+
+---
+
+### `SellerOptimizationResponse`
+
+Returned by `GET /api/v2/seller/probe/optimization`.
+
+```json
+{
+  "signals": [
+    {
+      "type": "warning",
+      "category": "conversion",
+      "title": "High views, low conversion",
+      "description": "Product gets lots of views but few purchases — consider adjusting price or improving photos",
+      "product_id": "prod_789",
+      "priority": 1
+    },
+    {
+      "type": "warning",
+      "category": "returns",
+      "title": "High return rate",
+      "description": "Product has a high return rate — review product description accuracy and sizing",
+      "product_id": "prod_012",
+      "priority": 2
+    }
+  ],
+  "benchmarks": {
+    "conversion_rate": {
+      "seller": 0.045,
+      "platform_avg": 0.038,
+      "percentile": 0
+    },
+    "aov": {
+      "seller": 2604.17,
+      "platform_avg": 2717.04,
+      "percentile": 0
+    },
+    "fulfillment_time": {
+      "seller": 18.5,
+      "platform_avg": 24.0,
+      "percentile": 0
+    },
+    "return_rate": {
+      "seller": 0.03,
+      "platform_avg": 0.04,
+      "percentile": 0
+    },
+    "growth_rate": {
+      "seller": 0.15,
+      "platform_avg": 0.12,
+      "percentile": 0
+    }
+  }
+}
+```
+
+---
+
+### `SellerForecastResponse`
+
+Returned by `GET /api/v2/seller/probe/forecast`.
+
+```json
+{
+  "current_revenue": 32000.0,
+  "forecast_7_day": 28500.0,
+  "forecast_30_day": 125000.0,
+  "confidence_level": 0.7,
+  "trend_direction": "accelerating",
+  "daily_averages": [{ "x_value": "2026-03-01", "y_value": 4200 }]
+}
+```
+
+Field descriptions:
+
+- `current_revenue`: Revenue in last 7 days
+- `forecast_7_day`: Predicted revenue for next 7 days (moving average)
+- `forecast_30_day`: Predicted revenue for next 30 days (moving average)
+- `confidence_level`: Forecast confidence (0.5-0.7 based on data availability)
+- `trend_direction`: `accelerating`, `stable`, or `decelerating`
+- `daily_averages`: Daily revenue time series used for forecasting
 
 ---
 
@@ -728,7 +1282,7 @@ Supported `type` values are validated server-side. Current categories:
 - Notification: `notification.received`, `notification.opened`, `notification.dismissed`
 - Closet: `closet.create`, `closet.add_item`, `closet.remove_item`, `closet.share`, `outfit.create`, `outfit.view`
 - Invite: `invite.sent`, `invite.accepted`, `invite.expired`
-- Feedback: `feedback.submitted`, `bug_report.submitted`
+- Feedback: `feedback.submitted`, `bug_report.submitted`, `brand.review_submitted`, `app.review_submitted`
 - App lifecycle: `app.install`, `app.open`, `app.background`, `app.foreground`, `app.update`, `app.uninstall`
 - Navigation: `navigation.tab_switch`, `navigation.deep_link`, `navigation.back`
 - Content: `update.view`, `update.reaction`
@@ -918,6 +1472,139 @@ All require admin auth. `start_time`, `end_time`, `granularity`, and `limit` are
 
 ---
 
+## Seller Analytics Endpoints
+
+### Seller Overview
+`GET /api/v2/seller/probe/overview`
+
+Auth: seller token required
+
+Returns the seller dashboard landing page metrics including revenue, orders, profile views, followers, conversion rate, health score, and trend data.
+
+**Query params**
+
+- standard seller query params
+- `compare=previous_period` supported
+
+**Response `200`**: [`SellerOverviewResponse`](#selleroverviewresponse)
+
+**Common errors**
+
+- `401 UNAUTHORIZED` — missing or invalid seller token
+- `403 FORBIDDEN` — authenticated user is not a seller
+
+---
+
+### Seller Sales Analytics
+`GET /api/v2/seller/probe/sales`
+
+Auth: seller token required
+
+Returns detailed sales performance metrics including revenue trends, order trends, AOV, fulfillment speed, cancellation rate, return rate, and repeat order rate.
+
+**Query params**
+
+- standard seller query params
+
+**Response `200`**: [`SellerSalesResponse`](#sellersalesresponse)
+
+---
+
+### Seller Product Performance List
+`GET /api/v2/seller/probe/products`
+
+Auth: seller token required
+
+Returns product performance rankings with metrics for each product including impressions, views, cart adds, purchases, revenue, conversion rate, likes, closet saves, shares, and return rate.
+
+**Query params**
+
+- standard seller query params
+- `limit` — optional results limit (default 50)
+
+**Response `200`**: [`SellerProductPerformanceResponse`](#sellerproductperformanceresponse)
+
+---
+
+### Seller Product Detail
+`GET /api/v2/seller/probe/products/{id}`
+
+Auth: seller token required
+
+Returns comprehensive analytics for a specific product including views trend, cart abandon rate, revenue per view, and traffic source breakdown.
+
+**Path params**
+
+- `id` — product ID
+
+**Query params**
+
+- standard seller query params (except `compare`)
+
+**Response `200`**: [`SellerProductDetailResponse`](#sellerproductdetailresponse)
+
+---
+
+### Seller Inventory Intelligence
+`GET /api/v2/seller/probe/inventory`
+
+Auth: seller token required
+
+Returns inventory health metrics including total products, active products, dead stock count, restock alerts with stock levels and days of inventory, and inventory turnover.
+
+**Query params**
+
+- standard seller query params
+
+**Response `200`**: [`SellerInventoryResponse`](#sellerinventoryresponse)
+
+---
+
+### Seller Customer Insights
+`GET /api/v2/seller/probe/customers`
+
+Auth: seller token required
+
+Returns customer analytics including total customers, new vs returning breakdown, repeat purchase rate, top 10 customers by spend, customer segmentation (one-time/occasional/loyal), geographic distribution, and customer acquisition trend.
+
+**Query params**
+
+- standard seller query params
+
+**Response `200`**: [`SellerCustomerInsightsResponse`](#sellercustomerinsightsresponse)
+
+---
+
+### Seller Optimization Signals
+`GET /api/v2/seller/probe/optimization`
+
+Auth: seller token required
+
+Returns actionable optimization signals and platform benchmarks. Signals include warnings for high views/low conversion, high cart abandonment, high return rates, and opportunities for growth. Benchmarks compare seller performance against platform averages.
+
+**Query params**
+
+- standard seller query params
+
+**Response `200`**: [`SellerOptimizationResponse`](#selleroptimizationresponse)
+
+---
+
+### Seller Revenue Forecast
+`GET /api/v2/seller/probe/forecast`
+
+Auth: seller token required
+
+Returns revenue forecasts using moving average projections. Includes 7-day and 30-day forecasts, confidence level, trend direction (accelerating/stable/decelerating), and daily revenue history.
+
+**Query params**
+
+- standard seller query params
+
+**Response `200`**: [`SellerForecastResponse`](#sellerforecastresponse)
+
+---
+
 ## Server-Side Emission
 
 Probe also accepts server-generated events through the internal `EventEmitter` interface. Current emitters include:
@@ -933,5 +1620,5 @@ Probe also accepts server-generated events through the internal `EventEmitter` i
 |------|---------|
 | `400 INVALID_BODY` | Malformed JSON request body |
 | `400 BAD_REQUEST` | Validation failure such as missing `session_id`, invalid date, invalid limit, or unsupported event type |
-| `401 UNAUTHORIZED` | Missing or invalid admin token on admin routes |
-| `403 FORBIDDEN` | Authenticated user is not an admin |
+| `401 UNAUTHORIZED` | Missing or invalid admin/seller token |
+| `403 FORBIDDEN` | Authenticated user is not an admin (admin routes) or not a seller (seller routes) |
