@@ -15,16 +15,33 @@ interface CampaignLayoutProps {
   };
   children: React.ReactNode;
   onSearch?: (query: string) => void;
+  onQueryChange?: (query: string) => void;
+  suggestionsOverride?: any[];
+  initialQuery?: string;
   hideBanner?: boolean;
 }
 
-const CampaignLayout: React.FC<CampaignLayoutProps> = ({ campaign, children, onSearch, hideBanner }) => {
+const CampaignLayout: React.FC<CampaignLayoutProps> = ({ 
+  campaign, 
+  children, 
+  onSearch, 
+  onQueryChange, 
+  suggestionsOverride,
+  initialQuery,
+  hideBanner 
+}) => {
   const isArgos = campaign.slug === 'argos' || campaign.slug === 'argos-campaign';
   const heroImage = isArgos ? '/argos.jpg' : campaign.landing?.hero_image_url;
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col overflow-x-hidden">
-      <CatalogNavbar homeHref={`/${campaign.slug}-campaign`} onSearch={onSearch} />
+      <CatalogNavbar 
+        homeHref={`/${campaign.slug}-campaign`} 
+        onSearch={onSearch} 
+        onQueryChange={onQueryChange}
+        suggestionsOverride={suggestionsOverride}
+        initialQuery={initialQuery}
+      />
 
       {/* Hero Section */}
       {!hideBanner && (campaign.landing || isArgos) && (

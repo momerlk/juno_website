@@ -5,26 +5,48 @@ import { Menu, X, ShoppingBag, Search, Heart, ArrowRight } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Catalog } from '../../api/catalogApi';
 
-interface SearchSuggestion {
-    keyword: string;
-}
-
 interface CatalogNavbarProps {
     homeHref?: string;
     onSearch?: (query: string) => void;
+    onQueryChange?: (query: string) => void;
+    suggestionsOverride?: SearchSuggestion[];
+    initialQuery?: string;
 }
 
-const CatalogNavbar: React.FC<CatalogNavbarProps> = ({ homeHref = '/', onSearch }) => {
+const CatalogNavbar: React.FC<CatalogNavbarProps> = ({ 
+    homeHref = '/', 
+    onSearch, 
+    onQueryChange,
+    suggestionsOverride,
+    initialQuery = ''
+}) => {
     const location = useLocation();
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(initialQuery);
     const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
     const [recentSearches, setRecentSearches] = useState<string[]>([]);
     const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
     const { itemCount, setCartOpen } = useGuestCart();
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+    const activeSuggestions = suggestionsOverride || suggestions;
+
+    // Only sync initial query when the search overlay is first opened
+    const lastOpenRef = useRef(false);
+    useEffect(() => {
+        if (searchOpen && !lastOpenRef.current && initialQuery) {
+            setSearchQuery(initialQuery);
+        }
+        lastOpenRef.current = searchOpen;
+    }, [searchOpen, initialQuery]);
+
+    useEffect(() => {
+        if (onQueryChange) {
+            onQueryChange(searchQuery);
+        }
+    }, [searchQuery, onQueryChange]);
 
     useEffect(() => {
         const stored = localStorage.getItem('juno_recent_searches');
@@ -56,18 +78,23 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({ homeHref = '/', onSearch 
     }, [searchOpen]);
 
     const handleSearchSubmit = (query: string) => {
-        if (!query.trim()) return;
-        const updated = [query, ...recentSearches.filter((s) => s !== query)].slice(0, 5);
-        setRecentSearches(updated);
-        localStorage.setItem('juno_recent_searches', JSON.stringify(updated));
+        const trimmed = query.trim();
+        
+        // Only add to recent searches if not empty
+        if (trimmed) {
+            const updated = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, 5);
+            setRecentSearches(updated);
+            localStorage.setItem('juno_recent_searches', JSON.stringify(updated));
+        }
+
+        setSearchQuery(trimmed);
         
         if (onSearch) {
-            onSearch(query);
+            onSearch(trimmed);
         } else {
-            navigate(`/catalog?q=${encodeURIComponent(query)}`);
+            navigate(`/catalog?q=${encodeURIComponent(trimmed)}`);
         }
         setSearchOpen(false);
-        setSearchQuery('');
     };
 
     return (
@@ -131,7 +158,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({ homeHref = '/', onSearch 
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
-                            onClick={() => { setSearchOpen(false); setSearchQuery(''); setSuggestions([]); }}
+                            onClick={() => { setSearchOpen(false); setSuggestions([]); }}
                         />
                         <motion.div
                             initial={{ opacity: 0, y: -8 }}
@@ -150,13 +177,16 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({ homeHref = '/', onSearch 
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter') handleSearchSubmit(searchQuery);
-                                            if (e.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); }
+                                            if (e.key === 'Escape') { setSearchOpen(false); }
                                         }}
                                         placeholder="Search products, brands, styles..."
                                         className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30"
                                     />
                                     <button
-                                        onClick={() => { setSearchOpen(false); setSearchQuery(''); setSuggestions([]); }}
+                                        onClick={() => { 
+                                            if (searchQuery) setSearchQuery('');
+                                            else { setSearchOpen(false); setSuggestions([]); }
+                                        }}
                                         className="shrink-0 text-white/40 hover:text-white"
                                     >
                                         <X size={16} />
@@ -164,11 +194,11 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({ homeHref = '/', onSearch 
                                 </div>
 
                                 {/* Suggestions */}
-                                {isLoadingSuggestions ? (
+                                {isLoadingSuggestions && !suggestionsOverride ? (
                                     <p className="mt-3 px-1 text-xs text-white/30">Searching…</p>
-                                ) : suggestions.length > 0 ? (
+                                ) : activeSuggestions.length > 0 ? (
                                     <div className="mt-2">
-                                        {suggestions.map((s) => (
+                                        {activeSuggestions.map((s) => (
                                             <button
                                                 key={s.keyword}
                                                 onClick={() => handleSearchSubmit(s.keyword)}

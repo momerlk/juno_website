@@ -17,6 +17,18 @@ type CampaignProduct = {
     inventory?: { in_stock?: boolean; quantity?: number };
 };
 
+const fuzzySearch = (query: string, text: string): boolean => {
+    const q = query.toLowerCase().replace(/\s+/g, '');
+    const t = text.toLowerCase().replace(/\s+/g, '');
+    if (t.includes(q)) return true;
+    
+    let n = -1;
+    for (let i = 0; i < q.length; i++) {
+        if (!~(n = t.indexOf(q[i], n + 1))) return false;
+    }
+    return true;
+};
+
 const CampaignLandingPage: React.FC = () => {
     const { campaignSlug } = useParams<{ campaignSlug: string }>();
     const [data, setData] = useState<any>(null);
@@ -24,6 +36,12 @@ const CampaignLandingPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const q = params.get('q');
+        if (q) setSearchQuery(q);
+    }, []);
 
     useEffect(() => {
         if (!campaignSlug || !campaignSlug.endsWith('-campaign')) {
@@ -53,7 +71,21 @@ const CampaignLandingPage: React.FC = () => {
         fetchCampaign();
     }, [campaignSlug, navigate]);
 
-    const handleSearch = (query: string) => setSearchQuery(query);
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+        const url = new URL(window.location.href);
+        if (query) url.searchParams.set('q', query);
+        else url.searchParams.delete('q');
+        window.history.replaceState({}, '', url);
+    };
+
+    const handleQueryChange = (query: string) => {
+        setSearchQuery(query);
+        const url = new URL(window.location.href);
+        if (query) url.searchParams.set('q', query);
+        else url.searchParams.delete('q');
+        window.history.replaceState({}, '', url);
+    };
 
     const products: CampaignProduct[] = useMemo(() => {
         if (!data?.products) return [];
@@ -66,10 +98,17 @@ const CampaignLandingPage: React.FC = () => {
             inventory: p.inventory,
         }));
         if (!searchQuery) return mapped;
-        const q = searchQuery.toLowerCase();
         return mapped.filter(
-            (p) => p.title.toLowerCase().includes(q) || p.seller_name.toLowerCase().includes(q)
+            (p) => fuzzySearch(searchQuery, p.title) || fuzzySearch(searchQuery, p.seller_name)
         );
+    }, [data, searchQuery]);
+
+    const suggestions = useMemo(() => {
+        if (!searchQuery || !data?.products) return [];
+        return data.products
+            .filter((p: any) => fuzzySearch(searchQuery, p.title))
+            .slice(0, 5)
+            .map((p: any) => ({ keyword: p.title }));
     }, [data, searchQuery]);
 
     if (isLoading) {
@@ -105,7 +144,14 @@ const CampaignLandingPage: React.FC = () => {
     }
 
     return (
-        <CampaignLayout campaign={data.campaign} onSearch={handleSearch}>
+        <CampaignLayout 
+            campaign={data.campaign} 
+            onSearch={handleSearch} 
+            onQueryChange={handleQueryChange}
+            suggestionsOverride={suggestions}
+            initialQuery={searchQuery}
+            hideBanner={!!searchQuery}
+        >
             <div className="relative pb-16 md:pb-24">
 
                 {/* ── Ambient atmosphere ── */}

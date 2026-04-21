@@ -217,8 +217,12 @@ const CampaignProductPage: React.FC = () => {
         setSelectedImageIdx((idx) => (idx + dir + imageGallery.length) % imageGallery.length);
     };
 
+    const handleSearch = (query: string) => {
+        navigate(`/${campaignSlug}?q=${encodeURIComponent(query)}`);
+    };
+
     return (
-        <CampaignLayout campaign={campaign} hideBanner>
+        <CampaignLayout campaign={campaign} onSearch={handleSearch} hideBanner>
             <div className="relative bg-[#050505] text-white pb-36 lg:pb-12">
 
                 {/* ── Ambient atmosphere ── */}
