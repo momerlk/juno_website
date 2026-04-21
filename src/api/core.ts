@@ -15,7 +15,7 @@ export const api_urls = {
 let base_url = api_urls.production;
 if (import.meta.env.VITE_API_URL) {
     base_url = import.meta.env.VITE_API_URL;
-} else if (import.meta.env.VITE_DEBUG === "true") {
+} else if (import.meta.env.VITE_DEBUG === "true" || import.meta.env.DEV) {
     base_url = api_urls.testing;
 }
 

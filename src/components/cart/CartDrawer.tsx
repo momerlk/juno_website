@@ -140,7 +140,7 @@ const CartDrawer: React.FC = () => {
                                         <div className="space-y-3">
                                             {optimisticCart.map((item, index) => (
                                                 <motion.div
-                                                    key={`${item.product_id}-${item.variant_id}`}
+                                                    key={`${item.product_id || 'p'}-${item.variant_id || 'v'}-${index}`}
                                                     initial={{ opacity: 0, y: 8 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ delay: Math.min(index * 0.035, 0.18) }}
@@ -220,9 +220,9 @@ const CartDrawer: React.FC = () => {
                                                     Complete the look
                                                 </p>
                                                 <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
-                                                    {relatedProducts.map((product) => (
+                                                    {relatedProducts.map((product, idx) => (
                                                         <Link
-                                                            key={product.id}
+                                                            key={product.id || `related-${idx}`}
                                                             to={`/catalog/${product.id}`}
                                                             onClick={() => setCartOpen(false)}
                                                             className="group w-28 shrink-0"

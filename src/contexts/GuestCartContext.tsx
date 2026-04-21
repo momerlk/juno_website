@@ -150,10 +150,15 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
         
         return () => clearTimeout(timeoutId);
     }, [operationQueue]);
+
+    // Persist operation queue
+    useEffect(() => {
+        saveToStorage(STORAGE_KEYS.CART_OPS, operationQueue);
+    }, [operationQueue]);
     
     // Flush operations to server
     const flushOperations = useCallback(async () => {
-        if (operationQueue.length === 0 || !guestCartId) return;
+        if (operationQueue.length === 0) return;
         
         setSyncState('syncing');
         
@@ -169,11 +174,11 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
                 if (op.type === 'add') {
                     response = await GuestCommerce.addToCart(
                         { product_id: op.product_id, variant_id: op.variant_id, quantity: op.quantity || 1 },
-                        currentCartId
+                        currentCartId || undefined
                     );
-                } else if (op.type === 'remove') {
+                } else if (op.type === 'remove' && currentCartId) {
                     response = await GuestCommerce.removeFromCart(op.product_id, op.variant_id, currentCartId);
-                } else if (op.type === 'update') {
+                } else if (op.type === 'update' && currentCartId) {
                     // For updates, we add/remove to reach the target quantity
                     const currentItem = optimisticCart.find(
                         (item) => item.product_id === op.product_id && item.variant_id === op.variant_id
@@ -193,14 +198,19 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
                 
                 if (response?.ok && response.body) {
                     const cartResponse = response.body as GuestCartResponse;
-                    currentCartId = cartResponse.guest_cart_id || currentCartId;
+                    const newCartId = cartResponse.guest_cart_id;
+                    
+                    if (newCartId) {
+                        currentCartId = newCartId;
+                    }
+                    
                     setPersistedCart(cartResponse.cart);
                     
                     // Update cookie and localStorage with latest cart ID
-                    if (cartResponse.guest_cart_id && cartResponse.guest_cart_id !== guestCartId) {
-                        setGuestCartId(cartResponse.guest_cart_id);
-                        setCookie(STORAGE_KEYS.CART_ID, cartResponse.guest_cart_id, COOKIE_EXPIRY_DAYS);
-                        localStorage.setItem(STORAGE_KEYS.CART_ID, cartResponse.guest_cart_id);
+                    if (newCartId && newCartId !== guestCartId) {
+                        setGuestCartId(newCartId);
+                        setCookie(STORAGE_KEYS.CART_ID, newCartId, COOKIE_EXPIRY_DAYS);
+                        localStorage.setItem(STORAGE_KEYS.CART_ID, newCartId);
                     }
                 }
             } catch (error) {
@@ -255,12 +265,7 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
             ...prev,
             { type: 'add', product_id, variant_id, quantity, price, timestamp: Date.now() },
         ]);
-        
-        saveToStorage(STORAGE_KEYS.CART_OPS, [
-            ...operationQueue,
-            { type: 'add', product_id, variant_id, quantity, price, timestamp: Date.now() },
-        ]);
-    }, [operationQueue]);
+    }, []);
     
     // Remove item from cart
     const removeItem = useCallback((product_id: string, variant_id: string) => {
@@ -272,12 +277,7 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
             ...prev,
             { type: 'remove', product_id, variant_id, timestamp: Date.now() },
         ]);
-        
-        saveToStorage(STORAGE_KEYS.CART_OPS, [
-            ...operationQueue,
-            { type: 'remove', product_id, variant_id, timestamp: Date.now() },
-        ]);
-    }, [operationQueue]);
+    }, []);
     
     // Update quantity
     const updateQuantity = useCallback((product_id: string, variant_id: string, newQuantity: number) => {
@@ -298,12 +298,7 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
             ...prev,
             { type: 'update', product_id, variant_id, quantity: newQuantity, timestamp: Date.now() },
         ]);
-        
-        saveToStorage(STORAGE_KEYS.CART_OPS, [
-            ...operationQueue,
-            { type: 'update', product_id, variant_id, quantity: newQuantity, timestamp: Date.now() },
-        ]);
-    }, [operationQueue, removeItem]);
+    }, [removeItem]);
     
     // Clear cart
     const clearCart = useCallback(() => {
@@ -340,17 +335,17 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
     
     // Persist cart snapshot on change
     useEffect(() => {
-        if (optimisticCart.length > 0 || persistedCart) {
-            const snapshot = persistedCart || {
-                id: guestCartId || 'temp',
-                user_id: 'guest',
-                items: optimisticCart,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            };
-            saveToStorage(STORAGE_KEYS.CART_SNAPSHOT, snapshot);
-        }
-    }, [optimisticCart, persistedCart, guestCartId]);
+        // Snapshot should always reflect optimisticCart so it persists across reloads
+        // while we wait for server sync.
+        const snapshot: GuestCart = {
+            id: guestCartId || persistedCart?.id || 'temp',
+            user_id: 'guest',
+            items: optimisticCart,
+            created_at: persistedCart?.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+        saveToStorage(STORAGE_KEYS.CART_SNAPSHOT, snapshot);
+    }, [optimisticCart, guestCartId, persistedCart]);
     
     // Derived values
     const itemCount = useMemo(

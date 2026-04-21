@@ -28,7 +28,7 @@ const FREE_SHIPPING_THRESHOLD = 5000;
 
 const CheckoutPage: React.FC = () => {
     const navigate = useNavigate();
-    const { optimisticCart, cartTotal, itemCount, clearCart, guestCartId } = useGuestCart();
+    const { optimisticCart, cartTotal, itemCount, clearCart, guestCartId, syncState } = useGuestCart();
 
     const [formData, setFormData] = useState<GuestCheckoutDetails>({
         full_name: '',
@@ -93,8 +93,19 @@ const CheckoutPage: React.FC = () => {
 
     const handleSubmit = async () => {
         if (!validateForm()) return;
+
+        // If we are currently syncing or have unsynced changes, we should wait or show a message
+        if (syncState === 'dirty' || syncState === 'syncing') {
+            setErrors({ general: 'Updating your bag... Please try again in a second.' });
+            return;
+        }
+
         if (!guestCartId) {
-            setErrors({ general: 'Cart not found. Please add items to your cart first.' });
+            if (optimisticCart.length > 0) {
+                setErrors({ general: 'Your bag is still being synchronized. Please wait a moment and try again.' });
+            } else {
+                setErrors({ general: 'Your bag is empty. Please add items to your cart first.' });
+            }
             return;
         }
 
@@ -153,7 +164,7 @@ const CheckoutPage: React.FC = () => {
         }
     }, [optimisticCart.length, navigate, isSubmitting]);
 
-    const shippingFee = cartTotal >= FREE_SHIPPING_THRESHOLD ? 0 : 200;
+    const shippingFee = cartTotal >= FREE_SHIPPING_THRESHOLD ? 0 : 199;
     const orderTotal = cartTotal + shippingFee;
     const progressPct = Math.min(100, Math.round((cartTotal / FREE_SHIPPING_THRESHOLD) * 100));
     const remainingForFreeShip = Math.max(0, FREE_SHIPPING_THRESHOLD - cartTotal);
