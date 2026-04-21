@@ -107,7 +107,11 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                         <Link
                             to={homeHref}
                             className="shrink-0"
-                            onClick={() => setIsOpen(false)}
+                            onClick={() => {
+                                setIsOpen(false);
+                                setSearchQuery('');
+                                if (onSearch) onSearch('');
+                            }}
                         >
                             <img
                                 src="/juno_logos/icon+text_white.png"

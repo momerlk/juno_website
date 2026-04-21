@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { PublicCampaigns } from '../../api/campaignsApi';
 import CampaignLayout from './CampaignLayout';
@@ -31,6 +31,7 @@ const fuzzySearch = (query: string, text: string): boolean => {
 
 const CampaignLandingPage: React.FC = () => {
     const { campaignSlug } = useParams<{ campaignSlug: string }>();
+    const location = useLocation();
     const [data, setData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -38,10 +39,10 @@ const CampaignLandingPage: React.FC = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams(location.search);
         const q = params.get('q');
-        if (q) setSearchQuery(q);
-    }, []);
+        setSearchQuery(q || '');
+    }, [location.search]);
 
     useEffect(() => {
         if (!campaignSlug || !campaignSlug.endsWith('-campaign')) {
