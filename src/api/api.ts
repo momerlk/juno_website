@@ -122,6 +122,11 @@ export type {
     CheckoutRequest,
     GuestCheckoutRequest,
     GuestOrderLookupRequest,
+    GeoPoint,
+    TrackingMilestone,
+    TrackingAnchors,
+    OrderTracking,
+    Order,
     
     // Tournament types
     Tournament,

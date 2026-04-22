@@ -624,6 +624,18 @@ Queue status flow:
 - `promoted`
 - `failed`
 
+### Queue Endpoints Summary
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v2/seller/queue` | Get all queue items |
+| `PUT` | `/api/v2/seller/queue/{id}` | Update product in queue |
+| `POST` | `/api/v2/seller/queue/{id}/promote` | Promote ready product to catalog |
+| `POST` | `/api/v2/seller/queue/{id}/reject` | Reject product from queue |
+| `PUT` | `/api/v2/seller/queue/{id}/enrich` | Enrich product with metadata |
+| `POST` | `/api/v2/seller/queue/{id}/embeddings` | Submit AI embeddings |
+| `GET` | `/api/v2/seller/queue/pending-embeddings` | Get items awaiting embeddings |
+
 ### Get Queue
 `GET /api/v2/seller/queue`
 
@@ -873,11 +885,11 @@ Auth: seller token required
 
 Auth: seller token required
 
-The handler accepts an optional body in Swagger, but the current implementation ignores it and only transitions the order to `shipped`.
+Transitions the order to `handed_to_rider` status. This is the final step for a seller to release the parcel to the courier.
 
 **Response `200`**
 ```json
-{ "message": "Order fulfilled successfully" }
+{ "message": "Order fulfilled and handed to rider" }
 ```
 
 **Common errors**
@@ -887,24 +899,32 @@ The handler accepts an optional body in Swagger, but the current implementation 
 ---
 
 ### Update Order Status
-`PUT /api/v2/seller/orders/{id}/status`
+`PUT /api/v2/seller/orders/{id}/status` (Legacy)
+`PATCH /api/v2/commerce/seller/orders/{id}/status` (Recommended for Tracking)
 
 Auth: seller token required
 
-**Body**
+The `PATCH` route under the commerce module is recommended as it supports the **Interactive Order Tracking** timeline and FSM validation.
+
+**Body (PATCH commerce route)**
 ```json
-{ "status": "delivered" }
+{ 
+  "status": "packed",
+  "note": "Optional update note"
+}
 ```
 
-Valid values in the service layer:
-- `pending`
-- `shipped`
-- `delivered`
-- `cancelled`
+**Valid values for sellers:**
+- `confirmed`: Accept the order and start preparation.
+- `packed`: Parcel is ready. Unlocks the "parcel is packed" animation for the customer.
+- `handed_to_rider`: Parcel released to the courier pickup rider. Starts the parcel movement on the live map.
+- `cancelled`: Pre-dispatch cancellation if items are out of stock.
+
+See [Commerce Module Tracking Docs](../commerce/docs.md#seller-order-management) for details on how these statuses drive the live map.
 
 **Response `200`**
 ```json
-{ "message": "Order status updated" }
+{ "success": true, "data": { "message": "Order status updated successfully" } }
 ```
 
 **Common errors**

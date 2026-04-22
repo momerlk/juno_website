@@ -19,6 +19,7 @@ import type {
     GuestCheckoutDetails,
     GuestCheckoutRequest,
     GuestOrderLookupRequest,
+    OrderTracking,
 } from "./api.types";
 
 // ============================================================================
@@ -83,6 +84,24 @@ export namespace Commerce {
      */
     export async function getOrders(token?: string): Promise<APIResponse<ParentOrder[]>> {
         return request(`${BASE_PATH}/orders`, 'GET', undefined, token || getUserToken());
+    }
+
+    /**
+     * Get order tracking
+     * 
+     * Returns the granular milestone timeline and map anchors for an order.
+     */
+    export async function getOrderTracking(orderId: string, token?: string): Promise<APIResponse<OrderTracking>> {
+        return request(`${BASE_PATH}/orders/${orderId}/tracking`, 'GET', undefined, token || getUserToken());
+    }
+
+    /**
+     * Share order tracking
+     * 
+     * Generates a signed token for public, read-only tracking access.
+     */
+    export async function shareOrderTracking(orderId: string, token?: string): Promise<APIResponse<{ token: string; url: string }>> {
+        return request(`${BASE_PATH}/orders/${orderId}/tracking/share`, 'POST', undefined, token || getUserToken());
     }
 }
 
@@ -220,5 +239,15 @@ export namespace GuestCommerce {
             body: JSON.stringify(payload)
         });
         return handleGuestResponse<ParentOrder[]>(resp);
+    }
+
+    /**
+     * Get public tracking
+     * 
+     * Returns order tracking data without PII using a valid share token.
+     */
+    export async function getPublicTracking(token: string): Promise<APIResponse<OrderTracking>> {
+        const resp = await fetch(`${API_BASE_URL}/track/${token}`, { method: 'GET' });
+        return handleGuestResponse<OrderTracking>(resp);
     }
 }

@@ -65,61 +65,92 @@ export type { APIResponse };
 
 const getToken = () => localStorage.getItem('admin_token') ?? undefined;
 
-export async function GetAllOrders(): Promise<APIResponse<Order[]>> {
-    return request('/admin/orders', 'GET', undefined, getToken());
+export namespace AdminAPI {
+    export const getAllOrders = (): Promise<APIResponse<Order[]>> => request('/admin/orders', 'GET', undefined, getToken());
+    
+    // api_v2.json does not show a GET /admin/orders/{id} endpoint. 
+    // We'll fetch all and filter, or use the orders list.
+    export const getOrderById = async (orderId: string): Promise<APIResponse<Order>> => {
+        const res = await getAllOrders();
+        if (res.ok && Array.isArray(res.body)) {
+            const order = res.body.find(o => o.id === orderId);
+            if (order) return { ...res, body: order };
+            return { ...res, ok: false, status: 404, body: { message: 'Order not found locally' } as any };
+        }
+        return res as any;
+    };
+
+    export const getProductById = (productId: string): Promise<APIResponse<Product>> => request(`/catalog/products/${productId}`, 'GET', undefined, getToken());
+    
+    export const getAllSellers       = (): Promise<APIResponse<any[]>> => request('/admin/sellers', 'GET', undefined, getToken());
+    export const adminGetAllSellers  = (): Promise<APIResponse<any[]>> => request('/admin/sellers', 'GET', undefined, getToken());
+    export const adminGetAllInteractions = (): Promise<APIResponse<any[]>> => request('/admin/interactions', 'GET', undefined, getToken());
+
+    export const getSellerDetails = (sellerId: string): Promise<APIResponse<any>> => request(`/admin/sellers/${sellerId}`, 'GET', undefined, getToken());
+    export const approveSeller    = (sellerId: string, approved: boolean = true, note: string = "KYC verified"): Promise<APIResponse<any>> => 
+        request(`/admin/sellers/${sellerId}/approve`, 'PUT', { approved, note }, getToken());
+    export const updateSeller     = (sellerId: string, data: any): Promise<APIResponse<any>> => request(`/admin/sellers/${sellerId}`, 'PUT', data, getToken());
+
+    export const getAllUsers          = (): Promise<APIResponse<any[]>> => request('/admin/users', 'GET', undefined, getToken());
+    export const getUserDetails       = (userId: string): Promise<APIResponse<any>> => request(`/admin/users/${userId}`, 'GET', undefined, getToken());
+    export const getWaitlist          = (): Promise<APIResponse<any[]>> => request('/admin/waitlist', 'GET', undefined, getToken());
+
+    export const getProductQueue = (): Promise<APIResponse<any[]>> => request('/admin/products-queue', 'GET', undefined, getToken());
+
+    export const updateOrder      = (orderId: string, data: any): Promise<APIResponse<any>> => request(`/admin/orders/${orderId}`, 'PUT', data, getToken());
+    export const updateOrderStatus = (orderId: string, status: string, note?: string): Promise<APIResponse<any>> => 
+        request(`/admin/orders/${orderId}/status`, 'PATCH', { status, note }, getToken());
+    export const appendOrderMilestone = (orderId: string, milestone: { label: string, note?: string, location?: any }): Promise<APIResponse<any>> => 
+        request(`/admin/orders/${orderId}/tracking/milestone`, 'POST', milestone, getToken());
+    export const setOrderWarehouseAnchor = (orderId: string, anchor: { lat: number, lng: number, city?: string, label?: string }): Promise<APIResponse<any>> => 
+        request(`/admin/orders/${orderId}/tracking/warehouse`, 'PUT', anchor, getToken());
+    export const updateOrderETA = (orderId: string, eta: string): Promise<APIResponse<any>> => 
+        request(`/admin/orders/${orderId}/tracking/eta`, 'PATCH', { eta }, getToken());
+    export const getAllCarts       = (): Promise<APIResponse<any[]>> => request('/admin/carts', 'GET', undefined, getToken());
+
+    export const getAllOTPs       = (): Promise<APIResponse<any[]>> => request('/admin/otps', 'GET', undefined, getToken());
+    export const getSystemHealth = (): Promise<APIResponse<any>> => request('/admin/health', 'GET', undefined, getToken());
+
+    export const createUpdate = (data: any): Promise<APIResponse<any>> => request('/admin/updates', 'POST', data, getToken());
+
+    export const broadcastNotification = (title: string, body: string, data?: object): Promise<APIResponse<any>> =>
+        request('/admin/notifications/broadcast', 'POST', {
+            title,
+            body,
+            data: data || { additionalProp1: "string", additionalProp2: "string", additionalProp3: "string" },
+        }, getToken());
+
+    export const sendNotificationToUser  = (user_id: string, title: string, body: string, data?: object): Promise<APIResponse<any>> =>
+        request(`/admin/notifications/users/${user_id}/send`, 'POST', { title, body, data }, getToken());
+    export const deleteNotificationToken = (expo_token: string): Promise<APIResponse<any>> =>
+        request(`/admin/notifications/tokens/${expo_token}`, 'DELETE', undefined, getToken());
+    export const deleteUserNotificationTokens = (user_id: string): Promise<APIResponse<any>> =>
+        request(`/admin/notifications/tokens/user/${user_id}`, 'DELETE', undefined, getToken());
+
+    export const createAmbassadorTask = (data: any): Promise<APIResponse<any>> => request('/admin/ambassador/tasks', 'POST', data, getToken());
 }
 
-export async function GetOrderById(orderId: string): Promise<APIResponse<Order>> {
-    return request(`/admin/orders/${orderId}`, 'GET', undefined, getToken());
-}
-
-export async function GetProductById(productId: string): Promise<APIResponse<Product>> {
-    return request(`/catalog/products/${productId}`, 'GET', undefined, getToken());
-}
-
-// --- Analytics ---
-
-// --- Sellers ---
-export const getAllSellers       = (): Promise<APIResponse<any[]>> => request('/catalog/brands', 'GET', undefined, undefined, true);
-export const adminGetAllSellers  = (): Promise<APIResponse<any[]>> => request('/admin/sellers', 'GET', undefined, getToken());
-export const adminGetAllInteractions = (): Promise<APIResponse<any[]>> => request('/admin/interactions', 'GET', undefined, getToken());
-
-export const getSellerDetails = (sellerId: string): Promise<APIResponse<any>> => request(`/admin/sellers/${sellerId}`, 'GET', undefined, getToken());
-export const approveSeller    = (sellerId: string, approved: boolean = true, note: string = "KYC verified"): Promise<APIResponse<any>> => 
-    request(`/admin/sellers/${sellerId}/approve`, 'PUT', { approved, note }, getToken());
-export const updateSeller     = (sellerId: string, data: any): Promise<APIResponse<any>> => request(`/admin/sellers/${sellerId}`, 'PUT', data, getToken());
-
-export const getAllUsers          = (): Promise<APIResponse<any[]>> => request('/admin/users', 'GET', undefined, getToken());
-export const getUserDetails       = (userId: string): Promise<APIResponse<any>> => request(`/admin/users/${userId}`, 'GET', undefined, getToken());
-export const getWaitlist          = (): Promise<APIResponse<any[]>> => request('/admin/waitlist', 'GET', undefined, getToken());
-
-// --- Products & Queue ---
-export const getProductQueue = (): Promise<APIResponse<any[]>> => request('/admin/products-queue', 'GET', undefined, getToken());
-
-// --- Orders Extended ---
-export const updateOrder      = (orderId: string, data: any): Promise<APIResponse<any>> => request(`/admin/orders/${orderId}`, 'PUT', data, getToken());
-export const getAllCarts       = (): Promise<APIResponse<any[]>> => request('/admin/carts', 'GET', undefined, getToken());
-
-// --- System ---
-export const getAllOTPs       = (): Promise<APIResponse<any[]>> => request('/admin/otps', 'GET', undefined, getToken());
-export const getSystemHealth = (): Promise<APIResponse<any>> => request('/admin/health', 'GET', undefined, getToken());
-
-// --- Updates ---
-export const createUpdate = (data: any): Promise<APIResponse<any>> => request('/admin/updates', 'POST', data, getToken());
-
-// --- Notifications ---
-export const broadcastNotification = (title: string, body: string, data?: object): Promise<APIResponse<any>> =>
-    request('/admin/notifications/broadcast', 'POST', {
-        title,
-        body,
-        data: data || { additionalProp1: "string", additionalProp2: "string", additionalProp3: "string" },
-    }, getToken());
-
-export const sendNotificationToUser  = (user_id: string, title: string, body: string, data?: object): Promise<APIResponse<any>> =>
-    request(`/admin/notifications/users/${user_id}/send`, 'POST', { title, body, data }, getToken());
-export const deleteNotificationToken = (expo_token: string): Promise<APIResponse<any>> =>
-    request(`/admin/notifications/tokens/${expo_token}`, 'DELETE', undefined, getToken());
-export const deleteUserNotificationTokens = (user_id: string): Promise<APIResponse<any>> =>
-    request(`/admin/notifications/tokens/user/${user_id}`, 'DELETE', undefined, getToken());
-
-export const createAmbassadorTask = (data: any): Promise<APIResponse<any>> => request('/admin/ambassador/tasks', 'POST', data, getToken());
+// Keep existing exports for backward compatibility
+export const GetAllOrders = AdminAPI.getAllOrders;
+export const GetOrderById = AdminAPI.getOrderById;
+export const GetProductById = AdminAPI.getProductById;
+export const getAllSellers = AdminAPI.getAllSellers;
+export const adminGetAllSellers = AdminAPI.adminGetAllSellers;
+export const adminGetAllInteractions = AdminAPI.adminGetAllInteractions;
+export const getSellerDetails = AdminAPI.getSellerDetails;
+export const approveSeller = AdminAPI.approveSeller;
+export const updateSeller = AdminAPI.updateSeller;
+export const getAllUsers = AdminAPI.getAllUsers;
+export const getUserDetails = AdminAPI.getUserDetails;
+export const getWaitlist = AdminAPI.getWaitlist;
+export const getProductQueue = AdminAPI.getProductQueue;
+export const updateOrder = AdminAPI.updateOrder;
+export const getAllCarts = AdminAPI.getAllCarts;
+export const getAllOTPs = AdminAPI.getAllOTPs;
+export const getSystemHealth = AdminAPI.getSystemHealth;
+export const createUpdate = AdminAPI.createUpdate;
+export const broadcastNotification = AdminAPI.broadcastNotification;
+export const sendNotificationToUser = AdminAPI.sendNotificationToUser;
+export const deleteNotificationToken = AdminAPI.deleteNotificationToken;
+export const deleteUserNotificationTokens = AdminAPI.deleteUserNotificationTokens;
+export const createAmbassadorTask = AdminAPI.createAmbassadorTask;

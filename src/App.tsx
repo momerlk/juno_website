@@ -44,6 +44,7 @@ const PlatformStats = React.lazy(() => import('./components/admin/PlatformStats'
 const ApiStatus = React.lazy(() => import('./components/admin/ApiStatus'));
 const ChapterForms = React.lazy(() => import('./components/admin/ChapterForms'));
 const ManageProducts = React.lazy(() => import('./components/admin/ManageProducts'));
+const OrderDetailPage = React.lazy(() => import('./components/admin/OrderDetailPage'));
 const SystemTools = React.lazy(() => import('./components/admin/SystemTools'));
 const SalesFunnel = React.lazy(() => import('./components/admin/SalesFunnel'));
 const AmbassadorTasks = React.lazy(() => import('./components/admin/AmbassadorTasks'));
@@ -84,6 +85,7 @@ const BrandReelGraphic = React.lazy(() => import('./components/BrandReelGraphic'
 const CheckoutPage = React.lazy(() => import('./components/checkout/CheckoutPage'));
 const OrderConfirmationPage = React.lazy(() => import('./components/checkout/OrderConfirmationPage'));
 const OrderTrackingPage = React.lazy(() => import('./components/checkout/OrderTrackingPage'));
+const InteractiveTrackingPage = React.lazy(() => import('./components/checkout/InteractiveTrackingPage'));
 const WishlistPage = React.lazy(() => import('./components/catalog/WishlistPage'));
 
 // Campaign Pages
@@ -182,7 +184,9 @@ function RoutedApp() {
                 <Route path="/wishlist" element={<WishlistPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/checkout/confirmation" element={<OrderConfirmationPage />} />
+                <Route path="/checkout/track/:orderId" element={<InteractiveTrackingPage />} />
                 <Route path="/track" element={<OrderTrackingPage />} />
+                <Route path="/track/:token" element={<InteractiveTrackingPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/refund-policy" element={<RefundPolicy />} />
                   <Route path="/service-policy" element={<ShippingServicePolicy />} />
@@ -237,6 +241,7 @@ function RoutedApp() {
 
                     {/* Operations */}
                     <Route path="orders" element={<AdminManageOrders />} />
+                    <Route path="orders/:orderId" element={<OrderDetailPage />} />
                     <Route path="sellers" element={<ManageSellers />} />
                     <Route path="users" element={<ManageUsers />} />
                     <Route path="products" element={<ManageProducts />} />

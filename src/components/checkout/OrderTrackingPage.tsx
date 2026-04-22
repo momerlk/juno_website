@@ -339,6 +339,15 @@ const OrderTrackingPage: React.FC = () => {
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* Live Tracking CTA */}
+                                <Link 
+                                    to={`/checkout/track/${order.id}`}
+                                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-white transition-all hover:bg-white hover:text-black"
+                                >
+                                    <Truck size={14} />
+                                    Watch Live Tracking
+                                </Link>
                             </motion.div>
                         ))}
                     </motion.div>

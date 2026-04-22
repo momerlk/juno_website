@@ -120,6 +120,43 @@ export namespace AdminAPI {
     }
 
     /**
+     * Update order status
+     * 
+     * Specific endpoint for status transitions with tracking support.
+     * Triggers the interactive tracking timeline and state machine.
+     */
+    export async function updateOrderStatus(orderId: string, status: string, note?: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${orderId}/status`, 'PATCH', { status, note }, getAdminToken());
+    }
+
+    /**
+     * Append tracking milestone
+     * 
+     * Adds a granular tracking update without changing the main order status.
+     */
+    export async function appendOrderMilestone(orderId: string, milestone: { label: string, note?: string, location?: any }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${orderId}/tracking/milestone`, 'POST', milestone, getAdminToken());
+    }
+
+    /**
+     * Set warehouse anchor
+     * 
+     * Sets the map anchor for the courier warehouse hub.
+     */
+    export async function setOrderWarehouseAnchor(orderId: string, anchor: { lat: number, lng: number, city?: string, label?: string }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${orderId}/tracking/warehouse`, 'PUT', anchor, getAdminToken());
+    }
+
+    /**
+     * Update order ETA
+     * 
+     * Overrides the estimated delivery timestamp.
+     */
+    export async function updateOrderETA(orderId: string, eta: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${orderId}/tracking/eta`, 'PATCH', { eta }, getAdminToken());
+    }
+
+    /**
      * Get all carts
      * 
      * Returns all active user carts for monitoring and analytics.

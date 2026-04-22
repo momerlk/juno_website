@@ -8,6 +8,9 @@ Auth:
 - `DELETE /api/v2/commerce/cart/items` — user auth required
 - `POST /api/v2/commerce/checkout` — user auth required
 - `GET /api/v2/commerce/orders` — user auth required
+- `GET /api/v2/commerce/orders/{id}/tracking` — user/seller auth required
+- `POST /api/v2/commerce/orders/{id}/tracking/share` — user auth required
+- `GET /api/v2/track/{token}` — public route
 - `GET /api/v2/commerce/guest/cart` — public guest cart route
 - `POST /api/v2/commerce/guest/cart` — public guest cart route
 - `DELETE /api/v2/commerce/guest/cart/items` — public guest cart route
@@ -15,7 +18,7 @@ Auth:
 - `POST /api/v2/commerce/guest/checkout` — public guest checkout route
 - `POST /api/v2/commerce/guest/orders/lookup` — public guest order tracking route
 
-All endpoints require `Authorization: Bearer <token>`.
+All protected endpoints require `Authorization: Bearer <token>`.
 
 Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` so the website can persist a fast, anonymous cart for performance marketing traffic.
 
@@ -68,7 +71,9 @@ Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` 
     "email": "sara@example.com",
     "address_line1": "12 Main Gulberg",
     "city": "Lahore",
-    "country": "Pakistan"
+    "country": "Pakistan",
+    "latitude": 31.5204,
+    "longitude": 74.3587
   },
   "child_order_ids": ["child-1", "child-2"],
   "created_at": "2026-03-28T14:30:00Z"
@@ -96,7 +101,9 @@ Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` 
       "email": "sara@example.com",
       "address_line1": "12 Main Gulberg",
       "city": "Lahore",
-      "country": "Pakistan"
+      "country": "Pakistan",
+      "latitude": 31.5204,
+      "longitude": 74.3587
     },
     "created_at": "2026-03-28T14:30:00Z",
     "updated_at": "2026-03-28T15:00:00Z"
@@ -121,9 +128,61 @@ Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` 
       "unit_price": 3500
     }
   ],
-  "status": "shipped",
+  "status": "at_warehouse",
+  "tracking": {
+    "current_status": "at_warehouse",
+    "estimated_delivery": "2026-04-25T14:30:00Z",
+    "timeline": [
+      {
+        "status": "pending",
+        "label": "Order Placed",
+        "note": "Awaiting seller acceptance",
+        "occurred_at": "2026-04-22T10:00:00Z",
+        "set_by": "user-1",
+        "location": { "lat": 31.5204, "lng": 74.3587, "city": "Lahore" }
+      },
+      {
+        "status": "at_warehouse",
+        "label": "Arrived at Warehouse",
+        "note": "Scanned at Karachi Hub",
+        "occurred_at": "2026-04-23T09:00:00Z",
+        "set_by": "admin-1",
+        "location": { "lat": 24.8607, "lng": 67.0011, "city": "Karachi" }
+      }
+    ],
+    "anchors": {
+      "seller": { "lat": 31.5204, "lng": 74.3587, "city": "Lahore", "label": "Zara Closet" },
+      "warehouse": { "lat": 24.8607, "lng": 67.0011, "city": "Karachi", "label": "Karachi Hub" },
+      "customer": { "lat": 24.9462, "lng": 67.0056, "city": "Karachi", "label": "Delivery Location" }
+    },
+    "polyline": "encoded_polyline_string"
+  },
   "total": 3700,
   "created_at": "2026-03-28T14:30:00Z"
+}
+```
+
+### `OrderTracking`
+```json
+{
+  "current_status": "at_warehouse",
+  "estimated_delivery": "2026-04-25T14:30:00Z",
+  "timeline": [
+    {
+      "status": "pending",
+      "label": "Order Placed",
+      "note": "Awaiting acceptance",
+      "occurred_at": "2026-04-22T10:00:00Z",
+      "set_by": "user-1",
+      "location": { "lat": 31.5204, "lng": 74.3587, "city": "Lahore" }
+    }
+  ],
+  "anchors": {
+    "seller": { "lat": 31.5204, "lng": 74.3587, "city": "Lahore", "label": "Store" },
+    "warehouse": { "lat": 24.8607, "lng": 67.0011, "city": "Karachi", "label": "Hub" },
+    "customer": { "lat": 24.9462, "lng": 67.0056, "city": "Karachi", "label": "Home" }
+  },
+  "polyline": "encoded_polyline_string"
 }
 ```
 
@@ -314,6 +373,8 @@ Optional fields:
 - `province`
 - `postal_code`
 - `country`
+- `latitude`
+- `longitude`
 
 If `country` is omitted it defaults to `Pakistan`.
 
@@ -324,7 +385,9 @@ If `country` is omitted it defaults to `Pakistan`.
   "phone_number": "+923001234567",
   "email": "sara@example.com",
   "address_line1": "12 Main Gulberg",
-  "city": "Lahore"
+  "city": "Lahore",
+  "latitude": 31.5204,
+  "longitude": 74.3587
 }
 ```
 
@@ -407,16 +470,173 @@ Returns the authenticated user's child orders, one per seller fulfillment group.
 
 **Response `200`**: array of `Order`
 
-Order statuses:
-- `pending`
-- `confirmed`
-- `shipped`
-- `delivered`
-- `cancelled`
-- `returned`
-
 **Common errors**
 - `401 UNAUTHORIZED` — missing or invalid user token
+
+---
+
+### Get Order Tracking
+`GET /api/v2/commerce/orders/{id}/tracking`
+
+Auth: user OR seller token required (must own the order)
+
+Returns the granular milestone timeline and map anchors for an order.
+
+**Response `200`**: `OrderTracking`
+
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid token
+- `403 FORBIDDEN` — not your order
+- `404 NOT_FOUND` — order not found
+
+---
+
+### Share Order Tracking
+`POST /api/v2/commerce/orders/{id}/tracking/share`
+
+Auth: user token required (must own the order)
+
+Generates a signed token for public, read-only tracking access.
+
+**Response `200`**
+```json
+{
+  "token": "signed_jwt_token",
+  "url": "/track/signed_jwt_token"
+}
+```
+
+---
+
+### Get Public Tracking
+`GET /api/v2/track/{token}`
+
+Auth: none
+
+Returns order tracking data without PII using a valid share token.
+
+**Response `200`**: `OrderTracking`
+
+---
+
+## Seller Order Management
+
+### Update Order Status (Seller)
+`PATCH /api/v2/commerce/seller/orders/{id}/status`
+
+Auth: seller token required (must own the order)
+
+Updates the status of an order and appends a tracking milestone.
+
+**Body**
+```json
+{
+  "status": "packed",
+  "note": "Parcel ready for pickup"
+}
+```
+
+Allowed statuses: `confirmed`, `packed`, `handed_to_rider`, `cancelled`.
+
+**Response `200`**
+```json
+{ "success": true, "data": { "message": "Order status updated successfully" } }
+```
+
+---
+
+## Admin Order Management
+
+### Update Order Status (Admin)
+`PATCH /api/v2/commerce/admin/orders/{id}/status`
+
+Auth: admin token required
+
+Updates the status of an order and appends a tracking milestone.
+
+**Body**
+```json
+{
+  "status": "at_warehouse",
+  "note": "Arrived at Lahore Hub"
+}
+```
+
+Allowed statuses: any valid transition in the state machine.
+
+---
+
+### Append Milestone (Admin)
+`POST /api/v2/commerce/admin/orders/{id}/tracking/milestone`
+
+Auth: admin token required
+
+Appends an arbitrary milestone to the tracking timeline without necessarily changing the order status. Useful for granular logistics updates (e.g. "Arrived at sorting center").
+
+**Body**
+```json
+{
+  "label": "Sorting Center",
+  "note": "Package being sorted at Lahore Hub",
+  "location": {
+    "lat": 31.5204,
+    "lng": 74.3587,
+    "city": "Lahore"
+  }
+}
+```
+
+---
+
+### Set Warehouse Anchor (Admin)
+`PUT /api/v2/commerce/admin/orders/{id}/tracking/warehouse`
+
+Auth: admin token required
+
+Sets the coordinates and label for the warehouse waypoint.
+
+**Body**
+```json
+{
+  "lat": 31.5204,
+  "lng": 74.3587,
+  "city": "Lahore",
+  "label": "Lahore Central Warehouse"
+}
+```
+
+---
+
+### Update ETA (Admin)
+`PATCH /api/v2/commerce/admin/orders/{id}/tracking/eta`
+
+Auth: admin token required
+
+Manually overrides the estimated delivery timestamp.
+
+**Body**
+```json
+{
+  "eta": "2026-04-25T14:30:00Z"
+}
+```
+
+---
+
+## Order Statuses
+
+| Status | Set by | Meaning |
+|--------|--------|---------|
+| `pending` | system | Order placed, awaiting seller acceptance |
+| `confirmed` | seller/admin | Seller accepted order |
+| `packed` | seller/admin | Ready for pickup (unlocks packing animation) |
+| `handed_to_rider` | seller/admin | Released to courier pickup rider |
+| `at_warehouse` | admin | Arrived at courier warehouse hub |
+| `out_for_delivery` | admin | Out for final delivery leg |
+| `delivered` | admin/courier | Customer received parcel |
+| `delivery_attempted` | admin | Rider attempted delivery, will retry |
+| `cancelled` | seller/admin | Order cancelled |
+| `returned` | admin | Parcel returned to warehouse/seller |
 
 ---
 
@@ -426,5 +646,6 @@ Order statuses:
 |------|---------|
 | `400 INVALID_BODY` | Malformed JSON request body |
 | `400` | Empty cart, invalid quantity, missing fields, or stock/validation failure |
-| `401 UNAUTHORIZED` | Missing or invalid user token |
-| `404 NOT_FOUND` | Product, variant, address, or cart item not found |
+| `401 UNAUTHORIZED` | Missing or invalid user/seller token |
+| `403 FORBIDDEN` | No permission to access this resource |
+| `404 NOT_FOUND` | Order, product, variant, address, or cart item not found |

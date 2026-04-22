@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Eye, Package, User, Calendar, Tag, Hash, ShoppingCart, List } from 'lucide-react';
 import { GetAllOrders, getAllCarts, getAllSellers } from '../../api/adminApi';
 import { Order, OrderStatus, PaymentStatus } from '../../constants/orders';
 import { Seller } from '../../constants/seller';
-import OrderDetailModal from './OrderDetailModal';
 
 const statusColors: { [key in OrderStatus]: string } = {
   pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   confirmed: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   packed: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-  booked: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  shipped: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+  handed_to_rider: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  at_warehouse: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+  out_for_delivery: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
   delivered: 'bg-green-500/10 text-green-400 border-green-500/20',
+  delivery_attempted: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
   returned: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
   refunded: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
@@ -20,13 +22,12 @@ const statusColors: { [key in OrderStatus]: string } = {
 };
 
 const ManageOrders: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'orders' | 'carts'>('orders');
   const [data, setData] = useState<any[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
@@ -41,7 +42,19 @@ const ManageOrders: React.FC = () => {
       else res = await getAllCarts();
 
       if (res.ok) {
-        const body = Array.isArray(res.body) ? res.body : (res.body?.data || []);
+        let body = Array.isArray(res.body) ? res.body : (res.body?.data || []);
+        
+        // Sort by most recent first
+        if (activeTab === 'orders') {
+            body = [...body].sort((a, b) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+        } else {
+            body = [...body].sort((a, b) => 
+                new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+            );
+        }
+        
         setData(body);
       } else {
         setError(res.body as any || `Failed to fetch ${activeTab}`);
@@ -169,7 +182,7 @@ const ManageOrders: React.FC = () => {
                             </td>
                             <td className="p-4 text-neutral-400 text-center font-bold">{item.order_items?.length || 0}</td>
                             <td className="p-4">
-                                <button onClick={() => { setSelectedOrder(item); setIsModalOpen(true); }} className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors">
+                                <button onClick={() => navigate(`/admin/orders/${item.id}`)} className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors">
                                     <Eye size={18} />
                                 </button>
                             </td>
@@ -190,7 +203,6 @@ const ManageOrders: React.FC = () => {
           </tbody>
         </table>
       </div>
-      {selectedOrder && <OrderDetailModal order={selectedOrder} sellers={sellers} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />}
     </motion.div>
   );
 };

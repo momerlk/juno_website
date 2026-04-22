@@ -645,6 +645,55 @@ export interface GuestOrderLookupRequest {
     email?: string;
 }
 
+export interface GeoPoint {
+    lat: number;
+    lng: number;
+    label?: string;
+    city?: string;
+}
+
+export interface TrackingMilestone {
+    status: string;
+    label: string;
+    note?: string;
+    occurred_at: string;
+    set_by: string;
+    location?: GeoPoint;
+}
+
+export interface TrackingAnchors {
+    seller: GeoPoint;
+    warehouse?: GeoPoint;
+    customer: GeoPoint;
+}
+
+export interface OrderTracking {
+    current_status: string;
+    estimated_delivery?: string;
+    timeline: TrackingMilestone[];
+    anchors: TrackingAnchors;
+    polyline?: string;
+}
+
+export interface Order {
+    id: string;
+    parent_order_id: string;
+    order_number: string;
+    seller_id: string;
+    user_id: string;
+    order_items: {
+        id: string;
+        product_id: string;
+        variant_id: string;
+        quantity: number;
+        unit_price: number;
+    }[];
+    status: string;
+    tracking?: OrderTracking;
+    total: number;
+    created_at: string;
+}
+
 // ============================================================================
 // Tournament Types
 // ============================================================================

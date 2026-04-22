@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, ShoppingBag, Package, MapPin, CreditCard, ArrowRight, Sparkles } from 'lucide-react';
+import { CheckCircle, ShoppingBag, Package, MapPin, CreditCard, ArrowRight, Sparkles, Truck } from 'lucide-react';
 import type { ParentOrder } from '../../api/api.types';
 
 const formatCurrency = (value: number) =>
@@ -237,10 +237,11 @@ const OrderConfirmationPage: React.FC = () => {
                     className="space-y-3"
                 >
                     <Link
-                        to="/track"
+                        to={`/checkout/track/${order.id}`}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-8 py-4 text-sm font-bold uppercase tracking-[0.2em] text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] hover:shadow-primary/30"
                     >
-                        Track Your Order
+                        <Truck size={18} />
+                        Watch Live Tracking
                         <ArrowRight size={16} />
                     </Link>
 
