@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, Loader2, Zap, Truck } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { GuestCommerce } from '../../api/commerceApi';
-import type { GuestCheckoutDetails } from '../../api/api.types';
+import type { GuestCheckoutDetails, ShippingEstimateResponse } from '../../api/api.types';
 import { useProbeCommerce } from '../../hooks/useProbe';
 
 const formatCurrency = (value: number) =>
@@ -23,13 +23,56 @@ const STORAGE_KEYS = {
     CHECKOUT_DRAFT: 'juno_checkout_draft',
     LAST_CHECKOUT_PHONE: 'juno_last_checkout_phone',
     LAST_CHECKOUT_EMAIL: 'juno_last_checkout_email',
+    LAST_DETECTED_CITY: 'juno_last_detected_city',
 };
 
-const FREE_SHIPPING_THRESHOLD = 5000;
+const DEFAULT_FREE_SHIPPING_THRESHOLD = 5900;
+const DEFAULT_SHIPPING_FEE = 199;
+
+const sanitizeCity = (value: unknown): string => {
+    if (typeof value !== 'string') return '';
+    return value.trim().replace(/\s+/g, ' ');
+};
+
+const fetchPublicIP = async (): Promise<string> => {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
+        if (!response.ok) return '';
+        const body = await response.json();
+        const ip = typeof (body as any)?.ip === 'string' ? (body as any).ip.trim() : '';
+        return ip;
+    } catch {
+        return '';
+    }
+};
+
+const fetchCityFromIP = async (): Promise<string> => {
+    const ip = await fetchPublicIP();
+    if (!ip) return '';
+
+    const endpoints = [
+        `https://ipapi.co/${encodeURIComponent(ip)}/json/`,
+        `https://ipwho.is/${encodeURIComponent(ip)}`,
+    ];
+
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch(endpoint, { signal: AbortSignal.timeout(3000) });
+            if (!response.ok) continue;
+            const body = await response.json();
+            const city = sanitizeCity((body as any)?.city);
+            if (city) return city;
+        } catch {
+            // Try next provider
+        }
+    }
+
+    return '';
+};
 
 const CheckoutPage: React.FC = () => {
     const navigate = useNavigate();
-    const { optimisticCart, cartTotal, itemCount, clearCart, guestCartId, syncState } = useGuestCart();
+    const { optimisticCart, cartTotal, itemCount, clearCart, guestCartId, syncState, isHydrated, refreshCart, flushPending } = useGuestCart();
     const { trackCheckoutStart, trackCheckoutComplete } = useProbeCommerce();
 
     const [formData, setFormData] = useState<GuestCheckoutDetails>({
@@ -48,6 +91,10 @@ const CheckoutPage: React.FC = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+    const [shippingEstimate, setShippingEstimate] = useState<ShippingEstimateResponse | null>(null);
+    const [shippingState, setShippingState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+    const [isRecoveringCart, setIsRecoveringCart] = useState(false);
+    const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
 
     useEffect(() => {
         // Track checkout start
@@ -58,6 +105,9 @@ const CheckoutPage: React.FC = () => {
             try {
                 const parsed = JSON.parse(savedDraft);
                 setFormData(parsed);
+                if (sanitizeCity(parsed?.city)) {
+                    setHasUserEditedCity(true);
+                }
             } catch {
                 // ignore
             }
@@ -83,6 +133,67 @@ const CheckoutPage: React.FC = () => {
         return () => clearTimeout(timeoutId);
     }, [formData]);
 
+    useEffect(() => {
+        let cancelled = false;
+
+        // Never override user-entered city.
+        if (hasUserEditedCity || sanitizeCity(formData.city)) return;
+
+        const applyDetectedCity = async () => {
+            const cachedCity = sanitizeCity(localStorage.getItem(STORAGE_KEYS.LAST_DETECTED_CITY));
+            if (cachedCity) {
+                if (!cancelled) {
+                    setFormData((prev) => (sanitizeCity(prev.city) ? prev : { ...prev, city: cachedCity }));
+                }
+                return;
+            }
+
+            const detectedCity = await fetchCityFromIP();
+            if (!detectedCity || cancelled) return;
+            localStorage.setItem(STORAGE_KEYS.LAST_DETECTED_CITY, detectedCity);
+            setFormData((prev) => (sanitizeCity(prev.city) ? prev : { ...prev, city: detectedCity }));
+        };
+
+        applyDetectedCity();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [formData.city, hasUserEditedCity]);
+
+    useEffect(() => {
+        const buyerCity = formData.city.trim();
+        let cancelled = false;
+
+        if (!guestCartId || itemCount === 0 || !buyerCity) {
+            setShippingEstimate(null);
+            setShippingState('idle');
+            return;
+        }
+
+        const timeoutId = setTimeout(async () => {
+            setShippingState('loading');
+            try {
+                const response = await GuestCommerce.getCartShippingEstimate(buyerCity, guestCartId);
+                if (!response.ok) {
+                    throw new Error('Unable to fetch shipping estimate');
+                }
+                if (cancelled) return;
+                setShippingEstimate(response.body);
+                setShippingState('ready');
+            } catch {
+                if (cancelled) return;
+                setShippingEstimate(null);
+                setShippingState('error');
+            }
+        }, 350);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timeoutId);
+        };
+    }, [formData.city, guestCartId, itemCount]);
+
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
         if (!formData.full_name.trim()) newErrors.full_name = 'Full name is required';
@@ -100,31 +211,29 @@ const CheckoutPage: React.FC = () => {
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
-        // If we are currently syncing or have unsynced changes, we should wait or show a message
-        if (syncState === 'dirty' || syncState === 'syncing') {
-            setErrors({ general: 'Updating your bag... Please try again in a second.' });
-            return;
-        }
-
-        if (!guestCartId) {
-            if (optimisticCart.length > 0) {
-                setErrors({ general: 'Your bag is still being synchronized. Please wait a moment and try again.' });
-            } else {
-                setErrors({ general: 'Your bag is empty. Please add items to your cart first.' });
-            }
-            return;
-        }
-
         setIsSubmitting(true);
         setErrors({});
 
         try {
-            const detailsResponse = await GuestCommerce.saveCustomerDetails(formData, guestCartId);
+            // Best-effort fast-path sync so "Buy now" flow isn't blocked by transient cart sync timing.
+            if (syncState === 'dirty' || syncState === 'syncing' || (!guestCartId && optimisticCart.length > 0)) {
+                await flushPending();
+            }
+
+            const activeGuestCartId = guestCartId || localStorage.getItem('juno_guest_cart_id');
+            if (!activeGuestCartId) {
+                if (optimisticCart.length > 0) {
+                    throw new Error('We could not sync your bag. Tap Place order again in a second.');
+                }
+                throw new Error('Your bag is empty. Please add items to your cart first.');
+            }
+
+            const detailsResponse = await GuestCommerce.saveCustomerDetails(formData, activeGuestCartId);
             if (!detailsResponse.ok) throw new Error('Failed to save delivery details');
 
             const checkoutResponse = await GuestCommerce.checkout(
                 { payment_method: 'cod' },
-                guestCartId
+                activeGuestCartId
             );
             if (!checkoutResponse.ok) throw new Error('Failed to place order');
 
@@ -158,6 +267,9 @@ const CheckoutPage: React.FC = () => {
     };
 
     const updateField = (field: keyof GuestCheckoutDetails, value: string) => {
+        if (field === 'city') {
+            setHasUserEditedCity(true);
+        }
         setFormData((prev) => ({ ...prev, [field]: value }));
         if (errors[field]) {
             setErrors((prev) => {
@@ -168,32 +280,73 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        if (optimisticCart.length === 0 && !isSubmitting && !isSuccess) {
-            const timeoutId = setTimeout(() => {
-                navigate('/catalog');
-            }, 1000);
-            return () => clearTimeout(timeoutId);
+    const handleRecoverCart = async () => {
+        setIsRecoveringCart(true);
+        setErrors({});
+        try {
+            await flushPending();
+            await refreshCart();
+        } finally {
+            setIsRecoveringCart(false);
         }
-    }, [optimisticCart.length, navigate, isSubmitting, isSuccess]);
+    };
 
-    const shippingFee = cartTotal >= FREE_SHIPPING_THRESHOLD ? 0 : 199;
-    const orderTotal = cartTotal + shippingFee;
-    const progressPct = Math.min(100, Math.round((cartTotal / FREE_SHIPPING_THRESHOLD) * 100));
-    const remainingForFreeShip = Math.max(0, FREE_SHIPPING_THRESHOLD - cartTotal);
+    const freeShippingThreshold = shippingEstimate?.free_shipping_threshold ?? DEFAULT_FREE_SHIPPING_THRESHOLD;
+    const displaySubtotal = shippingEstimate?.subtotal ?? cartTotal;
+    const shippingFee = shippingEstimate?.shipping_total ?? (displaySubtotal >= freeShippingThreshold ? 0 : DEFAULT_SHIPPING_FEE);
+    const isFreeShippingApplied = shippingEstimate?.free_shipping_applied ?? shippingFee === 0;
+    const orderTotal = displaySubtotal + shippingFee;
+    const progressPct = freeShippingThreshold > 0
+        ? Math.min(100, Math.round((displaySubtotal / freeShippingThreshold) * 100))
+        : 0;
+    const remainingForFreeShip = Math.max(0, freeShippingThreshold - displaySubtotal);
 
     const today = new Date();
     const deliveryStart = addDays(today, 2);
     const deliveryEnd = addDays(today, 4);
 
+    if (!isHydrated) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-[#050505] pt-24 text-white">
+                <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center">
+                    <Loader2 size={28} className="mx-auto mb-4 animate-spin text-primary" />
+                    <p className="text-sm font-semibold text-white">Loading your bag…</p>
+                    <p className="mt-2 text-xs text-white/55">Restoring your checkout items.</p>
+                </div>
+            </div>
+        );
+    }
+
     if (optimisticCart.length === 0) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#050505] pt-24 text-white">
-                <div className="text-center">
-                    <Loader2 size={32} className="mx-auto mb-4 animate-spin text-primary" />
-                    <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">
-                        Loading checkout…
+                <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center">
+                    <Loader2 size={28} className={`mx-auto mb-4 text-primary ${syncState !== 'idle' ? 'animate-spin' : ''}`} />
+                    <p className="text-sm font-semibold text-white">
+                        {syncState === 'dirty' || syncState === 'syncing'
+                            ? 'We are syncing your bag before checkout.'
+                            : 'Your bag is empty right now.'}
                     </p>
+                    <p className="mt-2 text-xs text-white/55">
+                        {syncState === 'dirty' || syncState === 'syncing'
+                            ? 'Stay here. We will keep your checkout context intact.'
+                            : 'You can retry sync or continue shopping.'}
+                    </p>
+                    <div className="mt-5 flex gap-2">
+                        <button
+                            onClick={handleRecoverCart}
+                            disabled={isRecoveringCart}
+                            className="flex-1 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-white/[0.09] disabled:opacity-50"
+                        >
+                            {isRecoveringCart ? 'Retrying…' : 'Retry Sync'}
+                        </button>
+                        <button
+                            onClick={() => navigate('/catalog')}
+                            className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-white"
+                        >
+                            Continue Shopping
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -259,7 +412,7 @@ const CheckoutPage: React.FC = () => {
                                 </div>
                                 <div>
                                     <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/40">
-                                        Free delivery over {formatCurrency(FREE_SHIPPING_THRESHOLD)}
+                                        Free delivery over {formatCurrency(freeShippingThreshold)}
                                     </p>
                                     <p
                                         className="mt-0.5 text-white"
@@ -272,6 +425,12 @@ const CheckoutPage: React.FC = () => {
                                     >
                                         Order will arrive {fmtDay(deliveryStart)} — {fmtDay(deliveryEnd)}
                                     </p>
+                                    {shippingState === 'loading' && (
+                                        <p className="mt-1 text-[11px] text-white/45">Estimating shipping for {formData.city || 'your city'}...</p>
+                                    )}
+                                    {shippingState === 'error' && formData.city.trim() && (
+                                        <p className="mt-1 text-[11px] text-white/45">Using fallback estimate. Final shipping confirmed on order placement.</p>
+                                    )}
                                 </div>
                             </div>
                         </motion.section>
@@ -293,7 +452,7 @@ const CheckoutPage: React.FC = () => {
                             <div className="space-y-3.5">
                                 {optimisticCart.map((item, index) => (
                                     <motion.div
-                                        key={`${item.product_id}-${item.variant_id}`}
+                                        key={`${item.product_id || 'product'}-${item.variant_id || 'variant'}-${index}`}
                                         initial={{ opacity: 0, x: -8 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.1 + index * 0.04 }}
@@ -348,11 +507,11 @@ const CheckoutPage: React.FC = () => {
                             <div className="mt-5 border-t border-white/[0.08] pt-4 space-y-2.5 lg:hidden">
                                 <div className="flex justify-between text-[13px]">
                                     <span className="text-white/55">Subtotal</span>
-                                    <span className="font-semibold text-white">{formatCurrency(cartTotal)}</span>
+                                    <span className="font-semibold text-white">{formatCurrency(displaySubtotal)}</span>
                                 </div>
                                 <div className="flex justify-between text-[13px]">
                                     <span className="text-white/55">Shipping</span>
-                                    {shippingFee === 0 ? (
+                                    {isFreeShippingApplied ? (
                                         <span className="inline-flex items-center gap-1.5">
                                             <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                                                 Free
@@ -606,11 +765,11 @@ const CheckoutPage: React.FC = () => {
 
                                 <div className="space-y-3">
                                     <Row label={`Subtotal (${itemCount} ${itemCount === 1 ? 'item' : 'items'})`}>
-                                        {formatCurrency(cartTotal)}
+                                        {formatCurrency(displaySubtotal)}
                                     </Row>
                                     <Row label="Shipping">
-                                        <span className={shippingFee === 0 ? 'text-white' : 'text-white/80'}>
-                                            {shippingFee === 0 ? 'Free' : formatCurrency(shippingFee)}
+                                        <span className={isFreeShippingApplied ? 'text-white' : 'text-white/80'}>
+                                            {isFreeShippingApplied ? 'Free' : formatCurrency(shippingFee)}
                                         </span>
                                     </Row>
 

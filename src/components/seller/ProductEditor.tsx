@@ -350,7 +350,11 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
         const newVariants = formData.variants?.map(v => {
             if (v.id === variantId) {
                 if (field === 'quantity') {
-                    return { ...v, inventory: { ...v.inventory, quantity: numericValue } };
+                    return {
+                        ...v,
+                        inventory: { ...v.inventory, quantity: numericValue },
+                        available: numericValue > 0,
+                    };
                 }
                 return { ...v, [field]: numericValue };
             }
@@ -440,8 +444,16 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
 
     const prepareSubmitData = (): Product => {
         const finalData = { ...formData };
+        const normalizedVariants = (finalData.variants || []).map((variant) => {
+            const quantity = Number(variant.inventory?.quantity || 0);
+            return {
+                ...variant,
+                available: quantity > 0,
+            };
+        });
+        finalData.variants = normalizedVariants;
         
-        const totalInventory = (finalData.variants || []).reduce((sum, variant) => sum + (variant.inventory?.quantity || 0), 0);
+        const totalInventory = normalizedVariants.reduce((sum, variant) => sum + (variant.inventory?.quantity || 0), 0);
         finalData.inventory = {
             ...finalData.inventory,
             quantity: totalInventory,

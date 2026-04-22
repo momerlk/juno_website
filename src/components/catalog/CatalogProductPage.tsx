@@ -27,6 +27,12 @@ const formatCurrency = (value?: number) =>
 const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
 const getProductImage = (product: Partial<CatalogProduct>) =>
     asArray(product.images)[0] || '/juno_app_icon.png';
+const getBaseProductPrice = (product: Partial<CatalogProduct> | null): number => {
+    if (!product) return 0;
+    return product.pricing?.discounted
+        ? product.pricing.discounted_price ?? product.pricing.price ?? 0
+        : product.pricing?.price ?? 0;
+};
 
 /* ── Skeleton (zero-CLS placeholder that reserves full layout) ── */
 const SkeletonPulse = 'animate-pulse rounded-lg bg-white/[0.06]';
@@ -168,8 +174,11 @@ const CatalogProductPage: React.FC = () => {
         );
     }, [product, selectedOptions]);
 
-    const currentPrice =
-        selectedVariant?.price ?? product?.pricing.discounted_price ?? product?.pricing.price ?? 0;
+    const maxAvailableQuantity = product?.inventory?.available_quantity;
+    const isVariantAvailable = selectedVariant?.available ?? true;
+    const canPurchase = !!product?.inventory?.in_stock && isVariantAvailable;
+
+    const currentPrice = getBaseProductPrice(product);
     const compareAt = product?.pricing.compare_at_price;
     const discountPercentage =
         compareAt && currentPrice
@@ -181,6 +190,11 @@ const CatalogProductPage: React.FC = () => {
 
     const handleAddToCart = useCallback(() => {
         if (!product || !selectedVariant) return;
+        if (!canPurchase) return;
+        if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
+            setQuantity(Math.max(1, maxAvailableQuantity));
+            return;
+        }
 
         setIsAdding(true);
         addItem(product.id, selectedVariant.id, quantity, currentPrice, {
@@ -188,6 +202,8 @@ const CatalogProductPage: React.FC = () => {
             product_title: product.title,
             variant_title: selectedVariant.title,
             image_url: getProductImage(product),
+            max_quantity: maxAvailableQuantity,
+            is_available: canPurchase,
         });
 
         setShowAddedFeedback(true);
@@ -196,7 +212,13 @@ const CatalogProductPage: React.FC = () => {
         window.setTimeout(() => {
             setCartOpen(true);
         }, 350);
-    }, [product, selectedVariant, quantity, currentPrice, addItem, setCartOpen]);
+    }, [product, selectedVariant, quantity, currentPrice, addItem, setCartOpen, canPurchase, maxAvailableQuantity]);
+
+    useEffect(() => {
+        if (typeof maxAvailableQuantity === 'number' && maxAvailableQuantity > 0 && quantity > maxAvailableQuantity) {
+            setQuantity(maxAvailableQuantity);
+        }
+    }, [quantity, maxAvailableQuantity]);
 
     useEffect(() => {
         if (!showAddedFeedback) return;
@@ -578,6 +600,7 @@ const CatalogProductPage: React.FC = () => {
                                             </span>
                                             <button
                                                 onClick={() => setQuantity((current) => current + 1)}
+                                                disabled={typeof maxAvailableQuantity === 'number' && quantity >= maxAvailableQuantity}
                                                 className="flex h-11 w-11 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
                                             >
                                                 <Plus size={18} />
@@ -605,16 +628,16 @@ const CatalogProductPage: React.FC = () => {
 
                                     <button
                                         onClick={handleAddToCart}
-                                        disabled={!product.inventory?.in_stock || isAdding}
+                                        disabled={!canPurchase || isAdding}
                                         className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-r from-primary to-secondary px-8 py-5 text-sm font-bold uppercase tracking-[0.2em] text-white shadow-[0_20px_45px_rgba(255,24,24,0.22)] transition-all hover:scale-[1.01] hover:shadow-[0_24px_50px_rgba(255,24,24,0.32)] disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <ShoppingBag size={18} />
                                         <span>{isAdding ? 'Adding...' : 'Add to Bag'}</span>
                                     </button>
 
-                                    {!product.inventory?.in_stock ? (
+                                    {!canPurchase ? (
                                         <p className="mt-4 text-center text-sm font-bold uppercase tracking-[0.16em] text-red-400">
-                                            Currently out of stock
+                                            This variant is unavailable
                                         </p>
                                     ) : null}
                                 </div>
@@ -676,7 +699,7 @@ const CatalogProductPage: React.FC = () => {
             </div>
 
             <AnimatePresence>
-                {showStickyBar && product.inventory?.in_stock ? (
+                {showStickyBar && canPurchase ? (
                     <motion.div
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
@@ -695,7 +718,7 @@ const CatalogProductPage: React.FC = () => {
                             </div>
                             <button
                                 onClick={handleAddToCart}
-                                disabled={isAdding}
+                                disabled={isAdding || !canPurchase}
                                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-6 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white shadow-[0_16px_36px_rgba(255,24,24,0.24)]"
                             >
                                 <ShoppingBag size={15} />

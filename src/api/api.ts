@@ -122,11 +122,23 @@ export type {
     CheckoutRequest,
     GuestCheckoutRequest,
     GuestOrderLookupRequest,
+    ShippingEstimateResponse,
+    ShippingEstimateBreakdown,
     GeoPoint,
     TrackingMilestone,
     TrackingAnchors,
     OrderTracking,
     Order,
+    DeliveryPartner,
+    DeliveryOption,
+    FareEstimateRequest,
+    AddressPoint,
+    DeliveryBooking,
+    BookDeliveryRequest,
+    UpdateBookingStatusRequest,
+    BookingTrackingEvent,
+    TrackingInfo,
+    BookingListResponse,
     
     // Tournament types
     Tournament,
@@ -151,6 +163,9 @@ export { Campaigns } from "./campaignsApi";
 
 // Commerce module
 export { Commerce, GuestCommerce } from "./commerceApi";
+
+// Logistics module
+export { Logistics } from "./logisticsApi";
 
 // Events module
 export { Events } from "./eventsApi";

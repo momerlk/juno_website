@@ -8,18 +8,18 @@
  * @module Commerce
  */
 
-import { request, APIResponse, API_BASE_URL, isAPIError } from "./core";
+import { request, APIResponse, API_BASE_URL } from "./core";
 import type {
     Cart,
-    CartItem,
+    ShippingEstimateResponse,
     ParentOrder,
     CheckoutRequest,
-    GuestCart,
     GuestCartResponse,
     GuestCheckoutDetails,
     GuestCheckoutRequest,
     GuestOrderLookupRequest,
     OrderTracking,
+    Order,
 } from "./api.types";
 
 // ============================================================================
@@ -65,6 +65,20 @@ export namespace Commerce {
     }
 
     /**
+     * Get cart shipping estimate
+     *
+     * Returns shipping fee breakdown for the authenticated user's cart.
+     */
+    export async function getCartShippingEstimate(buyerCity: string, token?: string): Promise<APIResponse<ShippingEstimateResponse>> {
+        return request(
+            `${BASE_PATH}/cart/shipping-estimate?buyer_city=${encodeURIComponent(buyerCity)}`,
+            'GET',
+            undefined,
+            token || getUserToken()
+        );
+    }
+
+    /**
      * Checkout
      * 
      * Creates a parent transaction from the current cart and splits
@@ -82,7 +96,7 @@ export namespace Commerce {
      * Returns the authenticated user's child orders, one per seller
      * fulfillment group. Includes order status history.
      */
-    export async function getOrders(token?: string): Promise<APIResponse<ParentOrder[]>> {
+    export async function getOrders(token?: string): Promise<APIResponse<Order[]>> {
         return request(`${BASE_PATH}/orders`, 'GET', undefined, token || getUserToken());
     }
 
@@ -102,6 +116,26 @@ export namespace Commerce {
      */
     export async function shareOrderTracking(orderId: string, token?: string): Promise<APIResponse<{ token: string; url: string }>> {
         return request(`${BASE_PATH}/orders/${orderId}/tracking/share`, 'POST', undefined, token || getUserToken());
+    }
+
+    /**
+     * Get order support link
+     *
+     * Returns an order-aware support WhatsApp link.
+     */
+    export async function getOrderSupportLink(orderId: string, category?: string, token?: string): Promise<APIResponse<{ support_whatsapp_number: string; support_url: string; category: string; order_id: string }>> {
+        const query = category ? `?category=${encodeURIComponent(category)}` : '';
+        return request(`${BASE_PATH}/orders/${orderId}/support-link${query}`, 'GET', undefined, token || getUserToken());
+    }
+
+    /**
+     * Get generic support link
+     *
+     * Public support deep-link helper.
+     */
+    export async function getSupportLink(category?: string): Promise<APIResponse<{ support_whatsapp_number: string; support_url: string; category: string }>> {
+        const query = category ? `?category=${encodeURIComponent(category)}` : '';
+        return request(`/support/link${query}`, 'GET', undefined, undefined, true);
     }
 }
 
@@ -185,6 +219,20 @@ export namespace GuestCommerce {
             headers
         });
         return handleGuestResponse<GuestCartResponse>(resp);
+    }
+
+    /**
+     * Get guest cart shipping estimate
+     *
+     * Returns shipping fee breakdown for a guest cart.
+     */
+    export async function getCartShippingEstimate(buyerCity: string, guestCartId?: string): Promise<APIResponse<ShippingEstimateResponse>> {
+        const headers = getHeaders(guestCartId);
+        const resp = await fetch(`${API_BASE_URL}${BASE_PATH}/cart/shipping-estimate?buyer_city=${encodeURIComponent(buyerCity)}`, {
+            method: 'GET',
+            headers
+        });
+        return handleGuestResponse<ShippingEstimateResponse>(resp);
     }
 
     /**

@@ -597,6 +597,8 @@ export interface GuestCheckoutDetails {
     province?: string;
     postal_code?: string;
     country?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 export interface GuestCart {
@@ -624,11 +626,37 @@ export interface ParentOrder {
     shipping_fee: number;
     subtotal: number;
     status: string;
+    rollup_status?: string;
     payment_method: string;
     address_id?: string;
     shipping_address?: GuestCheckoutDetails;
     child_order_ids: string[];
+    child_summaries?: {
+        order_id: string;
+        seller_id: string;
+        seller_name: string;
+        item_count: number;
+        total: number;
+        status: string;
+    }[];
     created_at: string;
+}
+
+export interface ShippingEstimateBreakdown {
+    seller_id: string;
+    seller_name: string;
+    seller_city: string;
+    quantity: number;
+    fee: number;
+}
+
+export interface ShippingEstimateResponse {
+    subtotal: number;
+    shipping_total: number;
+    free_shipping_applied: boolean;
+    free_shipping_threshold: number;
+    currency: string;
+    breakdown: ShippingEstimateBreakdown[];
 }
 
 export interface CheckoutRequest {
@@ -681,17 +709,111 @@ export interface Order {
     order_number: string;
     seller_id: string;
     user_id: string;
+    seller_name?: string;
+    seller_city?: string;
+    customer_name?: string;
+    customer_phone?: string;
+    customer_email?: string;
     order_items: {
         id: string;
         product_id: string;
         variant_id: string;
         quantity: number;
         unit_price: number;
+        product_name?: string;
+        product_image?: string;
+        variant_label?: string;
+        variant_options?: Record<string, string>;
+        line_total?: number;
     }[];
     status: string;
+    financials?: {
+        subtotal: number;
+        shipping_fee: number;
+        commission_rate: number;
+        commission: number;
+        seller_payout: number;
+        total: number;
+        currency: string;
+        free_shipping_applied: boolean;
+    };
+    shipping_address?: GuestCheckoutDetails;
     tracking?: OrderTracking;
     total: number;
     created_at: string;
+}
+
+// ============================================================================
+// Logistics Types
+// ============================================================================
+
+export type DeliveryPartner = 'Bykea' | 'PostEx';
+
+export interface DeliveryOption {
+    name: DeliveryPartner;
+    estimated_fare: number;
+    estimated_delivery_time: string;
+}
+
+export interface FareEstimateRequest {
+    seller_id: string;
+    customer_latitude: number;
+    customer_longitude: number;
+}
+
+export interface AddressPoint {
+    latitude: number;
+    longitude: number;
+    address_line: string;
+}
+
+export interface DeliveryBooking {
+    id: string;
+    order_id: string;
+    delivery_partner: DeliveryPartner;
+    status: string;
+    tracking_number: string;
+    booking_time: string;
+}
+
+export interface BookDeliveryRequest {
+    order_id: string;
+    delivery_partner: DeliveryPartner;
+    pickup_address?: AddressPoint;
+    delivery_address: AddressPoint;
+}
+
+export interface UpdateBookingStatusRequest {
+    status: string;
+    location?: string;
+    notes?: string;
+}
+
+export interface BookingTrackingEvent {
+    timestamp: string;
+    status: string;
+    location?: string;
+    notes?: string;
+}
+
+export interface TrackingInfo {
+    id: string;
+    order_id: string;
+    delivery_partner: DeliveryPartner;
+    status: string;
+    tracking_number: string;
+    current_location?: string;
+    estimated_delivery?: string;
+    booking_time: string;
+    tracking_history: BookingTrackingEvent[];
+}
+
+export interface BookingListResponse {
+    bookings: DeliveryBooking[];
+    total: number;
+    page: number;
+    limit: number;
+    has_next: boolean;
 }
 
 // ============================================================================

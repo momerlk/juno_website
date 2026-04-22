@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight, Zap } from 'lucide-react';
+import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight, Zap, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Catalog, type CatalogProduct } from '../../api/api';
@@ -15,11 +15,11 @@ const addDays = (date: Date, days: number) => {
 };
 const fmtDay = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-const FREE_SHIPPING_THRESHOLD = 5000;
+const FREE_SHIPPING_THRESHOLD = 5900;
 
 const CartDrawer: React.FC = () => {
     const navigate = useNavigate();
-    const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, syncState } = useGuestCart();
+    const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, syncState, isHydrated } = useGuestCart();
     const [relatedProducts, setRelatedProducts] = useState<CatalogProduct[]>([]);
 
     useEffect(() => {
@@ -105,7 +105,12 @@ const CartDrawer: React.FC = () => {
 
                             {/* Scrollable body */}
                             <div className="relative z-10 flex-1 overflow-y-auto">
-                                {optimisticCart.length === 0 ? (
+                                {!isHydrated ? (
+                                    <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                                        <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+                                        <p className="mt-4 text-sm font-bold uppercase tracking-[0.16em] text-white/70">Loading your bag</p>
+                                    </div>
+                                ) : optimisticCart.length === 0 ? (
                                     <div className="flex h-full flex-col items-center justify-center px-6 text-center">
                                         <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.03]">
                                             <ShoppingBag size={32} className="text-white/30" />
@@ -175,6 +180,11 @@ const CartDrawer: React.FC = () => {
                                                             {item.variant_title && (
                                                                 <p className="mt-0.5 text-[11px] text-white/45">{item.variant_title}</p>
                                                             )}
+                                                            {typeof (item as any).max_quantity === 'number' ? (
+                                                                <p className="mt-0.5 text-[10px] text-white/40">
+                                                                    Max {(item as any).max_quantity} in stock
+                                                                </p>
+                                                            ) : null}
                                                         </div>
 
                                                         <div className="mt-2.5 flex items-center justify-between">
@@ -189,7 +199,8 @@ const CartDrawer: React.FC = () => {
                                                                 <span className="w-7 text-center text-xs font-black text-white">{item.quantity}</span>
                                                                 <button
                                                                     onClick={() => updateQuantity(item.product_id, item.variant_id, item.quantity + 1)}
-                                                                    className="flex h-7 w-7 items-center justify-center text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
+                                                                    disabled={typeof (item as any).max_quantity === 'number' && item.quantity >= (item as any).max_quantity}
+                                                                    className="flex h-7 w-7 items-center justify-center text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                                                                 >
                                                                     <Plus size={12} />
                                                                 </button>

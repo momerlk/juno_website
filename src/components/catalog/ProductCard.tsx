@@ -16,6 +16,11 @@ interface ProductCardProps {
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
 
+const getBaseProductPrice = (product: CatalogProduct): number =>
+    product.pricing.discounted
+        ? product.pricing.discounted_price ?? product.pricing.price
+        : product.pricing.price;
+
 const getProductImage = (product: Partial<CatalogProduct>) => {
     const images = Array.isArray(product.images) ? product.images : [];
     return images[0] || '/juno_app_icon.png';
@@ -55,7 +60,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     const isSoldOut = !product.inventory?.in_stock;
     const productImage = getProductImage(product);
     const hoverImage = product.images?.[1];
-    const activePrice = product.pricing.discounted_price || product.pricing.price;
+    const activePrice = getBaseProductPrice(product);
     const categoryLabel = product.categories?.[0]?.name;
     const accentTags = [
         hasDiscount ? `${discountPercentage}% off` : null,
@@ -73,18 +78,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
         const variant = product.variants?.[0];
         if (!variant) return;
+        if (!variant.available || !product.inventory?.in_stock) return;
 
         setAddedToCart(true);
         addItem(
             product.id,
             variant.id,
             1,
-            variant.price || product.pricing.discounted_price || product.pricing.price,
+            getBaseProductPrice(product),
             {
                 seller_name: product.seller_name,
                 product_title: product.title,
                 variant_title: variant.title,
                 image_url: productImage,
+                max_quantity: product.inventory?.available_quantity,
+                is_available: variant.available && !!product.inventory?.in_stock,
             }
         );
 

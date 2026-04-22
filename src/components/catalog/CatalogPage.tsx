@@ -12,6 +12,10 @@ type SortValue = 'newest' | 'price_asc' | 'price_desc';
 type CatalogCategoryOption = { id: string; name: string; slug?: string };
 
 const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
+const getBaseProductPrice = (product: CatalogProduct): number =>
+    product.pricing.discounted
+        ? product.pricing.discounted_price ?? product.pricing.price
+        : product.pricing.price;
 
 // Product diversification algorithm - separates similar products
 const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
@@ -235,6 +239,7 @@ const CatalogPage: React.FC = () => {
     const handleQuickAdd = (product: CatalogProduct) => {
         const variant = product.variants?.[0];
         if (!variant) return;
+        if (!variant.available || !product.inventory?.in_stock) return;
 
         setAddingProductId(product.id);
 
@@ -242,12 +247,14 @@ const CatalogPage: React.FC = () => {
             product.id,
             variant.id,
             1,
-            variant.price || product.pricing.discounted_price || product.pricing.price,
+            getBaseProductPrice(product),
             {
                 seller_name: product.seller_name,
                 product_title: product.title,
                 variant_title: variant.title,
                 image_url: getProductImage(product),
+                max_quantity: product.inventory?.available_quantity,
+                is_available: variant.available && !!product.inventory?.in_stock,
             }
         );
 

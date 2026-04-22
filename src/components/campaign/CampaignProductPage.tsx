@@ -29,6 +29,13 @@ const formatCurrency = (value?: number) =>
 
 const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
 
+const getBaseProductPrice = (product: any): number => {
+    const listPrice = product?.pricing?.price ?? 0;
+    const discounted = product?.pricing?.discounted;
+    const discountedPrice = product?.pricing?.discounted_price;
+    return discounted ? (discountedPrice ?? listPrice) : listPrice;
+};
+
 /* ── Helpers for delivery timeline ── */
 const addDays = (date: Date, days: number) => {
     const d = new Date(date);
@@ -123,46 +130,75 @@ const CampaignProductPage: React.FC = () => {
         );
     }, [data, selectedOptions]);
 
+    const product = data?.product;
+    const campaign = data?.campaign;
+    const maxAvailableQuantity = product?.inventory?.quantity ?? product?.inventory?.available_quantity;
+    const isVariantAvailable = selectedVariant?.available ?? true;
+    const canPurchase = !!product?.inventory?.in_stock && isVariantAvailable;
+
     const cartPayload = useCallback(() => {
-        if (!data?.product || !selectedVariant || !campaignSlug) return null;
+        if (!product || !selectedVariant || !campaignSlug) return null;
         const slug = campaignSlug.replace(/-campaign$/, '');
+        const basePrice = getBaseProductPrice(product);
         return {
-            productId: data.product.id,
+            productId: product.id,
             variantId: selectedVariant.id,
-            price: selectedVariant.price || data.product.pricing.discounted_price || data.product.pricing.price,
+            price: basePrice,
             meta: {
-                seller_name: data.product.seller_name,
-                product_title: data.product.title,
+                seller_name: product.seller_name,
+                product_title: product.title,
                 variant_title: selectedVariant.title,
-                image_url: data.product.images?.[0] || '/juno_app_icon.png',
+                image_url: product.images?.[0] || '/juno_app_icon.png',
                 source: `campaign:${slug}`,
             },
         };
-    }, [data, selectedVariant, campaignSlug]);
+    }, [product, selectedVariant, campaignSlug]);
 
     const handleAddToCart = useCallback(() => {
         const p = cartPayload();
-        if (!p) return;
+        if (!p || !canPurchase) return;
+        if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
+            setQuantity(Math.max(1, maxAvailableQuantity));
+            return;
+        }
         setIsAdding(true);
-        addItem(p.productId, p.variantId, quantity, p.price, p.meta);
+        addItem(p.productId, p.variantId, quantity, p.price, {
+            ...p.meta,
+            max_quantity: maxAvailableQuantity,
+            is_available: canPurchase,
+        });
         setShowAddedFeedback(true);
         setIsAdding(false);
         window.setTimeout(() => setCartOpen(true), 350);
-    }, [cartPayload, quantity, addItem, setCartOpen]);
+    }, [cartPayload, quantity, addItem, setCartOpen, canPurchase, maxAvailableQuantity]);
 
     const handleBuyNow = useCallback(() => {
         const p = cartPayload();
-        if (!p) return;
+        if (!p || !canPurchase) return;
+        if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
+            setQuantity(Math.max(1, maxAvailableQuantity));
+            return;
+        }
         setIsBuyingNow(true);
-        addItem(p.productId, p.variantId, quantity, p.price, p.meta);
+        addItem(p.productId, p.variantId, quantity, p.price, {
+            ...p.meta,
+            max_quantity: maxAvailableQuantity,
+            is_available: canPurchase,
+        });
         window.setTimeout(() => navigate('/checkout'), 200);
-    }, [cartPayload, quantity, addItem, navigate]);
+    }, [cartPayload, quantity, addItem, navigate, canPurchase, maxAvailableQuantity]);
 
     useEffect(() => {
         if (!showAddedFeedback) return;
         const timer = window.setTimeout(() => setShowAddedFeedback(false), 2400);
         return () => window.clearTimeout(timer);
     }, [showAddedFeedback]);
+
+    useEffect(() => {
+        if (typeof maxAvailableQuantity === 'number' && maxAvailableQuantity > 0 && quantity > maxAvailableQuantity) {
+            setQuantity(maxAvailableQuantity);
+        }
+    }, [quantity, maxAvailableQuantity]);
 
     if (isLoading || !data) {
         return (
@@ -193,15 +229,14 @@ const CampaignProductPage: React.FC = () => {
         );
     }
 
-    const { product, campaign } = data;
-    const currentPrice = selectedVariant?.price ?? product.pricing.discounted_price ?? product.pricing.price ?? 0;
+    const currentPrice = getBaseProductPrice(product);
     const compareAt = product.pricing.compare_at_price;
     const discountPercentage = compareAt && currentPrice ? Math.round(((compareAt - currentPrice) / compareAt) * 100) : 0;
     const imageGallery = asArray(product?.images);
     const description = product?.short_description || product?.description;
     const eta = product?.shipping_details?.estimated_delivery_days || 3;
     const currentImage = imageGallery[selectedImageIdx] || '/juno_app_icon.png';
-    const inStock = product.inventory?.in_stock;
+    const inStock = canPurchase;
     const stockCount = product.inventory?.quantity ?? null;
     const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
 
@@ -248,8 +283,8 @@ const CampaignProductPage: React.FC = () => {
                     <div className="grid gap-10 xl:grid-cols-[1.1fr_0.9fr] xl:gap-16 xl:items-start">
 
                         {/* ══ LEFT: Image ══ */}
-                        <div className="space-y-3 xl:sticky xl:top-24">
-                            <div className="group relative overflow-hidden rounded-2xl bg-[#0d0d0e]">
+                        <div className="min-w-0 space-y-3 xl:sticky xl:top-24">
+                            <div className="group relative w-full overflow-hidden rounded-2xl bg-[#0d0d0e]">
 
                                 {/* Floating badges — top-left, no backdrop dimming image */}
                                 {(discountPercentage > 0 || lowStock) ? (
@@ -304,7 +339,7 @@ const CampaignProductPage: React.FC = () => {
                                         if (info.offset.x < -60) cycleImage(1);
                                         else if (info.offset.x > 60) cycleImage(-1);
                                     }}
-                                    className="touch-pan-y"
+                                    className="w-full touch-pan-y"
                                 >
                                     <AnimatePresence mode="wait">
                                         <motion.img
@@ -319,7 +354,7 @@ const CampaignProductPage: React.FC = () => {
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
                                             transition={{ duration: 0.22, ease: 'easeInOut' }}
-                                            className="aspect-[3/4] w-full select-none object-cover"
+                                            className="block w-full max-w-full select-none object-cover aspect-[4/5] sm:aspect-[3/4]"
                                         />
                                     </AnimatePresence>
                                 </motion.div>
@@ -355,7 +390,7 @@ const CampaignProductPage: React.FC = () => {
                         </div>
 
                         {/* ══ RIGHT: Details ══ */}
-                        <div className="space-y-6">
+                        <div className="min-w-0 space-y-6">
 
                             {/* ── Title block ── */}
                             <div>
@@ -551,6 +586,7 @@ const CampaignProductPage: React.FC = () => {
                                         <span className="w-10 text-center text-sm font-black text-white">{quantity}</span>
                                         <button
                                             onClick={() => setQuantity((q) => q + 1)}
+                                            disabled={typeof maxAvailableQuantity === 'number' && quantity >= maxAvailableQuantity}
                                             className="flex h-10 w-10 items-center justify-center text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
                                         >
                                             <Plus size={14} />
