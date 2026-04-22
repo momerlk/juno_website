@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowRight,
   Globe,
+  Inbox,
   Link2,
   Link2Off,
   Loader,
@@ -13,6 +14,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
+import { useSellerQueue } from '../../contexts/SellerQueueContext';
 import * as api from '../../api/sellerApi';
 import { Order } from '../../constants/orders';
 import { OrderStatusBadge } from './OrderStatusBadge';
@@ -25,8 +27,23 @@ const fadeUp = {
 
 const SellerHome: React.FC = () => {
   const { seller } = useSellerAuth();
+  const { items: queueItems, pendingCount: queuePendingCount } = useSellerQueue();
   const location = useLocation();
   const prefix = location.pathname.startsWith('/studio') ? '/studio' : '/seller';
+
+  const queueBreakdown = useMemo(() => {
+    const needsReview = queueItems.filter(item => item.status === 'synced' || item.status === 'queued' || item.status === 'validation_pending' || item.status === 'enrichment_pending').length;
+    const readyToPublish = queueItems.filter(item => item.status === 'ready').length;
+    const failed = queueItems.filter(item => item.status === 'failed').length;
+    const outOfStock = queueItems.filter(item => {
+      if (item.status === 'promoted') return false;
+      const product = item.product;
+      const variantTotal = product?.variants?.reduce((sum, v) => sum + (v.inventory?.quantity || 0), 0) ?? 0;
+      const total = variantTotal > 0 ? variantTotal : (product?.inventory?.quantity || 0);
+      return total <= 0;
+    }).length;
+    return { needsReview, readyToPublish, failed, outOfStock };
+  }, [queueItems]);
 
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [shopifyShop, setShopifyShop] = useState<string | undefined>(undefined);
@@ -149,6 +166,61 @@ const SellerHome: React.FC = () => {
 
   return (
     <>
+      {queuePendingCount > 0 && (
+        <motion.section
+          {...fadeUp}
+          transition={{ duration: 0.4 }}
+          className="mb-4 overflow-hidden rounded-[1.8rem] border border-primary/30 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.22),transparent_45%),linear-gradient(135deg,rgba(255,24,24,0.14),rgba(255,255,255,0.03))] p-5 shadow-[0_24px_80px_rgba(255,24,24,0.12)]"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="rounded-[1.2rem] border border-primary/30 bg-primary/15 p-3">
+                <Inbox size={20} className="text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-mono uppercase tracking-[0.28em] text-primary/80">Draft Queue</p>
+                <h3 className="mt-1 text-xl font-black uppercase tracking-[-0.03em] text-white">
+                  {queuePendingCount} product{queuePendingCount !== 1 ? 's' : ''} awaiting your review
+                </h3>
+                <div className="mt-2 flex flex-wrap gap-3 text-xs text-white/60">
+                  {queueBreakdown.readyToPublish > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-emerald-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      {queueBreakdown.readyToPublish} ready to publish
+                    </span>
+                  )}
+                  {queueBreakdown.needsReview > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-amber-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                      {queueBreakdown.needsReview} need details
+                    </span>
+                  )}
+                  {queueBreakdown.outOfStock > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-400/25 bg-orange-500/10 px-3 py-1 text-orange-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+                      {queueBreakdown.outOfStock} out of stock
+                    </span>
+                  )}
+                  {queueBreakdown.failed > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-red-400/25 bg-red-500/10 px-3 py-1 text-red-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                      {queueBreakdown.failed} failed
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Link
+              to={`${prefix}/dashboard/inventory`}
+              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white transition-opacity hover:opacity-90"
+            >
+              Review Drafts
+              <ArrowRight size={15} />
+            </Link>
+          </div>
+        </motion.section>
+      )}
+
       <motion.section
         {...fadeUp}
         transition={{ duration: 0.45 }}

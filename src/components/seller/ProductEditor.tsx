@@ -490,53 +490,49 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
             console.groupEnd();
             
             let response;
+            let finalQueueId: string | undefined = queueId;
+            const gender = payload.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
+            const enrichmentPayload = payload.product_type && gender ? {
+                product_type: payload.product_type,
+                gender,
+                sizing_guide: payload.sizing_guide || {},
+            } : null;
+
             if (queueId) {
                 // Updating an existing queue item
                 // Per API spec: PUT /seller/queue/{id} takes catalog product payload directly
-                const gender = payload.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
-                
-                // Build update payload with enrichment if available
                 const queueUpdatePayload = {
                     ...payload,
-                    // Include enrichment so both queue_item.enrichment and
-                    // queue_item.product.enrichment are updated together
-                    ...(payload.product_type && gender ? {
-                        enrichment: {
-                            product_type: payload.product_type,
-                            gender,
-                            sizing_guide: payload.sizing_guide || {},
-                        }
-                    } : {}),
+                    ...(enrichmentPayload ? { enrichment: enrichmentPayload } : {}),
                 };
-                
+
                 response = await api.Seller.Queue.Update(seller.token, queueId, queueUpdatePayload);
             } else if (product && product.id) {
                 // Updating an active product
                 response = await api.Seller.UpdateProduct(seller.token, { ...payload, id: product.id });
             } else {
                 // Creating a new product -> Goes to Queue
-                // Include enrichment data per API spec so both queue_item.enrichment and
-                // queue_item.product.enrichment are populated automatically
-                const gender = payload.tags?.find(t => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
                 const createPayload = {
                     ...payload,
                     handle: generateHandle(payload.title || '', seller?.user?.business_name || ''),
-                    status: 'queued', // Default to queued
+                    status: 'queued',
                     seller_name: seller?.user?.business_name,
                     seller_logo: seller?.user?.logo_url,
-                    // Include enrichment if we have the data
-                    ...(payload.product_type && gender ? {
-                        enrichment: {
-                            product_type: payload.product_type,
-                            gender,
-                            sizing_guide: payload.sizing_guide || {},
-                        }
-                    } : {}),
+                    ...(enrichmentPayload ? { enrichment: enrichmentPayload } : {}),
                 };
                 response = await api.Seller.Queue.Create(seller.token, createPayload as Product);
+                finalQueueId = (response.body as any)?.id || (response.body as any)?.queue_item_id;
             }
 
             if (response.ok) {
+                // PUT /seller/queue/{id} does not transition queue status to "ready".
+                // Explicit PUT /seller/queue/{id}/enrich is required so Promote can be called.
+                if (finalQueueId && enrichmentPayload) {
+                    const enrichRes = await api.Seller.Queue.Enrich(seller.token, finalQueueId, enrichmentPayload);
+                    if (!enrichRes.ok) {
+                        console.warn('[inventory] queue enrich failed', enrichRes.body);
+                    }
+                }
                 alert(`Product ${product ? 'updated' : 'created'} successfully!`);
                 onClose();
             } else {

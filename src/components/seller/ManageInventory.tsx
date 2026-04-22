@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
+import { useSellerQueue } from '../../contexts/SellerQueueContext';
 import * as api from '../../api/sellerApi';
 import { Product, SizingGuide, QueueItem } from '../../constants/types';
 import { productTypes } from '../../constants/sizing';
@@ -65,6 +66,12 @@ const getShopifyThumbnail = (url: string, size: string = '400x400') => {
     }
 };
 
+export const getTotalStock = (product: Product): number => {
+    const variantTotal = product.variants?.reduce((sum, v) => sum + (v.inventory?.quantity || 0), 0) ?? 0;
+    if (variantTotal > 0) return variantTotal;
+    return product.inventory?.quantity || 0;
+};
+
 const getQueueIssues = (product: Product, item: QueueItem) => {
     const missingFields: string[] = [];
     if (!product.title?.trim()) missingFields.push('Title');
@@ -76,12 +83,13 @@ const getQueueIssues = (product: Product, item: QueueItem) => {
     // - product.sizing_guide (legacy/direct location)
     // - product.enrichment?.sizing_guide (mirrored location)
     // - item.enrichment?.sizing_guide (top-level authoritative location)
-    const sizingGuide = product.sizing_guide?.size_chart 
-        || (product as any).enrichment?.sizing_guide 
+    const sizingGuide = product.sizing_guide?.size_chart
+        || (product as any).enrichment?.sizing_guide
         || (item as any).enrichment?.sizing_guide;
     if (requiresSizing && (!sizingGuide || Object.keys(sizingGuide).length === 0)) {
         missingFields.push('Sizing Guide');
     }
+    if (getTotalStock(product) <= 0) missingFields.push('Inventory');
     const apiErrors = item.errors || [];
     return { missingFields, apiErrors };
 };
@@ -98,6 +106,8 @@ const QueueItemCard: React.FC<{
     const isReady = item.status === 'ready';
     const { missingFields, apiErrors } = getQueueIssues(product, item);
     const hasErrors = missingFields.length > 0 || apiErrors.length > 0;
+    const totalStock = getTotalStock(product);
+    const isOutOfStock = totalStock <= 0;
 
     return (
         <motion.div layout className={`relative flex h-full flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/[0.03] transition-all duration-300 hover:border-primary/25 hover:bg-white/[0.05] ${selected ? 'ring-2 ring-primary/70' : ''}`}>
@@ -142,7 +152,7 @@ const QueueItemCard: React.FC<{
                     </div>
                 )}
 
-                <div className="mt-1 grid grid-cols-2 gap-2 text-xs text-white/52">
+                <div className="mt-1 grid grid-cols-3 gap-2 text-xs text-white/52">
                     <div className="rounded-[0.95rem] border border-white/10 bg-black/25 px-3 py-2">
                         <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Type</p>
                         <p className="mt-1 text-white/70">{product.product_type || 'Unset'}</p>
@@ -151,21 +161,27 @@ const QueueItemCard: React.FC<{
                         <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Variants</p>
                         <p className="mt-1 text-white/70">{product.variants?.length || 0}</p>
                     </div>
+                    <div className={`rounded-[0.95rem] border px-3 py-2 ${isOutOfStock ? 'border-red-500/30 bg-red-500/10' : 'border-white/10 bg-black/25'}`}>
+                        <p className={`text-[10px] font-mono uppercase tracking-[0.18em] ${isOutOfStock ? 'text-red-300' : 'text-white/25'}`}>Stock</p>
+                        <p className={`mt-1 ${isOutOfStock ? 'text-red-300 font-semibold' : 'text-white/70'}`}>{totalStock}</p>
+                    </div>
                 </div>
 
                 <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between gap-2">
-                    <button 
-                        onClick={() => onEdit(product, item.id)} 
-                        className="flex-1 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-medium transition-colors"
+                    <button
+                        onClick={() => onEdit(product, item.id)}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${isOutOfStock ? 'bg-red-500/20 hover:bg-red-500/30 text-red-200' : 'bg-white/5 hover:bg-white/10 text-white'}`}
                     >
-                        Edit & Fix
+                        {isOutOfStock ? 'Add Stock' : 'Edit & Fix'}
                     </button>
                     {isReady && (
-                        <button 
-                            onClick={() => onPromote(item.id)} 
-                            className="flex-1 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                        <button
+                            onClick={() => onPromote(item.id)}
+                            disabled={isOutOfStock}
+                            title={isOutOfStock ? 'Set stock before publishing' : undefined}
+                            className={`flex-1 py-1.5 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-1 ${isOutOfStock ? 'bg-neutral-700 cursor-not-allowed opacity-60' : 'bg-green-600 hover:bg-green-700'}`}
                         >
-                            <UploadCloud size={12} /> Publish
+                            <UploadCloud size={12} /> {isOutOfStock ? '0 Stock' : 'Publish'}
                         </button>
                     )}
                      <button
@@ -197,6 +213,8 @@ const QueueItemListItem: React.FC<{
     const isReady = item.status === 'ready';
     const { missingFields, apiErrors } = getQueueIssues(product, item);
     const hasIssues = missingFields.length > 0 || apiErrors.length > 0;
+    const totalStock = getTotalStock(product);
+    const isOutOfStock = totalStock <= 0;
 
     return (
         <motion.div layout className={`rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5 border-primary/25' : 'hover:bg-white/[0.05] hover:border-primary/20'}`}>
@@ -230,18 +248,23 @@ const QueueItemListItem: React.FC<{
             )}
 
             <div className="flex items-center gap-2 self-start sm:self-center mt-4 sm:mt-0 sm:border-l sm:border-white/10 sm:pl-4">
-                <button 
-                    onClick={() => onEdit(product, item.id)} 
-                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-medium transition-colors"
+                <div className={`rounded-lg border px-2 py-1 text-xs ${isOutOfStock ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-white/10 bg-black/20 text-white/55'}`}>
+                    Stock: <span className="font-semibold">{totalStock}</span>
+                </div>
+                <button
+                    onClick={() => onEdit(product, item.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${isOutOfStock ? 'bg-red-500/20 hover:bg-red-500/30 text-red-200' : 'bg-white/5 hover:bg-white/10 text-white'}`}
                 >
-                    Edit & Fix
+                    {isOutOfStock ? 'Add Stock' : 'Edit & Fix'}
                 </button>
                 {isReady && (
-                    <button 
-                        onClick={() => onPromote(item.id)} 
-                        className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors flex items-center gap-1"
+                    <button
+                        onClick={() => onPromote(item.id)}
+                        disabled={isOutOfStock}
+                        title={isOutOfStock ? 'Set stock before publishing' : undefined}
+                        className={`px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors flex items-center gap-1 ${isOutOfStock ? 'bg-neutral-700 cursor-not-allowed opacity-60' : 'bg-green-600 hover:bg-green-700'}`}
                     >
-                        <UploadCloud size={12} /> Publish
+                        <UploadCloud size={12} /> {isOutOfStock ? '0 Stock' : 'Publish'}
                     </button>
                 )}
                  <button
@@ -600,6 +623,7 @@ const ITEMS_PER_PAGE = 12;
 
 const ManageInventory: React.FC = () => {
     const { seller } = useSellerAuth();
+    const { refresh: refreshQueueContext, pendingCount: queuePendingCount } = useSellerQueue();
     const [activeTab, setActiveTab] = useState<'active' | 'queue'>('active');
     
     // Active Products State
@@ -933,20 +957,24 @@ const ManageInventory: React.FC = () => {
                 const existingEnrichment = (qItem as any)?.enrichment || (qItem?.product as any)?.enrichment || {};
                 const hasProductType = attributes.product_type || existingEnrichment.product_type || finalProduct.product_type;
                 const hasGender = attributes.gender || existingEnrichment.gender || finalProduct.tags?.find((t: string) => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
-                
+                const enrichmentPayload = hasProductType && hasGender ? {
+                    product_type: hasProductType,
+                    gender: hasGender,
+                    sizing_guide: finalProduct.sizing_guide || existingEnrichment.sizing_guide || {},
+                } : null;
+
                 const queueUpdatePayload = {
                     ...finalProduct,
-                    // Include enrichment if we have the data
-                    ...(hasProductType && hasGender ? {
-                        enrichment: {
-                            product_type: hasProductType,
-                            gender: hasGender,
-                            sizing_guide: finalProduct.sizing_guide || existingEnrichment.sizing_guide || {},
-                        }
-                    } : {}),
+                    ...(enrichmentPayload ? { enrichment: enrichmentPayload } : {}),
                 };
-                
-                return api.Seller.Queue.Update(seller.token!, queueId!, queueUpdatePayload);
+
+                const updateRes = await api.Seller.Queue.Update(seller.token!, queueId!, queueUpdatePayload);
+                // PUT /seller/queue/{id} leaves the queue FSM untouched. Explicit enrich
+                // is the only path to status=ready, which Promote requires.
+                if (updateRes.ok && enrichmentPayload) {
+                    await api.Seller.Queue.Enrich(seller.token!, queueId!, enrichmentPayload);
+                }
+                return updateRes;
             }
         });
 
@@ -954,17 +982,53 @@ const ManageInventory: React.FC = () => {
 
         setSelectedProductIds(new Set());
         if (activeTab === 'active') fetchAllProducts();
-        else fetchQueueItems();
+        else {
+            fetchQueueItems();
+            refreshQueueContext();
+        }
         alert('Items updated successfully!');
     };
 
     const handlePromoteQueueItem = async (id: string) => {
         if (!seller?.token) return;
+
+        const qItem = queueItems.find(item => item.id === id);
+        if (qItem && getTotalStock(qItem.product) <= 0) {
+            alert('This product has 0 stock. Update inventory levels for at least one variant before publishing.');
+            setEditingProduct(qItem.product);
+            setEditingQueueId(qItem.id);
+            setIsEditorOpen(true);
+            return;
+        }
+
         if (!window.confirm("Are you sure you want to publish this product?")) return;
+
+        // Promote requires queue status=ready. That only happens via PUT /seller/queue/{id}/enrich —
+        // not via Queue.Update. Run enrich preflight if the item isn't ready yet.
+        if (qItem && qItem.status !== 'ready' && qItem.status !== 'promoted') {
+            const existingEnrichment = (qItem as any)?.enrichment || (qItem.product as any)?.enrichment || {};
+            const product = qItem.product;
+            const product_type = existingEnrichment.product_type || product.product_type;
+            const gender = existingEnrichment.gender || product.tags?.find((t: string) => ['male', 'female', 'unisex'].includes(t.toLowerCase()));
+            const sizing_guide = product.sizing_guide || existingEnrichment.sizing_guide || {};
+
+            if (!product_type || !gender) {
+                alert('Missing product type or gender. Edit the draft and set both before publishing.');
+                return;
+            }
+
+            const enrichRes = await api.Seller.Queue.Enrich(seller.token, id, { product_type, gender, sizing_guide });
+            if (!enrichRes.ok) {
+                alert(`Failed to prepare product for publish. ${JSON.stringify(enrichRes.body)}`);
+                return;
+            }
+        }
+
         const response = await api.Seller.Queue.Promote(seller.token, id);
         if (response.ok) {
             alert("Product published successfully!");
             fetchQueueItems();
+            refreshQueueContext();
         } else {
             alert(`Failed to publish product. Message = ${JSON.stringify(response.body)}`);
         }
@@ -976,6 +1040,7 @@ const ManageInventory: React.FC = () => {
             const response = await api.Seller.Queue.Reject(seller.token, id, reason || "Discarded by seller");
             if (response.ok) {
                 await fetchQueueItems();
+                refreshQueueContext();
             } else {
                 const errorMsg = typeof response.body === 'object' && response.body?.message 
                     ? response.body.message 
@@ -1027,12 +1092,15 @@ const ManageInventory: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                         {[
-                            { label: 'Core Ready', value: `${readyCoreFields}/${inventoryItems.length || 0}` },
-                            { label: 'Size Guides', value: `${sizeGuideCoverage}%` },
-                            { label: 'Draft Queue', value: `${queueItems.length}` },
+                            { label: 'Core Ready', value: `${readyCoreFields}/${inventoryItems.length || 0}`, pulse: false },
+                            { label: 'Size Guides', value: `${sizeGuideCoverage}%`, pulse: false },
+                            { label: 'Draft Queue', value: `${queuePendingCount}`, pulse: queuePendingCount > 0 },
                         ].map(stat => (
-                            <div key={stat.label} className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5">
-                                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/35">{stat.label}</p>
+                            <div
+                                key={stat.label}
+                                className={`rounded-xl border px-3 py-2.5 ${stat.pulse ? 'border-primary/40 bg-primary/15 shadow-[0_0_24px_rgba(255,24,24,0.15)]' : 'border-white/10 bg-black/25'}`}
+                            >
+                                <p className={`text-[10px] font-mono uppercase tracking-[0.18em] ${stat.pulse ? 'text-primary' : 'text-white/35'}`}>{stat.label}</p>
                                 <p className="mt-1 text-lg font-black uppercase tracking-[-0.03em] text-white">{stat.value}</p>
                             </div>
                         ))}
@@ -1090,12 +1158,16 @@ const ManageInventory: React.FC = () => {
                     >
                         Active Products
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('queue')}
-                        className={`flex-1 px-4 py-3 rounded-[0.95rem] text-sm font-black uppercase tracking-[0.08em] transition-all flex items-center justify-center gap-2 ${activeTab === 'queue' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-neutral-400 hover:text-white'}`}
+                        className={`flex-1 px-4 py-3 rounded-[0.95rem] text-sm font-black uppercase tracking-[0.08em] transition-all flex items-center justify-center gap-2 ${activeTab === 'queue' ? 'bg-primary text-white shadow-lg shadow-primary/20' : queuePendingCount > 0 ? 'bg-primary/15 text-primary ring-1 ring-primary/30 animate-pulse' : 'text-neutral-400 hover:text-white'}`}
                     >
                         Drafts & Queue
-                        {queueItems.length > 0 && <span className="bg-white/20 px-1.5 rounded-full text-xs">{queueItems.length}</span>}
+                        {queuePendingCount > 0 && (
+                            <span className={`px-1.5 rounded-full text-xs ${activeTab === 'queue' ? 'bg-white/20' : 'bg-primary text-white'}`}>
+                                {queuePendingCount}
+                            </span>
+                        )}
                     </button>
                     </div>
                 </div>

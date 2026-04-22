@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
+import { useSellerQueue } from '../../contexts/SellerQueueContext';
 
 export const navigation = [
   { name: 'Dashboard', href: '/seller/dashboard', icon: LayoutDashboard, subtitle: 'Build something delightful.', focus: 'Lead with story, not admin.' },
@@ -30,6 +31,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const { seller, logout } = useSellerAuth();
+  const { pendingCount: queuePendingCount } = useSellerQueue();
   const location = useLocation();
   const prefix = location.pathname.startsWith('/studio') ? '/studio' : '/seller';
   const metrics = seller?.user?.seller_metrics;
@@ -121,6 +123,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-black uppercase tracking-[0.04em] text-white">{item.name}</span>
                             {isActive && <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary">Live</span>}
+                            {item.name === 'Inventory' && queuePendingCount > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-primary/35 bg-primary/15 px-2 py-0.5 text-[9px] font-mono uppercase tracking-[0.18em] text-primary">
+                                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                                {queuePendingCount} in queue
+                              </span>
+                            )}
                           </div>
                         </div>
                         {item.snapshot.stat && (

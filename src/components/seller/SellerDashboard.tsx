@@ -4,9 +4,10 @@ import { Menu, RadioTower, ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Sidebar, { navigation } from './Sidebar';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
+import { SellerQueueProvider } from '../../contexts/SellerQueueContext';
 import { sendSellerHeartbeat, trackSellerEvent } from './probe';
 
-const SellerDashboard: React.FC = () => {
+const SellerDashboardInner: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { seller } = useSellerAuth();
@@ -183,5 +184,11 @@ const SellerDashboard: React.FC = () => {
     </div>
   );
 };
+
+const SellerDashboard: React.FC = () => (
+  <SellerQueueProvider>
+    <SellerDashboardInner />
+  </SellerQueueProvider>
+);
 
 export default SellerDashboard;
