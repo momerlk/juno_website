@@ -20,9 +20,16 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncCount, setSyncCount] = useState(0);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
-  
-  const initialQueueCount = useRef<number>(0);
+
   const pollingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = () => {
+    if (pollingInterval.current) {
+      clearInterval(pollingInterval.current);
+      pollingInterval.current = null;
+    }
+    setIsSyncing(false);
+  };
 
   useEffect(() => {
     return () => {
@@ -39,34 +46,46 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
     return url;
   };
 
-  const startPolling = async () => {
+  const startPolling = () => {
     setIsSyncing(true);
-    
+
     pollingInterval.current = setInterval(async () => {
       if (!seller?.token) return;
-      
-      try {
-        const res = await api.Seller.Queue.List(seller.token);
-        if (res.ok && Array.isArray(res.body)) {
-          const currentCount = res.body.length;
-          const newProducts = Math.max(0, currentCount - initialQueueCount.current);
-          
-          if (newProducts > syncCount) {
-            setSyncCount(newProducts);
-            setMessage({
-              type: 'info',
-              text: `Sync in progress... Imported ${newProducts} product${newProducts !== 1 ? 's' : ''} so far.`
-            });
-          }
 
-          // If we haven't seen new products for a while, we could stop, 
-          // but better to let the user stop it or wait for a "complete" status if it existed.
-          // For now, we just keep polling while this component is mounted and syncing is true.
+      try {
+        const res = await api.Shopify.GetStatus(seller.token);
+        if (!res.ok || !res.body) return;
+
+        const { scrape_status, scrape_count } = res.body;
+        const count = scrape_count ?? 0;
+
+        if (scrape_status === 'completed') {
+          stopPolling();
+          setSyncCount(count);
+          setMessage({
+            type: 'success',
+            text: `Imported ${count} product${count !== 1 ? 's' : ''}. They're now in your draft queue for review.`,
+          });
+          onScrapeComplete?.(count);
+        } else if (scrape_status === 'failed') {
+          stopPolling();
+          setMessage({
+            type: 'error',
+            text: 'Sync failed. Check that the store is publicly accessible and has published products.',
+          });
+        } else {
+          setSyncCount(count);
+          setMessage({
+            type: 'info',
+            text: count > 0
+              ? `Sync in progress... Imported ${count} product${count !== 1 ? 's' : ''} so far.`
+              : 'Sync in progress... Fetching your products.',
+          });
         }
       } catch (error) {
         console.error('Polling error:', error);
       }
-    }, 4000);
+    }, 3000);
   };
 
   const handleScrape = async () => {
@@ -83,13 +102,6 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
     setSyncCount(0);
 
     try {
-      // 1. Get initial queue count to track progress
-      const queueRes = await api.Seller.Queue.List(seller.token);
-      if (queueRes.ok && Array.isArray(queueRes.body)) {
-        initialQueueCount.current = queueRes.body.length;
-      }
-
-      // 2. Start the scrape
       const res = await api.Shopify.Scrape(seller.token, normalizedUrl);
       
       if (res.status === 202) {

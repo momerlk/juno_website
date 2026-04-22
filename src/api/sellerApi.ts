@@ -669,6 +669,10 @@ export namespace Shopify {
         installed_at?: string;
         // Connection type: "active" (OAuth-based) or "public" (scrape-based, no access token)
         connection_type?: 'active' | 'public';
+        scrape_status?: 'running' | 'completed' | 'failed';
+        scrape_count?: number;
+        scrape_started_at?: string | null;
+        scrape_completed_at?: string | null;
     }
 
     export interface SyncResponse {
