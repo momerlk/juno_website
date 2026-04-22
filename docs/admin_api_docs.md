@@ -116,7 +116,7 @@ Auth: admin token required
 
 Auth: admin token required
 
-Returns all child orders across all sellers and users. Supports filtering by status and date.
+Returns all child orders across all sellers and users.
 
 **Response `200`**
 ```json
@@ -137,28 +137,26 @@ Returns all child orders across all sellers and users. Supports filtering by sta
       }
     ],
     "status": "confirmed",
-    "tracking": {
-      "current_status": "confirmed",
-      "estimated_delivery": "2026-04-25T14:30:00Z",
-      "timeline": [ ... ],
-      "anchors": { ... }
-    },
     "total": 3700,
     "created_at": "2026-03-28T14:30:00Z"
   }
 ]
 ```
 
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid admin token
+
 ---
 
-### Update Order Status
-`PATCH /api/v2/admin/orders/{id}/status`
+### Update Order
+`PUT /api/v2/admin/orders/{orderID}` (Legacy)
+`PATCH /api/v2/commerce/admin/orders/{id}/status` (Recommended for Tracking)
 
 Auth: admin token required
 
-Updates the status of an order and appends a tracking milestone. This endpoint supports the **Interactive Order Tracking** timeline and FSM validation.
+The `PATCH` route under commerce module is recommended as it supports the **Interactive Order Tracking** timeline and FSM validation.
 
-**Body**
+**Body (PATCH commerce route)**
 ```json
 { 
   "status": "at_warehouse",
@@ -166,79 +164,14 @@ Updates the status of an order and appends a tracking milestone. This endpoint s
 }
 ```
 
----
+See [Commerce Module Tracking Docs](../commerce/docs.md#admin-order-management) for additional interactive tracking endpoints:
+- `PUT /api/v2/commerce/admin/orders/{id}/tracking/warehouse` — Set map anchor
+- `PATCH /api/v2/commerce/admin/orders/{id}/tracking/eta` — Manual ETA override
 
-### Append Tracking Milestone
-`POST /api/v2/admin/orders/{id}/tracking/milestone`
-
-Auth: admin token required
-
-Appends an arbitrary milestone to the tracking timeline without changing the overall order status.
-
-**Body**
-```json
-{
-  "label": "Sorting Center",
-  "note": "Package being sorted at Karachi Hub",
-  "location": {
-    "lat": 24.8607,
-    "lng": 67.0011,
-    "city": "Karachi"
-  }
-}
-```
-
----
-
-### Set Warehouse Anchor
-`PUT /api/v2/admin/orders/{id}/tracking/warehouse`
-
-Auth: admin token required
-
-Sets the coordinates and label for the warehouse waypoint used in the map tracking UI.
-
-**Body**
-```json
-{
-  "lat": 24.8607,
-  "lng": 67.0011,
-  "city": "Karachi",
-  "label": "Karachi Central Hub"
-}
-```
-
----
-
-### Update Order ETA
-`PATCH /api/v2/admin/orders/{id}/tracking/eta`
-
-Auth: admin token required
-
-Manually overrides the estimated delivery timestamp.
-
-**Body**
-```json
-{
-  "eta": "2026-04-25T14:30:00Z"
-}
-```
-
----
-
-### Order Statuses (FSM)
-
-| Status | Meaning |
-|--------|---------|
-| `pending` | Awaiting seller acceptance |
-| `confirmed` | Seller accepted order |
-| `packed` | Ready for pickup (unlocks animation) |
-| `handed_to_rider` | Released to courier pickup rider |
-| `at_warehouse` | Arrived at courier warehouse hub |
-| `out_for_delivery` | Out for final delivery leg |
-| `delivered` | Customer received parcel |
-| `delivery_attempted` | Rider attempted delivery, will retry |
-| `cancelled` | Order cancelled |
-| `returned` | Parcel returned to warehouse/seller |
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — invalid order status
+- `401 UNAUTHORIZED` — missing or invalid admin token
 
 ---
 

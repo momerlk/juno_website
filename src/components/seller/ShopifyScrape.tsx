@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Loader, Sparkles, Zap } from 'lucide-react';
+import { Globe, Loader, Sparkles, Zap, RefreshCw } from 'lucide-react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
 
@@ -17,13 +17,56 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
   const { seller } = useSellerAuth();
   const [shopUrl, setShopUrl] = useState('');
   const [isScraping, setIsScraping] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncCount, setSyncCount] = useState(0);
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  
+  const initialQueueCount = useRef<number>(0);
+  const pollingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollingInterval.current) {
+        clearInterval(pollingInterval.current);
+      }
+    };
+  }, []);
 
   const normalizeShopUrl = (input: string): string => {
     let url = input.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
     // Remove any trailing paths like /admin or /products
     url = url.split('/')[0];
     return url;
+  };
+
+  const startPolling = async () => {
+    setIsSyncing(true);
+    
+    pollingInterval.current = setInterval(async () => {
+      if (!seller?.token) return;
+      
+      try {
+        const res = await api.Seller.Queue.List(seller.token);
+        if (res.ok && Array.isArray(res.body)) {
+          const currentCount = res.body.length;
+          const newProducts = Math.max(0, currentCount - initialQueueCount.current);
+          
+          if (newProducts > syncCount) {
+            setSyncCount(newProducts);
+            setMessage({
+              type: 'info',
+              text: `Sync in progress... Imported ${newProducts} product${newProducts !== 1 ? 's' : ''} so far.`
+            });
+          }
+
+          // If we haven't seen new products for a while, we could stop, 
+          // but better to let the user stop it or wait for a "complete" status if it existed.
+          // For now, we just keep polling while this component is mounted and syncing is true.
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    }, 4000);
   };
 
   const handleScrape = async () => {
@@ -37,12 +80,29 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
 
     setIsScraping(true);
     setMessage(null);
+    setSyncCount(0);
 
     try {
+      // 1. Get initial queue count to track progress
+      const queueRes = await api.Seller.Queue.List(seller.token);
+      if (queueRes.ok && Array.isArray(queueRes.body)) {
+        initialQueueCount.current = queueRes.body.length;
+      }
+
+      // 2. Start the scrape
       const res = await api.Shopify.Scrape(seller.token, normalizedUrl);
       
-      if (res.ok && res.body) {
-        const count = res.body.count || 0;
+      if (res.status === 202) {
+        // Async scrape started
+        setMessage({ 
+          type: 'info', 
+          text: 'Shopify sync started! We\'re fetching your products in the background. They will appear in your draft queue shortly.' 
+        });
+        setShopUrl('');
+        startPolling();
+      } else if (res.ok && res.body) {
+        // Legacy synchronous behavior (if any)
+        const count = (res.body as any).count || 0;
         setMessage({ 
           type: 'success', 
           text: `Successfully scraped ${count} product${count !== 1 ? 's' : ''}. They're now in your draft queue for review.` 
@@ -67,7 +127,7 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isScraping) {
+    if (e.key === 'Enter' && !isScraping && !isSyncing) {
       handleScrape();
     }
   };
@@ -103,13 +163,18 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
           <div className={`mt-4 rounded-[1.2rem] border p-4 ${
             message.type === 'success' 
               ? 'border-emerald-400/20 bg-emerald-500/10' 
-              : 'border-red-400/20 bg-red-500/10'
+              : message.type === 'info'
+                ? 'border-blue-400/20 bg-blue-500/10'
+                : 'border-red-400/20 bg-red-500/10'
           }`}>
-            <p className={`text-sm ${
-              message.type === 'success' ? 'text-emerald-300' : 'text-red-300'
-            }`}>
-              {message.text}
-            </p>
+            <div className="flex items-center gap-3">
+              {message.type === 'info' && <RefreshCw size={14} className="animate-spin text-blue-300" />}
+              <p className={`text-sm ${
+                message.type === 'success' ? 'text-emerald-300' : message.type === 'info' ? 'text-blue-300' : 'text-red-300'
+              }`}>
+                {message.text}
+              </p>
+            </div>
           </div>
         )}
 
@@ -124,19 +189,20 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
               value={shopUrl}
               onChange={(e) => setShopUrl(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full rounded-[1.2rem] border border-white/10 bg-black/30 py-4 pl-[5.5rem] pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/18 focus:border-primary/35"
+              disabled={isScraping || isSyncing}
+              className="w-full rounded-[1.2rem] border border-white/10 bg-black/30 py-4 pl-[5.5rem] pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/18 focus:border-primary/35 disabled:opacity-50"
             />
           </div>
           
           <button
             onClick={handleScrape}
-            disabled={isScraping || !shopUrl.trim()}
+            disabled={isScraping || isSyncing || !shopUrl.trim()}
             className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-4 text-sm font-black uppercase tracking-[0.07em] text-white disabled:opacity-45"
           >
-            {isScraping ? (
+            {isScraping || isSyncing ? (
               <>
                 <Loader size={15} className="animate-spin" />
-                Scraping Products...
+                {isSyncing ? 'Syncing Products...' : 'Starting Scrape...'}
               </>
             ) : (
               <>
@@ -177,3 +243,4 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
 };
 
 export default ShopifyScrape;
+

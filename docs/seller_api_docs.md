@@ -162,7 +162,6 @@ Same `seller` object shown above, without the top-level `token`.
       "M": { "chest": 91, "waist": 73 }
     }
   },
-  "embeddings": [0.12, -0.34, 0.56],
   "errors": [],
   "created_at": "2026-03-28T14:30:00Z",
   "updated_at": "2026-03-28T15:00:00Z"
@@ -619,8 +618,7 @@ Queue status flow:
 - `queued`
 - `synced`
 - `enrichment_pending`
-- `embedding_pending`
-- `ready`
+- `ready` (after enrichment)
 - `promoted`
 - `failed`
 
@@ -632,9 +630,7 @@ Queue status flow:
 | `PUT` | `/api/v2/seller/queue/{id}` | Update product in queue |
 | `POST` | `/api/v2/seller/queue/{id}/promote` | Promote ready product to catalog |
 | `POST` | `/api/v2/seller/queue/{id}/reject` | Reject product from queue |
-| `PUT` | `/api/v2/seller/queue/{id}/enrich` | Enrich product with metadata |
-| `POST` | `/api/v2/seller/queue/{id}/embeddings` | Submit AI embeddings |
-| `GET` | `/api/v2/seller/queue/pending-embeddings` | Get items awaiting embeddings |
+| `PUT` | `/api/v2/seller/queue/{id}/enrich` | Enrich product with metadata (transitions to ready) |
 
 ### Get Queue
 `GET /api/v2/seller/queue`
@@ -683,21 +679,12 @@ Updates the product details of a queued item. Preserves the queue status, seller
 
 ---
 
-### Get Pending Embeddings
-`GET /api/v2/seller/queue/pending-embeddings`
-
-Auth: seller token required
-
-Despite its name, this route is currently protected by seller auth in the router.
-
-**Response `200`**: array of `ProductsQueue`
-
----
-
 ### Enrich Product
 `PUT /api/v2/seller/queue/{id}/enrich`
 
 Auth: seller token required
+
+Enriches a product with metadata (sizing guide, gender, product type) and **automatically transitions it to `ready` for admin promotion**.
 
 **Body**
 ```json
@@ -713,7 +700,7 @@ Auth: seller token required
 
 **Response `200`**
 ```json
-{ "message": "Product enriched, pending embeddings" }
+{ "message": "Product enriched and ready for promotion" }
 ```
 
 **Common errors**
@@ -724,35 +711,12 @@ Auth: seller token required
 
 ---
 
-### Submit Embeddings
-`POST /api/v2/seller/queue/{id}/embeddings`
-
-Auth: seller token required
-
-**Body**
-```json
-{
-  "embeddings": [0.12, -0.34, 0.56]
-}
-```
-
-**Response `200`**
-```json
-{ "message": "Embeddings stored, product is ready for promotion" }
-```
-
-**Common errors**
-- `400 INVALID_BODY` — malformed JSON
-- `400` — invalid queue state or embedding payload
-- `401 UNAUTHORIZED` — missing or invalid seller token
-- `404 NOT_FOUND` — queue item not found
-
----
-
 ### Promote Product
 `POST /api/v2/seller/queue/{id}/promote`
 
 Auth: seller token required
+
+Promotes a product from the queue to the live catalog. The product must be in `ready` status.
 
 **Response `200`**
 ```json
@@ -760,7 +724,7 @@ Auth: seller token required
 ```
 
 **Common errors**
-- `400` — queue item not in `ready` state
+- `400` — queue item not in `ready` status
 - `401 UNAUTHORIZED` — missing or invalid seller token
 - `404 NOT_FOUND` — queue item not found
 
@@ -885,11 +849,11 @@ Auth: seller token required
 
 Auth: seller token required
 
-Transitions the order to `handed_to_rider` status. This is the final step for a seller to release the parcel to the courier.
+The handler accepts an optional body in Swagger, but the current implementation ignores it and only transitions the order to `shipped`.
 
 **Response `200`**
 ```json
-{ "message": "Order fulfilled and handed to rider" }
+{ "message": "Order fulfilled successfully" }
 ```
 
 **Common errors**
@@ -904,7 +868,7 @@ Transitions the order to `handed_to_rider` status. This is the final step for a 
 
 Auth: seller token required
 
-The `PATCH` route under the commerce module is recommended as it supports the **Interactive Order Tracking** timeline and FSM validation.
+The `PATCH` route under commerce module is recommended as it supports the **Interactive Order Tracking** timeline and FSM validation.
 
 **Body (PATCH commerce route)**
 ```json
@@ -914,13 +878,13 @@ The `PATCH` route under the commerce module is recommended as it supports the **
 }
 ```
 
-**Valid values for sellers:**
-- `confirmed`: Accept the order and start preparation.
-- `packed`: Parcel is ready. Unlocks the "parcel is packed" animation for the customer.
-- `handed_to_rider`: Parcel released to the courier pickup rider. Starts the parcel movement on the live map.
-- `cancelled`: Pre-dispatch cancellation if items are out of stock.
+Valid values for interactive tracking:
+- `confirmed`
+- `packed`
+- `handed_to_rider`
+- `cancelled`
 
-See [Commerce Module Tracking Docs](../commerce/docs.md#seller-order-management) for details on how these statuses drive the live map.
+See [Commerce Module Tracking Docs](../commerce/docs.md#seller-order-management) for details.
 
 **Response `200`**
 ```json
