@@ -35,6 +35,13 @@ const getBaseProductPrice = (product: any): number => {
     const discountedPrice = product?.pricing?.discounted_price;
     return discounted ? (discountedPrice ?? listPrice) : listPrice;
 };
+const getVariantAvailableQuantity = (variant: any, product: any): number | undefined => {
+    const variantQty = variant?.inventory?.available_quantity ?? variant?.inventory?.quantity;
+    if (typeof variantQty === 'number' && Number.isFinite(variantQty)) return Math.max(0, variantQty);
+    const productQty = product?.inventory?.available_quantity ?? product?.inventory?.quantity;
+    if (typeof productQty === 'number' && Number.isFinite(productQty)) return Math.max(0, productQty);
+    return undefined;
+};
 
 /* ── Helpers for delivery timeline ── */
 const addDays = (date: Date, days: number) => {
@@ -132,7 +139,7 @@ const CampaignProductPage: React.FC = () => {
 
     const product = data?.product;
     const campaign = data?.campaign;
-    const maxAvailableQuantity = product?.inventory?.quantity ?? product?.inventory?.available_quantity;
+    const maxAvailableQuantity = getVariantAvailableQuantity(selectedVariant, product);
     const isVariantAvailable = selectedVariant?.available ?? true;
     const canPurchase = !!product?.inventory?.in_stock && isVariantAvailable;
 

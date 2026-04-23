@@ -16,6 +16,13 @@ const getBaseProductPrice = (product: CatalogProduct): number =>
     product.pricing.discounted
         ? product.pricing.discounted_price ?? product.pricing.price
         : product.pricing.price;
+const getVariantAvailableQuantity = (variant: any, product: CatalogProduct): number | undefined => {
+    const variantQty = variant?.inventory?.available_quantity ?? variant?.inventory?.quantity;
+    if (typeof variantQty === 'number' && Number.isFinite(variantQty)) return Math.max(0, variantQty);
+    const productQty = product.inventory?.available_quantity ?? product.inventory?.quantity;
+    if (typeof productQty === 'number' && Number.isFinite(productQty)) return Math.max(0, productQty);
+    return undefined;
+};
 
 // Product diversification algorithm - separates similar products
 const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
@@ -240,6 +247,8 @@ const CatalogPage: React.FC = () => {
         const variant = product.variants?.[0];
         if (!variant) return;
         if (!variant.available || !product.inventory?.in_stock) return;
+        const maxVariantQuantity = getVariantAvailableQuantity(variant, product);
+        if (typeof maxVariantQuantity === 'number' && maxVariantQuantity <= 0) return;
 
         setAddingProductId(product.id);
 
@@ -253,7 +262,7 @@ const CatalogPage: React.FC = () => {
                 product_title: product.title,
                 variant_title: variant.title,
                 image_url: getProductImage(product),
-                max_quantity: product.inventory?.available_quantity,
+                max_quantity: maxVariantQuantity,
                 is_available: variant.available && !!product.inventory?.in_stock,
             }
         );

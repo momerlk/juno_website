@@ -25,6 +25,13 @@ const getProductImage = (product: Partial<CatalogProduct>) => {
     const images = Array.isArray(product.images) ? product.images : [];
     return images[0] || '/juno_app_icon.png';
 };
+const getVariantAvailableQuantity = (variant: any, product: CatalogProduct): number | undefined => {
+    const variantQty = variant?.inventory?.available_quantity ?? variant?.inventory?.quantity;
+    if (typeof variantQty === 'number' && Number.isFinite(variantQty)) return Math.max(0, variantQty);
+    const productQty = product.inventory?.available_quantity ?? product.inventory?.quantity;
+    if (typeof productQty === 'number' && Number.isFinite(productQty)) return Math.max(0, productQty);
+    return undefined;
+};
 
 const ProductCard: React.FC<ProductCardProps> = ({
     product,
@@ -79,6 +86,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
         const variant = product.variants?.[0];
         if (!variant) return;
         if (!variant.available || !product.inventory?.in_stock) return;
+        const maxVariantQuantity = getVariantAvailableQuantity(variant, product);
+        if (typeof maxVariantQuantity === 'number' && maxVariantQuantity <= 0) return;
 
         setAddedToCart(true);
         addItem(
@@ -91,7 +100,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 product_title: product.title,
                 variant_title: variant.title,
                 image_url: productImage,
-                max_quantity: product.inventory?.available_quantity,
+                max_quantity: maxVariantQuantity,
                 is_available: variant.available && !!product.inventory?.in_stock,
             }
         );

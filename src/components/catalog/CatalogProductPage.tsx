@@ -33,6 +33,13 @@ const getBaseProductPrice = (product: Partial<CatalogProduct> | null): number =>
         ? product.pricing.discounted_price ?? product.pricing.price ?? 0
         : product.pricing?.price ?? 0;
 };
+const getVariantAvailableQuantity = (variant: any, product: CatalogProduct | null): number | undefined => {
+    const variantQty = variant?.inventory?.available_quantity ?? variant?.inventory?.quantity;
+    if (typeof variantQty === 'number' && Number.isFinite(variantQty)) return Math.max(0, variantQty);
+    const productQty = product?.inventory?.available_quantity ?? product?.inventory?.quantity;
+    if (typeof productQty === 'number' && Number.isFinite(productQty)) return Math.max(0, productQty);
+    return undefined;
+};
 
 /* ── Skeleton (zero-CLS placeholder that reserves full layout) ── */
 const SkeletonPulse = 'animate-pulse rounded-lg bg-white/[0.06]';
@@ -174,7 +181,7 @@ const CatalogProductPage: React.FC = () => {
         );
     }, [product, selectedOptions]);
 
-    const maxAvailableQuantity = product?.inventory?.available_quantity;
+    const maxAvailableQuantity = getVariantAvailableQuantity(selectedVariant, product);
     const isVariantAvailable = selectedVariant?.available ?? true;
     const canPurchase = !!product?.inventory?.in_stock && isVariantAvailable;
 

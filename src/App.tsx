@@ -5,6 +5,7 @@ import Hero from './components/landing/Hero';
 import Footer from './components/Footer';
 import { GuestCartProvider } from './contexts/GuestCartContext';
 import CartDrawer from './components/cart/CartDrawer';
+import CartStockLimitToast from './components/cart/CartStockLimitToast';
 const JunoApp = React.lazy(() => import('./components/landing/JunoApp'));
 const Mission = React.lazy(() => import('./components/landing/Mission'));
 const DownloadSection = React.lazy(() => import('./components/landing/DownloadSection'));
@@ -300,6 +301,7 @@ function RoutedApp() {
               </Routes>
               </Suspense>
               <CartDrawer />
+              <CartStockLimitToast />
               {!isExcludedPath && <Footer />}
               </div>
               </GuestCartProvider>
