@@ -96,7 +96,6 @@ const CampaignDetail: React.FC = () => {
       { name: 'Clicks', count: metrics.clicks, icon: MousePointer2, color: 'text-blue-400' },
       { name: 'Product Views', count: metrics.product_views, icon: ShoppingBag, color: 'text-purple-400' },
       { name: 'Add to Carts', count: metrics.add_to_carts, icon: ShoppingCart, color: 'text-yellow-400' },
-      { name: 'Reminders', count: metrics.reminder_signups, icon: UserPlus, color: 'text-pink-400' },
       { name: 'Checkouts', count: metrics.checkouts, icon: CreditCard, color: 'text-orange-400' },
       { name: 'Orders', count: metrics.orders, icon: CheckCircle2, color: 'text-green-400' },
     ];

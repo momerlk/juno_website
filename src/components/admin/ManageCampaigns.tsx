@@ -4,13 +4,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Campaigns } from '../../api/campaignsApi';
 import { Campaign, MetaInputsRequest } from '../../api/api.types';
-import CreateCampaignModal from './CreateCampaignModal';
 
 const ManageCampaigns: React.FC = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [metaInputCampaignId, setMetaInputCampaignId] = useState<string | null>(null);
   const [metaInputs, setMetaInputs] = useState<MetaInputsRequest>({ ad_spend_to_date: 0, impressions: 0, clicks: 0, impression_lower: 0, impression_upper: 0 });
   const [isMetaLoading, setIsMetaLoading] = useState(false);
@@ -131,13 +129,13 @@ const ManageCampaigns: React.FC = () => {
           <h1 className="text-3xl font-black uppercase tracking-tight text-white">Campaign Management</h1>
           <p className="text-white/40 font-mono text-xs uppercase tracking-[0.2em] mt-1">Growth & Acquisition Engines</p>
         </div>
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
+        <Link
+          to="/admin/campaigns/new"
           className="flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-black uppercase tracking-widest text-white transition-all hover:bg-primary-dark hover:scale-[1.02] shadow-glow-primary"
         >
           <Plus size={18} />
           Create Campaign
-        </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -268,12 +266,6 @@ const ManageCampaigns: React.FC = () => {
       </div>
 
       <AnimatePresence>
-        {isCreateModalOpen && (
-          <CreateCampaignModal
-            onClose={() => setIsCreateModalOpen(false)}
-            onSuccess={fetchCampaigns}
-          />
-        )}
         {metaInputCampaignId && (
           <motion.div
             initial={{ opacity: 0 }}
