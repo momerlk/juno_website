@@ -11,6 +11,19 @@ interface LocationState {
     order?: ParentOrder;
 }
 
+const buildGuestTrackingPath = (order: ParentOrder): string => {
+    const params = new URLSearchParams();
+    const phone = order.shipping_address?.phone_number?.trim() || order.customer_phone?.trim() || '';
+    const email = order.shipping_address?.email?.trim() || order.customer_email?.trim() || '';
+    const trackingOrderId = order.child_order_ids?.[0] || order.id;
+
+    if (phone) params.set('phone_number', phone);
+    else if (email) params.set('email', email);
+
+    const query = params.toString();
+    return query ? `/checkout/track/${trackingOrderId}?${query}` : `/checkout/track/${trackingOrderId}`;
+};
+
 const OrderConfirmationPage: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -237,7 +250,7 @@ const OrderConfirmationPage: React.FC = () => {
                     className="space-y-3"
                 >
                     <Link
-                        to={`/checkout/track/${order.id}`}
+                        to={order.customer_type === 'guest' ? buildGuestTrackingPath(order) : `/checkout/track/${order.id}`}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-8 py-4 text-sm font-bold uppercase tracking-[0.2em] text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] hover:shadow-primary/30"
                     >
                         <Truck size={18} />

@@ -24,6 +24,7 @@ Auth:
 - `POST /api/v2/commerce/guest/checkout` — public guest checkout route
 - `POST /api/v2/commerce/guest/checkout/direct` — public guest direct checkout route
 - `POST /api/v2/commerce/guest/orders/lookup` — public guest order tracking route
+- `GET /api/v2/commerce/guest/orders/{id}/tracking` — public guest tracking route (requires matching phone/email query)
 - `GET /api/v2/commerce/seller/orders` — seller auth required
 - `GET /api/v2/commerce/seller/orders/{id}` — seller auth required
 - `PATCH /api/v2/commerce/seller/orders/{id}/status` — seller auth required
@@ -626,6 +627,25 @@ Provide at least one of `phone_number` or `email`.
 
 ---
 
+### Get Guest Order Tracking
+`GET /api/v2/commerce/guest/orders/{id}/tracking?phone_number={phone}` or `?email={email}`
+
+Auth: none
+
+Returns tracking for a specific guest child order when contact proof matches the order.
+
+Provide exactly one contact proof query param:
+- `phone_number`
+- `email`
+
+**Response `200`**: `OrderTracking`
+
+**Common errors**
+- `400` — missing both `phone_number` and `email`
+- `404 NOT_FOUND` — order not found, not a guest order, or contact proof does not match
+
+---
+
 ### Get Guest Cart Shipping Estimate
 `GET /api/v2/commerce/guest/cart/shipping-estimate?buyer_city={city}`
 
@@ -739,6 +759,17 @@ Returns a WhatsApp deep-link pre-filled with order context.
 ---
 
 ## Order Endpoints
+
+### Guest Order Tracking Flows
+
+Guest order tracking now supports two self-serve paths plus optional public share links:
+1. `POST /api/v2/commerce/guest/orders/lookup` to find guest parent orders by `phone_number` or `email`.
+2. `GET /api/v2/commerce/guest/orders/{id}/tracking?phone_number=...` (or `email=...`) to fetch tracking for a specific guest child order directly.
+3. `GET /api/v2/track/{token}` for public token-based tracking links (usually generated via authenticated `POST /api/v2/commerce/orders/{id}/tracking/share`).
+
+Authenticated `/api/v2/commerce/orders/{id}/tracking` remains protected for user/seller/admin tokens.
+
+---
 
 ### Get User Orders
 `GET /api/v2/commerce/orders`

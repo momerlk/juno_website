@@ -333,6 +333,29 @@ export namespace GuestCommerce {
     }
 
     /**
+     * Get guest order tracking by order id + contact proof
+     *
+     * Requires exactly one of:
+     * - phone_number
+     * - email
+     */
+    export async function getGuestOrderTracking(orderId: string, payload: GuestOrderLookupRequest): Promise<APIResponse<OrderTracking>> {
+        const params = new URLSearchParams();
+        const phone = payload.phone_number?.trim();
+        const email = payload.email?.trim();
+
+        if (phone) params.set('phone_number', phone);
+        if (email) params.set('email', email);
+
+        const query = params.toString();
+        const resp = await fetch(
+            `${API_BASE_URL}${BASE_PATH}/orders/${encodeURIComponent(orderId)}/tracking${query ? `?${query}` : ''}`,
+            { method: 'GET' }
+        );
+        return handleGuestResponse<OrderTracking>(resp);
+    }
+
+    /**
      * Get public tracking
      * 
      * Returns order tracking data without PII using a valid share token.

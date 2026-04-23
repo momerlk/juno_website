@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
 import {
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Commerce, GuestCommerce } from '../../api/commerceApi';
-import type { OrderStatus, OrderTracking, TrackingAnchors, TrackingMilestone } from '../../api/api.types';
+import type { GuestOrderLookupRequest, OrderStatus, OrderTracking, TrackingAnchors, TrackingMilestone } from '../../api/api.types';
 import { decodePolyline, interpolateAlong, type LatLng } from '../../utils/tracking';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_WEB_KEY;
@@ -153,8 +153,91 @@ const makeAbsoluteUrl = (url: string): string => {
     return `${window.location.origin}${url.startsWith('/') ? url : `/${url}`}`;
 };
 
+const PAK_CITY_COORDS: Record<string, LatLng> = {
+    lahore: { lat: 31.5204, lng: 74.3587 },
+    karachi: { lat: 24.8607, lng: 67.0011 },
+    islamabad: { lat: 33.6844, lng: 73.0479 },
+    rawalpindi: { lat: 33.5651, lng: 73.0169 },
+    faisalabad: { lat: 31.4504, lng: 73.1350 },
+    multan: { lat: 30.1575, lng: 71.5249 },
+    peshawar: { lat: 34.0151, lng: 71.5249 },
+    quetta: { lat: 30.1798, lng: 66.9750 },
+    gujranwala: { lat: 32.1617, lng: 74.1883 },
+    sialkot: { lat: 32.4945, lng: 74.5229 },
+    hyderabad: { lat: 25.3960, lng: 68.3578 },
+};
+
+const normalizeCityKey = (value?: string): string => {
+    if (!value) return '';
+    return value.toLowerCase().replace(/[^a-z]/g, '');
+};
+
+const findPakCityCoords = (value?: string): LatLng | null => {
+    const normalized = normalizeCityKey(value);
+    if (!normalized) return null;
+    for (const [city, coords] of Object.entries(PAK_CITY_COORDS)) {
+        if (normalized.includes(city)) return coords;
+    }
+    return null;
+};
+
+const isInvalidGeoPoint = (point?: LatLng): boolean => {
+    if (!point) return true;
+    if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return true;
+    if (point.lat < -90 || point.lat > 90 || point.lng < -180 || point.lng > 180) return true;
+    // Gulf of Guinea/default-null style coordinates
+    if (Math.abs(point.lat) < 0.01 && Math.abs(point.lng) < 0.01) return true;
+    return false;
+};
+
+const isLikelyPakistanPoint = (point: LatLng): boolean => {
+    return point.lat >= 23 && point.lat <= 38 && point.lng >= 60 && point.lng <= 78;
+};
+
+const sanitizeTrackingAnchors = (anchors: TrackingAnchors): TrackingAnchors => {
+    if (!anchors?.customer) return anchors;
+    const customer = anchors.customer;
+    const cityFallback = findPakCityCoords(customer.city) ?? findPakCityCoords(customer.label);
+    const fallback = cityFallback ?? PAK_CITY_COORDS.lahore;
+
+    if (isInvalidGeoPoint(customer) || !isLikelyPakistanPoint(customer)) {
+        return {
+            ...anchors,
+            customer: {
+                ...customer,
+                lat: fallback.lat,
+                lng: fallback.lng,
+                city: customer.city || (cityFallback ? Object.keys(PAK_CITY_COORDS).find((k) => PAK_CITY_COORDS[k] === cityFallback) : 'Lahore'),
+            },
+        };
+    }
+
+    return anchors;
+};
+
+const buildGuestTrackingCandidates = (orderId: string, orders: { id: string; child_order_ids?: string[] }[]): string[] => {
+    const allChildIds = Array.from(
+        new Set(
+            orders.flatMap((order) => order.child_order_ids ?? []).filter((id) => !!id)
+        )
+    );
+
+    const parentMatch = orders.find((order) => order.id === orderId);
+    if (parentMatch?.child_order_ids?.length) {
+        return Array.from(new Set(parentMatch.child_order_ids));
+    }
+
+    const childMatch = orders.find((order) => order.child_order_ids?.includes(orderId));
+    if (childMatch) {
+        return [orderId];
+    }
+
+    return Array.from(new Set([orderId, ...allChildIds]));
+};
+
 const InteractiveTrackingPage: React.FC = () => {
     const { token, orderId } = useParams<{ token?: string; orderId?: string }>();
+    const [searchParams] = useSearchParams();
     const [tracking, setTracking] = useState<OrderTracking | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -163,6 +246,9 @@ const InteractiveTrackingPage: React.FC = () => {
     const [isSharing, setIsSharing] = useState(false);
 
     const isPublic = !!token;
+    const guestPhoneNumber = searchParams.get('phone_number')?.trim() || '';
+    const guestEmail = searchParams.get('email')?.trim() || '';
+    const hasGuestProof = !isPublic && (!!guestPhoneNumber || !!guestEmail);
     const previousStatusRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -175,19 +261,47 @@ const InteractiveTrackingPage: React.FC = () => {
 
             setIsLoading(true);
             try {
-                const trackingResponse = isPublic
-                    ? await GuestCommerce.getPublicTracking(token!)
-                    : await Commerce.getOrderTracking(orderId!);
+                const guestProof: GuestOrderLookupRequest = {
+                    phone_number: guestPhoneNumber || undefined,
+                    email: guestEmail || undefined,
+                };
+                let trackingResponse;
+
+                if (isPublic) {
+                    trackingResponse = await GuestCommerce.getPublicTracking(token!);
+                } else if (hasGuestProof) {
+                    const lookupResponse = await GuestCommerce.lookupOrders(guestProof);
+                    if (!lookupResponse.ok || !Array.isArray(lookupResponse.body) || lookupResponse.body.length === 0) {
+                        throw new Error('Unable to verify guest order with provided phone/email.');
+                    }
+
+                    const candidates = buildGuestTrackingCandidates(orderId!, lookupResponse.body);
+                    let resolved = null;
+                    for (const candidateId of candidates) {
+                        const attempt = await GuestCommerce.getGuestOrderTracking(candidateId, guestProof);
+                        if (attempt.ok && attempt.body) {
+                            resolved = attempt;
+                            break;
+                        }
+                    }
+
+                    trackingResponse = resolved ?? { ok: false, status: 404, body: null };
+                } else {
+                    trackingResponse = await Commerce.getOrderTracking(orderId!);
+                }
 
                 if (!trackingResponse.ok || !trackingResponse.body) {
                     throw new Error(isPublic
                         ? 'Tracking information not found for this link.'
-                        : 'Unable to load tracking. If this is a guest order, open the shared tracking link.');
+                        : hasGuestProof
+                            ? 'Unable to load guest tracking. Verify your phone/email and order ID.'
+                            : 'Unable to load tracking. If this is a guest order, open tracking from lookup or use a shared link.');
                 }
 
                 const nextTracking = trackingResponse.body;
+                nextTracking.anchors = sanitizeTrackingAnchors(nextTracking.anchors);
 
-                if (!nextTracking.polyline && !isPublic && orderId) {
+                if (!nextTracking.polyline && !isPublic && orderId && !hasGuestProof) {
                     const polylineResponse = await Commerce.getOrderTrackingPolyline(orderId);
                     const resolved = polylineResponse.ok ? resolvePolyline(polylineResponse.body) : null;
                     if (resolved) {
@@ -223,7 +337,7 @@ const InteractiveTrackingPage: React.FC = () => {
         fetchData();
         const intervalId = window.setInterval(fetchData, 30000);
         return () => window.clearInterval(intervalId);
-    }, [token, orderId, isPublic]);
+    }, [token, orderId, isPublic, hasGuestProof, guestPhoneNumber, guestEmail]);
 
     const timelineAsc = useMemo(() => {
         if (!tracking?.timeline?.length) return [];
@@ -289,7 +403,7 @@ const InteractiveTrackingPage: React.FC = () => {
         setIsSharing(true);
         try {
             let shareUrl = window.location.href;
-            if (!isPublic && orderId) {
+            if (!isPublic && orderId && !hasGuestProof) {
                 const response = await Commerce.shareOrderTracking(orderId);
                 if (response.ok && response.body?.url) {
                     shareUrl = makeAbsoluteUrl(response.body.url);

@@ -124,6 +124,19 @@ const OrderTrackingPage: React.FC = () => {
         }
     };
 
+    const buildTrackingUrl = (order: ParentOrder) => {
+        const params = new URLSearchParams();
+        if (lookupBy === 'phone' && phoneNumber.trim()) {
+            params.set('phone_number', phoneNumber.trim());
+        }
+        if (lookupBy === 'email' && email.trim()) {
+            params.set('email', email.trim());
+        }
+        const trackingOrderId = order.child_order_ids?.[0] || order.id;
+        const query = params.toString();
+        return query ? `/checkout/track/${trackingOrderId}?${query}` : `/checkout/track/${trackingOrderId}`;
+    };
+
     return (
         <div className="min-h-screen bg-background pb-20 pt-24 text-white">
             <div className="container mx-auto max-w-3xl px-4">
@@ -345,7 +358,7 @@ const OrderTrackingPage: React.FC = () => {
 
                                 {/* Live Tracking CTA */}
                                 <Link 
-                                    to={`/checkout/track/${order.id}`}
+                                    to={buildTrackingUrl(order)}
                                     className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-white transition-all hover:bg-white hover:text-black"
                                 >
                                     <Truck size={14} />
