@@ -1,104 +1,144 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-    X, ShoppingCart, User, MapPin, Hash, Calendar, 
-    CreditCard, Truck, Package, DollarSign, Percent, 
-    FileText, Send, Warehouse, Clock, CheckCircle, 
-    Plus, Info, ArrowLeft 
+import {
+  ArrowLeft,
+  Calendar,
+  CreditCard,
+  MapPin,
+  Package,
+  Store,
+  Truck,
+  User,
+  XCircle,
 } from 'lucide-react';
-import { Order, OrderItem, OrderStatus, PaymentStatus } from '../../constants/orders';
-import { Seller } from '../../constants/seller';
-import { Product } from '../../constants/types';
-import { GetProductById, AdminAPI, GetOrderById, getAllSellers } from '../../api/adminApi';
+import { AdminCommerce, GetProductById, getAllSellers } from '../../api/adminApi';
+import type { Order, ParentOrder } from '../../api/api.types';
+import type { Product, Variant } from '../../constants/types';
+import type { Seller } from '../../constants/seller';
 
-const statusColors: { [key in OrderStatus]: string } = {
+const ORDER_STATUSES = [
+  'pending',
+  'confirmed',
+  'packed',
+  'handed_to_rider',
+  'at_warehouse',
+  'out_for_delivery',
+  'delivery_attempted',
+  'delivered',
+  'cancelled',
+  'returned',
+] as const;
+
+const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   confirmed: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   packed: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
   handed_to_rider: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   at_warehouse: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
   out_for_delivery: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
-  delivered: 'bg-green-500/10 text-green-400 border-green-500/20',
   delivery_attempted: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  delivered: 'bg-green-500/10 text-green-400 border-green-500/20',
   cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
   returned: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-  refunded: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-  fulfilled: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
 };
 
-const paymentStatusColors: { [key in PaymentStatus]: string } = {
-  pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-  paid: 'bg-green-500/10 text-green-400 border-green-500/20',
-  failed: 'bg-red-500/10 text-red-400 border-red-500/20',
-  refunded: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+const formatCurrency = (value?: number) => `Rs ${(value ?? 0).toLocaleString()}`;
+
+const getAvailableInventory = (variant?: Variant, product?: Product): number | null => {
+  const variantInv = variant?.inventory;
+  const productInv = product?.inventory;
+
+  const value =
+    variantInv?.available_quantity ??
+    variantInv?.quantity ??
+    productInv?.available_quantity ??
+    productInv?.quantity;
+
+  return typeof value === 'number' ? value : null;
 };
 
-const safeFormat = (val: number | undefined | null) => 
-  (val !== undefined && val !== null) ? val.toLocaleString() : '0';
+const ProductLineItem: React.FC<{
+  item: Order['order_items'][number];
+  product?: Product;
+}> = ({ item, product }) => {
+  const variant = product?.variants?.find((v) => String(v.id) === String(item.variant_id));
+  const image =
+    variant?.images?.[0] ||
+    item.product_image ||
+    product?.images?.[0] ||
+    'https://via.placeholder.com/120x120?text=No+Image';
 
-const OrderItemCard: React.FC<{ item: OrderItem }> = ({ item }) => {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProduct = async () => {
-      if (!item.product_id) return;
-      setIsLoading(true);
-      try {
-        const res = await GetProductById(item.product_id);
-        if (res.ok) setProduct(res.body);
-      } catch (err) {
-        console.error('Error fetching product:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchProduct();
-  }, [item.product_id]);
-
-  const variant = product?.variants.find(v => v.id === item.variant_id);
-
-  if (isLoading) {
-    return <div className="flex items-center bg-white/5 p-4 rounded-xl border border-white/5 animate-pulse"><div className="w-16 h-16 bg-white/10 rounded-md"></div><div className="ml-4 flex-grow space-y-2"><div className="h-4 bg-white/10 rounded w-3/4"></div><div className="h-3 bg-white/10 rounded w-1/2"></div></div></div>;
-  }
-
-  if (!product) {
-    return (
-        <div className="flex items-center bg-white/5 p-4 rounded-xl border border-white/5">
-            <div className="w-16 h-16 bg-white/10 rounded-md flex items-center justify-center">
-                <Package size={24} className="text-neutral-500" />
-            </div>
-            <div className="flex-grow ml-4">
-                <p className="text-white font-semibold">Product not found</p>
-                <p className="text-neutral-400 text-sm font-mono">ID: {item.product_id}</p>
-            </div>
-            <div className="text-right">
-                <p className="text-white font-bold">Qty: {item.quantity}</p>
-                <p className="text-neutral-300 text-sm">Rs {safeFormat(item.unit_price)}</p>
-            </div>
-        </div>
-    );
-  }
+  const remainingInventory = getAvailableInventory(variant, product);
 
   return (
-    <div className="flex items-start bg-white/5 p-4 rounded-xl border border-white/5">
-      <img src={product.images[0]} alt={product.title} className="w-20 h-24 object-cover rounded-lg border border-white/10" />
-      <div className="flex-grow ml-4">
-        <p className="text-white font-bold text-lg">{product.title}</p>
-        <p className="text-neutral-400 text-sm">{product.short_description}</p>
-        <div className="text-sm text-neutral-300 mt-2 font-mono">
-          <p>SKU: {variant?.sku || 'N/A'}</p>
-          {variant?.options && Object.entries(variant.options).map(([key, value]) => (
-            <p key={key}><span className="capitalize">{key}:</span> {value}</p>
-          ))}
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="flex gap-4">
+        <img
+          src={image}
+          alt={item.product_name || 'Product'}
+          className="h-24 w-24 rounded-xl object-cover border border-white/10"
+        />
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-black text-white truncate">{item.product_name || product?.title || item.product_id}</p>
+          <p className="text-xs text-neutral-400 mt-1 break-all">Product ID: {item.product_id}</p>
+          <p className="text-xs text-neutral-400 break-all">Variant ID: {item.variant_id}</p>
+
+          {(item.variant_label || variant?.title) && (
+            <p className="text-xs text-primary mt-1">Variant: {item.variant_label || variant?.title}</p>
+          )}
+
+          {item.variant_options && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {Object.entries(item.variant_options).map(([key, value]) => (
+                <span key={key} className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/80">
+                  {key}: {value}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="text-right shrink-0">
+          <p className="text-sm font-bold text-white">{formatCurrency(item.unit_price)}</p>
+          <p className="text-xs text-neutral-400 mt-1">Ordered: {item.quantity}</p>
+          <p className="text-xs text-neutral-400">Line total: {formatCurrency(item.line_total)}</p>
+          <p className="text-xs text-emerald-400 mt-2">
+            Remaining inv: {remainingInventory !== null ? remainingInventory : 'N/A'}
+          </p>
         </div>
       </div>
-      <div className="text-right ml-4 flex-shrink-0">
-        <p className="text-white font-bold text-lg">Rs {safeFormat(item.total_price)}</p>
-        <p className="text-neutral-400 text-sm">Qty: {item.quantity}</p>
-        <p className="text-neutral-400 text-sm">@ Rs {safeFormat(item.unit_price)}</p>
+    </div>
+  );
+};
+
+const SellerLocationCard: React.FC<{ seller?: Seller; child: Order }> = ({ seller, child }) => {
+  const loc = seller?.location;
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <p className="text-sm font-black text-white">{child.seller_name || seller?.business_name || child.seller_id}</p>
+        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${statusColors[child.status] || 'bg-neutral-500/10 text-neutral-300 border-neutral-500/20'}`}>
+          {child.status}
+        </span>
       </div>
+
+      <div className="text-xs text-neutral-300 space-y-1">
+        <p>Pickup Address: {loc?.address || 'N/A'}</p>
+        <p>{loc?.city || 'N/A'}{loc?.state ? `, ${loc.state}` : ''}{loc?.postal_code ? ` ${loc.postal_code}` : ''}</p>
+        <p>Coordinates: {typeof loc?.latitude === 'number' ? loc.latitude : 'N/A'}, {typeof loc?.longitude === 'number' ? loc.longitude : 'N/A'}</p>
+        <p>Pickup Available: {typeof loc?.pickup_available === 'boolean' ? (loc.pickup_available ? 'Yes' : 'No') : 'N/A'}</p>
+      </div>
+
+      {child.financials && (
+        <div className="mt-3 pt-3 border-t border-white/10 grid grid-cols-2 gap-2 text-[11px]">
+          <p className="text-neutral-400">Subtotal</p><p className="text-white text-right">{formatCurrency(child.financials.subtotal)}</p>
+          <p className="text-neutral-400">Shipping</p><p className="text-white text-right">{formatCurrency(child.financials.shipping_fee)}</p>
+          <p className="text-neutral-400">Commission</p><p className="text-white text-right">{formatCurrency(child.financials.commission)}</p>
+          <p className="text-neutral-400">Seller Payout</p><p className="text-emerald-400 text-right">{formatCurrency(child.financials.seller_payout)}</p>
+        </div>
+      )}
     </div>
   );
 };
@@ -106,391 +146,389 @@ const OrderItemCard: React.FC<{ item: OrderItem }> = ({ item }) => {
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  
-  const [order, setOrder] = useState<Order | null>(null);
+
+  const [parent, setParent] = useState<ParentOrder | null>(null);
+  const [children, setChildren] = useState<Order[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
+  const [products, setProducts] = useState<Record<string, Product>>({});
+
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  
-  const [newStatus, setNewStatus] = useState<OrderStatus>('pending');
+  const [error, setError] = useState<string | null>(null);
+
+  const [newStatus, setNewStatus] = useState<string>('pending');
   const [statusNote, setStatusNote] = useState('');
-  
-  const [milestoneLabel, setMilestoneLabel] = useState('');
-  const [milestoneNote, setMilestoneNote] = useState('');
-  const [milestoneCity, setMilestoneCity] = useState('');
-  
-  const [warehouseCity, setWarehouseCity] = useState('');
-  const [warehouseLabel, setWarehouseLabel] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
+
   const [warehouseLat, setWarehouseLat] = useState('');
   const [warehouseLng, setWarehouseLng] = useState('');
-  
+  const [warehouseCity, setWarehouseCity] = useState('');
+  const [warehouseLabel, setWarehouseLabel] = useState('');
   const [newEta, setNewEta] = useState('');
+
+  const sellerMap = useMemo(() => new Map(sellers.map((s) => [s.id, s])), [sellers]);
+
+  const selectedChild = useMemo(
+    () => children.find((child) => child.id === selectedChildId) || null,
+    [children, selectedChildId]
+  );
 
   const fetchData = async () => {
     if (!orderId) return;
-    setIsLoading(true);
-    try {
-        const [orderRes, sellersRes] = await Promise.all([
-            GetOrderById(orderId),
-            getAllSellers()
-        ]);
 
-        if (orderRes.ok) {
-            setOrder(orderRes.body);
-            setNewStatus(orderRes.body.status);
-        }
-        if (sellersRes.ok) {
-            setSellers(sellersRes.body);
-        }
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const [orderRes, sellersRes] = await Promise.all([
+        AdminCommerce.getParentOrder(orderId),
+        getAllSellers(),
+      ]);
+
+      if (!orderRes.ok) {
+        throw new Error((orderRes.body as any)?.message || 'Failed to fetch order detail');
+      }
+
+      const payload = orderRes.body as { parent: ParentOrder; children: Order[] };
+      setParent(payload.parent);
+      setChildren(payload.children ?? []);
+
+      const firstChild = payload.children?.[0];
+      setSelectedChildId(firstChild?.id || '');
+      setNewStatus(firstChild?.status || payload.parent.rollup_status || payload.parent.status || 'pending');
+
+      if (sellersRes.ok && Array.isArray(sellersRes.body)) {
+        setSellers(sellersRes.body as Seller[]);
+      }
+
+      const productIds = Array.from(new Set((payload.children ?? []).flatMap((child) =>
+        (child.order_items ?? []).map((item) => item.product_id).filter(Boolean)
+      )));
+
+      if (productIds.length > 0) {
+        const productEntries = await Promise.all(productIds.map(async (productId) => {
+          const res = await GetProductById(productId);
+          if (res.ok && res.body) {
+            return [productId, res.body as Product] as const;
+          }
+          return null;
+        }));
+
+        const nextProducts: Record<string, Product> = {};
+        productEntries.forEach((entry) => {
+          if (!entry) return;
+          nextProducts[entry[0]] = entry[1];
+        });
+
+        setProducts(nextProducts);
+      } else {
+        setProducts({});
+      }
     } catch (err) {
-        console.error(err);
+      setError(err instanceof Error ? err.message : 'Unexpected error while loading order detail');
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
-  const handleUpdateStatus = async () => {
-    if (!order) return;
+  useEffect(() => {
+    if (selectedChild?.status) {
+      setNewStatus(selectedChild.status);
+    }
+  }, [selectedChild?.status]);
+
+  const runUpdate = async (action: () => Promise<any>, successMessage: string) => {
     setIsUpdating(true);
+    setError(null);
     try {
-      const res = await AdminAPI.updateOrderStatus(order.id!, newStatus, statusNote);
-      if (res.ok) {
-        setOrder({ ...order, status: newStatus });
-        setStatusNote('');
-        alert('Status updated successfully');
-      } else {
-        alert('Failed to update status');
+      const res = await action();
+      if (!res.ok) {
+        throw new Error((res.body as any)?.message || 'Operation failed');
       }
+      await fetchData();
+      alert(successMessage);
     } catch (err) {
-      alert('An error occurred');
+      setError(err instanceof Error ? err.message : 'Operation failed');
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const handleAddMilestone = async () => {
-    if (!order || !milestoneLabel) return;
-    setIsUpdating(true);
-    try {
-      const res = await AdminAPI.appendOrderMilestone(order.id!, {
-        label: milestoneLabel,
-        note: milestoneNote,
-        location: milestoneCity ? { city: milestoneCity } : undefined
-      });
-      if (res.ok) {
-        setMilestoneLabel('');
-        setMilestoneNote('');
-        setMilestoneCity('');
-        alert('Milestone added');
-      }
-    } catch (err) {
-      alert('An error occurred');
-    } finally {
-      setIsUpdating(false);
-    }
+  const handleUpdateStatus = async () => {
+    if (!selectedChildId) return;
+    await runUpdate(
+      () => AdminCommerce.updateOrderStatus(selectedChildId, newStatus, statusNote || undefined),
+      'Order status updated.'
+    );
+    setStatusNote('');
   };
 
   const handleSetWarehouse = async () => {
-    if (!order || !warehouseLat || !warehouseLng) return;
-    setIsUpdating(true);
-    try {
-      const res = await AdminAPI.setOrderWarehouseAnchor(order.id!, {
-        lat: parseFloat(warehouseLat),
-        lng: parseFloat(warehouseLng),
-        city: warehouseCity,
-        label: warehouseLabel
-      });
-      if (res.ok) alert('Warehouse anchor set');
-    } catch (err) {
-      alert('An error occurred');
-    } finally {
-      setIsUpdating(false);
-    }
+    if (!selectedChildId || !warehouseLat || !warehouseLng) return;
+    await runUpdate(
+      () => AdminCommerce.setWarehouseAnchor(selectedChildId, {
+        lat: Number(warehouseLat),
+        lng: Number(warehouseLng),
+        city: warehouseCity || undefined,
+        label: warehouseLabel || undefined,
+      }),
+      'Warehouse anchor updated.'
+    );
   };
 
   const handleUpdateEta = async () => {
-    if (!order || !newEta) return;
-    setIsUpdating(true);
-    try {
-      const res = await AdminAPI.updateOrderETA(order.id!, new Date(newEta).toISOString());
-      if (res.ok) alert('ETA updated');
-    } catch (err) {
-      alert('An error occurred');
-    } finally {
-      setIsUpdating(false);
-    }
+    if (!selectedChildId || !newEta) return;
+    await runUpdate(
+      () => AdminCommerce.updateETA(selectedChildId, new Date(newEta).toISOString()),
+      'ETA updated.'
+    );
   };
 
-  const seller = order ? sellers.find(s => s.id === order.seller_id) : null;
-
-  const renderAddress = (address: any, title: string) => (
-    <div className="bg-white/5 p-6 rounded-2xl border border-white/5 h-full">
-      <h4 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><MapPin size={20}/>{title}</h4>
-      <div className="space-y-1 text-sm">
-          <p className="text-white font-bold">{address?.name}</p>
-          <p className="text-neutral-300">{address?.address_line1}</p>
-          {address?.address_line2 && <p className="text-neutral-300">{address.address_line2}</p>}
-          <p className="text-neutral-300 font-medium">{address?.city}, {address?.province} {address?.postal_code}</p>
-          <p className="text-neutral-400 text-xs uppercase tracking-widest mt-1">{address?.country}</p>
-          {address?.phone_number && (
-            <div className="mt-4 pt-4 border-t border-white/5">
-                <p className="text-[10px] uppercase font-black text-neutral-500 tracking-widest mb-1">Phone Number</p>
-                <p className="text-white font-mono">{address.phone_number}</p>
-            </div>
-          )}
-      </div>
-    </div>
-  );
+  const handleCancelParent = async () => {
+    if (!parent) return;
+    if (!window.confirm('Cancel this parent order and all child orders?')) return;
+    await runUpdate(
+      () => AdminCommerce.cancelParentOrder(parent.id, cancelReason || undefined),
+      'Parent order cancelled.'
+    );
+    setCancelReason('');
+  };
 
   if (isLoading) {
     return (
-        <div className="flex h-[60vh] items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
     );
   }
 
-  if (!order) {
+  if (!parent) {
     return (
-        <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-white">Order not found</h2>
-            <button onClick={() => navigate('/admin/orders')} className="mt-4 text-primary font-bold">Go back to orders</button>
-        </div>
+      <div className="text-center py-20">
+        <h2 className="text-2xl font-bold text-white">Order not found</h2>
+        <button onClick={() => navigate('/admin/orders')} className="mt-4 text-primary font-bold">Go back to orders</button>
+      </div>
     );
   }
+
+  const rollupStatus = parent.rollup_status || parent.status;
+  const customer = parent.shipping_address;
 
   return (
     <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-7xl mx-auto space-y-8 pb-20"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-7xl mx-auto space-y-8 pb-20"
     >
-        {/* Navigation Header */}
-        <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-                <button 
-                    onClick={() => navigate('/admin/orders')}
-                    className="p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-neutral-400 hover:text-white"
-                >
-                    <ArrowLeft size={20} />
-                </button>
-                <div>
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-3xl font-black uppercase tracking-tight text-white">{order.order_number}</h2>
-                        <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border ${statusColors[order.status] || 'bg-neutral-500/10'}`}>
-                            {order.status}
-                        </span>
-                    </div>
-                    <p className="text-xs text-neutral-500 font-mono mt-1">ID: {order.id}</p>
-                </div>
-            </div>
-
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/admin/orders')}
+            className="p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-neutral-400 hover:text-white"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
             <div className="flex items-center gap-3">
-                <div className="text-right hidden md:block mr-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Order Date</p>
-                    <p className="text-sm font-bold text-white">{new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-                <div className="p-3 bg-primary/20 rounded-2xl border border-primary/20">
-                    <ShoppingCart size={24} className="text-primary" />
-                </div>
+              <h2 className="text-3xl font-black uppercase tracking-tight text-white">Parent Order</h2>
+              <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border ${statusColors[rollupStatus] || 'bg-neutral-500/10 text-neutral-300 border-neutral-500/20'}`}>
+                {rollupStatus.replace(/_/g, ' ')}
+              </span>
             </div>
+            <p className="text-xs text-neutral-500 font-mono mt-1">{parent.id}</p>
+          </div>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column: Order Summary & Items */}
-            <div className="lg:col-span-2 space-y-8">
-                {/* Financial Summary */}
-                <div className="bg-white/5 rounded-[2.5rem] border border-white/10 overflow-hidden">
-                    <div className="p-8 border-b border-white/10 bg-white/[0.02]">
-                        <h3 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
-                            <FileText size={22} className="text-primary"/> Financial Summary
-                        </h3>
-                    </div>
-                    <div className="p-8">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Subtotal</p>
-                                <p className="text-lg font-bold text-white">Rs {safeFormat(order.subtotal)}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Shipping</p>
-                                <p className="text-lg font-bold text-white">Rs {safeFormat(order.shipping_cost)}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Discount</p>
-                                <p className="text-lg font-bold text-red-400">- Rs {safeFormat(order.discount)}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Tax</p>
-                                <p className="text-lg font-bold text-white">Rs {safeFormat(order.tax)}</p>
-                            </div>
-                        </div>
-                        <div className="mt-10 pt-8 border-t border-white/10 flex justify-between items-end">
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Payment Method</p>
-                                <div className="flex items-center gap-2">
-                                    <CreditCard size={16} className="text-primary"/>
-                                    <span className="text-sm font-bold text-white uppercase tracking-tight">{(order.payment_method || '').replace(/_/g, ' ')}</span>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Total Amount</p>
-                                <p className="text-5xl font-black text-white tracking-tighter">Rs {safeFormat(order.total)}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Order Items */}
-                <div className="bg-white/5 rounded-[2.5rem] border border-white/10 overflow-hidden">
-                    <div className="p-8 border-b border-white/10 bg-white/[0.02] flex justify-between items-center">
-                        <h3 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
-                            <Package size={22} className="text-primary"/> Order Items
-                        </h3>
-                        <span className="px-3 py-1 bg-white/5 rounded-full text-[10px] font-black text-neutral-400 uppercase tracking-widest border border-white/5">
-                            {order.order_items?.length || 0} Products
-                        </span>
-                    </div>
-                    <div className="p-8 space-y-4">
-                        {order.order_items?.map(item => (
-                            <OrderItemCard key={item.id || item.product_id} item={item} />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Delivery Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {renderAddress(order.shipping_address, 'Shipping Address')}
-                    {renderAddress(order.billing_address, 'Billing Address')}
-                </div>
-            </div>
-
-            {/* Right Column: Seller & Admin Controls */}
-            <div className="space-y-8">
-                {/* Seller Info */}
-                <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10">
-                    <h3 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3 mb-8">
-                        <User size={22} className="text-primary"/> Seller Details
-                    </h3>
-                    {seller ? (
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-4">
-                                <img src={seller.logo_url} alt="" className="w-16 h-16 rounded-3xl object-cover border-2 border-white/10 p-0.5 shadow-xl bg-black" />
-                                <div>
-                                    <p className="text-lg font-black uppercase tracking-tight text-white leading-tight">{seller.business_name}</p>
-                                    <p className="text-xs text-primary font-bold mt-0.5">Verified Brand</p>
-                                </div>
-                            </div>
-                            <div className="space-y-4 pt-6 border-t border-white/5">
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Support Email</p>
-                                    <p className="text-sm font-medium text-white">{seller.contact.email}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Business Phone</p>
-                                    <p className="text-sm font-mono text-white">{seller.contact.phone_number}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl">
-                            <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest">Seller data unavailable</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* NEW Admin Controls (Interactive Tracking) */}
-                <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 space-y-10">
-                    <div>
-                        <h3 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3 mb-1">
-                            <Truck size={22} className="text-primary"/> Logistics
-                        </h3>
-                        <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-black">Interactive Management</p>
-                    </div>
-
-                    {/* Status Update */}
-                    <div className="space-y-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
-                            <Send size={12}/> Update Status
-                        </p>
-                        <select 
-                            value={newStatus}
-                            onChange={(e) => setNewStatus(e.target.value as OrderStatus)}
-                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-primary transition-colors appearance-none font-bold"
-                        >
-                            <option value="pending">Pending Acceptance</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="packed">Packed & Ready</option>
-                            <option value="handed_to_rider">Handed to Rider</option>
-                            <option value="at_warehouse">At Warehouse</option>
-                            <option value="out_for_delivery">Out for Delivery</option>
-                            <option value="delivered">Delivered Successfully</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                        <input 
-                            type="text"
-                            placeholder="Status Note (e.g. 'Delayed due to rain')"
-                            value={statusNote}
-                            onChange={(e) => setStatusNote(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-primary transition-colors"
-                        />
-                        <button 
-                            onClick={handleUpdateStatus}
-                            disabled={isUpdating}
-                            className="w-full bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest py-3.5 rounded-2xl text-xs transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
-                        >
-                            {isUpdating ? 'Syncing...' : 'Push Status Update'}
-                        </button>
-                    </div>
-
-                    {/* Milestone */}
-                    <div className="space-y-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
-                            <Clock size={12}/> Append Milestone
-                        </p>
-                        <input 
-                            type="text"
-                            placeholder="Label (e.g. 'Sorting Center')"
-                            value={milestoneLabel}
-                            onChange={(e) => setMilestoneLabel(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-primary transition-colors"
-                        />
-                        <button 
-                            onClick={handleAddMilestone}
-                            disabled={isUpdating || !milestoneLabel}
-                            className="w-full border border-white/10 hover:bg-white/5 text-white font-black uppercase tracking-widest py-3.5 rounded-2xl text-xs transition-all disabled:opacity-50"
-                        >
-                            Add Granular Update
-                        </button>
-                    </div>
-
-                    {/* ETA */}
-                    <div className="space-y-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
-                            <Calendar size={12}/> Delivery ETA
-                        </p>
-                        <input 
-                            type="datetime-local"
-                            value={newEta}
-                            onChange={(e) => setNewEta(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-primary transition-colors text-white"
-                        />
-                        <button 
-                            onClick={handleUpdateEta}
-                            disabled={isUpdating || !newEta}
-                            className="w-full border border-white/10 hover:bg-white/5 text-white font-black uppercase tracking-widest py-3.5 rounded-2xl text-xs transition-all disabled:opacity-50"
-                        >
-                            Set Manual ETA
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Created</p>
+          <p className="text-sm font-bold text-white">{new Date(parent.created_at).toLocaleString()}</p>
         </div>
+      </div>
+
+      {error && <div className="bg-red-900/20 text-red-400 border border-red-700 rounded-lg text-center p-4">{error}</div>}
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="xl:col-span-2 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
+                <User size={16} className="text-primary" /> Full Customer Details
+              </h3>
+              <div className="space-y-1 text-sm text-neutral-300">
+                <p className="text-white font-bold">{parent.customer_name || customer?.full_name || 'Guest Customer'}</p>
+                <p>Phone: {parent.customer_phone || customer?.phone_number || 'N/A'}</p>
+                <p>Email: {parent.customer_email || customer?.email || 'N/A'}</p>
+                <p className="pt-2 text-white/80">Shipping Address</p>
+                <p>{customer?.address_line1 || 'N/A'}</p>
+                {customer?.address_line2 ? <p>{customer.address_line2}</p> : null}
+                <p>{customer?.city || 'N/A'}{customer?.province ? `, ${customer.province}` : ''}{customer?.postal_code ? ` ${customer.postal_code}` : ''}</p>
+                <p>{customer?.country || 'Pakistan'}</p>
+                <p className="text-xs text-neutral-400 pt-1">
+                  Customer coordinates: {typeof customer?.latitude === 'number' ? customer.latitude : 'N/A'}, {typeof customer?.longitude === 'number' ? customer.longitude : 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
+                <CreditCard size={16} className="text-primary" /> Order Metrics
+              </h3>
+              <div className="space-y-2 text-sm">
+                <p className="text-neutral-300">Payment Method: <span className="text-white">{(parent.payment_method || '').replace(/_/g, ' ')}</span></p>
+                <p className="text-neutral-300">Subtotal: <span className="text-white">{formatCurrency(parent.subtotal)}</span></p>
+                <p className="text-neutral-300">Shipping: <span className="text-white">{formatCurrency(parent.shipping_fee)}</span></p>
+                <p className="text-neutral-300">Total: <span className="text-white font-black">{formatCurrency(parent.total_amount)}</span></p>
+                <p className="text-neutral-300">Child Orders: <span className="text-white">{children.length}</span></p>
+                <p className="text-neutral-300">Customer Type: <span className="text-white">{parent.customer_type}</span></p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <h3 className="text-sm font-black uppercase tracking-wider text-white mb-4 flex items-center gap-2">
+              <Store size={16} className="text-primary" /> Seller Pickup Location + Child Financials
+            </h3>
+            <div className="grid gap-3 md:grid-cols-2">
+              {children.map((child) => (
+                <SellerLocationCard key={child.id} child={child} seller={sellerMap.get(child.seller_id)} />
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <h3 className="text-sm font-black uppercase tracking-wider text-white mb-4 flex items-center gap-2">
+              <Package size={16} className="text-primary" /> Product + Variant + Inventory Details
+            </h3>
+
+            <div className="space-y-4">
+              {children.flatMap((child) =>
+                (child.order_items || []).map((item, idx) => (
+                  <ProductLineItem
+                    key={`${child.id}-${item.product_id}-${item.variant_id}-${idx}`}
+                    item={item}
+                    product={products[item.product_id]}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
+            <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+              <Truck size={16} className="text-primary" /> Status + Tracking Controls
+            </h3>
+
+            <select
+              value={selectedChildId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedChildId(id);
+                const child = children.find((c) => c.id === id);
+                if (child?.status) setNewStatus(child.status);
+              }}
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
+            >
+              <option value="">Select child order</option>
+              {children.map((child) => (
+                <option key={child.id} value={child.id}>{(child.seller_name || child.seller_id) + ' • ' + child.id.slice(0, 8)}</option>
+              ))}
+            </select>
+
+            <select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
+            >
+              {ORDER_STATUSES.map((status) => (
+                <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>
+              ))}
+            </select>
+
+            <input
+              value={statusNote}
+              onChange={(e) => setStatusNote(e.target.value)}
+              placeholder="Status note (optional)"
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+
+            <button
+              onClick={handleUpdateStatus}
+              disabled={isUpdating || !selectedChildId}
+              className="w-full rounded-xl bg-primary text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-primary/90 disabled:opacity-50"
+            >
+              {isUpdating ? 'Updating...' : 'Push Status'}
+            </button>
+
+            <div className="pt-3 border-t border-white/10 grid grid-cols-2 gap-2">
+              <input value={warehouseLat} onChange={(e) => setWarehouseLat(e.target.value)} placeholder="Lat" className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
+              <input value={warehouseLng} onChange={(e) => setWarehouseLng(e.target.value)} placeholder="Lng" className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
+              <input value={warehouseCity} onChange={(e) => setWarehouseCity(e.target.value)} placeholder="City" className="col-span-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
+              <input value={warehouseLabel} onChange={(e) => setWarehouseLabel(e.target.value)} placeholder="Label" className="col-span-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
+              <button
+                onClick={handleSetWarehouse}
+                disabled={isUpdating || !selectedChildId || !warehouseLat || !warehouseLng}
+                className="col-span-2 rounded-xl border border-white/10 text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-white/10 disabled:opacity-50"
+              >
+                Set Warehouse Anchor
+              </button>
+            </div>
+
+            <div className="pt-3 border-t border-white/10 space-y-2">
+              <input
+                type="datetime-local"
+                value={newEta}
+                onChange={(e) => setNewEta(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+              <button
+                onClick={handleUpdateEta}
+                disabled={isUpdating || !selectedChildId || !newEta}
+                className="w-full rounded-xl border border-white/10 text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-white/10 disabled:opacity-50"
+              >
+                Update ETA
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.04] p-5 space-y-3">
+            <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+              <XCircle size={16} className="text-red-400" /> Cancel Parent Order
+            </h3>
+            <input
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Reason (optional)"
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-red-400"
+            />
+            <button
+              onClick={handleCancelParent}
+              disabled={isUpdating}
+              className="w-full rounded-xl bg-red-600 text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-red-500 disabled:opacity-50"
+            >
+              {isUpdating ? 'Processing...' : 'Cancel Parent'}
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
+              <Calendar size={16} className="text-primary" /> Timeline Metadata
+            </h3>
+            <div className="space-y-1 text-xs text-neutral-400">
+              <p>Created: <span className="text-white">{new Date(parent.created_at).toLocaleString()}</span></p>
+              <p>Rollup Status: <span className="text-white">{rollupStatus}</span></p>
+              <p>Total Child Orders: <span className="text-white">{children.length}</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 };

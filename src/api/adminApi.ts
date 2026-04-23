@@ -1,6 +1,7 @@
 import { Order } from "../constants/orders";
 import { Product } from "../constants/types";
 import { request, API_BASE_URL, APIResponse, APIError } from "./core";
+import type { ParentOrder as CommerceParentOrder, Order as CommerceChildOrder } from "./api.types";
 
 export const api_url = API_BASE_URL;
 
@@ -64,6 +65,49 @@ export namespace Auth {
 export type { APIResponse };
 
 const getToken = () => localStorage.getItem('admin_token') ?? undefined;
+
+export interface AdminParentOrdersResponse {
+    orders: CommerceParentOrder[];
+    total: number;
+}
+
+export interface AdminParentOrderDetailResponse {
+    parent: CommerceParentOrder;
+    children: CommerceChildOrder[];
+}
+
+export namespace AdminCommerce {
+    const BASE_PATH = '/commerce/admin/orders';
+
+    export async function listParentOrders(params?: { status?: string; limit?: number; offset?: number }): Promise<APIResponse<AdminParentOrdersResponse>> {
+        const searchParams = new URLSearchParams();
+        if (params?.status && params.status !== 'all') searchParams.set('status', params.status);
+        if (typeof params?.limit === 'number') searchParams.set('limit', String(params.limit));
+        if (typeof params?.offset === 'number') searchParams.set('offset', String(params.offset));
+        const query = searchParams.toString();
+        return request(`${BASE_PATH}${query ? `?${query}` : ''}`, 'GET', undefined, getToken());
+    }
+
+    export async function getParentOrder(orderId: string): Promise<APIResponse<AdminParentOrderDetailResponse>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}`, 'GET', undefined, getToken());
+    }
+
+    export async function cancelParentOrder(orderId: string, reason?: string): Promise<APIResponse<{ message: string }>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/cancel`, 'POST', reason ? { reason } : undefined, getToken());
+    }
+
+    export async function updateOrderStatus(orderId: string, status: string, note?: string): Promise<APIResponse<{ message: string }>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/status`, 'PATCH', { status, note }, getToken());
+    }
+
+    export async function setWarehouseAnchor(orderId: string, anchor: { lat: number; lng: number; city?: string; label?: string }): Promise<APIResponse<{ message: string }>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/tracking/warehouse`, 'PUT', anchor, getToken());
+    }
+
+    export async function updateETA(orderId: string, eta: string): Promise<APIResponse<{ message: string }>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/tracking/eta`, 'PATCH', { eta }, getToken());
+    }
+}
 
 export namespace AdminAPI {
     export const getAllOrders = (): Promise<APIResponse<Order[]>> => request('/admin/orders', 'GET', undefined, getToken());
