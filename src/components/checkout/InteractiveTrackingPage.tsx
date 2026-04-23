@@ -10,6 +10,7 @@ import {
     Truck,
     CheckCircle,
     Share2,
+    MessageCircle,
     Store,
     Home,
     Warehouse,
@@ -22,6 +23,26 @@ import { decodePolyline, interpolateAlong, type LatLng } from '../../utils/track
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_WEB_KEY;
 const MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
+const SUPPORT_CATEGORY = 'delivery';
+const SUPPORT_WHATSAPP_NUMBER = '923158972405';
+
+const extractSupportUrl = (value: unknown): string | null => {
+    if (!value || typeof value !== 'object') return null;
+    if (!('support_url' in value)) return null;
+    return typeof value.support_url === 'string' ? value.support_url : null;
+};
+
+const openExternalUrl = (url: string) => {
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!win) window.location.href = url;
+};
+
+const buildFallbackSupportUrl = (orderRef?: string) => {
+    const baseText = orderRef
+        ? `I need help with order ${orderRef}`
+        : 'I need help with my order';
+    return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(baseText)}`;
+};
 
 type StatusUi = {
     color: string;
@@ -244,6 +265,8 @@ const InteractiveTrackingPage: React.FC = () => {
     const [showTimeline, setShowTimeline] = useState(false);
     const [progress, setProgress] = useState(0);
     const [isSharing, setIsSharing] = useState(false);
+    const [isOpeningSupport, setIsOpeningSupport] = useState(false);
+    const [supportError, setSupportError] = useState<string | null>(null);
 
     const isPublic = !!token;
     const guestPhoneNumber = searchParams.get('phone_number')?.trim() || '';
@@ -421,6 +444,38 @@ const InteractiveTrackingPage: React.FC = () => {
         }
     };
 
+    const handleContactSupport = async () => {
+        if (isOpeningSupport) return;
+
+        setIsOpeningSupport(true);
+        setSupportError(null);
+
+        try {
+            if (!isPublic && !hasGuestProof && orderId) {
+                const orderSupportResp = await Commerce.getOrderSupportLink(orderId, SUPPORT_CATEGORY);
+                const orderSupportUrl = orderSupportResp.ok ? extractSupportUrl(orderSupportResp.body) : null;
+                if (orderSupportUrl) {
+                    openExternalUrl(orderSupportUrl);
+                    return;
+                }
+            }
+
+            const response = await Commerce.getSupportLink(SUPPORT_CATEGORY);
+            const publicSupportUrl = response.ok ? extractSupportUrl(response.body) : null;
+
+            if (publicSupportUrl) {
+                openExternalUrl(publicSupportUrl);
+                return;
+            }
+            openExternalUrl(buildFallbackSupportUrl(orderId));
+        } catch {
+            openExternalUrl(buildFallbackSupportUrl(orderId));
+            setSupportError('Support API unavailable. Redirected to WhatsApp fallback.');
+        } finally {
+            setIsOpeningSupport(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#050505]">
@@ -450,6 +505,16 @@ const InteractiveTrackingPage: React.FC = () => {
                 <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] p-6">
                     <h1 className="text-2xl font-black uppercase tracking-tight">{statusLabel(tracking.current_status)}</h1>
                     <p className="mt-2 text-white/60">Map key is missing. Timeline is still available below.</p>
+                    <button
+                        type="button"
+                        onClick={handleContactSupport}
+                        disabled={isOpeningSupport}
+                        className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.05] px-5 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white disabled:opacity-60"
+                    >
+                        <MessageCircle size={14} />
+                        {isOpeningSupport ? 'Opening Support...' : 'Contact Support'}
+                    </button>
+                    {supportError ? <p className="mt-2 text-xs text-red-300">{supportError}</p> : null}
                     <div className="mt-6 space-y-4">
                         {timelineDesc.map((milestone, index) => (
                             <div key={`${milestone.status}-${milestone.occurred_at}-${index}`} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -542,15 +607,30 @@ const InteractiveTrackingPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <button
-                        onClick={handleShare}
-                        disabled={isSharing}
-                        className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 backdrop-blur-md disabled:opacity-60"
-                        aria-label="Share tracking link"
-                    >
-                        {isSharing ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={20} />}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleContactSupport}
+                            disabled={isOpeningSupport}
+                            className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 backdrop-blur-md disabled:opacity-60"
+                            aria-label="Contact support"
+                        >
+                            {isOpeningSupport ? <Loader2 size={18} className="animate-spin" /> : <MessageCircle size={20} />}
+                        </button>
+                        <button
+                            onClick={handleShare}
+                            disabled={isSharing}
+                            className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 backdrop-blur-md disabled:opacity-60"
+                            aria-label="Share tracking link"
+                        >
+                            {isSharing ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={20} />}
+                        </button>
+                    </div>
                 </div>
+                {supportError ? (
+                    <div className="mt-2 rounded-xl border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                        {supportError}
+                    </div>
+                ) : null}
             </div>
 
             <motion.div

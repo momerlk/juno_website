@@ -6,12 +6,14 @@ import {
     Check,
     CheckCircle,
     MapPin,
+    MessageCircle,
     Package,
     Printer,
     ShoppingBag,
     Sparkles,
     Truck,
 } from 'lucide-react';
+import { Commerce } from '../../api/commerceApi';
 import type { ParentOrder } from '../../api/api.types';
 
 const formatCurrency = (value: number) =>
@@ -49,12 +51,33 @@ const buildGuestTrackingPath = (order: ParentOrder): string => {
 };
 
 const STORAGE_KEY = 'juno_last_order_payload';
+const SUPPORT_CATEGORY = 'delivery';
+const SUPPORT_WHATSAPP_NUMBER = '923158972405';
+
+const extractSupportUrl = (value: unknown): string | null => {
+    if (!value || typeof value !== 'object') return null;
+    if (!('support_url' in value)) return null;
+    return typeof value.support_url === 'string' ? value.support_url : null;
+};
+
+const openExternalUrl = (url: string) => {
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!win) window.location.href = url;
+};
+
+const buildFallbackSupportUrl = (orderRef?: string) => {
+    const baseText = orderRef
+        ? `I need help with order ${orderRef}`
+        : 'I need help with my order';
+    return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(baseText)}`;
+};
 
 const OrderConfirmationPage: React.FC = () => {
     const location = useLocation();
     const [order, setOrder] = useState<ParentOrder | null>(null);
     const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
     const [showParticles, setShowParticles] = useState(true);
+    const [isOpeningSupport, setIsOpeningSupport] = useState(false);
 
     useEffect(() => {
         const state = location.state as LocationState;
@@ -101,6 +124,38 @@ const OrderConfirmationPage: React.FC = () => {
 
     const handlePrintReceipt = () => {
         window.print();
+    };
+
+    const handleContactSupport = async () => {
+        if (!order || isOpeningSupport) return;
+
+        setIsOpeningSupport(true);
+        try {
+            if (order.customer_type !== 'guest') {
+                const orderCandidates = Array.from(new Set([order.id, ...(order.child_order_ids || [])]));
+                for (const candidateOrderId of orderCandidates) {
+                    const candidateResp = await Commerce.getOrderSupportLink(candidateOrderId, SUPPORT_CATEGORY);
+                    const candidateUrl = candidateResp.ok ? extractSupportUrl(candidateResp.body) : null;
+                    if (candidateUrl) {
+                        openExternalUrl(candidateUrl);
+                        return;
+                    }
+                }
+            }
+
+            const genericResp = await Commerce.getSupportLink(SUPPORT_CATEGORY);
+            const genericUrl = genericResp.ok ? extractSupportUrl(genericResp.body) : null;
+            if (genericUrl) {
+                openExternalUrl(genericUrl);
+                return;
+            }
+
+            openExternalUrl(buildFallbackSupportUrl(order.id));
+        } catch {
+            openExternalUrl(buildFallbackSupportUrl(order.id));
+        } finally {
+            setIsOpeningSupport(false);
+        }
     };
 
     if (!order) {
@@ -327,7 +382,7 @@ const OrderConfirmationPage: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.14, duration: 0.45 }}
-                    className="mt-6 grid gap-3 md:grid-cols-2 no-print"
+                    className="mt-6 grid gap-3 md:grid-cols-3 no-print"
                 >
                     <Link
                         to={orderTrackingPath}
@@ -335,6 +390,16 @@ const OrderConfirmationPage: React.FC = () => {
                     >
                         <Truck size={15} /> Track Order Live <ArrowRight size={14} />
                     </Link>
+
+                    <button
+                        type="button"
+                        onClick={handleContactSupport}
+                        disabled={isOpeningSupport}
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.03] px-7 py-4 text-xs font-black uppercase tracking-[0.2em] text-white transition-all hover:scale-[1.02] hover:bg-white/[0.07] disabled:opacity-60"
+                    >
+                        <MessageCircle size={15} />
+                        {isOpeningSupport ? 'Opening Support...' : 'Contact Support'}
+                    </button>
 
                     <Link
                         to="/catalog"

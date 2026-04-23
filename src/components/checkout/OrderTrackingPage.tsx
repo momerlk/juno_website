@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Package, Mail, Phone, ArrowLeft, Clock, CheckCircle, Truck, AlertCircle } from 'lucide-react';
+import { Search, Package, Mail, Phone, ArrowLeft, Clock, CheckCircle, Truck, AlertCircle, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { GuestCommerce } from '../../api/commerceApi';
+import { Commerce, GuestCommerce } from '../../api/commerceApi';
 import type { ParentOrder } from '../../api/api.types';
 
 const formatCurrency = (value: number) =>
@@ -11,6 +11,26 @@ const formatCurrency = (value: number) =>
 const STORAGE_KEYS = {
     LAST_LOOKUP_PHONE: 'juno_last_lookup_phone',
     LAST_LOOKUP_EMAIL: 'juno_last_lookup_email',
+};
+const SUPPORT_CATEGORY = 'delivery';
+const SUPPORT_WHATSAPP_NUMBER = '923158972405';
+
+const extractSupportUrl = (value: unknown): string | null => {
+    if (!value || typeof value !== 'object') return null;
+    if (!('support_url' in value)) return null;
+    return typeof value.support_url === 'string' ? value.support_url : null;
+};
+
+const openExternalUrl = (url: string) => {
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!win) window.location.href = url;
+};
+
+const buildFallbackSupportUrl = (orderRef?: string) => {
+    const baseText = orderRef
+        ? `I need help with order ${orderRef}`
+        : 'I need help with my order';
+    return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(baseText)}`;
 };
 
 const formatStatusLabel = (status: string) => status.replace(/_/g, ' ');
@@ -23,6 +43,7 @@ const OrderTrackingPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasSearched, setHasSearched] = useState(false);
+    const [supportLoadingOrderId, setSupportLoadingOrderId] = useState<string | null>(null);
 
     // Load last used lookup credentials
     useEffect(() => {
@@ -135,6 +156,37 @@ const OrderTrackingPage: React.FC = () => {
         const trackingOrderId = order.child_order_ids?.[0] || order.id;
         const query = params.toString();
         return query ? `/checkout/track/${trackingOrderId}?${query}` : `/checkout/track/${trackingOrderId}`;
+    };
+
+    const handleContactSupport = async (order: ParentOrder) => {
+        if (supportLoadingOrderId) return;
+
+        setSupportLoadingOrderId(order.id);
+        try {
+            const orderCandidates = Array.from(new Set([order.id, ...(order.child_order_ids || [])]));
+            for (const candidateOrderId of orderCandidates) {
+                const response = await Commerce.getOrderSupportLink(candidateOrderId, SUPPORT_CATEGORY);
+                const supportUrl = response.ok ? extractSupportUrl(response.body) : null;
+                if (supportUrl) {
+                    openExternalUrl(supportUrl);
+                    return;
+                }
+            }
+
+            const response = await Commerce.getSupportLink(SUPPORT_CATEGORY);
+            const fallbackUrl = response.ok ? extractSupportUrl(response.body) : null;
+
+            if (fallbackUrl) {
+                openExternalUrl(fallbackUrl);
+                return;
+            }
+
+            openExternalUrl(buildFallbackSupportUrl(order.id));
+        } catch {
+            openExternalUrl(buildFallbackSupportUrl(order.id));
+        } finally {
+            setSupportLoadingOrderId(null);
+        }
     };
 
     return (
@@ -357,13 +409,24 @@ const OrderTrackingPage: React.FC = () => {
                                 </div>
 
                                 {/* Live Tracking CTA */}
-                                <Link 
-                                    to={buildTrackingUrl(order)}
-                                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-white transition-all hover:bg-white hover:text-black"
-                                >
-                                    <Truck size={14} />
-                                    Watch Live Tracking
-                                </Link>
+                                <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                                    <Link
+                                        to={buildTrackingUrl(order)}
+                                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-white transition-all hover:bg-white hover:text-black"
+                                    >
+                                        <Truck size={14} />
+                                        Watch Live Tracking
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleContactSupport(order)}
+                                        disabled={supportLoadingOrderId === order.id}
+                                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] py-3 text-xs font-bold uppercase tracking-[0.1em] text-white transition-all hover:bg-white hover:text-black disabled:opacity-60"
+                                    >
+                                        <MessageCircle size={14} />
+                                        {supportLoadingOrderId === order.id ? 'Opening...' : 'Contact Support'}
+                                    </button>
+                                </div>
                             </motion.div>
                         ))}
                     </motion.div>
