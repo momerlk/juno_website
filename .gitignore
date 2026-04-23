@@ -9,6 +9,10 @@ lerna-debug.log*
 
 .qwen
 
+graphify-out/
+
+src/graphify-out
+
 onboarding
 
 node-compile-cache

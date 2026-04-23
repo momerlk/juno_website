@@ -1,1067 +1,1026 @@
-# Graph Report - src  (2026-04-13)
+# Graph Report - ./src  (2026-04-23)
 
 ## Corpus Check
-- Large corpus: 161 files · ~548,762 words. Semantic extraction will be expensive (many Claude tokens). Consider running on a subfolder, or use --no-semantic to run AST-only.
+- Large corpus: 179 files · ~574,607 words. Semantic extraction will be expensive (many Claude tokens). Consider running on a subfolder, or use --no-semantic to run AST-only.
 
 ## Summary
-- 743 nodes · 774 edges · 162 communities detected
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.88)
+- 856 nodes · 959 edges · 160 communities detected
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Seller API Layer|Seller API Layer]]
-- [[_COMMUNITY_Admin API Layer|Admin API Layer]]
-- [[_COMMUNITY_Catalog API Layer|Catalog API Layer]]
-- [[_COMMUNITY_User API Layer|User API Layer]]
-- [[_COMMUNITY_Inventory Management|Inventory Management]]
-- [[_COMMUNITY_Admin API Types|Admin API Types]]
-- [[_COMMUNITY_Analytics Probe|Analytics Probe]]
-- [[_COMMUNITY_Analytics API|Analytics API]]
-- [[_COMMUNITY_Employee Portal|Employee Portal]]
-- [[_COMMUNITY_Ambassador Chapter API|Ambassador Chapter API]]
-- [[_COMMUNITY_Platform Stats Dashboard|Platform Stats Dashboard]]
-- [[_COMMUNITY_Error Handling|Error Handling]]
-- [[_COMMUNITY_Seller API Types|Seller API Types]]
-- [[_COMMUNITY_Seller Onboarding Flow|Seller Onboarding Flow]]
-- [[_COMMUNITY_Shopify Integration|Shopify Integration]]
-- [[_COMMUNITY_Commerce Cart API|Commerce Cart API]]
-- [[_COMMUNITY_Core API Utilities|Core API Utilities]]
-- [[_COMMUNITY_Campaigns API|Campaigns API]]
-- [[_COMMUNITY_Catalog Browse Page|Catalog Browse Page]]
-- [[_COMMUNITY_Ambassador Chapter Form|Ambassador Chapter Form]]
-- [[_COMMUNITY_Events Tournament API|Events Tournament API]]
-- [[_COMMUNITY_Guest Cart Context|Guest Cart Context]]
-- [[_COMMUNITY_Seller Home Dashboard|Seller Home Dashboard]]
-- [[_COMMUNITY_Profile Management|Profile Management]]
-- [[_COMMUNITY_Sizing Guide Editor|Sizing Guide Editor]]
-- [[_COMMUNITY_Catalog Product Page|Catalog Product Page]]
-- [[_COMMUNITY_Work Task Management|Work Task Management]]
-- [[_COMMUNITY_App UI Screenshots|App UI Screenshots]]
-- [[_COMMUNITY_Product Editor|Product Editor]]
-- [[_COMMUNITY_Protected Routes|Protected Routes]]
-- [[_COMMUNITY_Seller Order Management|Seller Order Management]]
-- [[_COMMUNITY_Seller Probe Tracking|Seller Probe Tracking]]
-- [[_COMMUNITY_Interaction Analytics|Interaction Analytics]]
-- [[_COMMUNITY_Ambassador Dashboard|Ambassador Dashboard]]
-- [[_COMMUNITY_Checkout Page|Checkout Page]]
-- [[_COMMUNITY_Order Tracking|Order Tracking]]
-- [[_COMMUNITY_Cart Drawer|Cart Drawer]]
-- [[_COMMUNITY_App Entry Point|App Entry Point]]
-- [[_COMMUNITY_Brand Page|Brand Page]]
-- [[_COMMUNITY_Navbar|Navbar]]
-- [[_COMMUNITY_Product Page|Product Page]]
-- [[_COMMUNITY_Shopify Scraper|Shopify Scraper]]
-- [[_COMMUNITY_Seller Analytics|Seller Analytics]]
-- [[_COMMUNITY_Juno Studio Landing|Juno Studio Landing]]
-- [[_COMMUNITY_Catalog Hero|Catalog Hero]]
-- [[_COMMUNITY_Delivery Coverage Map|Delivery Coverage Map]]
-- [[_COMMUNITY_Shared API Utils|Shared API Utils]]
-- [[_COMMUNITY_Ambassador Auth Context|Ambassador Auth Context]]
-- [[_COMMUNITY_Juno Studio Context|Juno Studio Context]]
-- [[_COMMUNITY_Seller Auth Context|Seller Auth Context]]
-- [[_COMMUNITY_Subscription Modal|Subscription Modal]]
-- [[_COMMUNITY_Form Input Component|Form Input Component]]
-- [[_COMMUNITY_Wishlist Page|Wishlist Page]]
-- [[_COMMUNITY_Product Card|Product Card]]
-- [[_COMMUNITY_Catalog Discovery|Catalog Discovery]]
-- [[_COMMUNITY_Order Detail Modal|Order Detail Modal]]
-- [[_COMMUNITY_Product Performance|Product Performance]]
-- [[_COMMUNITY_API Status Monitor|API Status Monitor]]
-- [[_COMMUNITY_Onboarding Flow Logic|Onboarding Flow Logic]]
-- [[_COMMUNITY_Work Auth|Work Auth]]
-- [[_COMMUNITY_Notification Center|Notification Center]]
-- [[_COMMUNITY_CEO Overview|CEO Overview]]
-- [[_COMMUNITY_Work Task List|Work Task List]]
-- [[_COMMUNITY_Work API|Work API]]
-- [[_COMMUNITY_Adminauthcontext Useadminauth|Adminauthcontext Useadminauth]]
-- [[_COMMUNITY_Qrcode Generateqrcode|Qrcode Generateqrcode]]
-- [[_COMMUNITY_Downloadredirect Trackvisit|Downloadredirect Trackvisit]]
-- [[_COMMUNITY_Brandreelgraphic Update|Brandreelgraphic Update]]
-- [[_COMMUNITY_Selleronboarding Geturl|Selleronboarding Geturl]]
-- [[_COMMUNITY_Junostudioaccounts Junostudioa|Junostudioaccounts Junostudioa]]
-- [[_COMMUNITY_Formstep Formstep|Formstep Formstep]]
-- [[_COMMUNITY_Junostudiodownloads Junostudio|Junostudiodownloads Junostudio]]
-- [[_COMMUNITY_Sidebar Getnavsnapshot|Sidebar Getnavsnapshot]]
-- [[_COMMUNITY_Sellerauth Handlesubmit|Sellerauth Handlesubmit]]
-- [[_COMMUNITY_Mission Missionitem|Mission Missionitem]]
-- [[_COMMUNITY_Catchyproducts Scroll|Catchyproducts Scroll]]
-- [[_COMMUNITY_Junostudio Featurecard|Junostudio Featurecard]]
-- [[_COMMUNITY_Downloadsection Downloadsectio|Downloadsection Downloadsectio]]
-- [[_COMMUNITY_Junoapp Impactcard|Junoapp Impactcard]]
-- [[_COMMUNITY_Genderorproductrouter Genderor|Genderorproductrouter Genderor]]
-- [[_COMMUNITY_Catalognavbar Catalognavbar|Catalognavbar Catalognavbar]]
-- [[_COMMUNITY_Productgrid Formatprice|Productgrid Formatprice]]
-- [[_COMMUNITY_Genderheader Genderheader|Genderheader Genderheader]]
-- [[_COMMUNITY_Gendercatalogpage Loadgenderov|Gendercatalogpage Loadgenderov]]
-- [[_COMMUNITY_Ambassadortasks Ambassadortask|Ambassadortasks Ambassadortask]]
-- [[_COMMUNITY_Src Components Admin Systemtoo|Src Components Admin Systemtoo]]
-- [[_COMMUNITY_Locationmap Locationmap|Locationmap Locationmap]]
-- [[_COMMUNITY_Salesfunnel Salesfunnel|Salesfunnel Salesfunnel]]
-- [[_COMMUNITY_Manageorders Manageorders|Manageorders Manageorders]]
-- [[_COMMUNITY_Managesellers Managesellers|Managesellers Managesellers]]
-- [[_COMMUNITY_Manageusers Manageusers|Manageusers Manageusers]]
-- [[_COMMUNITY_Chapterforms Chapterforms|Chapterforms Chapterforms]]
-- [[_COMMUNITY_Manageinvites Manageinvites|Manageinvites Manageinvites]]
-- [[_COMMUNITY_Manageproducts Manageproducts|Manageproducts Manageproducts]]
-- [[_COMMUNITY_Managenotifications Managenoti|Managenotifications Managenoti]]
-- [[_COMMUNITY_Adminauth Handlesubmit|Adminauth Handlesubmit]]
-- [[_COMMUNITY_Admindashboard Admindashboard|Admindashboard Admindashboard]]
-- [[_COMMUNITY_Ambassadorauth Handlesubmit|Ambassadorauth Handlesubmit]]
-- [[_COMMUNITY_Loadingspinner Loadingspinner|Loadingspinner Loadingspinner]]
-- [[_COMMUNITY_Orderconfirmationpage Formatcu|Orderconfirmationpage Formatcu]]
-- [[_COMMUNITY_Blogpostpage Loadpost|Blogpostpage Loadpost]]
-- [[_COMMUNITY_Performancestats Performancest|Performancestats Performancest]]
-- [[_COMMUNITY_Employeelist Employeelist|Employeelist Employeelist]]
-- [[_COMMUNITY_Src Components Work Weeklyrepo|Src Components Work Weeklyrepo]]
-- [[_COMMUNITY_Myperformance Myperformance|Myperformance Myperformance]]
-- [[_COMMUNITY_Src Components Work Weeklyrepo|Src Components Work Weeklyrepo]]
-- [[_COMMUNITY_Src Components Work Workdashbo|Src Components Work Workdashbo]]
-- [[_COMMUNITY_Concept Splash Screen|Concept Splash Screen]]
-- [[_COMMUNITY_Creare Brand|Creare Brand]]
-- [[_COMMUNITY_Sparktank Logo Jpg|Sparktank Logo Jpg]]
-- [[_COMMUNITY_Src Vite Env D Ts|Src Vite Env D Ts]]
-- [[_COMMUNITY_Src Api Tsx|Src Api Tsx]]
-- [[_COMMUNITY_Src Constants Colors Ts|Src Constants Colors Ts]]
-- [[_COMMUNITY_Src Constants Sizing Ts|Src Constants Sizing Ts]]
-- [[_COMMUNITY_Src Constants Samples Ts|Src Constants Samples Ts]]
-- [[_COMMUNITY_Src Constants Seller Ts|Src Constants Seller Ts]]
-- [[_COMMUNITY_Src Constants Types Ts|Src Constants Types Ts]]
-- [[_COMMUNITY_Src Constants Orders Ts|Src Constants Orders Ts]]
-- [[_COMMUNITY_Src Constants User Ts|Src Constants User Ts]]
-- [[_COMMUNITY_Src Constants Address Ts|Src Constants Address Ts]]
-- [[_COMMUNITY_Src Blog Index Ts|Src Blog Index Ts]]
-- [[_COMMUNITY_Src Components Pricing Tsx|Src Components Pricing Tsx]]
-- [[_COMMUNITY_Src Components Team Tsx|Src Components Team Tsx]]
-- [[_COMMUNITY_Src Components Footer Tsx|Src Components Footer Tsx]]
-- [[_COMMUNITY_Src Components Seller Ordersta|Src Components Seller Ordersta]]
-- [[_COMMUNITY_Src Components Seller Shopifys|Src Components Seller Shopifys]]
-- [[_COMMUNITY_Src Components Seller Sellerda|Src Components Seller Sellerda]]
-- [[_COMMUNITY_Src Components Landing Hero Ts|Src Components Landing Hero Ts]]
-- [[_COMMUNITY_Src Components Landing Brandsh|Src Components Landing Brandsh]]
-- [[_COMMUNITY_Src Components Landing Brandsp|Src Components Landing Brandsp]]
-- [[_COMMUNITY_Src Components Landing Testimo|Src Components Landing Testimo]]
-- [[_COMMUNITY_Src Components Landing Brandss|Src Components Landing Brandss]]
-- [[_COMMUNITY_Src Components Landing Screens|Src Components Landing Screens]]
-- [[_COMMUNITY_Src Components Catalog Sizegui|Src Components Catalog Sizegui]]
-- [[_COMMUNITY_Src Components Catalog Gender|Src Components Catalog Gender ]]
-- [[_COMMUNITY_Src Components Catalog Gender|Src Components Catalog Gender ]]
-- [[_COMMUNITY_Src Components Admin Sidebar T|Src Components Admin Sidebar T]]
-- [[_COMMUNITY_Src Components Policies Privac|Src Components Policies Privac]]
-- [[_COMMUNITY_Src Components Policies Termsc|Src Components Policies Termsc]]
-- [[_COMMUNITY_Src Components Policies Refund|Src Components Policies Refund]]
-- [[_COMMUNITY_Src Components Policies Return|Src Components Policies Return]]
-- [[_COMMUNITY_Src Components Policies Shippi|Src Components Policies Shippi]]
-- [[_COMMUNITY_Src Components Blog Blogindexp|Src Components Blog Blogindexp]]
-- [[_COMMUNITY_Src Components Blog Writepage|Src Components Blog Writepage ]]
-- [[_COMMUNITY_Src Components App Onboarding|Src Components App Onboarding ]]
-- [[_COMMUNITY_Src Components Work Taskcard T|Src Components Work Taskcard T]]
-- [[_COMMUNITY_Src Api Api Types Ts|Src Api Api Types Ts]]
-- [[_COMMUNITY_Src Api Api Ts|Src Api Api Ts]]
-- [[_COMMUNITY_App Landscape Screenshot|App Landscape Screenshot]]
-- [[_COMMUNITY_Concept Brand Ukiyo|Concept Brand Ukiyo]]
-- [[_COMMUNITY_Concept Size Match|Concept Size Match]]
-- [[_COMMUNITY_Concept 1Hr Delivery|Concept 1Hr Delivery]]
-- [[_COMMUNITY_Concept Dark Theme|Concept Dark Theme]]
-- [[_COMMUNITY_Concept Bottom Nav|Concept Bottom Nav]]
-- [[_COMMUNITY_Concept Brand Filter|Concept Brand Filter]]
-- [[_COMMUNITY_Concept Top Nav|Concept Top Nav]]
-- [[_COMMUNITY_Pmyp Brand|Pmyp Brand]]
-- [[_COMMUNITY_Impactx Brand|Impactx Brand]]
-- [[_COMMUNITY_Tajarba Brand|Tajarba Brand]]
-- [[_COMMUNITY_Tajarba Logo|Tajarba Logo]]
-- [[_COMMUNITY_Khantastic Logo|Khantastic Logo]]
-- [[_COMMUNITY_Juno Ecosystem Partners|Juno Ecosystem Partners]]
+- [[_COMMUNITY_Community 0|Community 0]]
+- [[_COMMUNITY_Community 1|Community 1]]
+- [[_COMMUNITY_Community 2|Community 2]]
+- [[_COMMUNITY_Community 3|Community 3]]
+- [[_COMMUNITY_Community 4|Community 4]]
+- [[_COMMUNITY_Community 5|Community 5]]
+- [[_COMMUNITY_Community 6|Community 6]]
+- [[_COMMUNITY_Community 7|Community 7]]
+- [[_COMMUNITY_Community 8|Community 8]]
+- [[_COMMUNITY_Community 9|Community 9]]
+- [[_COMMUNITY_Community 10|Community 10]]
+- [[_COMMUNITY_Community 11|Community 11]]
+- [[_COMMUNITY_Community 12|Community 12]]
+- [[_COMMUNITY_Community 13|Community 13]]
+- [[_COMMUNITY_Community 14|Community 14]]
+- [[_COMMUNITY_Community 15|Community 15]]
+- [[_COMMUNITY_Community 16|Community 16]]
+- [[_COMMUNITY_Community 17|Community 17]]
+- [[_COMMUNITY_Community 18|Community 18]]
+- [[_COMMUNITY_Community 19|Community 19]]
+- [[_COMMUNITY_Community 20|Community 20]]
+- [[_COMMUNITY_Community 21|Community 21]]
+- [[_COMMUNITY_Community 22|Community 22]]
+- [[_COMMUNITY_Community 23|Community 23]]
+- [[_COMMUNITY_Community 24|Community 24]]
+- [[_COMMUNITY_Community 25|Community 25]]
+- [[_COMMUNITY_Community 26|Community 26]]
+- [[_COMMUNITY_Community 27|Community 27]]
+- [[_COMMUNITY_Community 28|Community 28]]
+- [[_COMMUNITY_Community 29|Community 29]]
+- [[_COMMUNITY_Community 30|Community 30]]
+- [[_COMMUNITY_Community 31|Community 31]]
+- [[_COMMUNITY_Community 32|Community 32]]
+- [[_COMMUNITY_Community 33|Community 33]]
+- [[_COMMUNITY_Community 34|Community 34]]
+- [[_COMMUNITY_Community 35|Community 35]]
+- [[_COMMUNITY_Community 36|Community 36]]
+- [[_COMMUNITY_Community 37|Community 37]]
+- [[_COMMUNITY_Community 38|Community 38]]
+- [[_COMMUNITY_Community 39|Community 39]]
+- [[_COMMUNITY_Community 40|Community 40]]
+- [[_COMMUNITY_Community 41|Community 41]]
+- [[_COMMUNITY_Community 42|Community 42]]
+- [[_COMMUNITY_Community 43|Community 43]]
+- [[_COMMUNITY_Community 44|Community 44]]
+- [[_COMMUNITY_Community 45|Community 45]]
+- [[_COMMUNITY_Community 46|Community 46]]
+- [[_COMMUNITY_Community 47|Community 47]]
+- [[_COMMUNITY_Community 48|Community 48]]
+- [[_COMMUNITY_Community 49|Community 49]]
+- [[_COMMUNITY_Community 50|Community 50]]
+- [[_COMMUNITY_Community 51|Community 51]]
+- [[_COMMUNITY_Community 52|Community 52]]
+- [[_COMMUNITY_Community 53|Community 53]]
+- [[_COMMUNITY_Community 54|Community 54]]
+- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 56|Community 56]]
+- [[_COMMUNITY_Community 57|Community 57]]
+- [[_COMMUNITY_Community 58|Community 58]]
+- [[_COMMUNITY_Community 59|Community 59]]
+- [[_COMMUNITY_Community 60|Community 60]]
+- [[_COMMUNITY_Community 61|Community 61]]
+- [[_COMMUNITY_Community 62|Community 62]]
+- [[_COMMUNITY_Community 63|Community 63]]
+- [[_COMMUNITY_Community 64|Community 64]]
+- [[_COMMUNITY_Community 65|Community 65]]
+- [[_COMMUNITY_Community 66|Community 66]]
+- [[_COMMUNITY_Community 67|Community 67]]
+- [[_COMMUNITY_Community 68|Community 68]]
+- [[_COMMUNITY_Community 69|Community 69]]
+- [[_COMMUNITY_Community 70|Community 70]]
+- [[_COMMUNITY_Community 71|Community 71]]
+- [[_COMMUNITY_Community 72|Community 72]]
+- [[_COMMUNITY_Community 73|Community 73]]
+- [[_COMMUNITY_Community 74|Community 74]]
+- [[_COMMUNITY_Community 75|Community 75]]
+- [[_COMMUNITY_Community 76|Community 76]]
+- [[_COMMUNITY_Community 77|Community 77]]
+- [[_COMMUNITY_Community 78|Community 78]]
+- [[_COMMUNITY_Community 79|Community 79]]
+- [[_COMMUNITY_Community 80|Community 80]]
+- [[_COMMUNITY_Community 81|Community 81]]
+- [[_COMMUNITY_Community 82|Community 82]]
+- [[_COMMUNITY_Community 83|Community 83]]
+- [[_COMMUNITY_Community 84|Community 84]]
+- [[_COMMUNITY_Community 85|Community 85]]
+- [[_COMMUNITY_Community 86|Community 86]]
+- [[_COMMUNITY_Community 87|Community 87]]
+- [[_COMMUNITY_Community 88|Community 88]]
+- [[_COMMUNITY_Community 89|Community 89]]
+- [[_COMMUNITY_Community 90|Community 90]]
+- [[_COMMUNITY_Community 91|Community 91]]
+- [[_COMMUNITY_Community 92|Community 92]]
+- [[_COMMUNITY_Community 93|Community 93]]
+- [[_COMMUNITY_Community 94|Community 94]]
+- [[_COMMUNITY_Community 95|Community 95]]
+- [[_COMMUNITY_Community 96|Community 96]]
+- [[_COMMUNITY_Community 97|Community 97]]
+- [[_COMMUNITY_Community 98|Community 98]]
+- [[_COMMUNITY_Community 99|Community 99]]
+- [[_COMMUNITY_Community 100|Community 100]]
+- [[_COMMUNITY_Community 101|Community 101]]
+- [[_COMMUNITY_Community 102|Community 102]]
+- [[_COMMUNITY_Community 103|Community 103]]
+- [[_COMMUNITY_Community 104|Community 104]]
+- [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Community 106|Community 106]]
+- [[_COMMUNITY_Community 107|Community 107]]
+- [[_COMMUNITY_Community 108|Community 108]]
+- [[_COMMUNITY_Community 109|Community 109]]
+- [[_COMMUNITY_Community 110|Community 110]]
+- [[_COMMUNITY_Community 111|Community 111]]
+- [[_COMMUNITY_Community 112|Community 112]]
+- [[_COMMUNITY_Community 113|Community 113]]
+- [[_COMMUNITY_Community 114|Community 114]]
+- [[_COMMUNITY_Community 115|Community 115]]
+- [[_COMMUNITY_Community 116|Community 116]]
+- [[_COMMUNITY_Community 117|Community 117]]
+- [[_COMMUNITY_Community 118|Community 118]]
+- [[_COMMUNITY_Community 119|Community 119]]
+- [[_COMMUNITY_Community 120|Community 120]]
+- [[_COMMUNITY_Community 121|Community 121]]
+- [[_COMMUNITY_Community 122|Community 122]]
+- [[_COMMUNITY_Community 123|Community 123]]
+- [[_COMMUNITY_Community 124|Community 124]]
+- [[_COMMUNITY_Community 125|Community 125]]
+- [[_COMMUNITY_Community 126|Community 126]]
+- [[_COMMUNITY_Community 127|Community 127]]
+- [[_COMMUNITY_Community 128|Community 128]]
+- [[_COMMUNITY_Community 129|Community 129]]
+- [[_COMMUNITY_Community 130|Community 130]]
+- [[_COMMUNITY_Community 131|Community 131]]
+- [[_COMMUNITY_Community 132|Community 132]]
+- [[_COMMUNITY_Community 133|Community 133]]
+- [[_COMMUNITY_Community 134|Community 134]]
+- [[_COMMUNITY_Community 135|Community 135]]
+- [[_COMMUNITY_Community 136|Community 136]]
+- [[_COMMUNITY_Community 137|Community 137]]
+- [[_COMMUNITY_Community 138|Community 138]]
+- [[_COMMUNITY_Community 139|Community 139]]
+- [[_COMMUNITY_Community 140|Community 140]]
+- [[_COMMUNITY_Community 141|Community 141]]
+- [[_COMMUNITY_Community 142|Community 142]]
+- [[_COMMUNITY_Community 143|Community 143]]
+- [[_COMMUNITY_Community 144|Community 144]]
+- [[_COMMUNITY_Community 145|Community 145]]
+- [[_COMMUNITY_Community 146|Community 146]]
+- [[_COMMUNITY_Community 147|Community 147]]
+- [[_COMMUNITY_Community 148|Community 148]]
+- [[_COMMUNITY_Community 149|Community 149]]
+- [[_COMMUNITY_Community 150|Community 150]]
+- [[_COMMUNITY_Community 151|Community 151]]
+- [[_COMMUNITY_Community 152|Community 152]]
+- [[_COMMUNITY_Community 153|Community 153]]
+- [[_COMMUNITY_Community 154|Community 154]]
+- [[_COMMUNITY_Community 155|Community 155]]
+- [[_COMMUNITY_Community 156|Community 156]]
+- [[_COMMUNITY_Community 157|Community 157]]
+- [[_COMMUNITY_Community 158|Community 158]]
+- [[_COMMUNITY_Community 159|Community 159]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `getToken()` - 25 edges
-2. `getAdminToken()` - 22 edges
+1. `getToken()` - 34 edges
+2. `getAdminToken()` - 26 edges
 3. `getAdminToken()` - 17 edges
 4. `buildTimeRangeParams()` - 15 edges
 5. `getAdminToken()` - 14 edges
-6. `getSellerToken()` - 11 edges
-7. `getAdminToken()` - 9 edges
-8. `getOrCreateSession()` - 7 edges
-9. `request()` - 7 edges
-10. `requestWithAuth()` - 7 edges
+6. `getUserToken()` - 12 edges
+7. `getSellerToken()` - 11 edges
+8. `handleGuestResponse()` - 11 edges
+9. `getAdminToken()` - 10 edges
+10. `getOrCreateSession()` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Heart/Like Gesture Interaction` --conceptually_related_to--> `Swipe-to-Shop Feed Interface`  [INFERRED]
-  src/assets/screenshots/app_portrait.png → src/assets/screenshots/swipe.png
-- `Juno App Portrait Screenshot` --conceptually_related_to--> `Swipe-to-Shop Feed Interface`  [EXTRACTED]
-  src/assets/screenshots/app_portrait.png → src/assets/screenshots/swipe.png
-- `Creare` --semantically_similar_to--> `Creare Logo (Alt)`  [EXTRACTED] [semantically similar]
-  src/assets/partners/creare.png → src/assets/partners/Creare-logo.png
-- `SparkTank by Beaconhouse` --semantically_similar_to--> `SparkTank by Beaconhouse (PNG)`  [EXTRACTED] [semantically similar]
-  src/assets/partners/sparktank.jpg → src/assets/partners/sparktank.png
-
-## Hyperedges (group relationships)
-- **Juno App Feed UI Components** — concept_swipe_to_shop, concept_product_card, concept_heart_interaction, concept_feed_stacked_cards, concept_bottom_nav, concept_top_nav, concept_dark_theme [INFERRED 0.90]
-- **Juno App Screenshot Asset Set** — app_portrait_screenshot, swipe_screenshot, splash_screenshot, app_landscape_screenshot [EXTRACTED 1.00]
+- None detected - all connections are within the same source files.
 
 ## Communities
 
-### Community 0 - "Seller API Layer"
+### Community 0 - "Community 0"
 Cohesion: 0.02
-Nodes (7): Create(), CreateProduct(), GetProfile(), normalizeOrderStatus(), normalizeSellerOrder(), normalizeSellerProfile(), UpdateProfile()
+Nodes (10): Create(), CreateProduct(), FulfillOrder(), GetOrderByID(), GetProfile(), normalizeOrderStatus(), normalizeSellerOrder(), normalizeSellerProfile() (+2 more)
 
-### Community 1 - "Admin API Layer"
-Cohesion: 0.11
-Nodes (28): adminGetAllInteractions(), adminGetAllSellers(), approveSeller(), broadcastNotification(), ChangePassword(), createAmbassadorTask(), createUpdate(), deleteNotificationToken() (+20 more)
+### Community 1 - "Community 1"
+Cohesion: 0.09
+Nodes (38): adminGetAllInteractions(), adminGetAllSellers(), appendOrderMilestone(), approveSeller(), broadcastNotification(), cancelParentOrder(), ChangePassword(), createAmbassadorTask() (+30 more)
 
-### Community 2 - "Catalog API Layer"
+### Community 2 - "Community 2"
 Cohesion: 0.09
 Nodes (14): addProductsToCollection(), changeDropStatus(), createCollection(), createDrop(), deleteCollection(), getAdminToken(), getDrop(), getDropAnalytics() (+6 more)
 
-### Community 3 - "User API Layer"
+### Community 3 - "Community 3"
 Cohesion: 0.06
 Nodes (0): 
 
-### Community 4 - "Inventory Management"
+### Community 4 - "Community 4"
+Cohesion: 0.15
+Nodes (26): appendOrderMilestone(), approveSeller(), broadcastNotification(), createAmbassadorTask(), createUpdate(), deleteNotificationToken(), deleteUserNotificationTokens(), getAdminToken() (+18 more)
+
+### Community 5 - "Community 5"
 Cohesion: 0.09
-Nodes (0): 
+Nodes (3): getQueueIssues(), getTotalStock(), handlePromoteQueueItem()
 
-### Community 5 - "Admin API Types"
-Cohesion: 0.17
-Nodes (22): approveSeller(), broadcastNotification(), createAmbassadorTask(), createUpdate(), deleteNotificationToken(), deleteUserNotificationTokens(), getAdminToken(), getCarts() (+14 more)
+### Community 6 - "Community 6"
+Cohesion: 0.14
+Nodes (17): buildFallbackSupportUrl(), buildGuestTrackingCandidates(), estimateSegmentProgress(), extractSupportUrl(), fetchData(), findPakCityCoords(), getStatusStart(), handleContactSupport() (+9 more)
 
-### Community 6 - "Analytics Probe"
+### Community 7 - "Community 7"
 Cohesion: 0.16
-Nodes (14): addScreenToHistory(), clearProbeSession(), flushEvents(), generateSessionId(), getDeviceInfo(), getOrCreateSession(), getSessionData(), incrementPageCount() (+6 more)
+Nodes (15): addScreenToHistory(), clearProbeSession(), flushEvents(), generateSessionId(), getDeviceInfo(), getOrCreateSession(), getScreenNameFromLocation(), getSessionData() (+7 more)
 
-### Community 7 - "Analytics API"
+### Community 8 - "Community 8"
 Cohesion: 0.24
 Nodes (18): buildTimeRangeParams(), getAdminToken(), getCategories(), getCommerce(), getFeedback(), getFunnel(), getLogistics(), getOperations() (+10 more)
 
-### Community 8 - "Employee Portal"
+### Community 9 - "Community 9"
+Cohesion: 0.22
+Nodes (18): addToCart(), checkout(), checkoutDirect(), getCart(), getCartShippingEstimate(), getGuestOrderTracking(), getHeaders(), getOrders() (+10 more)
+
+### Community 10 - "Community 10"
 Cohesion: 0.11
 Nodes (0): 
 
-### Community 9 - "Ambassador Chapter API"
+### Community 11 - "Community 11"
 Cohesion: 0.22
 Nodes (8): getAmbassadorDashboard(), getAmbassadorReports(), getAmbassadorTasks(), getInstituteUsers(), getMyTeam(), getToken(), requestWithAuth(), submitWeeklyReport()
 
-### Community 10 - "Platform Stats Dashboard"
+### Community 12 - "Community 12"
+Cohesion: 0.22
+Nodes (7): fetchData(), formatCurrency(), handleCancelParent(), handleSetWarehouse(), handleUpdateEta(), handleUpdateStatus(), runUpdate()
+
+### Community 13 - "Community 13"
 Cohesion: 0.17
 Nodes (2): fetchAnalytics(), toTimeRange()
 
-### Community 11 - "Error Handling"
+### Community 14 - "Community 14"
 Cohesion: 0.24
 Nodes (9): formatErrorCode(), getErrorToastConfig(), getUserFriendlyMessage(), handleAPIResponse(), isAPIError(), isAuthError(), isNotFoundError(), isServerError() (+1 more)
 
-### Community 12 - "Seller API Types"
+### Community 15 - "Community 15"
+Cohesion: 0.27
+Nodes (10): archiveCampaign(), changeCampaignStatus(), createCampaign(), getAdminToken(), getCampaign(), getCampaignMetrics(), listCampaigns(), resolveLandingTarget() (+2 more)
+
+### Community 16 - "Community 16"
 Cohesion: 0.28
 Nodes (11): bookDelivery(), bulkUpdateInventory(), createDrop(), getDrop(), getDropAnalytics(), getDrops(), getInventoryCategories(), getLowStock() (+3 more)
 
-### Community 13 - "Seller Onboarding Flow"
+### Community 17 - "Community 17"
+Cohesion: 0.27
+Nodes (6): applyDetectedCity(), fetchCityFromIP(), fetchPublicIP(), handleSubmit(), sanitizeCity(), validateForm()
+
+### Community 18 - "Community 18"
+Cohesion: 0.24
+Nodes (4): buildFallbackSupportUrl(), extractSupportUrl(), handleContactSupport(), openExternalUrl()
+
+### Community 19 - "Community 19"
 Cohesion: 0.18
 Nodes (0): 
 
-### Community 14 - "Shopify Integration"
+### Community 20 - "Community 20"
 Cohesion: 0.31
 Nodes (9): adminSyncCollections(), adminSyncProducts(), disconnect(), getAdminToken(), getSellerToken(), getStatus(), scrapeProducts(), syncCollections() (+1 more)
 
-### Community 15 - "Commerce Cart API"
-Cohesion: 0.47
-Nodes (10): addToCart(), checkout(), getCart(), getHeaders(), getOrders(), getUserToken(), handleGuestResponse(), lookupOrders() (+2 more)
-
-### Community 16 - "Core API Utilities"
+### Community 21 - "Community 21"
 Cohesion: 0.33
 Nodes (7): createEvent(), getAuthToken(), getOrQueueTokenRefresh(), parseBody(), request(), unwrapErrorBody(), unwrapSuccessBody()
 
-### Community 17 - "Campaigns API"
-Cohesion: 0.38
-Nodes (9): archiveCampaign(), changeCampaignStatus(), createCampaign(), getAdminToken(), getCampaign(), getCampaignMetrics(), listCampaigns(), resolveLandingTarget() (+1 more)
+### Community 22 - "Community 22"
+Cohesion: 0.36
+Nodes (6): asArray(), getBaseProductPrice(), getProductImage(), getVariantAvailableQuantity(), handleQuickAdd(), loadFilters()
 
-### Community 18 - "Catalog Browse Page"
-Cohesion: 0.31
-Nodes (4): asArray(), getProductImage(), handleQuickAdd(), loadFilters()
+### Community 23 - "Community 23"
+Cohesion: 0.25
+Nodes (2): fmtDay(), fmtRange()
 
-### Community 19 - "Ambassador Chapter Form"
+### Community 24 - "Community 24"
+Cohesion: 0.29
+Nodes (2): formatCurrency(), ManageOrders()
+
+### Community 25 - "Community 25"
+Cohesion: 0.36
+Nodes (4): buildFallbackSupportUrl(), extractSupportUrl(), handleContactSupport(), openExternalUrl()
+
+### Community 26 - "Community 26"
 Cohesion: 0.32
 Nodes (3): handleNext(), handleSubmit(), validate()
 
-### Community 20 - "Events Tournament API"
+### Community 27 - "Community 27"
 Cohesion: 0.32
 Nodes (4): createTournament(), getAdminToken(), getUserToken(), register()
 
-### Community 21 - "Guest Cart Context"
+### Community 28 - "Community 28"
 Cohesion: 0.29
 Nodes (0): 
 
-### Community 22 - "Seller Home Dashboard"
+### Community 29 - "Community 29"
 Cohesion: 0.29
 Nodes (0): 
 
-### Community 23 - "Profile Management"
+### Community 30 - "Community 30"
+Cohesion: 0.43
+Nodes (3): asArray(), getProductImage(), loadProduct()
+
+### Community 31 - "Community 31"
+Cohesion: 0.29
+Nodes (0): 
+
+### Community 32 - "Community 32"
+Cohesion: 0.53
+Nodes (4): handleKeyDown(), handleScrape(), normalizeShopUrl(), startPolling()
+
+### Community 33 - "Community 33"
 Cohesion: 0.33
 Nodes (0): 
 
-### Community 24 - "Sizing Guide Editor"
+### Community 34 - "Community 34"
 Cohesion: 0.33
 Nodes (0): 
 
-### Community 25 - "Catalog Product Page"
-Cohesion: 0.6
-Nodes (4): asArray(), getProductImage(), handleAddToCart(), loadProduct()
+### Community 35 - "Community 35"
+Cohesion: 0.47
+Nodes (3): getBaseProductPrice(), getProductImage(), ProductCard()
 
-### Community 26 - "Work Task Management"
+### Community 36 - "Community 36"
 Cohesion: 0.33
 Nodes (0): 
 
-### Community 27 - "App UI Screenshots"
+### Community 37 - "Community 37"
+Cohesion: 0.33
+Nodes (0): 
+
+### Community 38 - "Community 38"
+Cohesion: 0.33
+Nodes (0): 
+
+### Community 39 - "Community 39"
+Cohesion: 0.5
+Nodes (2): getPathDistance(), interpolateAlong()
+
+### Community 40 - "Community 40"
 Cohesion: 0.4
-Nodes (6): Juno App Portrait Screenshot, Stacked Product Cards Feed, Heart/Like Gesture Interaction, Product Card UI Component, Swipe-to-Shop Feed Interface, Juno App Swipe Feed Screenshot
-
-### Community 28 - "Product Editor"
-Cohesion: 0.4
 Nodes (0): 
 
-### Community 29 - "Protected Routes"
+### Community 41 - "Community 41"
 Cohesion: 0.4
 Nodes (1): ProtectedRoute()
 
-### Community 30 - "Seller Order Management"
-Cohesion: 0.4
-Nodes (0): 
-
-### Community 31 - "Seller Probe Tracking"
+### Community 42 - "Community 42"
 Cohesion: 0.8
 Nodes (4): buildProbeDevice(), getOrCreateSellerProbeSessionId(), sendSellerHeartbeat(), trackSellerEvent()
 
-### Community 32 - "Interaction Analytics"
+### Community 43 - "Community 43"
+Cohesion: 0.6
+Nodes (3): fetchCampaign(), handleMetaInputsSubmit(), handleStatusChange()
+
+### Community 44 - "Community 44"
+Cohesion: 0.7
+Nodes (4): fetchCampaigns(), handleArchive(), handleMetaInputsSubmit(), handleStatusChange()
+
+### Community 45 - "Community 45"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 33 - "Ambassador Dashboard"
+### Community 46 - "Community 46"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 34 - "Checkout Page"
-Cohesion: 0.5
-Nodes (2): handleSubmit(), validateForm()
-
-### Community 35 - "Order Tracking"
-Cohesion: 0.4
-Nodes (0): 
-
-### Community 36 - "Cart Drawer"
-Cohesion: 0.4
-Nodes (0): 
-
-### Community 37 - "App Entry Point"
+### Community 47 - "Community 47"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 38 - "Brand Page"
+### Community 48 - "Community 48"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 39 - "Navbar"
+### Community 49 - "Community 49"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 40 - "Product Page"
+### Community 50 - "Community 50"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 41 - "Shopify Scraper"
-Cohesion: 0.83
-Nodes (3): handleKeyDown(), handleScrape(), normalizeShopUrl()
-
-### Community 42 - "Seller Analytics"
+### Community 51 - "Community 51"
 Cohesion: 0.67
 Nodes (2): fetchData(), getRangeStart()
 
-### Community 43 - "Juno Studio Landing"
+### Community 52 - "Community 52"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 44 - "Catalog Hero"
+### Community 53 - "Community 53"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 45 - "Delivery Coverage Map"
+### Community 54 - "Community 54"
 Cohesion: 0.67
 Nodes (2): deg2rad(), getDistance()
 
-### Community 46 - "Shared API Utils"
+### Community 55 - "Community 55"
 Cohesion: 0.67
 Nodes (2): compressImage(), uploadFileAndGetUrl()
 
-### Community 47 - "Ambassador Auth Context"
+### Community 56 - "Community 56"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 48 - "Juno Studio Context"
+### Community 57 - "Community 57"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 49 - "Seller Auth Context"
+### Community 58 - "Community 58"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 50 - "Subscription Modal"
+### Community 59 - "Community 59"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 51 - "Form Input Component"
+### Community 60 - "Community 60"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 52 - "Wishlist Page"
+### Community 61 - "Community 61"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 53 - "Product Card"
+### Community 62 - "Community 62"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 54 - "Catalog Discovery"
+### Community 63 - "Community 63"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 55 - "Order Detail Modal"
+### Community 64 - "Community 64"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 56 - "Product Performance"
+### Community 65 - "Community 65"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 57 - "API Status Monitor"
+### Community 66 - "Community 66"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 58 - "Onboarding Flow Logic"
+### Community 67 - "Community 67"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 59 - "Work Auth"
+### Community 68 - "Community 68"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 60 - "Notification Center"
+### Community 69 - "Community 69"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 61 - "CEO Overview"
-Cohesion: 0.67
-Nodes (0): 
-
-### Community 62 - "Work Task List"
-Cohesion: 0.67
-Nodes (0): 
-
-### Community 63 - "Work API"
+### Community 70 - "Community 70"
 Cohesion: 1.0
 Nodes (2): apiRequest(), getToken()
 
-### Community 64 - "Adminauthcontext Useadminauth"
+### Community 71 - "Community 71"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 65 - "Qrcode Generateqrcode"
+### Community 72 - "Community 72"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 66 - "Downloadredirect Trackvisit"
+### Community 73 - "Community 73"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 67 - "Brandreelgraphic Update"
+### Community 74 - "Community 74"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 68 - "Selleronboarding Geturl"
+### Community 75 - "Community 75"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 69 - "Junostudioaccounts Junostudioa"
+### Community 76 - "Community 76"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 70 - "Formstep Formstep"
+### Community 77 - "Community 77"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 71 - "Junostudiodownloads Junostudio"
+### Community 78 - "Community 78"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 72 - "Sidebar Getnavsnapshot"
+### Community 79 - "Community 79"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 73 - "Sellerauth Handlesubmit"
+### Community 80 - "Community 80"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 74 - "Mission Missionitem"
+### Community 81 - "Community 81"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 75 - "Catchyproducts Scroll"
+### Community 82 - "Community 82"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 76 - "Junostudio Featurecard"
+### Community 83 - "Community 83"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 77 - "Downloadsection Downloadsectio"
+### Community 84 - "Community 84"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 78 - "Junoapp Impactcard"
+### Community 85 - "Community 85"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 79 - "Genderorproductrouter Genderor"
+### Community 86 - "Community 86"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 80 - "Catalognavbar Catalognavbar"
+### Community 87 - "Community 87"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 81 - "Productgrid Formatprice"
+### Community 88 - "Community 88"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 82 - "Genderheader Genderheader"
+### Community 89 - "Community 89"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 83 - "Gendercatalogpage Loadgenderov"
+### Community 90 - "Community 90"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 84 - "Ambassadortasks Ambassadortask"
+### Community 91 - "Community 91"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 85 - "Src Components Admin Systemtoo"
+### Community 92 - "Community 92"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 86 - "Locationmap Locationmap"
+### Community 93 - "Community 93"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 87 - "Salesfunnel Salesfunnel"
+### Community 94 - "Community 94"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 88 - "Manageorders Manageorders"
+### Community 95 - "Community 95"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 89 - "Managesellers Managesellers"
+### Community 96 - "Community 96"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 90 - "Manageusers Manageusers"
+### Community 97 - "Community 97"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 91 - "Chapterforms Chapterforms"
+### Community 98 - "Community 98"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 92 - "Manageinvites Manageinvites"
+### Community 99 - "Community 99"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 93 - "Manageproducts Manageproducts"
+### Community 100 - "Community 100"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 94 - "Managenotifications Managenoti"
+### Community 101 - "Community 101"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 95 - "Adminauth Handlesubmit"
+### Community 102 - "Community 102"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 96 - "Admindashboard Admindashboard"
+### Community 103 - "Community 103"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 97 - "Ambassadorauth Handlesubmit"
+### Community 104 - "Community 104"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 98 - "Loadingspinner Loadingspinner"
+### Community 105 - "Community 105"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 99 - "Orderconfirmationpage Formatcu"
+### Community 106 - "Community 106"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 100 - "Blogpostpage Loadpost"
+### Community 107 - "Community 107"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 101 - "Performancestats Performancest"
+### Community 108 - "Community 108"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 102 - "Employeelist Employeelist"
+### Community 109 - "Community 109"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 103 - "Src Components Work Weeklyrepo"
+### Community 110 - "Community 110"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 104 - "Myperformance Myperformance"
+### Community 111 - "Community 111"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 105 - "Src Components Work Weeklyrepo"
+### Community 112 - "Community 112"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 106 - "Src Components Work Workdashbo"
+### Community 113 - "Community 113"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 107 - "Concept Splash Screen"
+### Community 114 - "Community 114"
 Cohesion: 1.0
-Nodes (2): Splash Screen with Red Background, Juno App Splash Screen Screenshot
-
-### Community 108 - "Creare Brand"
-Cohesion: 1.0
-Nodes (2): Creare, Creare Logo (Alt)
-
-### Community 109 - "Sparktank Logo Jpg"
-Cohesion: 1.0
-Nodes (2): SparkTank by Beaconhouse, SparkTank by Beaconhouse (PNG)
-
-### Community 110 - "Src Vite Env D Ts"
-Cohesion: 1.0
 Nodes (0): 
 
-### Community 111 - "Src Api Tsx"
+### Community 115 - "Community 115"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 112 - "Src Constants Colors Ts"
+### Community 116 - "Community 116"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 113 - "Src Constants Sizing Ts"
+### Community 117 - "Community 117"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 114 - "Src Constants Samples Ts"
+### Community 118 - "Community 118"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 115 - "Src Constants Seller Ts"
+### Community 119 - "Community 119"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 116 - "Src Constants Types Ts"
+### Community 120 - "Community 120"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 117 - "Src Constants Orders Ts"
+### Community 121 - "Community 121"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 118 - "Src Constants User Ts"
+### Community 122 - "Community 122"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 119 - "Src Constants Address Ts"
+### Community 123 - "Community 123"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 120 - "Src Blog Index Ts"
+### Community 124 - "Community 124"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 121 - "Src Components Pricing Tsx"
+### Community 125 - "Community 125"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 122 - "Src Components Team Tsx"
+### Community 126 - "Community 126"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 123 - "Src Components Footer Tsx"
+### Community 127 - "Community 127"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 124 - "Src Components Seller Ordersta"
+### Community 128 - "Community 128"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 125 - "Src Components Seller Shopifys"
+### Community 129 - "Community 129"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 126 - "Src Components Seller Sellerda"
+### Community 130 - "Community 130"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 127 - "Src Components Landing Hero Ts"
+### Community 131 - "Community 131"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 128 - "Src Components Landing Brandsh"
+### Community 132 - "Community 132"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 129 - "Src Components Landing Brandsp"
+### Community 133 - "Community 133"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 130 - "Src Components Landing Testimo"
+### Community 134 - "Community 134"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 131 - "Src Components Landing Brandss"
+### Community 135 - "Community 135"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 132 - "Src Components Landing Screens"
+### Community 136 - "Community 136"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 133 - "Src Components Catalog Sizegui"
+### Community 137 - "Community 137"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 134 - "Src Components Catalog Gender "
+### Community 138 - "Community 138"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 135 - "Src Components Catalog Gender "
+### Community 139 - "Community 139"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 136 - "Src Components Admin Sidebar T"
+### Community 140 - "Community 140"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 137 - "Src Components Policies Privac"
+### Community 141 - "Community 141"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 138 - "Src Components Policies Termsc"
+### Community 142 - "Community 142"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 139 - "Src Components Policies Refund"
+### Community 143 - "Community 143"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 140 - "Src Components Policies Return"
+### Community 144 - "Community 144"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 141 - "Src Components Policies Shippi"
+### Community 145 - "Community 145"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 142 - "Src Components Blog Blogindexp"
+### Community 146 - "Community 146"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 143 - "Src Components Blog Writepage "
+### Community 147 - "Community 147"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 144 - "Src Components App Onboarding "
+### Community 148 - "Community 148"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 145 - "Src Components Work Taskcard T"
+### Community 149 - "Community 149"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 146 - "Src Api Api Types Ts"
+### Community 150 - "Community 150"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 147 - "Src Api Api Ts"
+### Community 151 - "Community 151"
 Cohesion: 1.0
 Nodes (0): 
-
-### Community 148 - "App Landscape Screenshot"
-Cohesion: 1.0
-Nodes (1): Juno App Landscape Screenshot
-
-### Community 149 - "Concept Brand Ukiyo"
-Cohesion: 1.0
-Nodes (1): Ukiyo Brand
-
-### Community 150 - "Concept Size Match"
-Cohesion: 1.0
-Nodes (1): Size Match Feature
-
-### Community 151 - "Concept 1Hr Delivery"
-Cohesion: 1.0
-Nodes (1): 1 Hour Delivery Feature
-
-### Community 152 - "Concept Dark Theme"
-Cohesion: 1.0
-Nodes (1): Dark Theme UI Design
 
-### Community 153 - "Concept Bottom Nav"
+### Community 152 - "Community 152"
 Cohesion: 1.0
-Nodes (1): Bottom Navigation Bar
-
-### Community 154 - "Concept Brand Filter"
-Cohesion: 1.0
-Nodes (1): Brand Filter in Swipe Feed
+Nodes (0): 
 
-### Community 155 - "Concept Top Nav"
+### Community 153 - "Community 153"
 Cohesion: 1.0
-Nodes (1): Top Navigation Bar with Search, Filter, Bookmark, Refresh
+Nodes (0): 
 
-### Community 156 - "Pmyp Brand"
+### Community 154 - "Community 154"
 Cohesion: 1.0
-Nodes (1): PMYP
+Nodes (0): 
 
-### Community 157 - "Impactx Brand"
+### Community 155 - "Community 155"
 Cohesion: 1.0
-Nodes (1): ImpactX
+Nodes (0): 
 
-### Community 158 - "Tajarba Brand"
+### Community 156 - "Community 156"
 Cohesion: 1.0
-Nodes (1): Tajarba
+Nodes (0): 
 
-### Community 159 - "Tajarba Logo"
+### Community 157 - "Community 157"
 Cohesion: 1.0
-Nodes (1): Tajarba Logo
+Nodes (0): 
 
-### Community 160 - "Khantastic Logo"
+### Community 158 - "Community 158"
 Cohesion: 1.0
-Nodes (1): Khantastic Ventures
+Nodes (0): 
 
-### Community 161 - "Juno Ecosystem Partners"
+### Community 159 - "Community 159"
 Cohesion: 1.0
-Nodes (1): Juno Ecosystem Partners
+Nodes (0): 
 
 ## Knowledge Gaps
-- **21 isolated node(s):** `Juno App Splash Screen Screenshot`, `Juno App Landscape Screenshot`, `Product Card UI Component`, `Ukiyo Brand`, `Size Match Feature` (+16 more)
-  These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Adminauthcontext Useadminauth`** (2 nodes): `useAdminAuth()`, `AdminAuthContext.tsx`
+- **Thin community `Community 71`** (2 nodes): `useSellerQueue()`, `SellerQueueContext.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Qrcode Generateqrcode`** (2 nodes): `generateQRCode()`, `qrCode.ts`
+- **Thin community `Community 72`** (2 nodes): `useAdminAuth()`, `AdminAuthContext.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Downloadredirect Trackvisit`** (2 nodes): `trackVisit()`, `DownloadRedirect.tsx`
+- **Thin community `Community 73`** (2 nodes): `generateQRCode()`, `qrCode.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Brandreelgraphic Update`** (2 nodes): `update()`, `BrandReelGraphic.tsx`
+- **Thin community `Community 74`** (2 nodes): `trackVisit()`, `DownloadRedirect.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Selleronboarding Geturl`** (2 nodes): `getUrl()`, `SellerOnboarding.tsx`
+- **Thin community `Community 75`** (2 nodes): `update()`, `BrandReelGraphic.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Junostudioaccounts Junostudioa`** (2 nodes): `JunoStudioAccounts()`, `JunoStudioAccounts.tsx`
+- **Thin community `Community 76`** (2 nodes): `getUrl()`, `SellerOnboarding.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Formstep Formstep`** (2 nodes): `FormStep()`, `FormStep.tsx`
+- **Thin community `Community 77`** (2 nodes): `JunoStudioAccounts()`, `JunoStudioAccounts.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Junostudiodownloads Junostudio`** (2 nodes): `JunoStudioDownloads()`, `JunoStudioDownloads.tsx`
+- **Thin community `Community 78`** (2 nodes): `FormStep()`, `FormStep.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sidebar Getnavsnapshot`** (2 nodes): `getNavSnapshot()`, `Sidebar.tsx`
+- **Thin community `Community 79`** (2 nodes): `JunoStudioDownloads()`, `JunoStudioDownloads.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sellerauth Handlesubmit`** (2 nodes): `handleSubmit()`, `SellerAuth.tsx`
+- **Thin community `Community 80`** (2 nodes): `getNavSnapshot()`, `Sidebar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Mission Missionitem`** (2 nodes): `MissionItem()`, `Mission.tsx`
+- **Thin community `Community 81`** (2 nodes): `handleSubmit()`, `SellerAuth.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Catchyproducts Scroll`** (2 nodes): `scroll()`, `CatchyProducts.tsx`
+- **Thin community `Community 82`** (2 nodes): `MissionItem()`, `Mission.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Junostudio Featurecard`** (2 nodes): `FeatureCard()`, `JunoStudio.tsx`
+- **Thin community `Community 83`** (2 nodes): `scroll()`, `CatchyProducts.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Downloadsection Downloadsectio`** (2 nodes): `DownloadSection()`, `DownloadSection.tsx`
+- **Thin community `Community 84`** (2 nodes): `FeatureCard()`, `JunoStudio.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Junoapp Impactcard`** (2 nodes): `ImpactCard()`, `JunoApp.tsx`
+- **Thin community `Community 85`** (2 nodes): `DownloadSection()`, `DownloadSection.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Genderorproductrouter Genderor`** (2 nodes): `GenderOrProductRouter()`, `GenderOrProductRouter.tsx`
+- **Thin community `Community 86`** (2 nodes): `ImpactCard()`, `JunoApp.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Catalognavbar Catalognavbar`** (2 nodes): `CatalogNavbar()`, `CatalogNavbar.tsx`
+- **Thin community `Community 87`** (2 nodes): `GenderOrProductRouter()`, `GenderOrProductRouter.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Productgrid Formatprice`** (2 nodes): `formatPrice()`, `ProductGrid.tsx`
+- **Thin community `Community 88`** (2 nodes): `handleSearchSubmit()`, `CatalogNavbar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Genderheader Genderheader`** (2 nodes): `GenderHeader()`, `GenderHeader.tsx`
+- **Thin community `Community 89`** (2 nodes): `formatCurrency()`, `ProductGrid.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Gendercatalogpage Loadgenderov`** (2 nodes): `loadGenderOverview()`, `GenderCatalogPage.tsx`
+- **Thin community `Community 90`** (2 nodes): `loadGenderOverview()`, `GenderCatalogPage.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Ambassadortasks Ambassadortask`** (2 nodes): `AmbassadorTasks()`, `AmbassadorTasks.tsx`
+- **Thin community `Community 91`** (2 nodes): `AmbassadorTasks()`, `AmbassadorTasks.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Admin Systemtoo`** (2 nodes): `SystemTools.tsx`, `SystemTools()`
+- **Thin community `Community 92`** (2 nodes): `fetchDrops()`, `ManageDrops.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Locationmap Locationmap`** (2 nodes): `LocationMap()`, `LocationMap.tsx`
+- **Thin community `Community 93`** (2 nodes): `SystemTools.tsx`, `SystemTools()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Salesfunnel Salesfunnel`** (2 nodes): `SalesFunnel()`, `SalesFunnel.tsx`
+- **Thin community `Community 94`** (2 nodes): `LocationMap()`, `LocationMap.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Manageorders Manageorders`** (2 nodes): `ManageOrders()`, `ManageOrders.tsx`
+- **Thin community `Community 95`** (2 nodes): `SalesFunnel()`, `SalesFunnel.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Managesellers Managesellers`** (2 nodes): `ManageSellers()`, `ManageSellers.tsx`
+- **Thin community `Community 96`** (2 nodes): `handleSubmit()`, `CreateCollectionModal.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Manageusers Manageusers`** (2 nodes): `ManageUsers()`, `ManageUsers.tsx`
+- **Thin community `Community 97`** (2 nodes): `CreateCampaignModal()`, `CreateCampaignModal.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Chapterforms Chapterforms`** (2 nodes): `ChapterForms()`, `ChapterForms.tsx`
+- **Thin community `Community 98`** (2 nodes): `ManageSellers()`, `ManageSellers.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Manageinvites Manageinvites`** (2 nodes): `ManageInvites()`, `ManageInvites.tsx`
+- **Thin community `Community 99`** (2 nodes): `ManageUsers()`, `ManageUsers.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Manageproducts Manageproducts`** (2 nodes): `ManageProducts()`, `ManageProducts.tsx`
+- **Thin community `Community 100`** (2 nodes): `ChapterForms()`, `ChapterForms.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Managenotifications Managenoti`** (2 nodes): `ManageNotifications()`, `ManageNotifications.tsx`
+- **Thin community `Community 101`** (2 nodes): `ManageInvites()`, `ManageInvites.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Adminauth Handlesubmit`** (2 nodes): `handleSubmit()`, `AdminAuth.tsx`
+- **Thin community `Community 102`** (2 nodes): `ManageProducts()`, `ManageProducts.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Admindashboard Admindashboard`** (2 nodes): `AdminDashboard()`, `AdminDashboard.tsx`
+- **Thin community `Community 103`** (2 nodes): `fetchCollections()`, `ManageCollections.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Ambassadorauth Handlesubmit`** (2 nodes): `handleSubmit()`, `AmbassadorAuth.tsx`
+- **Thin community `Community 104`** (2 nodes): `ManageNotifications()`, `ManageNotifications.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Loadingspinner Loadingspinner`** (2 nodes): `LoadingSpinner()`, `LoadingSpinner.tsx`
+- **Thin community `Community 105`** (2 nodes): `handleSubmit()`, `AdminAuth.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Orderconfirmationpage Formatcu`** (2 nodes): `formatCurrency()`, `OrderConfirmationPage.tsx`
+- **Thin community `Community 106`** (2 nodes): `AdminDashboard()`, `AdminDashboard.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Blogpostpage Loadpost`** (2 nodes): `loadPost()`, `BlogPostPage.tsx`
+- **Thin community `Community 107`** (2 nodes): `handleSubmit()`, `AmbassadorAuth.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Performancestats Performancest`** (2 nodes): `PerformanceStats()`, `PerformanceStats.tsx`
+- **Thin community `Community 108`** (2 nodes): `LoadingSpinner()`, `LoadingSpinner.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Employeelist Employeelist`** (2 nodes): `EmployeeList()`, `EmployeeList.tsx`
+- **Thin community `Community 109`** (2 nodes): `loadPost()`, `BlogPostPage.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Work Weeklyrepo`** (2 nodes): `WeeklyReportHistory.tsx`, `loadReports()`
+- **Thin community `Community 110`** (2 nodes): `PerformanceStats()`, `PerformanceStats.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Myperformance Myperformance`** (2 nodes): `MyPerformance()`, `MyPerformance.tsx`
+- **Thin community `Community 111`** (2 nodes): `EmployeeList()`, `EmployeeList.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Work Weeklyrepo`** (2 nodes): `WeeklyReportForm.tsx`, `WeeklyReportForm()`
+- **Thin community `Community 112`** (2 nodes): `WeeklyReportHistory.tsx`, `loadReports()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Work Workdashbo`** (2 nodes): `WorkDashboard.tsx`, `renderContent()`
+- **Thin community `Community 113`** (2 nodes): `MyPerformance()`, `MyPerformance.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Concept Splash Screen`** (2 nodes): `Splash Screen with Red Background`, `Juno App Splash Screen Screenshot`
+- **Thin community `Community 114`** (2 nodes): `WeeklyReportForm.tsx`, `WeeklyReportForm()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Creare Brand`** (2 nodes): `Creare`, `Creare Logo (Alt)`
+- **Thin community `Community 115`** (2 nodes): `WorkDashboard.tsx`, `renderContent()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparktank Logo Jpg`** (2 nodes): `SparkTank by Beaconhouse`, `SparkTank by Beaconhouse (PNG)`
+- **Thin community `Community 116`** (1 nodes): `vite-env.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Vite Env D Ts`** (1 nodes): `vite-env.d.ts`
+- **Thin community `Community 117`** (1 nodes): `api.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Api Tsx`** (1 nodes): `api.tsx`
+- **Thin community `Community 118`** (1 nodes): `Colors.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Constants Colors Ts`** (1 nodes): `Colors.ts`
+- **Thin community `Community 119`** (1 nodes): `sizing.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Constants Sizing Ts`** (1 nodes): `sizing.ts`
+- **Thin community `Community 120`** (1 nodes): `Samples.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Constants Samples Ts`** (1 nodes): `Samples.ts`
+- **Thin community `Community 121`** (1 nodes): `seller.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Constants Seller Ts`** (1 nodes): `seller.ts`
+- **Thin community `Community 122`** (1 nodes): `types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Constants Types Ts`** (1 nodes): `types.ts`
+- **Thin community `Community 123`** (1 nodes): `orders.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Constants Orders Ts`** (1 nodes): `orders.ts`
+- **Thin community `Community 124`** (1 nodes): `user.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Constants User Ts`** (1 nodes): `user.ts`
+- **Thin community `Community 125`** (1 nodes): `address.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Constants Address Ts`** (1 nodes): `address.ts`
+- **Thin community `Community 126`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Blog Index Ts`** (1 nodes): `index.ts`
+- **Thin community `Community 127`** (1 nodes): `Pricing.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Pricing Tsx`** (1 nodes): `Pricing.tsx`
+- **Thin community `Community 128`** (1 nodes): `Team.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Team Tsx`** (1 nodes): `Team.tsx`
+- **Thin community `Community 129`** (1 nodes): `Footer.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Footer Tsx`** (1 nodes): `Footer.tsx`
+- **Thin community `Community 130`** (1 nodes): `OrderStatusBadge.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Seller Ordersta`** (1 nodes): `OrderStatusBadge.tsx`
+- **Thin community `Community 131`** (1 nodes): `ShopifySuccess.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Seller Shopifys`** (1 nodes): `ShopifySuccess.tsx`
+- **Thin community `Community 132`** (1 nodes): `SellerDashboard.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Seller Sellerda`** (1 nodes): `SellerDashboard.tsx`
+- **Thin community `Community 133`** (1 nodes): `Hero.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Landing Hero Ts`** (1 nodes): `Hero.tsx`
+- **Thin community `Community 134`** (1 nodes): `BrandShowcase.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Landing Brandsh`** (1 nodes): `BrandShowcase.tsx`
+- **Thin community `Community 135`** (1 nodes): `BrandSpotlight.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Landing Brandsp`** (1 nodes): `BrandSpotlight.tsx`
+- **Thin community `Community 136`** (1 nodes): `TestimonialsSection.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Landing Testimo`** (1 nodes): `TestimonialsSection.tsx`
+- **Thin community `Community 137`** (1 nodes): `BrandsSection.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Landing Brandss`** (1 nodes): `BrandsSection.tsx`
+- **Thin community `Community 138`** (1 nodes): `ScreenshotsSection.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Landing Screens`** (1 nodes): `ScreenshotsSection.tsx`
+- **Thin community `Community 139`** (1 nodes): `SizeGuideModal.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Catalog Sizegui`** (1 nodes): `SizeGuideModal.tsx`
+- **Thin community `Community 140`** (1 nodes): `GenderHeader.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Catalog Gender `** (1 nodes): `BrandList.tsx`
+- **Thin community `Community 141`** (1 nodes): `BrandList.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Catalog Gender `** (1 nodes): `GenderLandingPage.tsx`
+- **Thin community `Community 142`** (1 nodes): `GenderLandingPage.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Admin Sidebar T`** (1 nodes): `Sidebar.tsx`
+- **Thin community `Community 143`** (1 nodes): `ProbeCommerce.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Policies Privac`** (1 nodes): `PrivacyPolicy.tsx`
+- **Thin community `Community 144`** (1 nodes): `ProbeRealTime.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Policies Termsc`** (1 nodes): `TermsConditions.tsx`
+- **Thin community `Community 145`** (1 nodes): `ProbeUsers.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Policies Refund`** (1 nodes): `RefundPolicy.tsx`
+- **Thin community `Community 146`** (1 nodes): `Sidebar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Policies Return`** (1 nodes): `ReturnPolicy.tsx`
+- **Thin community `Community 147`** (1 nodes): `PrivacyPolicy.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Policies Shippi`** (1 nodes): `ShippingServicePolicy.tsx`
+- **Thin community `Community 148`** (1 nodes): `TermsConditions.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Blog Blogindexp`** (1 nodes): `BlogIndexPage.tsx`
+- **Thin community `Community 149`** (1 nodes): `RefundPolicy.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Blog Writepage `** (1 nodes): `WritePage.tsx`
+- **Thin community `Community 150`** (1 nodes): `ReturnPolicy.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components App Onboarding `** (1 nodes): `user.ts`
+- **Thin community `Community 151`** (1 nodes): `ShippingServicePolicy.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Components Work Taskcard T`** (1 nodes): `TaskCard.tsx`
+- **Thin community `Community 152`** (1 nodes): `BlogIndexPage.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Api Api Types Ts`** (1 nodes): `api.types.ts`
+- **Thin community `Community 153`** (1 nodes): `WritePage.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Src Api Api Ts`** (1 nodes): `api.ts`
+- **Thin community `Community 154`** (1 nodes): `user.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `App Landscape Screenshot`** (1 nodes): `Juno App Landscape Screenshot`
+- **Thin community `Community 155`** (1 nodes): `TaskCard.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Concept Brand Ukiyo`** (1 nodes): `Ukiyo Brand`
+- **Thin community `Community 156`** (1 nodes): `CampaignLayout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Concept Size Match`** (1 nodes): `Size Match Feature`
+- **Thin community `Community 157`** (1 nodes): `CartStockLimitToast.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Concept 1Hr Delivery`** (1 nodes): `1 Hour Delivery Feature`
+- **Thin community `Community 158`** (1 nodes): `api.types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Concept Dark Theme`** (1 nodes): `Dark Theme UI Design`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Concept Bottom Nav`** (1 nodes): `Bottom Navigation Bar`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Concept Brand Filter`** (1 nodes): `Brand Filter in Swipe Feed`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Concept Top Nav`** (1 nodes): `Top Navigation Bar with Search, Filter, Bookmark, Refresh`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Pmyp Brand`** (1 nodes): `PMYP`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Impactx Brand`** (1 nodes): `ImpactX`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Tajarba Brand`** (1 nodes): `Tajarba`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Tajarba Logo`** (1 nodes): `Tajarba Logo`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Khantastic Logo`** (1 nodes): `Khantastic Ventures`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Juno Ecosystem Partners`** (1 nodes): `Juno Ecosystem Partners`
+- **Thin community `Community 159`** (1 nodes): `api.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What connects `Juno App Splash Screen Screenshot`, `Juno App Landscape Screenshot`, `Product Card UI Component` to the rest of the system?**
-  _21 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Seller API Layer` be split into smaller, more focused modules?**
+- **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._
-- **Should `Admin API Layer` be split into smaller, more focused modules?**
-  _Cohesion score 0.11 - nodes in this community are weakly interconnected._
-- **Should `Catalog API Layer` be split into smaller, more focused modules?**
+- **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.09 - nodes in this community are weakly interconnected._
-- **Should `User API Layer` be split into smaller, more focused modules?**
+- **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.09 - nodes in this community are weakly interconnected._
+- **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.06 - nodes in this community are weakly interconnected._
-- **Should `Inventory Management` be split into smaller, more focused modules?**
+- **Should `Community 5` be split into smaller, more focused modules?**
   _Cohesion score 0.09 - nodes in this community are weakly interconnected._
-- **Should `Employee Portal` be split into smaller, more focused modules?**
+- **Should `Community 6` be split into smaller, more focused modules?**
+  _Cohesion score 0.14 - nodes in this community are weakly interconnected._
+- **Should `Community 10` be split into smaller, more focused modules?**
   _Cohesion score 0.11 - nodes in this community are weakly interconnected._
