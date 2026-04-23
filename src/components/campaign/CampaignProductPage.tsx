@@ -43,6 +43,13 @@ const getVariantAvailableQuantity = (variant: any, product: any): number | undef
     return undefined;
 };
 
+const isPurchasableVariant = (variant: any, product: any): boolean => {
+    if (!variant) return false;
+    if (variant.available === false) return false;
+    const qty = getVariantAvailableQuantity(variant, product);
+    return typeof qty === 'number' ? qty > 0 : true;
+};
+
 /* ── Helpers for delivery timeline ── */
 const addDays = (date: Date, days: number) => {
     const d = new Date(date);
@@ -104,13 +111,19 @@ const CampaignProductPage: React.FC = () => {
                     setData(resp.body);
                     const product = resp.body.product;
                     setSelectedImageIdx(0);
+                    const variants = asArray(product?.variants);
+                    const defaultVariant =
+                        variants.find((variant: any) => isPurchasableVariant(variant, product)) ||
+                        variants[0];
                     setSelectedOptions(
-                        Object.fromEntries(
-                            (product.options || []).map((option: any) => [
-                                option.name,
-                                option.values?.[0] ?? '',
-                            ])
-                        )
+                        defaultVariant?.options
+                            ? { ...defaultVariant.options }
+                            : Object.fromEntries(
+                                (product.options || []).map((option: any) => [
+                                    option.name,
+                                    option.values?.[0] ?? '',
+                                ])
+                            )
                     );
                 } else {
                     setError('Product not found in this campaign.');
@@ -133,12 +146,15 @@ const CampaignProductPage: React.FC = () => {
                 Object.entries(selectedOptions).every(
                     ([name, value]) => variant.options?.[name] === value
                 )
-            ) ?? variants[0]
+            ) ??
+            variants.find((variant: any) => isPurchasableVariant(variant, data.product)) ??
+            variants[0]
         );
     }, [data, selectedOptions]);
 
     const product = data?.product;
     const campaign = data?.campaign;
+    const variants = asArray(product?.variants);
     const maxAvailableQuantity = getVariantAvailableQuantity(selectedVariant, product);
     const isVariantAvailable = selectedVariant?.available ?? true;
     const canPurchase = !!product?.inventory?.in_stock && isVariantAvailable;
@@ -553,15 +569,34 @@ const CampaignProductPage: React.FC = () => {
                                             <div className="flex flex-wrap gap-2">
                                                 {asArray(option.values).map((value) => {
                                                     const isActive = selectedOptions[option.name] === value;
+                                                    const isValueAvailable = variants.some((variant: any) => {
+                                                        if (variant?.options?.[option.name] !== value) return false;
+                                                        const matchesOtherSelectedOptions = asArray(product.options).every((otherOption: any) => {
+                                                            if (otherOption?.name === option.name) return true;
+                                                            const selectedValue = selectedOptions[otherOption?.name];
+                                                            if (!selectedValue) return true;
+                                                            return variant?.options?.[otherOption.name] === selectedValue;
+                                                        });
+                                                        if (!matchesOtherSelectedOptions) return false;
+                                                        if (variant?.available === false) return false;
+                                                        const qty = getVariantAvailableQuantity(variant, product);
+                                                        return typeof qty === 'number' ? qty > 0 : true;
+                                                    });
                                                     return (
                                                         <motion.button
                                                             key={value}
                                                             whileTap={{ scale: 0.93 }}
-                                                            onClick={() => setSelectedOptions((cur) => ({ ...cur, [option.name]: value }))}
+                                                            onClick={() => {
+                                                                if (!isValueAvailable) return;
+                                                                setSelectedOptions((cur) => ({ ...cur, [option.name]: value }));
+                                                            }}
+                                                            disabled={!isValueAvailable}
                                                             className={`relative min-w-[3rem] rounded-lg px-3.5 py-2.5 text-sm font-bold transition-all ${
                                                                 isActive
                                                                     ? 'bg-white text-black shadow-[0_6px_18px_rgba(255,255,255,0.18)]'
-                                                                    : 'border border-white/12 bg-white/[0.03] text-white/70 hover:border-white/30 hover:bg-white/[0.06] hover:text-white'
+                                                                    : isValueAvailable
+                                                                        ? 'border border-white/12 bg-white/[0.03] text-white/70 hover:border-white/30 hover:bg-white/[0.06] hover:text-white'
+                                                                        : 'cursor-not-allowed border border-white/10 bg-white/[0.02] text-white/35 line-through decoration-white/30'
                                                             }`}
                                                         >
                                                             {isActive ? (
