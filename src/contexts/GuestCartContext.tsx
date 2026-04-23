@@ -6,6 +6,7 @@ interface OptimisticCartItem extends CartItem {
     seller_name?: string;
     product_title?: string;
     variant_title?: string;
+    variant_options?: Record<string, string>;
     image_url?: string;
     max_quantity?: number;
     is_available?: boolean;
@@ -15,6 +16,7 @@ type StoredCartItem = CartItem & {
     seller_name?: string;
     product_title?: string;
     variant_title?: string;
+    variant_options?: Record<string, string>;
     image_url?: string;
     max_quantity?: number;
     is_available?: boolean;
@@ -98,6 +100,7 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
                 seller_name: stored.seller_name,
                 product_title: stored.product_title,
                 variant_title: stored.variant_title,
+                variant_options: stored.variant_options,
                 image_url: stored.image_url,
                 max_quantity: stored.max_quantity,
                 is_available: stored.is_available,

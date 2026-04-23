@@ -155,6 +155,7 @@ const CampaignProductPage: React.FC = () => {
                 seller_name: product.seller_name,
                 product_title: product.title,
                 variant_title: selectedVariant.title,
+                variant_options: selectedVariant.options,
                 image_url: product.images?.[0] || '/juno_app_icon.png',
                 source: `campaign:${slug}`,
             },

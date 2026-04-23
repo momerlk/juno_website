@@ -261,6 +261,7 @@ const CatalogPage: React.FC = () => {
                 seller_name: product.seller_name,
                 product_title: product.title,
                 variant_title: variant.title,
+                variant_options: variant.options,
                 image_url: getProductImage(product),
                 max_quantity: maxVariantQuantity,
                 is_available: variant.available && !!product.inventory?.in_stock,

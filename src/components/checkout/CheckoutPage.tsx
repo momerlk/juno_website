@@ -247,6 +247,18 @@ const CheckoutPage: React.FC = () => {
             if (!checkoutResponse.ok) throw new Error('Failed to place order');
 
             const order = checkoutResponse.body;
+            const receiptItems = optimisticCart.map((item) => ({
+                product_id: item.product_id,
+                variant_id: item.variant_id,
+                quantity: item.quantity,
+                unit_price: item.price,
+                line_total: item.price * item.quantity,
+                product_title: item.product_title,
+                variant_title: item.variant_title,
+                variant_options: item.variant_options,
+                image_url: item.image_url,
+                seller_name: item.seller_name,
+            }));
 
             // Track checkout completion
             if (order) {
@@ -263,7 +275,7 @@ const CheckoutPage: React.FC = () => {
             localStorage.removeItem(STORAGE_KEYS.CHECKOUT_DRAFT);
             clearCart();
 
-            navigate('/checkout/confirmation', { state: { order } });
+            navigate('/checkout/confirmation', { state: { order, receiptItems } });
         } catch (error: unknown) {
             setErrors({
                 general: error instanceof Error ? error.message : 'Failed to place order. Please try again.',
