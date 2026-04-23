@@ -121,6 +121,20 @@
   }
 }
 
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+    background: transparent;
+  }
+}
+
 .logo-scroller {
   overflow: hidden;
   -webkit-mask-image: linear-gradient(to right, transparent, white 20%, white 80%, transparent);

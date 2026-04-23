@@ -5,6 +5,7 @@ import { Menu } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
 
   const getTitle = () => {
@@ -16,7 +17,12 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="flex h-screen text-white overflow-hidden bg-background">
-      <Sidebar isOpen={isSidebarOpen} setIsOpen={setSidebarOpen} />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        setIsOpen={setSidebarOpen}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+      />
       <div className="flex-1 flex flex-col overflow-hidden relative">
          {/* Decorative background blobs for dashboard area */}
          <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">

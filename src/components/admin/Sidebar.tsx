@@ -1,56 +1,56 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, ShoppingCart, Users, BarChart2, Bell, X, LogOut, Package, TrendingUp, Settings, 
-  Search, ShieldCheck, Globe, Zap, Megaphone, Users2, Database, Layers
+  LayoutDashboard, ShoppingCart, Users, BarChart2, Bell, X, LogOut, Package, Settings,
+  ShieldCheck, Globe, Zap, Megaphone, Users2, Database, Layers, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 export const navigation = [
-  // Insights (Probe Engine)
+  {
+    group: 'Core',
+    items: [
+      { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, subtitle: 'Platform-wide fulfillment' },
+      { name: 'Campaigns', href: '/admin/campaigns', icon: Megaphone, subtitle: 'Acquisition campaigns' },
+      { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Queue and catalog management' },
+      { name: 'Sellers', href: '/admin/sellers', icon: ShieldCheck, subtitle: 'Seller onboarding and moderation' },
+    ]
+  },
   { 
     group: 'Insights',
     items: [
-      { name: 'Probe Overview', href: '/admin', icon: LayoutDashboard, subtitle: 'Platform KPIs & Trends', focus: 'Lead with data, not intuition.' },
-      { name: 'Real-time', href: '/admin/probe/real-time', icon: Zap, subtitle: 'Live event stream & activity', focus: 'Watch the platform breathe.' },
-      { name: 'Commerce', href: '/admin/probe/commerce', icon: BarChart2, subtitle: 'Sales & Funnel Analytics', focus: 'Track every rupee and conversion.' },
-      { name: 'User Growth', href: '/admin/probe/users', icon: Users2, subtitle: 'Acquisition & Retention', focus: 'Measure the viral coefficient.' },
+      { name: 'Probe Overview', href: '/admin', icon: LayoutDashboard, subtitle: 'Platform KPIs and trends' },
+      { name: 'Real-time', href: '/admin/probe/real-time', icon: Zap, subtitle: 'Live event stream' },
+      { name: 'Commerce', href: '/admin/probe/commerce', icon: BarChart2, subtitle: 'Sales and funnel analytics' },
+      { name: 'User Growth', href: '/admin/probe/users', icon: Users2, subtitle: 'Acquisition and retention' },
     ]
   },
-  // Operations
-  {
-    group: 'Operations',
-    items: [
-      { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, subtitle: 'Platform-wide fulfillment', focus: 'Ensure every child order ships.' },
-      { name: 'Sellers', href: '/admin/sellers', icon: ShieldCheck, subtitle: 'Onboarding & Moderation', focus: 'Keep the brand quality high.' },
-      { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Moderation Queue', focus: 'Review every single listing.' },
-      { name: 'Users', href: '/admin/users', icon: Users, subtitle: 'Identity & Access', focus: 'Manage the platform citizens.' },
-    ]
-  },
-  // Catalog
   {
     group: 'Catalog',
     items: [
-      { name: 'Collections', href: '/admin/catalog/collections', icon: Layers, subtitle: 'Discovery & Curation', focus: 'Shape the platform aesthetic.' },
-      { name: 'Drops', href: '/admin/catalog/drops', icon: Globe, subtitle: 'Exclusive release management', focus: 'Build hype and scarcity.' },
+      { name: 'Collections', href: '/admin/catalog/collections', icon: Layers, subtitle: 'Discovery and curation' },
+      { name: 'Drops', href: '/admin/catalog/drops', icon: Globe, subtitle: 'Exclusive release management' },
     ]
   },
-  // Marketing & Programs
   {
     group: 'Marketing',
     items: [
-      { name: 'Campaigns', href: '/admin/campaigns', icon: Megaphone, subtitle: 'Acquisition Strategies', focus: 'Growth through precision.' },
-      { name: 'Notifications', href: '/admin/notifications', icon: Bell, subtitle: 'Platform Broadcasts', focus: 'Direct line to every user.' },
-      { name: 'Ambassador', href: '/admin/ambassador-tasks', icon: Users2, subtitle: 'Campus & Affiliate tasks', focus: 'Scale through humans.' },
+      { name: 'Notifications', href: '/admin/notifications', icon: Bell, subtitle: 'Platform broadcasts' },
+      { name: 'Ambassador', href: '/admin/ambassador-tasks', icon: Users2, subtitle: 'Campus and affiliate tasks' },
     ]
   },
-  // System
+  {
+    group: 'Management',
+    items: [
+      { name: 'Users', href: '/admin/users', icon: Users, subtitle: 'Identity and access management' },
+    ]
+  },
   {
     group: 'System',
     items: [
-      { name: 'Infrastructure', href: '/admin/system', icon: Settings, subtitle: 'Global System Tools', focus: 'Keep the engines running.' },
-      { name: 'API Status', href: '/admin/api-status', icon: Database, subtitle: 'Health & Error logs', focus: 'Monitor service reliability.' },
+      { name: 'Infrastructure', href: '/admin/system', icon: Settings, subtitle: 'Global system tools' },
+      { name: 'API Status', href: '/admin/api-status', icon: Database, subtitle: 'Health and error logs' },
     ]
   }
 ];
@@ -58,32 +58,51 @@ export const navigation = [
 interface SidebarProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isCollapsed, onToggleCollapse }) => {
   const { admin, logout } = useAdminAuth();
+  const collapsed = isOpen ? false : isCollapsed;
 
   const sidebarContent = (
-    <div className="flex h-full flex-col bg-[linear-gradient(180deg,rgba(10,10,10,0.98),rgba(5,5,5,0.97))] border-r border-white/5">
-      <div className="border-b border-white/10 px-5 py-5">
-        <div className="mb-5 flex items-center justify-between">
+    <div className="flex h-full flex-col border-r border-white/10 bg-[#0b0b0b]">
+      <div className="border-b border-white/10 px-4 py-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/juno_logos/icon+text_white.png" alt="Juno Admin" className="h-8" />
-            <div className="rounded-full bg-primary/20 px-2 py-0.5 border border-primary/30">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-primary">Admin</span>
-            </div>
+            <img src="/juno_logos/icon+text_white.png" alt="Juno Admin" className="h-7" />
+            {!collapsed ? (
+              <div className="rounded-md border border-white/15 bg-white/[0.03] px-2 py-0.5">
+                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-300">Admin</span>
+              </div>
+            ) : null}
           </div>
-          <button onClick={() => setIsOpen(false)} className="rounded-2xl border border-white/10 bg-white/[0.03] p-2 text-white/60 transition-colors hover:text-white md:hidden">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onToggleCollapse}
+              className="hidden rounded-md border border-white/15 bg-white/[0.03] p-2 text-neutral-300 transition-colors hover:text-white md:inline-flex"
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
+            <button onClick={() => setIsOpen(false)} className="rounded-md border border-white/15 bg-white/[0.03] p-2 text-neutral-300 transition-colors hover:text-white md:hidden">
+              <X size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-4 py-5 space-y-8 scrollbar-hide">
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4 scrollbar-hide">
         {navigation.map((group) => (
           <div key={group.group}>
-            <div className="mb-3 px-2 text-[10px] font-mono uppercase tracking-[0.25em] text-white/25">{group.group}</div>
-            <ul className="space-y-2">
+            {!collapsed ? (
+              <div className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">{group.group}</div>
+            ) : (
+              <div className="mb-2 border-t border-white/10" />
+            )}
+            <ul className="space-y-1">
               {group.items.map((item) => (
                 <li key={item.name}>
                   <NavLink
@@ -91,27 +110,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                     end={item.href === '/admin'}
                     onClick={() => isOpen && setIsOpen(false)}
                     className={({ isActive }) =>
-                      `group block rounded-[1.35rem] p-3 transition-all duration-300 ${
+                      `group block rounded-md border p-2.5 transition-colors ${
                         isActive
-                          ? 'bg-[linear-gradient(135deg,rgba(255,24,24,0.12),rgba(255,255,255,0.05))] shadow-[0_12px_36px_rgba(255,24,24,0.08)] border border-white/5'
-                          : 'bg-white/[0.01] hover:bg-white/[0.04] border border-transparent'
+                          ? 'border-white/20 bg-white/[0.09]'
+                          : 'border-transparent bg-transparent hover:border-white/10 hover:bg-white/[0.04]'
                       }`
                     }
+                    title={collapsed ? item.name : undefined}
                   >
                     {({ isActive }) => (
-                      <div className="flex items-start gap-3">
-                        <div className={`mt-0.5 rounded-2xl p-2.5 ${isActive ? 'bg-primary/15 text-primary' : 'bg-black/28 text-white/40 group-hover:text-white'}`}>
-                          <item.icon size={16} />
+                      <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
+                        <div className={`rounded-md p-1.5 ${isActive ? 'bg-white/15 text-white' : 'text-white/50 group-hover:text-white/80'}`}>
+                          <item.icon size={14} />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-black uppercase tracking-[0.04em] text-white">{item.name}</span>
-                            {isActive && <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-primary">View</span>}
+                        {!collapsed ? (
+                          <div className="min-w-0 flex-1">
+                            <p className={`truncate text-[12px] font-medium ${isActive ? 'text-white' : 'text-neutral-200'}`}>{item.name}</p>
+                            <p className="truncate text-[10px] text-neutral-500 group-hover:text-neutral-400">
+                              {item.subtitle}
+                            </p>
                           </div>
-                          <p className="mt-1 text-[11px] text-white/30 truncate group-hover:text-white/50 transition-colors">
-                            {item.subtitle}
-                          </p>
-                        </div>
+                        ) : null}
                       </div>
                     )}
                   </NavLink>
@@ -122,24 +141,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         ))}
       </nav>
 
-      <div className="border-t border-white/10 p-4">
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl border border-primary/20 bg-primary/10 flex items-center justify-center">
-              <span className="text-primary font-bold">{admin?.name?.[0] || 'A'}</span>
+      <div className="border-t border-white/10 p-3">
+        <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
+          <div className={`mb-3 flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-white/[0.05]">
+              <span className="text-sm font-semibold text-neutral-100">{admin?.name?.[0] || 'A'}</span>
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-black uppercase tracking-[0.04em] text-white">{admin?.name || 'Admin'}</p>
-              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">{admin?.role || 'Administrator'}</p>
-            </div>
+            {!collapsed ? (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-white">{admin?.name || 'Admin'}</p>
+                <p className="text-[10px] uppercase tracking-[0.08em] text-neutral-500">{admin?.role || 'Administrator'}</p>
+              </div>
+            ) : null}
           </div>
           
           <button
             onClick={logout}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:border-red-500/25 hover:text-red-400"
+            className={`flex w-full items-center justify-center gap-2 rounded-md border border-white/15 bg-black/30 px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-red-400/30 hover:text-red-300 ${collapsed ? 'px-2' : ''}`}
+            title={collapsed ? 'Logout' : undefined}
           >
             <LogOut size={15} />
-            Logout
+            {!collapsed ? 'Logout' : null}
           </button>
         </div>
       </div>
@@ -153,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
   return (
     <>
-      <div className="hidden md:flex md:h-[100dvh] md:w-80 md:flex-col md:sticky md:top-0 flex-shrink-0">
+      <div className={`hidden md:sticky md:top-0 md:flex md:h-[100dvh] md:flex-shrink-0 md:flex-col ${isCollapsed ? 'md:w-20' : 'md:w-72'}`}>
         {sidebarContent}
       </div>
 

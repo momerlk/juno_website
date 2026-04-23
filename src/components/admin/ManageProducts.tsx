@@ -74,6 +74,8 @@ interface CatalogEditDraft {
   tagsInput: string;
 }
 
+type QueueSortKey = 'updated_desc' | 'updated_asc' | 'price_desc' | 'price_asc' | 'stock_desc' | 'stock_asc';
+
 const PRODUCT_TYPES = ['Eastern', 'Western', 'Fusion', 'Modest', 'Footwear', 'Accessories'];
 const GENDERS = ['female', 'male', 'unisex'];
 const PAGE_SIZE = 25;
@@ -142,6 +144,47 @@ const statusPillClass = (status?: string) => {
 const getPageSlice = <T,>(items: T[], page: number, pageSize: number): T[] => {
   const start = (page - 1) * pageSize;
   return items.slice(start, start + pageSize);
+};
+
+const getQueueItemPrice = (item: QueueItem): number => {
+  const value = item.product?.pricing?.price ?? item.product?.pricing?.brand_price;
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+};
+
+const getQueueItemStock = (item: QueueItem): number => {
+  const value = item.product?.inventory?.available_quantity ?? item.product?.inventory?.quantity;
+  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0;
+};
+
+const getQueueItemUpdatedTs = (item: QueueItem): number => {
+  const ts = Date.parse(item.updated_at || item.created_at || '');
+  return Number.isFinite(ts) ? ts : 0;
+};
+
+const hasSizingGuideData = (item: QueueItem): boolean => {
+  const guide = item.enrichment?.sizing_guide || item.product?.sizing_guide;
+  if (!guide || typeof guide !== 'object') return false;
+  const chart = (guide as any).size_chart && typeof (guide as any).size_chart === 'object'
+    ? (guide as any).size_chart
+    : guide;
+  return typeof chart === 'object' && Object.keys(chart).length > 0;
+};
+
+const hasQueueBodyHtmlTable = (item: QueueItem): boolean => !!extractFirstTableHtml(item.product?.body_html);
+
+const getVariantAvailability = (product: any): { available: string[]; unavailable: string[] } => {
+  const variants = asArray(product?.variants);
+  const available: string[] = [];
+  const unavailable: string[] = [];
+  variants.forEach((variant: any, index: number) => {
+    const title = String(variant?.title || variant?.id || `Variant ${index + 1}`);
+    const qty = variant?.inventory?.available_quantity ?? variant?.inventory?.quantity;
+    const hasQty = typeof qty === 'number' && Number.isFinite(qty);
+    const isAvailable = variant?.available !== false && (!hasQty || qty > 0);
+    if (isAvailable) available.push(title);
+    else unavailable.push(title);
+  });
+  return { available, unavailable };
 };
 
 const sanitizeHtml = (html?: string): string => {
@@ -250,6 +293,15 @@ const ManageProducts: React.FC = () => {
   const [scrapeShopUrl, setScrapeShopUrl] = useState('');
   const [scrapeFeedback, setScrapeFeedback] = useState('');
   const [scrapeError, setScrapeError] = useState('');
+  const [queueBrandFilter, setQueueBrandFilter] = useState('all');
+  const [queueSort, setQueueSort] = useState<QueueSortKey>('updated_desc');
+  const [queueFlagFilters, setQueueFlagFilters] = useState({
+    noSizingGuide: false,
+    hasBodyTable: false,
+    outOfStock: false,
+    hasErrors: false,
+    hasImages: false,
+  });
 
   const [queueEditId, setQueueEditId] = useState('');
   const [queueEditDraft, setQueueEditDraft] = useState<QueueEditDraft>({
@@ -309,7 +361,7 @@ const ManageProducts: React.FC = () => {
   useEffect(() => {
     setQueuePage(1);
     setCatalogPage(1);
-  }, [searchTerm, statusFilter, activeTab]);
+  }, [searchTerm, statusFilter, activeTab, queueSort, queueFlagFilters, queueBrandFilter]);
 
   useEffect(() => {
     setIncrementStepsByCol((prev) => {
@@ -333,19 +385,120 @@ const ManageProducts: React.FC = () => {
     });
   }, [products, searchTerm]);
 
+  const queueBrandOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: string[] = [];
+    queue.forEach((item) => {
+      const name = String(item.product?.seller_name || item.seller_id || '').trim();
+      if (!name || seen.has(name)) return;
+      seen.add(name);
+      options.push(name);
+    });
+    return options.sort((a, b) => a.localeCompare(b));
+  }, [queue]);
+
   const filteredQueue = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return queue.filter((item) => {
+    const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
+    const termTokens: string[] = [];
+    const fieldFilters: Record<string, string[]> = {};
+    const priceOps: Array<{ op: '>' | '<' | '>=' | '<='; value: number }> = [];
+
+    tokens.forEach((token) => {
+      const priceMatch = token.match(/^price(<=|>=|<|>)(\d+(?:\.\d+)?)$/);
+      if (priceMatch) {
+        priceOps.push({ op: priceMatch[1] as '>' | '<' | '>=' | '<=', value: Number(priceMatch[2]) });
+        return;
+      }
+      const splitIdx = token.indexOf(':');
+      if (splitIdx > 0) {
+        const key = token.slice(0, splitIdx);
+        const value = token.slice(splitIdx + 1);
+        if (value) fieldFilters[key] = [...(fieldFilters[key] || []), value];
+      } else {
+        termTokens.push(token);
+      }
+    });
+
+    const filtered = queue.filter((item) => {
       const title = String(item.product?.title || '').toLowerCase();
       const seller = String(item.product?.seller_name || item.seller_id || '').toLowerCase();
+      const sellerExact = String(item.product?.seller_name || item.seller_id || '').trim();
       const status = String(item.status || '').toLowerCase();
       const source = String(item.source || '').toLowerCase();
       const queueId = String(item.id || '').toLowerCase();
-      const matchesSearch = !q || title.includes(q) || seller.includes(q) || status.includes(q) || source.includes(q) || queueId.includes(q);
+      const productType = String(item.enrichment?.product_type || item.product?.product_type || '').toLowerCase();
+      const gender = String(item.enrichment?.gender || inferGender(item) || '').toLowerCase();
+      const hasTable = hasQueueBodyHtmlTable(item);
+      const hasImages = asArray(item.product?.images).length > 0;
+      const hasSizing = hasSizingGuideData(item);
+      const hasErrors = asArray(item.errors).length > 0;
+      const stock = getQueueItemStock(item);
+      const price = getQueueItemPrice(item);
+
+      const matchesTerms = termTokens.every((term) =>
+        title.includes(term) ||
+        seller.includes(term) ||
+        status.includes(term) ||
+        source.includes(term) ||
+        queueId.includes(term) ||
+        productType.includes(term)
+      );
+      const matchesSearch = tokens.length === 0 || matchesTerms;
       const matchesStatus = statusFilter === 'all' || status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesBrand = queueBrandFilter === 'all' || sellerExact === queueBrandFilter;
+      const matchesSmartFields = Object.entries(fieldFilters).every(([key, values]) => {
+        if (values.length === 0) return true;
+        if (key === 'status') return values.some((v) => status.includes(v));
+        if (key === 'seller') return values.some((v) => seller.includes(v));
+        if (key === 'source') return values.some((v) => source.includes(v));
+        if (key === 'id') return values.some((v) => queueId.includes(v));
+        if (key === 'title') return values.some((v) => title.includes(v));
+        if (key === 'type') return values.some((v) => productType.includes(v));
+        if (key === 'gender') return values.some((v) => gender.includes(v));
+        if (key === 'has') {
+          return values.every((v) => {
+            if (v === 'table') return hasTable;
+            if (v === 'image' || v === 'images') return hasImages;
+            if (v === 'sizing' || v === 'sizeguide') return hasSizing;
+            if (v === 'error' || v === 'errors') return hasErrors;
+            return true;
+          });
+        }
+        if (key === 'stock') {
+          return values.every((v) => {
+            if (v === 'out') return stock <= 0;
+            if (v === 'low') return stock > 0 && stock <= 5;
+            if (v === 'in') return stock > 0;
+            return true;
+          });
+        }
+        return true;
+      });
+      const matchesPrice = priceOps.every(({ op, value }) => {
+        if (op === '>') return price > value;
+        if (op === '<') return price < value;
+        if (op === '>=') return price >= value;
+        return price <= value;
+      });
+      const matchesFlags =
+        (!queueFlagFilters.noSizingGuide || !hasSizing) &&
+        (!queueFlagFilters.hasBodyTable || hasTable) &&
+        (!queueFlagFilters.outOfStock || stock <= 0) &&
+        (!queueFlagFilters.hasErrors || hasErrors) &&
+        (!queueFlagFilters.hasImages || hasImages);
+      return matchesSearch && matchesStatus && matchesBrand && matchesSmartFields && matchesPrice && matchesFlags;
     });
-  }, [queue, searchTerm, statusFilter]);
+
+    return filtered.sort((a, b) => {
+      if (queueSort === 'updated_asc') return getQueueItemUpdatedTs(a) - getQueueItemUpdatedTs(b);
+      if (queueSort === 'updated_desc') return getQueueItemUpdatedTs(b) - getQueueItemUpdatedTs(a);
+      if (queueSort === 'price_asc') return getQueueItemPrice(a) - getQueueItemPrice(b);
+      if (queueSort === 'price_desc') return getQueueItemPrice(b) - getQueueItemPrice(a);
+      if (queueSort === 'stock_asc') return getQueueItemStock(a) - getQueueItemStock(b);
+      return getQueueItemStock(b) - getQueueItemStock(a);
+    });
+  }, [queue, searchTerm, statusFilter, queueSort, queueFlagFilters, queueBrandFilter]);
 
   const queueTotalPages = Math.max(1, Math.ceil(filteredQueue.length / PAGE_SIZE));
   const catalogTotalPages = Math.max(1, Math.ceil(filteredCatalog.length / PAGE_SIZE));
@@ -694,6 +847,43 @@ const ManageProducts: React.FC = () => {
     }
   };
 
+  const handleBulkDeleteFilteredQueue = async () => {
+    const targetItems = filteredQueue;
+    if (targetItems.length === 0) return;
+    const confirmed = window.confirm(`Delete ${targetItems.length} queue item(s) matching current filters? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setActionKey('bulkDelete');
+    try {
+      const ids = targetItems.map((item) => item.id);
+      const BATCH_SIZE = 12;
+      let failed = 0;
+
+      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+        const batch = ids.slice(i, i + BATCH_SIZE);
+        const results = await Promise.allSettled(batch.map((id) => deleteProductQueueItem(id)));
+        results.forEach((result) => {
+          if (result.status === 'rejected') {
+            failed += 1;
+            return;
+          }
+          if (!result.value.ok) failed += 1;
+        });
+      }
+
+      await fetchQueueData();
+      if (queueEditId && ids.includes(queueEditId)) cancelQueueEdit();
+
+      if (failed > 0) {
+        window.alert(`Bulk delete finished with ${failed} failure(s).`);
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Bulk delete failed');
+    } finally {
+      setActionKey('');
+    }
+  };
+
   const openCatalogEdit = (product: any) => {
     setCatalogEditId(product.id);
     setCatalogEditError('');
@@ -820,7 +1010,7 @@ const ManageProducts: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={`Search ${activeTab}...`}
+              placeholder={activeTab === 'queue' ? 'Smart search queue (e.g. status:ready seller:rakh has:table)' : 'Search catalog...'}
               className="w-full rounded border border-white/20 bg-[#080808] py-1.5 pl-7 pr-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-primary/60 focus:outline-none"
             />
           </div>
@@ -829,7 +1019,7 @@ const ManageProducts: React.FC = () => {
 
       {activeTab === 'queue' ? (
         <section className="rounded-lg border border-white/10 bg-[#121212] p-4">
-          <div className="grid gap-2 lg:grid-cols-[180px_1fr_1fr_auto]">
+          <div className="grid gap-2 lg:grid-cols-[180px_180px_1fr_1fr_auto]">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -841,6 +1031,18 @@ const ManageProducts: React.FC = () => {
               <option className="bg-[#0f0f0f] text-neutral-100" value="ready">Ready</option>
               <option className="bg-[#0f0f0f] text-neutral-100" value="promoted">Promoted</option>
               <option className="bg-[#0f0f0f] text-neutral-100" value="failed">Failed</option>
+            </select>
+            <select
+              value={queueBrandFilter}
+              onChange={(e) => setQueueBrandFilter(e.target.value)}
+              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 [color-scheme:dark] focus:border-primary/60 focus:outline-none"
+            >
+              <option className="bg-[#0f0f0f] text-neutral-100" value="all">All brands</option>
+              {queueBrandOptions.map((brand) => (
+                <option key={brand} className="bg-[#0f0f0f] text-neutral-100" value={brand}>
+                  {brand}
+                </option>
+              ))}
             </select>
             <select
               value={selectedSellerId}
@@ -871,6 +1073,66 @@ const ManageProducts: React.FC = () => {
               {actionKey === 'scrape' ? 'Running...' : 'Scrape'}
             </button>
           </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {[
+              { key: 'noSizingGuide', label: 'No Sizing Guide' },
+              { key: 'hasBodyTable', label: 'Has Body Table' },
+              { key: 'outOfStock', label: 'Out of Stock' },
+              { key: 'hasErrors', label: 'Has Errors' },
+              { key: 'hasImages', label: 'Has Images' },
+            ].map((filter) => {
+              const active = queueFlagFilters[filter.key as keyof typeof queueFlagFilters];
+              return (
+                <button
+                  key={filter.key}
+                  onClick={() =>
+                    setQueueFlagFilters((prev) => ({
+                      ...prev,
+                      [filter.key]: !prev[filter.key as keyof typeof queueFlagFilters],
+                    }))
+                  }
+                  className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.08em] ${
+                    active
+                      ? 'border-white/50 bg-white/15 text-neutral-100'
+                      : 'border-white/15 bg-[#0b0b0b] text-neutral-400'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setQueueFlagFilters({ noSizingGuide: false, hasBodyTable: false, outOfStock: false, hasErrors: false, hasImages: false })}
+              className="rounded border border-white/15 bg-[#0b0b0b] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-400"
+            >
+              Clear
+            </button>
+            <button
+              onClick={handleBulkDeleteFilteredQueue}
+              disabled={filteredQueue.length === 0 || actionKey === 'bulkDelete'}
+              className="rounded border border-red-400/35 bg-red-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-red-300 disabled:opacity-40"
+            >
+              {actionKey === 'bulkDelete' ? 'Deleting...' : `Delete Filtered (${filteredQueue.length})`}
+            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-[0.1em] text-neutral-500">{filteredQueue.length} items</span>
+              <select
+                value={queueSort}
+                onChange={(e) => setQueueSort(e.target.value as QueueSortKey)}
+                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark] focus:border-primary/60 focus:outline-none"
+              >
+                <option className="bg-[#0f0f0f] text-neutral-100" value="updated_desc">Newest first</option>
+                <option className="bg-[#0f0f0f] text-neutral-100" value="updated_asc">Oldest first</option>
+                <option className="bg-[#0f0f0f] text-neutral-100" value="price_desc">Price high-low</option>
+                <option className="bg-[#0f0f0f] text-neutral-100" value="price_asc">Price low-high</option>
+                <option className="bg-[#0f0f0f] text-neutral-100" value="stock_desc">Stock high-low</option>
+                <option className="bg-[#0f0f0f] text-neutral-100" value="stock_asc">Stock low-high</option>
+              </select>
+            </div>
+          </div>
+          <p className="mt-2 text-[10px] text-neutral-500">
+            Smart search: <span className="font-mono">status:ready seller:rakh has:table stock:low price&gt;3000 type:eastern</span>
+          </p>
           {scrapeFeedback ? <p className="mt-2 text-xs text-green-300">{scrapeFeedback}</p> : null}
           {scrapeError ? <p className="mt-2 text-xs text-red-300">{scrapeError}</p> : null}
         </section>
@@ -1187,6 +1449,7 @@ const ManageProducts: React.FC = () => {
                   <th className="px-3 py-2 font-medium">Product</th>
                   <th className="px-3 py-2 font-medium">Seller</th>
                   <th className="px-3 py-2 font-medium">Type</th>
+                  <th className="px-3 py-2 font-medium">Variants</th>
                   <th className="px-3 py-2 font-medium">Price</th>
                   <th className="px-3 py-2 font-medium">Stock</th>
                   <th className="px-3 py-2 font-medium">Status</th>
@@ -1196,6 +1459,7 @@ const ManageProducts: React.FC = () => {
               <tbody>
                 {catalogPageItems.map((product) => {
                   const isEditing = catalogEditId === product.id;
+                  const variantInfo = getVariantAvailability(product);
                   return (
                     <tr key={product.id} className="border-t border-white/10">
                       <td className="px-3 py-2">
@@ -1222,6 +1486,27 @@ const ManageProducts: React.FC = () => {
                       </td>
                       <td className="px-3 py-2 text-neutral-300">{product.seller_name || product.seller_id || '-'}</td>
                       <td className="px-3 py-2 text-neutral-300">{product.product_type || '-'}</td>
+                      <td className="px-3 py-2">
+                        <div className="space-y-1">
+                          <div className="text-[10px] text-green-300">
+                            Available: {variantInfo.available.length}
+                          </div>
+                          <div className="text-[10px] text-red-300">
+                            Unavailable: {variantInfo.unavailable.length}
+                          </div>
+                          <div className="max-w-[250px] space-y-0.5">
+                            {variantInfo.available.slice(0, 4).map((name) => (
+                              <div key={`${product.id}-av-${name}`} className="truncate text-[10px] text-neutral-200">{name}</div>
+                            ))}
+                            {variantInfo.unavailable.slice(0, 4).map((name) => (
+                              <div key={`${product.id}-un-${name}`} className="truncate text-[10px] text-neutral-500 line-through">{name}</div>
+                            ))}
+                            {variantInfo.available.length + variantInfo.unavailable.length > 8 ? (
+                              <div className="text-[10px] text-neutral-500">+{variantInfo.available.length + variantInfo.unavailable.length - 8} more</div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-3 py-2 text-neutral-100">{formatCurrency(product.pricing?.price, product.pricing?.currency || 'PKR')}</td>
                       <td className="px-3 py-2 text-neutral-300">{product.inventory?.available_quantity ?? product.inventory?.quantity ?? 0}</td>
                       <td className="px-3 py-2">
