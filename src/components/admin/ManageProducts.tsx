@@ -325,6 +325,12 @@ const ManageProducts: React.FC = () => {
     tagsInput: '',
   });
   const [catalogEditError, setCatalogEditError] = useState('');
+  const [catalogReferenceTab, setCatalogReferenceTab] = useState<ReferenceTab>('images');
+  const [catalogReferenceImageIndex, setCatalogReferenceImageIndex] = useState(0);
+  const [catalogSizingDraft, setCatalogSizingDraft] = useState<SizingGridDraft>(parseSizingGuideDraft({}));
+  const [catalogIncrementBaseSize, setCatalogIncrementBaseSize] = useState('');
+  const [catalogIncrementStep, setCatalogIncrementStep] = useState('0.5');
+  const [catalogIncrementStepsByCol, setCatalogIncrementStepsByCol] = useState<Record<string, string>>({});
 
   const [queuePage, setQueuePage] = useState(1);
   const [catalogPage, setCatalogPage] = useState(1);
@@ -372,6 +378,16 @@ const ManageProducts: React.FC = () => {
       return next;
     });
   }, [sizingDraft.cols]);
+
+  useEffect(() => {
+    setCatalogIncrementStepsByCol((prev) => {
+      const next: Record<string, string> = {};
+      catalogSizingDraft.cols.forEach((col) => {
+        next[col] = prev[col] ?? '0.5';
+      });
+      return next;
+    });
+  }, [catalogSizingDraft.cols]);
 
   const filteredCatalog = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -894,11 +910,195 @@ const ManageProducts: React.FC = () => {
       is_featured: !!product.is_featured,
       tagsInput: Array.isArray(product.tags) ? product.tags.join(', ') : '',
     });
+    const parsed = parseSizingGuideDraft(product?.sizing_guide || {});
+    setCatalogSizingDraft(parsed);
+    const hasBodyTable = !!extractFirstTableHtml(product?.body_html);
+    setCatalogReferenceTab(hasBodyTable ? 'body_html' : asArray(product?.images).length ? 'images' : product?.body_html ? 'body_html' : 'description');
+    setCatalogReferenceImageIndex(0);
+    setCatalogIncrementBaseSize(parsed.rows[0] || '');
+    setCatalogIncrementStep('0.5');
+    setCatalogIncrementStepsByCol(
+      parsed.cols.reduce((acc, col) => {
+        acc[col] = '0.5';
+        return acc;
+      }, {} as Record<string, string>)
+    );
   };
 
   const cancelCatalogEdit = () => {
     setCatalogEditId('');
     setCatalogEditError('');
+  };
+
+  const updateCatalogGuideCell = (row: string, col: string, value: string) => {
+    setCatalogSizingDraft((prev) => ({
+      ...prev,
+      cells: {
+        ...prev.cells,
+        [row]: {
+          ...(prev.cells[row] || {}),
+          [col]: value,
+        },
+      },
+    }));
+  };
+
+  const updateCatalogGuideRowName = (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+    setCatalogSizingDraft((prev) => {
+      if (prev.rows.includes(trimmed)) return prev;
+      const nextRows = prev.rows.map((row) => (row === oldName ? trimmed : row));
+      const nextCells = { ...prev.cells, [trimmed]: { ...(prev.cells[oldName] || {}) } };
+      delete nextCells[oldName];
+      return { ...prev, rows: nextRows, cells: nextCells };
+    });
+    setCatalogIncrementBaseSize((prev) => (prev === oldName ? trimmed : prev));
+  };
+
+  const updateCatalogGuideColName = (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+    setCatalogSizingDraft((prev) => {
+      if (prev.cols.includes(trimmed)) return prev;
+      const nextCols = prev.cols.map((col) => (col === oldName ? trimmed : col));
+      const nextCells: Record<string, Record<string, string>> = {};
+      prev.rows.forEach((row) => {
+        const rowCells = { ...(prev.cells[row] || {}) };
+        rowCells[trimmed] = rowCells[oldName] || '';
+        delete rowCells[oldName];
+        nextCells[row] = rowCells;
+      });
+      return { ...prev, cols: nextCols, cells: nextCells };
+    });
+    setCatalogIncrementStepsByCol((prev) => {
+      const next = { ...prev, [trimmed]: prev[oldName] || prev[trimmed] || '0.5' };
+      delete next[oldName];
+      return next;
+    });
+  };
+
+  const addCatalogGuideRow = () => {
+    setCatalogSizingDraft((prev) => {
+      const suggested = SIZE_ROW_PRESET.find((name) => !prev.rows.includes(name)) || `Size ${prev.rows.length + 1}`;
+      const nextRows = [...prev.rows, suggested];
+      const nextCells = { ...prev.cells, [suggested]: {} as Record<string, string> };
+      prev.cols.forEach((col) => {
+        nextCells[suggested][col] = '';
+      });
+      return { ...prev, rows: nextRows, cells: nextCells };
+    });
+  };
+
+  const addCatalogGuideCol = () => {
+    setCatalogSizingDraft((prev) => {
+      const suggested = `measurement_${prev.cols.length + 1}`;
+      const nextCols = [...prev.cols, suggested];
+      const nextCells: Record<string, Record<string, string>> = {};
+      prev.rows.forEach((row) => {
+        nextCells[row] = { ...(prev.cells[row] || {}), [suggested]: '' };
+      });
+      return { ...prev, cols: nextCols, cells: nextCells };
+    });
+  };
+
+  const removeCatalogGuideRow = (rowName: string) => {
+    setCatalogSizingDraft((prev) => {
+      if (prev.rows.length <= 1) return prev;
+      const nextRows = prev.rows.filter((row) => row !== rowName);
+      const nextCells = { ...prev.cells };
+      delete nextCells[rowName];
+      return { ...prev, rows: nextRows, cells: nextCells };
+    });
+    setCatalogIncrementBaseSize((prev) => (prev === rowName ? '' : prev));
+  };
+
+  const removeCatalogGuideCol = (colName: string) => {
+    setCatalogSizingDraft((prev) => {
+      if (prev.cols.length <= 1) return prev;
+      const nextCols = prev.cols.filter((col) => col !== colName);
+      const nextCells: Record<string, Record<string, string>> = {};
+      prev.rows.forEach((row) => {
+        const rowCells = { ...(prev.cells[row] || {}) };
+        delete rowCells[colName];
+        nextCells[row] = rowCells;
+      });
+      return { ...prev, cols: nextCols, cells: nextCells };
+    });
+    setCatalogIncrementStepsByCol((prev) => {
+      const next = { ...prev };
+      delete next[colName];
+      return next;
+    });
+  };
+
+  const transposeCatalogGuide = () => {
+    setCatalogSizingDraft((prev) => {
+      const nextRows = [...prev.cols];
+      const nextCols = [...prev.rows];
+      const nextCells: Record<string, Record<string, string>> = {};
+      nextRows.forEach((row) => {
+        nextCells[row] = {};
+        nextCols.forEach((col) => {
+          nextCells[row][col] = prev.cells[col]?.[row] || '';
+        });
+      });
+      return { ...prev, rows: nextRows, cols: nextCols, cells: nextCells };
+    });
+    setCatalogIncrementBaseSize('');
+    setCatalogIncrementStepsByCol({});
+  };
+
+  const applyCatalogStepIncrement = () => {
+    const stepValue = Number(catalogIncrementStep);
+    if (!catalogIncrementBaseSize || !Number.isFinite(stepValue)) {
+      setCatalogEditError('Choose a base size and valid increment step.');
+      return;
+    }
+    setCatalogEditError('');
+    setCatalogSizingDraft((prev) => {
+      const baseIndex = prev.rows.indexOf(catalogIncrementBaseSize);
+      if (baseIndex === -1) return prev;
+      const baseCells = prev.cells[catalogIncrementBaseSize] || {};
+      const nextCells: Record<string, Record<string, string>> = {};
+      prev.rows.forEach((row, rowIndex) => {
+        const offset = rowIndex - baseIndex;
+        nextCells[row] = { ...(prev.cells[row] || {}) };
+        prev.cols.forEach((col) => {
+          const baseNumber = Number(baseCells[col]);
+          if (!Number.isFinite(baseNumber)) return;
+          const nextValue = baseNumber + (offset * stepValue);
+          nextCells[row][col] = String(Number(nextValue.toFixed(3)));
+        });
+      });
+      return { ...prev, cells: nextCells };
+    });
+  };
+
+  const applyCatalogColumnStepIncrement = () => {
+    if (!catalogIncrementBaseSize) {
+      setCatalogEditError('Choose a base size first.');
+      return;
+    }
+    setCatalogEditError('');
+    setCatalogSizingDraft((prev) => {
+      const baseIndex = prev.rows.indexOf(catalogIncrementBaseSize);
+      if (baseIndex === -1) return prev;
+      const baseCells = prev.cells[catalogIncrementBaseSize] || {};
+      const nextCells: Record<string, Record<string, string>> = {};
+      prev.rows.forEach((row, rowIndex) => {
+        const offset = rowIndex - baseIndex;
+        nextCells[row] = { ...(prev.cells[row] || {}) };
+        prev.cols.forEach((col) => {
+          const step = Number(catalogIncrementStepsByCol[col] || catalogIncrementStep);
+          const baseNumber = Number(baseCells[col]);
+          if (!Number.isFinite(step) || !Number.isFinite(baseNumber)) return;
+          const nextValue = baseNumber + (offset * step);
+          nextCells[row][col] = String(Number(nextValue.toFixed(3)));
+        });
+      });
+      return { ...prev, cells: nextCells };
+    });
   };
 
   const handleCatalogPatch = async (product: any) => {
@@ -913,6 +1113,7 @@ const ManageProducts: React.FC = () => {
       status: catalogEditDraft.status,
       is_featured: catalogEditDraft.is_featured,
       tags: catalogEditDraft.tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
+      sizing_guide: buildSizingGuidePayload(catalogSizingDraft),
     };
 
     setCatalogEditError('');
@@ -949,6 +1150,11 @@ const ManageProducts: React.FC = () => {
       setActionKey('');
     }
   };
+
+  const selectedCatalogProduct = useMemo(
+    () => products.find((p) => p.id === catalogEditId),
+    [products, catalogEditId]
+  );
 
   const renderPager = (page: number, totalPages: number, setPage: (n: number) => void) => (
     <div className="mt-3 flex items-center justify-between text-xs text-neutral-400">
@@ -1461,141 +1667,311 @@ const ManageProducts: React.FC = () => {
                   const isEditing = catalogEditId === product.id;
                   const variantInfo = getVariantAvailability(product);
                   return (
-                    <tr key={product.id} className="border-t border-white/10">
-                      <td className="px-3 py-2">
-                        {isEditing ? (
-                          <input
-                            value={catalogEditDraft.title}
-                            onChange={(e) => setCatalogEditDraft((p) => ({ ...p, title: e.target.value }))}
-                            className="w-full rounded border border-white/15 bg-[#0a0a0a] px-2 py-1 text-xs"
-                          />
-                        ) : (
-                          <div className="flex items-start gap-2">
-                            <img
-                              src={getImageUrl(product.images)}
-                              alt={product.title || product.id}
-                              className="h-10 w-8 rounded border border-white/15 bg-[#111] object-cover"
-                              loading="lazy"
+                    <React.Fragment key={product.id}>
+                      <tr className="border-t border-white/10">
+                        <td className="px-3 py-2">
+                          {isEditing ? (
+                            <input
+                              value={catalogEditDraft.title}
+                              onChange={(e) => setCatalogEditDraft((p) => ({ ...p, title: e.target.value }))}
+                              className="w-full rounded border border-white/15 bg-[#0a0a0a] px-2 py-1 text-xs"
                             />
-                            <div className="min-w-0">
-                              <div className="max-w-[300px] truncate text-neutral-100">{product.title || 'Untitled'}</div>
-                              <div className="font-mono text-[10px] text-neutral-500">{product.id}</div>
+                          ) : (
+                            <div className="flex items-start gap-2">
+                              <img
+                                src={getImageUrl(product.images)}
+                                alt={product.title || product.id}
+                                className="h-10 w-8 rounded border border-white/15 bg-[#111] object-cover"
+                                loading="lazy"
+                              />
+                              <div className="min-w-0">
+                                <div className="max-w-[300px] truncate text-neutral-100">{product.title || 'Untitled'}</div>
+                                <div className="font-mono text-[10px] text-neutral-500">{product.id}</div>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-neutral-300">{product.seller_name || product.seller_id || '-'}</td>
+                        <td className="px-3 py-2 text-neutral-300">{product.product_type || '-'}</td>
+                        <td className="px-3 py-2">
+                          <div className="space-y-1">
+                            <div className="text-[10px] text-green-300">
+                              Available: {variantInfo.available.length}
+                            </div>
+                            <div className="text-[10px] text-red-300">
+                              Unavailable: {variantInfo.unavailable.length}
+                            </div>
+                            <div className="max-w-[250px] space-y-0.5">
+                              {variantInfo.available.slice(0, 4).map((name) => (
+                                <div key={`${product.id}-av-${name}`} className="truncate text-[10px] text-neutral-200">{name}</div>
+                              ))}
+                              {variantInfo.unavailable.slice(0, 4).map((name) => (
+                                <div key={`${product.id}-un-${name}`} className="truncate text-[10px] text-neutral-500 line-through">{name}</div>
+                              ))}
+                              {variantInfo.available.length + variantInfo.unavailable.length > 8 ? (
+                                <div className="text-[10px] text-neutral-500">+{variantInfo.available.length + variantInfo.unavailable.length - 8} more</div>
+                              ) : null}
                             </div>
                           </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-neutral-300">{product.seller_name || product.seller_id || '-'}</td>
-                      <td className="px-3 py-2 text-neutral-300">{product.product_type || '-'}</td>
-                      <td className="px-3 py-2">
-                        <div className="space-y-1">
-                          <div className="text-[10px] text-green-300">
-                            Available: {variantInfo.available.length}
-                          </div>
-                          <div className="text-[10px] text-red-300">
-                            Unavailable: {variantInfo.unavailable.length}
-                          </div>
-                          <div className="max-w-[250px] space-y-0.5">
-                            {variantInfo.available.slice(0, 4).map((name) => (
-                              <div key={`${product.id}-av-${name}`} className="truncate text-[10px] text-neutral-200">{name}</div>
-                            ))}
-                            {variantInfo.unavailable.slice(0, 4).map((name) => (
-                              <div key={`${product.id}-un-${name}`} className="truncate text-[10px] text-neutral-500 line-through">{name}</div>
-                            ))}
-                            {variantInfo.available.length + variantInfo.unavailable.length > 8 ? (
-                              <div className="text-[10px] text-neutral-500">+{variantInfo.available.length + variantInfo.unavailable.length - 8} more</div>
-                            ) : null}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-neutral-100">{formatCurrency(product.pricing?.price, product.pricing?.currency || 'PKR')}</td>
-                      <td className="px-3 py-2 text-neutral-300">{product.inventory?.available_quantity ?? product.inventory?.quantity ?? 0}</td>
-                      <td className="px-3 py-2">
-                        {isEditing ? (
-                          <select
-                            value={catalogEditDraft.status}
-                            onChange={(e) => setCatalogEditDraft((p) => ({ ...p, status: e.target.value as 'active' | 'draft' | 'archived' }))}
-                            className="rounded border border-white/15 bg-[#0a0a0a] px-2 py-1 text-xs"
-                          >
-                            <option className="bg-[#0a0a0a]" value="active">active</option>
-                            <option className="bg-[#0a0a0a]" value="draft">draft</option>
-                            <option className="bg-[#0a0a0a]" value="archived">archived</option>
-                          </select>
-                        ) : (
-                          <span className={`rounded border px-2 py-0.5 text-[10px] uppercase ${statusPillClass(product.status)}`}>{product.status || 'draft'}</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex flex-wrap gap-1">
+                        </td>
+                        <td className="px-3 py-2 text-neutral-100">{formatCurrency(product.pricing?.price, product.pricing?.currency || 'PKR')}</td>
+                        <td className="px-3 py-2 text-neutral-300">{product.inventory?.available_quantity ?? product.inventory?.quantity ?? 0}</td>
+                        <td className="px-3 py-2">
                           {isEditing ? (
-                            <>
+                            <select
+                              value={catalogEditDraft.status}
+                              onChange={(e) => setCatalogEditDraft((p) => ({ ...p, status: e.target.value as 'active' | 'draft' | 'archived' }))}
+                              className="rounded border border-white/15 bg-[#0a0a0a] px-2 py-1 text-xs"
+                            >
+                              <option className="bg-[#0a0a0a]" value="active">active</option>
+                              <option className="bg-[#0a0a0a]" value="draft">draft</option>
+                              <option className="bg-[#0a0a0a]" value="archived">archived</option>
+                            </select>
+                          ) : (
+                            <span className={`rounded border px-2 py-0.5 text-[10px] uppercase ${statusPillClass(product.status)}`}>{product.status || 'draft'}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex flex-wrap gap-1">
+                            {isEditing ? (
+                              <>
+                                <button
+                                  onClick={() => handleCatalogPatch(product)}
+                                  disabled={actionKey === `${product.id}:patch`}
+                                  className="rounded border border-white/15 px-2 py-1 text-[10px] disabled:opacity-40"
+                                >
+                                  {actionKey === `${product.id}:patch` ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                  onClick={cancelCatalogEdit}
+                                  className="rounded border border-white/15 px-2 py-1 text-[10px]"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
                               <button
-                                onClick={() => handleCatalogPatch(product)}
-                                disabled={actionKey === `${product.id}:patch`}
-                                className="rounded border border-white/15 px-2 py-1 text-[10px] disabled:opacity-40"
-                              >
-                                {actionKey === `${product.id}:patch` ? 'Saving...' : 'Save'}
-                              </button>
-                              <button
-                                onClick={cancelCatalogEdit}
+                                onClick={() => openCatalogEdit(product)}
                                 className="rounded border border-white/15 px-2 py-1 text-[10px]"
                               >
-                                Cancel
+                                Edit
                               </button>
-                            </>
-                          ) : (
+                            )}
                             <button
-                              onClick={() => openCatalogEdit(product)}
-                              className="rounded border border-white/15 px-2 py-1 text-[10px]"
+                              onClick={() => handleCatalogDelete(product)}
+                              disabled={!!actionKey}
+                              className="inline-flex items-center gap-1 rounded border border-red-400/30 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40"
                             >
-                              Edit
+                              <Trash2 size={10} />
+                              Delete
                             </button>
-                          )}
-                          <button
-                            onClick={() => handleCatalogDelete(product)}
-                            disabled={!!actionKey}
-                            className="inline-flex items-center gap-1 rounded border border-red-400/30 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40"
-                          >
-                            <Trash2 size={10} />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                          </div>
+                        </td>
+                      </tr>
+                      {isEditing ? (
+                        <tr className="border-t border-white/10">
+                          <td colSpan={8} className="bg-[#0d0d0d] px-3 py-3">
+                            <div className="grid gap-3 xl:grid-cols-2">
+                              <div className="space-y-2 rounded border border-white/10 bg-[#0a0a0a] p-2">
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <button
+                                    onClick={() => setCatalogReferenceTab('images')}
+                                    className={`rounded px-2 py-1 text-[10px] ${catalogReferenceTab === 'images' ? 'bg-white text-black' : 'border border-white/15 text-neutral-300'}`}
+                                  >
+                                    Images
+                                  </button>
+                                  <button
+                                    onClick={() => setCatalogReferenceTab('description')}
+                                    className={`rounded px-2 py-1 text-[10px] ${catalogReferenceTab === 'description' ? 'bg-white text-black' : 'border border-white/15 text-neutral-300'}`}
+                                  >
+                                    Description
+                                  </button>
+                                  <button
+                                    onClick={() => setCatalogReferenceTab('body_html')}
+                                    className={`rounded px-2 py-1 text-[10px] ${catalogReferenceTab === 'body_html' ? 'bg-white text-black' : 'border border-white/15 text-neutral-300'}`}
+                                  >
+                                    Body HTML
+                                  </button>
+                                </div>
+
+                                {catalogReferenceTab === 'images' ? (
+                                  <div className="space-y-2">
+                                    <div className="h-[280px] overflow-hidden rounded border border-white/15 bg-[#050505]">
+                                      {asArray(product?.images).length > 0 ? (
+                                        <img
+                                          src={getImageUrl([asArray(product?.images)[catalogReferenceImageIndex] || asArray(product?.images)[0]])}
+                                          alt={product?.title || product.id}
+                                          className="h-full w-full object-contain"
+                                          loading="lazy"
+                                        />
+                                      ) : (
+                                        <div className="flex h-full items-center justify-center text-xs text-neutral-500">No images available</div>
+                                      )}
+                                    </div>
+                                    <div className="flex gap-1 overflow-x-auto pb-1">
+                                      {asArray(product?.images).map((img, idx) => (
+                                        <button
+                                          key={`${product.id}-img-${idx}`}
+                                          onClick={() => setCatalogReferenceImageIndex(idx)}
+                                          className={`h-12 w-10 shrink-0 overflow-hidden rounded border ${catalogReferenceImageIndex === idx ? 'border-white' : 'border-white/15'}`}
+                                        >
+                                          <img src={getImageUrl([img])} alt={`Ref ${idx + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : null}
+
+                                {catalogReferenceTab === 'description' ? (
+                                  <textarea
+                                    value={catalogEditDraft.description}
+                                    onChange={(e) => setCatalogEditDraft((p) => ({ ...p, description: e.target.value }))}
+                                    rows={12}
+                                    className="h-[320px] w-full resize-none rounded border border-white/15 bg-[#050505] px-2 py-1.5 text-xs text-neutral-200"
+                                    placeholder="Description"
+                                  />
+                                ) : null}
+
+                                {catalogReferenceTab === 'body_html' ? (
+                                  extractFirstTableHtml(product?.body_html) ? (
+                                    <div
+                                      className="h-[320px] overflow-auto rounded border border-white/15 bg-[#050505] p-2 text-xs text-neutral-200"
+                                      dangerouslySetInnerHTML={{ __html: extractFirstTableHtml(product?.body_html) }}
+                                    />
+                                  ) : (
+                                    <div className="h-[320px] overflow-auto rounded border border-white/15 bg-[#050505] p-2 text-xs text-neutral-200">
+                                      {stripHtml(product?.body_html) || 'No body_html available.'}
+                                    </div>
+                                  )
+                                ) : null}
+                              </div>
+
+                              <div className="space-y-2 rounded border border-white/10 bg-[#0a0a0a] p-2">
+                                <div className="grid gap-2 xl:grid-cols-2">
+                                  <input
+                                    value={catalogEditDraft.tagsInput}
+                                    onChange={(e) => setCatalogEditDraft((p) => ({ ...p, tagsInput: e.target.value }))}
+                                    className="w-full rounded border border-white/15 bg-[#0a0a0a] px-2 py-1.5 text-xs"
+                                    placeholder="Tags: summer, new"
+                                  />
+                                  <label className="inline-flex items-center gap-2 text-xs text-neutral-300">
+                                    <input
+                                      type="checkbox"
+                                      checked={catalogEditDraft.is_featured}
+                                      onChange={(e) => setCatalogEditDraft((p) => ({ ...p, is_featured: e.target.checked }))}
+                                    />
+                                    Featured product
+                                  </label>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <button onClick={addCatalogGuideRow} className="rounded border border-white/15 px-2 py-1 text-[10px]">+ Size Row</button>
+                                  <button onClick={addCatalogGuideCol} className="rounded border border-white/15 px-2 py-1 text-[10px]">+ Measurement</button>
+                                  <button onClick={transposeCatalogGuide} className="rounded border border-white/15 px-2 py-1 text-[10px]">Transpose</button>
+                                  <label className="ml-2 text-[10px] text-neutral-400">Base</label>
+                                  <select
+                                    value={catalogIncrementBaseSize}
+                                    onChange={(e) => setCatalogIncrementBaseSize(e.target.value)}
+                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
+                                  >
+                                    <option className="bg-[#0a0a0a] text-neutral-100" value="">Select</option>
+                                    {catalogSizingDraft.rows.map((row) => (
+                                      <option key={`${catalogEditId}-base-${row}`} className="bg-[#0a0a0a] text-neutral-100" value={row}>{row}</option>
+                                    ))}
+                                  </select>
+                                  <label className="text-[10px] text-neutral-400">Step</label>
+                                  <input
+                                    value={catalogIncrementStep}
+                                    onChange={(e) => setCatalogIncrementStep(e.target.value)}
+                                    className="w-16 rounded border border-white/15 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100"
+                                  />
+                                  <button onClick={applyCatalogStepIncrement} className="rounded border border-white/15 px-2 py-1 text-[10px]">Apply Step</button>
+                                  <button onClick={applyCatalogColumnStepIncrement} className="rounded border border-white/15 px-2 py-1 text-[10px]">Apply Per-Column</button>
+                                </div>
+
+                                <div className="rounded border border-white/15 bg-[#050505] p-2">
+                                  <div className="mb-2 text-[10px] text-neutral-400">Per-measurement step (from base size)</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {catalogSizingDraft.cols.map((col) => (
+                                      <label key={`${catalogEditId}-step-${col}`} className="inline-flex items-center gap-1 rounded border border-white/15 bg-[#080808] px-2 py-1 text-[10px] text-neutral-300">
+                                        <span className="max-w-[90px] truncate">{col}</span>
+                                        <input
+                                          value={catalogIncrementStepsByCol[col] ?? '0.5'}
+                                          onChange={(e) => setCatalogIncrementStepsByCol((prev) => ({ ...prev, [col]: e.target.value }))}
+                                          className="w-12 rounded border border-white/15 bg-[#040404] px-1 py-0.5 text-[10px] text-neutral-100"
+                                        />
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="max-h-[340px] overflow-auto rounded border border-white/15 bg-[#070707]">
+                                  <table className="min-w-full border-collapse text-[10px]">
+                                    <thead className="bg-[#050505]">
+                                      <tr>
+                                        <th className="sticky left-0 z-20 border border-white/10 bg-[#050505] px-2 py-1 text-left text-neutral-400">Size</th>
+                                        {catalogSizingDraft.cols.map((col) => (
+                                          <th key={`${catalogEditId}-col-${col}`} className="border border-white/10 px-1 py-1">
+                                            <div className="flex items-center gap-1">
+                                              <input
+                                                defaultValue={col}
+                                                onBlur={(e) => updateCatalogGuideColName(col, e.target.value)}
+                                                className="w-24 rounded border border-white/15 bg-[#080808] px-1 py-1 font-mono text-[10px] text-neutral-100"
+                                              />
+                                              <button onClick={() => removeCatalogGuideCol(col)} className="rounded border border-white/15 px-1 text-[10px] text-neutral-400">x</button>
+                                            </div>
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {catalogSizingDraft.rows.map((row, rowIndex) => (
+                                        <tr key={`${catalogEditId}-row-${row}`} className="border-t border-white/10">
+                                          <td className="sticky left-0 z-10 border border-white/10 bg-[#0a0a0a] px-2 py-1">
+                                            <div className="flex items-center gap-1">
+                                              <input
+                                                defaultValue={row}
+                                                onBlur={(e) => updateCatalogGuideRowName(row, e.target.value)}
+                                                className="w-16 rounded border border-white/15 bg-[#080808] px-1 py-1 font-mono text-[10px] text-neutral-100"
+                                              />
+                                              <button onClick={() => removeCatalogGuideRow(row)} className="rounded border border-white/15 px-1 text-[10px] text-neutral-400">x</button>
+                                            </div>
+                                          </td>
+                                          {catalogSizingDraft.cols.map((col, colIndex) => (
+                                            <td key={`${catalogEditId}-cell-${row}-${col}`} className="border border-white/10 px-1 py-1">
+                                              <input
+                                                id={`sg-cell-catalog-${catalogEditId}-${rowIndex}-${colIndex}`}
+                                                value={catalogSizingDraft.cells[row]?.[col] || ''}
+                                                onChange={(e) => updateCatalogGuideCell(row, col, e.target.value)}
+                                                onKeyDown={(e) => onGuideCellKeyDown(
+                                                  e,
+                                                  `catalog-${catalogEditId}`,
+                                                  rowIndex,
+                                                  colIndex,
+                                                  catalogSizingDraft.rows.length,
+                                                  catalogSizingDraft.cols.length
+                                                )}
+                                                onFocus={(e) => e.currentTarget.select()}
+                                                className="w-20 rounded border border-white/15 bg-[#080808] px-1 py-1 font-mono text-[10px] text-neutral-100 focus:border-primary/60 focus:outline-none"
+                                              />
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </div>
+                            {catalogEditError ? <p className="mt-2 text-xs text-red-300">{catalogEditError}</p> : null}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
             </table>
-
-            {catalogEditId ? (
-              <div className="border-t border-white/10 bg-[#0d0d0d] px-3 py-3">
-                <div className="grid gap-2 md:grid-cols-2">
-                  <textarea
-                    value={catalogEditDraft.description}
-                    onChange={(e) => setCatalogEditDraft((p) => ({ ...p, description: e.target.value }))}
-                    rows={4}
-                    className="w-full resize-none rounded border border-white/15 bg-[#0a0a0a] px-2 py-1.5 text-xs"
-                    placeholder="Description"
-                  />
-                  <div className="space-y-2">
-                    <input
-                      value={catalogEditDraft.tagsInput}
-                      onChange={(e) => setCatalogEditDraft((p) => ({ ...p, tagsInput: e.target.value }))}
-                      className="w-full rounded border border-white/15 bg-[#0a0a0a] px-2 py-1.5 text-xs"
-                      placeholder="Tags: summer, new"
-                    />
-                    <label className="inline-flex items-center gap-2 text-xs text-neutral-300">
-                      <input
-                        type="checkbox"
-                        checked={catalogEditDraft.is_featured}
-                        onChange={(e) => setCatalogEditDraft((p) => ({ ...p, is_featured: e.target.checked }))}
-                      />
-                      Featured product
-                    </label>
-                  </div>
-                </div>
-                {catalogEditError ? <p className="mt-2 text-xs text-red-300">{catalogEditError}</p> : null}
-              </div>
-            ) : null}
 
             {filteredCatalog.length === 0 ? <div className="p-4 text-xs text-neutral-500">No catalog products found.</div> : null}
             <div className="px-3 pb-3">{renderPager(catalogPage, catalogTotalPages, setCatalogPage)}</div>

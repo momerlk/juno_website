@@ -331,6 +331,7 @@ export namespace AdminCatalog {
             status?: 'active' | 'draft' | 'archived';
             is_featured?: boolean;
             tags?: string[];
+            sizing_guide?: Record<string, any>;
         }
     ): Promise<APIResponse<CatalogProduct>> {
         return request(`${BASE_PATH}/products/${id}`, 'PATCH', product, getAdminToken());
