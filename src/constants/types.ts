@@ -6,6 +6,7 @@ export interface Product {
   title: string;
   description: string;
   short_description?: string;
+  body_html?: string;
 
   seller_id: string;
   seller_name: string;

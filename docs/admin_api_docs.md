@@ -13,6 +13,9 @@ Router coverage:
 - `PUT /api/v2/admin/orders/{orderID}`
 - `GET /api/v2/admin/carts`
 - `GET /api/v2/admin/products-queue`
+- `PUT /api/v2/admin/products-queue/{id}/enrich`
+- `POST /api/v2/admin/products-queue/{id}/promote`
+- `DELETE /api/v2/admin/products-queue/{id}`
 - `GET /api/v2/admin/otps`
 - `GET /api/v2/admin/waitlist`
 - `GET /api/v2/admin/users`
@@ -256,6 +259,74 @@ Returns all seller queue items regardless of status.
 
 **Common errors**
 - `401 UNAUTHORIZED` — missing or invalid admin token
+
+---
+
+### Enrich Queue Item
+`PUT /api/v2/admin/products-queue/{id}/enrich`
+
+Auth: admin token required
+
+Enriches a queued product for any seller by queue item ID.
+
+**Body**
+```json
+{
+  "product_type": "Eastern",
+  "gender": "Female",
+  "sizing_guide": {
+    "S": { "chest": 86, "waist": 68 },
+    "M": { "chest": 91, "waist": 73 }
+  }
+}
+```
+
+**Response `200`**
+```json
+{ "message": "Queue item enriched successfully" }
+```
+
+**Common errors**
+- `400 BAD_REQUEST` — invalid body or invalid queue status
+- `401 UNAUTHORIZED` — missing or invalid admin token
+- `404 NOT_FOUND` — queue item not found
+
+---
+
+### Promote Queue Item
+`POST /api/v2/admin/products-queue/{id}/promote`
+
+Auth: admin token required
+
+Promotes a queue item to the active catalog. Queue item must already be in `ready` status.
+
+**Response `200`**
+```json
+{ "message": "Queue item promoted successfully" }
+```
+
+**Common errors**
+- `400 BAD_REQUEST` — queue item is not in `ready` status
+- `401 UNAUTHORIZED` — missing or invalid admin token
+- `404 NOT_FOUND` — queue item not found
+
+---
+
+### Delete Queue Item
+`DELETE /api/v2/admin/products-queue/{id}`
+
+Auth: admin token required
+
+Deletes a queue item from the moderation queue.
+
+**Response `200`**
+```json
+{ "message": "Queue item deleted successfully" }
+```
+
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid admin token
+- `404 NOT_FOUND` — queue item not found
 
 ---
 

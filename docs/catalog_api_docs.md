@@ -527,6 +527,9 @@ Authenticated admins can manage the full drop lifecycle.
 | `POST` | `/api/v2/admin/catalog/drops/{id}/products` | Replace or reorder drop products |
 | `GET` | `/api/v2/admin/catalog/drops/{id}/reminders` | List pending reminders |
 | `GET` | `/api/v2/admin/catalog/drops/{id}/analytics` | View denormalized drop metrics |
+| `PATCH` | `/api/v2/admin/catalog/products/{id}` | Partially update active catalog product |
+| `DELETE` | `/api/v2/admin/catalog/products/{id}` | Delete product from active catalog |
+| `DELETE` | `/api/v2/admin/catalog/collections/{id}/products/{productID}` | Remove a product from collection |
 
 ---
 
@@ -609,27 +612,51 @@ Auth: admin token required
 
 ---
 
-## Product Deletion
+### Remove Product from Collection
+`DELETE /api/v2/admin/catalog/collections/{id}/products/{productID}`
 
-Product deletion is handled through the **Seller module**, not the Catalog module. Sellers can delete their own products via:
+Auth: admin token required
+
+Removes a single product from an existing collection.
+
+**Response `200`** `{ "message": "Product removed from collection" }`
+
+---
+
+## Admin Product Endpoints
+
+### Update Product
+`PATCH /api/v2/admin/catalog/products/{id}`
+
+Auth: admin token required
+
+Partially updates a product in the active catalog.
+
+**Body** (all fields optional)
+```json
+{
+  "title": "Updated product title",
+  "description": "Updated description",
+  "status": "active",
+  "is_featured": true,
+  "tags": ["summer", "new"]
+}
+```
+
+**Response `200`** — updated `Product`.
+
+---
 
 ### Delete Product
-`DELETE /api/v2/seller/products/{id}`
+`DELETE /api/v2/admin/catalog/products/{id}`
 
-Auth: seller token required
+Auth: admin token required
 
-Deletes a product from the catalog and cleans up associated queue items.
+Deletes a product from the catalog and also removes stale references in collections and drops.
 
-**Response `200`** `{ "message": "Product deleted successfully" }`
+**Response `200`** `{ "message": "Product deleted" }`
 
 **Error `404`** — product not found.
-
-**Error `401`** — not your product.
-
-**Implementation Notes:**
-- When a product is deleted, the system also attempts to delete any associated queue item from the `products_queue` collection
-- This prevents orphaned queue items from accumulating when products are removed
-- Queue items that were promoted to the catalog share the same ID as the product, so cleanup is straightforward
 
 ### Reject Product from Queue
 `POST /api/v2/seller/queue/{id}/reject`

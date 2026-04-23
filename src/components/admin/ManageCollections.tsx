@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Plus, Search, RefreshCw, AlertCircle } from 'lucide-react';
+import { Layers, Plus, Search, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
 import { AdminCatalog } from '../../api/catalogApi';
 import { Collection } from '../../api/api.types';
 
@@ -40,6 +40,25 @@ const ManageCollections: React.FC = () => {
     c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.slug.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleRemoveProductFromCollection = async (collectionId: string) => {
+    const productID = window.prompt('Enter Product ID to remove from this collection:');
+    if (!productID || !productID.trim()) return;
+    try {
+      const response = await AdminCatalog.removeProductFromCollection(collectionId, productID.trim());
+      if (!response.ok) {
+        const message = typeof response.body === 'object' && response.body && 'message' in response.body
+          ? String((response.body as any).message)
+          : 'Failed to remove product from collection.';
+        throw new Error(message);
+      }
+      await fetchCollections();
+      window.alert('Product removed from collection.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to remove product from collection.';
+      window.alert(message);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -116,7 +135,15 @@ const ManageCollections: React.FC = () => {
                 </div>
                 <div className="flex justify-between items-center mt-4">
                   <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-white/30">{col.product_ids?.length || 0} Items</p>
-                  <button className="text-[10px] font-mono uppercase tracking-widest text-primary hover:text-white transition-colors">Manage Items</button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleRemoveProductFromCollection(col.id)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/10 px-2 py-1 text-[10px] font-mono uppercase tracking-widest text-red-300 transition-colors hover:bg-red-500/20"
+                    >
+                      <Trash2 size={11} />
+                      Remove Product
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

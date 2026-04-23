@@ -310,6 +310,42 @@ export namespace AdminCatalog {
     }
 
     /**
+     * Remove product from collection
+     *
+     * Removes a single product from an existing collection.
+     */
+    export async function removeProductFromCollection(id: string, productID: string): Promise<APIResponse<{ message: string }>> {
+        return request(`${BASE_PATH}/collections/${id}/products/${productID}`, 'DELETE', undefined, getAdminToken());
+    }
+
+    /**
+     * Update catalog product (admin)
+     *
+     * Partially updates an active catalog product.
+     */
+    export async function updateProduct(
+        id: string,
+        product: {
+            title?: string;
+            description?: string;
+            status?: 'active' | 'draft' | 'archived';
+            is_featured?: boolean;
+            tags?: string[];
+        }
+    ): Promise<APIResponse<CatalogProduct>> {
+        return request(`${BASE_PATH}/products/${id}`, 'PATCH', product, getAdminToken());
+    }
+
+    /**
+     * Delete catalog product (admin)
+     *
+     * Deletes product and cleans stale collection/drop references.
+     */
+    export async function deleteProduct(id: string): Promise<APIResponse<{ message: string }>> {
+        return request(`${BASE_PATH}/products/${id}`, 'DELETE', undefined, getAdminToken());
+    }
+
+    /**
      * List all drops (admin)
      * 
      * Returns all drops with optional status and seller_id filters.

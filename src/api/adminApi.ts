@@ -140,6 +140,23 @@ export namespace AdminAPI {
     export const getWaitlist          = (): Promise<APIResponse<any[]>> => request('/admin/waitlist', 'GET', undefined, getToken());
 
     export const getProductQueue = (): Promise<APIResponse<any[]>> => request('/admin/products-queue', 'GET', undefined, getToken());
+    export const enrichProductQueueItem = (queueId: string, data: { product_type: string; gender: string; sizing_guide?: Record<string, any> }): Promise<APIResponse<any>> =>
+        request(`/admin/products-queue/${encodeURIComponent(queueId)}/enrich`, 'PUT', data, getToken());
+    export const promoteProductQueueItem = (queueId: string): Promise<APIResponse<any>> =>
+        request(`/admin/products-queue/${encodeURIComponent(queueId)}/promote`, 'POST', {}, getToken());
+    export const deleteProductQueueItem = (queueId: string): Promise<APIResponse<any>> =>
+        request(`/admin/products-queue/${encodeURIComponent(queueId)}`, 'DELETE', undefined, getToken());
+
+    export const scrapeSellerProducts = async (sellerId: string, shopUrl?: string): Promise<APIResponse<any>> => {
+        // Prefer scrape endpoint if present; fallback to sync for older routers.
+        const body = {
+            seller_id: sellerId,
+            ...(shopUrl ? { shop_url: shopUrl } : {}),
+        };
+        const scrapeResp = await request('/admin/shopify/scrape', 'POST', body, getToken());
+        if (scrapeResp.ok || scrapeResp.status !== 404) return scrapeResp;
+        return request('/admin/shopify/sync', 'POST', body, getToken());
+    };
 
     export const updateOrder      = (orderId: string, data: any): Promise<APIResponse<any>> => request(`/admin/orders/${orderId}`, 'PUT', data, getToken());
     export const updateOrderStatus = (orderId: string, status: string, note?: string): Promise<APIResponse<any>> => 
@@ -188,6 +205,10 @@ export const getAllUsers = AdminAPI.getAllUsers;
 export const getUserDetails = AdminAPI.getUserDetails;
 export const getWaitlist = AdminAPI.getWaitlist;
 export const getProductQueue = AdminAPI.getProductQueue;
+export const enrichProductQueueItem = AdminAPI.enrichProductQueueItem;
+export const promoteProductQueueItem = AdminAPI.promoteProductQueueItem;
+export const deleteProductQueueItem = AdminAPI.deleteProductQueueItem;
+export const scrapeSellerProducts = AdminAPI.scrapeSellerProducts;
 export const updateOrder = AdminAPI.updateOrder;
 export const getAllCarts = AdminAPI.getAllCarts;
 export const getAllOTPs = AdminAPI.getAllOTPs;

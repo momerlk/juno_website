@@ -247,6 +247,7 @@ export interface CatalogProduct {
     title: string;
     description: string;
     short_description?: string;
+    body_html?: string;
     seller_id: string;
     seller_name: string;
     seller_logo?: string;
