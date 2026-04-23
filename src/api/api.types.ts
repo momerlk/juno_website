@@ -664,8 +664,26 @@ export interface CheckoutRequest {
     payment_method: string;
 }
 
+export interface DirectCheckoutItem {
+    product_id: string;
+    variant_id: string;
+    quantity: number;
+}
+
+export interface CheckoutDirectRequest {
+    address_id: string;
+    payment_method: string;
+    items: DirectCheckoutItem[];
+}
+
 export interface GuestCheckoutRequest {
     payment_method: string;
+}
+
+export interface GuestCheckoutDirectRequest {
+    payment_method: string;
+    items: DirectCheckoutItem[];
+    customer: GuestCheckoutDetails;
 }
 
 export interface GuestOrderLookupRequest {
@@ -680,8 +698,20 @@ export interface GeoPoint {
     city?: string;
 }
 
+export type OrderStatus =
+    | 'pending'
+    | 'confirmed'
+    | 'packed'
+    | 'handed_to_rider'
+    | 'at_warehouse'
+    | 'out_for_delivery'
+    | 'delivery_attempted'
+    | 'delivered'
+    | 'cancelled'
+    | 'returned';
+
 export interface TrackingMilestone {
-    status: string;
+    status: OrderStatus | string;
     label: string;
     note?: string;
     occurred_at: string;
@@ -696,7 +726,7 @@ export interface TrackingAnchors {
 }
 
 export interface OrderTracking {
-    current_status: string;
+    current_status: OrderStatus | string;
     estimated_delivery?: string;
     timeline: TrackingMilestone[];
     anchors: TrackingAnchors;

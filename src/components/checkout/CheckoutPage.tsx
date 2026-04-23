@@ -34,12 +34,15 @@ const sanitizeCity = (value: unknown): string => {
     return value.trim().replace(/\s+/g, ' ');
 };
 
+type PublicIPResponse = { ip?: string };
+type CityLookupResponse = { city?: string };
+
 const fetchPublicIP = async (): Promise<string> => {
     try {
         const response = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
         if (!response.ok) return '';
-        const body = await response.json();
-        const ip = typeof (body as any)?.ip === 'string' ? (body as any).ip.trim() : '';
+        const body = (await response.json()) as PublicIPResponse;
+        const ip = typeof body.ip === 'string' ? body.ip.trim() : '';
         return ip;
     } catch {
         return '';
@@ -59,8 +62,8 @@ const fetchCityFromIP = async (): Promise<string> => {
         try {
             const response = await fetch(endpoint, { signal: AbortSignal.timeout(3000) });
             if (!response.ok) continue;
-            const body = await response.json();
-            const city = sanitizeCity((body as any)?.city);
+            const body = (await response.json()) as CityLookupResponse;
+            const city = sanitizeCity(body.city);
             if (city) return city;
         } catch {
             // Try next provider
@@ -72,7 +75,7 @@ const fetchCityFromIP = async (): Promise<string> => {
 
 const CheckoutPage: React.FC = () => {
     const navigate = useNavigate();
-    const { optimisticCart, cartTotal, itemCount, clearCart, guestCartId, syncState, isHydrated, refreshCart, flushPending } = useGuestCart();
+    const { optimisticCart, cartTotal, itemCount, clearCart, isHydrated } = useGuestCart();
     const { trackCheckoutStart, trackCheckoutComplete } = useProbeCommerce();
 
     const [formData, setFormData] = useState<GuestCheckoutDetails>({
@@ -88,12 +91,10 @@ const CheckoutPage: React.FC = () => {
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [shippingEstimate, setShippingEstimate] = useState<ShippingEstimateResponse | null>(null);
     const [shippingState, setShippingState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-    const [isRecoveringCart, setIsRecoveringCart] = useState(false);
     const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
 
     useEffect(() => {
@@ -122,7 +123,7 @@ const CheckoutPage: React.FC = () => {
                 email: lastEmail || prev.email,
             }));
         }
-    }, []);
+    }, [cartTotal, itemCount, trackCheckoutStart]);
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
@@ -165,7 +166,18 @@ const CheckoutPage: React.FC = () => {
         const buyerCity = formData.city.trim();
         let cancelled = false;
 
-        if (!guestCartId || itemCount === 0 || !buyerCity) {
+        if (itemCount === 0 || !buyerCity) {
+            setShippingEstimate(null);
+            setShippingState('idle');
+            return;
+        }
+
+        const items = optimisticCart.map((item) => ({
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            quantity: item.quantity,
+        }));
+        if (items.length === 0) {
             setShippingEstimate(null);
             setShippingState('idle');
             return;
@@ -174,7 +186,10 @@ const CheckoutPage: React.FC = () => {
         const timeoutId = setTimeout(async () => {
             setShippingState('loading');
             try {
-                const response = await GuestCommerce.getCartShippingEstimate(buyerCity, guestCartId);
+                const response = await GuestCommerce.estimateShipping({
+                    buyer_city: buyerCity,
+                    items,
+                });
                 if (!response.ok) {
                     throw new Error('Unable to fetch shipping estimate');
                 }
@@ -192,7 +207,7 @@ const CheckoutPage: React.FC = () => {
             cancelled = true;
             clearTimeout(timeoutId);
         };
-    }, [formData.city, guestCartId, itemCount]);
+    }, [formData.city, itemCount, optimisticCart]);
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
@@ -215,26 +230,20 @@ const CheckoutPage: React.FC = () => {
         setErrors({});
 
         try {
-            // Best-effort fast-path sync so "Buy now" flow isn't blocked by transient cart sync timing.
-            if (syncState === 'dirty' || syncState === 'syncing' || (!guestCartId && optimisticCart.length > 0)) {
-                await flushPending();
-            }
-
-            const activeGuestCartId = guestCartId || localStorage.getItem('juno_guest_cart_id');
-            if (!activeGuestCartId) {
-                if (optimisticCart.length > 0) {
-                    throw new Error('We could not sync your bag. Tap Place order again in a second.');
-                }
+            const items = optimisticCart.map((item) => ({
+                product_id: item.product_id,
+                variant_id: item.variant_id,
+                quantity: item.quantity,
+            }));
+            if (items.length === 0) {
                 throw new Error('Your bag is empty. Please add items to your cart first.');
             }
 
-            const detailsResponse = await GuestCommerce.saveCustomerDetails(formData, activeGuestCartId);
-            if (!detailsResponse.ok) throw new Error('Failed to save delivery details');
-
-            const checkoutResponse = await GuestCommerce.checkout(
-                { payment_method: 'cod' },
-                activeGuestCartId
-            );
+            const checkoutResponse = await GuestCommerce.checkoutDirect({
+                payment_method: 'cod',
+                items,
+                customer: formData,
+            });
             if (!checkoutResponse.ok) throw new Error('Failed to place order');
 
             const order = checkoutResponse.body;
@@ -243,8 +252,6 @@ const CheckoutPage: React.FC = () => {
             if (order) {
                 trackCheckoutComplete(order.id, order.total_amount);
             }
-
-            setIsSuccess(true);
 
             if (formData.phone_number) {
                 localStorage.setItem(STORAGE_KEYS.LAST_CHECKOUT_PHONE, formData.phone_number);
@@ -257,9 +264,9 @@ const CheckoutPage: React.FC = () => {
             clearCart();
 
             navigate('/checkout/confirmation', { state: { order } });
-        } catch (error: any) {
+        } catch (error: unknown) {
             setErrors({
-                general: error.message || 'Failed to place order. Please try again.',
+                general: error instanceof Error ? error.message : 'Failed to place order. Please try again.',
             });
         } finally {
             setIsSubmitting(false);
@@ -277,17 +284,6 @@ const CheckoutPage: React.FC = () => {
                 delete next[field];
                 return next;
             });
-        }
-    };
-
-    const handleRecoverCart = async () => {
-        setIsRecoveringCart(true);
-        setErrors({});
-        try {
-            await flushPending();
-            await refreshCart();
-        } finally {
-            setIsRecoveringCart(false);
         }
     };
 
@@ -321,32 +317,15 @@ const CheckoutPage: React.FC = () => {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#050505] pt-24 text-white">
                 <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center">
-                    <Loader2 size={28} className={`mx-auto mb-4 text-primary ${syncState !== 'idle' ? 'animate-spin' : ''}`} />
-                    <p className="text-sm font-semibold text-white">
-                        {syncState === 'dirty' || syncState === 'syncing'
-                            ? 'We are syncing your bag before checkout.'
-                            : 'Your bag is empty right now.'}
-                    </p>
-                    <p className="mt-2 text-xs text-white/55">
-                        {syncState === 'dirty' || syncState === 'syncing'
-                            ? 'Stay here. We will keep your checkout context intact.'
-                            : 'You can retry sync or continue shopping.'}
-                    </p>
-                    <div className="mt-5 flex gap-2">
-                        <button
-                            onClick={handleRecoverCart}
-                            disabled={isRecoveringCart}
-                            className="flex-1 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-white/[0.09] disabled:opacity-50"
-                        >
-                            {isRecoveringCart ? 'Retrying…' : 'Retry Sync'}
-                        </button>
-                        <button
-                            onClick={() => navigate('/catalog')}
-                            className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-white"
-                        >
-                            Continue Shopping
-                        </button>
-                    </div>
+                    <Loader2 size={28} className="mx-auto mb-4 text-primary" />
+                    <p className="text-sm font-semibold text-white">Your bag is empty right now.</p>
+                    <p className="mt-2 text-xs text-white/55">Add items and come back to checkout.</p>
+                    <button
+                        onClick={() => navigate('/catalog')}
+                        className="mt-5 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-white"
+                    >
+                        Continue Shopping
+                    </button>
                 </div>
             </div>
         );

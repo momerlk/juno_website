@@ -14,9 +14,12 @@ import type {
     ShippingEstimateResponse,
     ParentOrder,
     CheckoutRequest,
+    CheckoutDirectRequest,
     GuestCartResponse,
     GuestCheckoutDetails,
     GuestCheckoutRequest,
+    GuestCheckoutDirectRequest,
+    DirectCheckoutItem,
     GuestOrderLookupRequest,
     OrderTracking,
     Order,
@@ -91,6 +94,15 @@ export namespace Commerce {
     }
 
     /**
+     * Checkout direct (payload-based)
+     *
+     * Creates order directly from provided items; does not rely on server cart.
+     */
+    export async function checkoutDirect(payload: CheckoutDirectRequest, token?: string): Promise<APIResponse<ParentOrder>> {
+        return request(`${BASE_PATH}/checkout/direct`, 'POST', payload, token || getUserToken());
+    }
+
+    /**
      * Get user orders
      * 
      * Returns the authenticated user's child orders, one per seller
@@ -107,6 +119,16 @@ export namespace Commerce {
      */
     export async function getOrderTracking(orderId: string, token?: string): Promise<APIResponse<OrderTracking>> {
         return request(`${BASE_PATH}/orders/${orderId}/tracking`, 'GET', undefined, token || getUserToken());
+    }
+
+    /**
+     * Get order tracking polyline
+     *
+     * Returns the encoded polyline for the active segment.
+     * Some backends return `{ polyline: string }`; others may return the raw string.
+     */
+    export async function getOrderTrackingPolyline(orderId: string, token?: string): Promise<APIResponse<{ polyline: string } | string>> {
+        return request(`${BASE_PATH}/orders/${orderId}/tracking/polyline`, 'GET', undefined, token || getUserToken());
     }
 
     /**
@@ -272,6 +294,27 @@ export namespace GuestCommerce {
             body: JSON.stringify(payload)
         });
         return handleGuestResponse<ParentOrder>(resp);
+    }
+
+    /**
+     * Guest checkout direct (payload-based)
+     *
+     * Creates guest order directly from items + inline customer details.
+     */
+    export async function checkoutDirect(payload: GuestCheckoutDirectRequest): Promise<APIResponse<ParentOrder>> {
+        const resp = await fetch(`${API_BASE_URL}${BASE_PATH}/checkout/direct`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        return handleGuestResponse<ParentOrder>(resp);
+    }
+
+    /**
+     * Public shipping estimate from raw items (no cart dependency)
+     */
+    export async function estimateShipping(payload: { buyer_city: string; items: DirectCheckoutItem[] }): Promise<APIResponse<ShippingEstimateResponse>> {
+        return request('/commerce/shipping/estimate', 'POST', payload, undefined, true);
     }
 
     /**

@@ -19,7 +19,7 @@ const FREE_SHIPPING_THRESHOLD = 5900;
 
 const CartDrawer: React.FC = () => {
     const navigate = useNavigate();
-    const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, syncState, isHydrated } = useGuestCart();
+    const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, isHydrated } = useGuestCart();
     const [relatedProducts, setRelatedProducts] = useState<CatalogProduct[]>([]);
 
     useEffect(() => {
@@ -54,9 +54,10 @@ const CartDrawer: React.FC = () => {
     return (
         <AnimatePresence>
             {isCartOpen && (
-                <>
+                <React.Fragment key="cart-drawer-shell">
                     {/* Backdrop */}
                     <motion.div
+                        key="cart-drawer-backdrop"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -67,6 +68,7 @@ const CartDrawer: React.FC = () => {
 
                     {/* Drawer */}
                     <motion.div
+                        key="cart-drawer-panel"
                         initial={{ x: '100%' }}
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
@@ -180,9 +182,9 @@ const CartDrawer: React.FC = () => {
                                                             {item.variant_title && (
                                                                 <p className="mt-0.5 text-[11px] text-white/45">{item.variant_title}</p>
                                                             )}
-                                                            {typeof (item as any).max_quantity === 'number' ? (
+                                                            {typeof item.max_quantity === 'number' ? (
                                                                 <p className="mt-0.5 text-[10px] text-white/40">
-                                                                    Max {(item as any).max_quantity} in stock
+                                                                    Max {item.max_quantity} in stock
                                                                 </p>
                                                             ) : null}
                                                         </div>
@@ -199,7 +201,7 @@ const CartDrawer: React.FC = () => {
                                                                 <span className="w-7 text-center text-xs font-black text-white">{item.quantity}</span>
                                                                 <button
                                                                     onClick={() => updateQuantity(item.product_id, item.variant_id, item.quantity + 1)}
-                                                                    disabled={typeof (item as any).max_quantity === 'number' && item.quantity >= (item as any).max_quantity}
+                                                                    disabled={typeof item.max_quantity === 'number' && item.quantity >= item.max_quantity}
                                                                     className="flex h-7 w-7 items-center justify-center text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                                                                 >
                                                                     <Plus size={12} />
@@ -290,16 +292,6 @@ const CartDrawer: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Sync indicator */}
-                                    {syncState !== 'idle' && (
-                                        <div className="mb-2 flex items-center justify-center gap-1.5">
-                                            <div className="h-1 w-1 animate-pulse rounded-full bg-primary" />
-                                            <span className="text-[9px] font-bold uppercase tracking-[0.24em] text-white/40">
-                                                {syncState === 'syncing' ? 'Syncing…' : syncState === 'error' ? 'Sync error' : 'Saving…'}
-                                            </span>
-                                        </div>
-                                    )}
-
                                     {/* Subtotal */}
                                     <div className="mb-3 flex items-baseline justify-between">
                                         <span className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white/45">
@@ -333,10 +325,10 @@ const CartDrawer: React.FC = () => {
                             )}
                         </div>
                     </motion.div>
-                </>
+                </React.Fragment>
             )}
 
-            <style>{`
+            <style key="cart-drawer-style">{`
                 @keyframes shimmer {
                     0% { transform: translateX(0%); }
                     60%, 100% { transform: translateX(400%); }

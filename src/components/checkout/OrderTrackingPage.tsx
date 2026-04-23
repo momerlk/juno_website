@@ -13,6 +13,8 @@ const STORAGE_KEYS = {
     LAST_LOOKUP_EMAIL: 'juno_last_lookup_email',
 };
 
+const formatStatusLabel = (status: string) => status.replace(/_/g, ' ');
+
 const OrderTrackingPage: React.FC = () => {
     const [lookupBy, setLookupBy] = useState<'phone' | 'email'>('phone');
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -70,8 +72,9 @@ const OrderTrackingPage: React.FC = () => {
             } else {
                 localStorage.setItem(STORAGE_KEYS.LAST_LOOKUP_EMAIL, lookupValue);
             }
-        } catch (err: any) {
-            setError(err.message || 'Failed to lookup orders');
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Failed to lookup orders';
+            setError(message);
         } finally {
             setIsLoading(false);
         }
@@ -82,17 +85,17 @@ const OrderTrackingPage: React.FC = () => {
             case 'pending':
             case 'confirmed':
                 return <Clock size={18} className="text-yellow-400" />;
-            case 'processing':
-            case 'preparing':
+            case 'packed':
                 return <Package size={18} className="text-blue-400" />;
-            case 'shipped':
-            case 'in_transit':
+            case 'handed_to_rider':
+            case 'at_warehouse':
             case 'out_for_delivery':
+            case 'delivery_attempted':
                 return <Truck size={18} className="text-primary" />;
             case 'delivered':
                 return <CheckCircle size={18} className="text-green-400" />;
             case 'cancelled':
-            case 'failed':
+            case 'returned':
                 return <AlertCircle size={18} className="text-red-400" />;
             default:
                 return <Package size={18} className="text-white/60" />;
@@ -104,17 +107,17 @@ const OrderTrackingPage: React.FC = () => {
             case 'pending':
             case 'confirmed':
                 return 'text-yellow-400';
-            case 'processing':
-            case 'preparing':
+            case 'packed':
                 return 'text-blue-400';
-            case 'shipped':
-            case 'in_transit':
+            case 'handed_to_rider':
+            case 'at_warehouse':
             case 'out_for_delivery':
+            case 'delivery_attempted':
                 return 'text-primary';
             case 'delivered':
                 return 'text-green-400';
             case 'cancelled':
-            case 'failed':
+            case 'returned':
                 return 'text-red-400';
             default:
                 return 'text-white/60';
@@ -272,7 +275,7 @@ const OrderTrackingPage: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         {getStatusIcon(order.status)}
                                         <span className={`text-sm font-bold uppercase tracking-[0.16em] ${getStatusColor(order.status)}`}>
-                                            {order.status.replace(/_/g, ' ')}
+                                            {formatStatusLabel(order.status)}
                                         </span>
                                     </div>
                                 </div>

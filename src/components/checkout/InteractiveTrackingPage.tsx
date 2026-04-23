@@ -1,233 +1,391 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    APIProvider, 
-    Map, 
-    AdvancedMarker, 
-    useMap, 
-    Pin 
-} from '@vis.gl/react-google-maps';
-import { 
-    ArrowLeft, 
-    Package, 
-    MapPin, 
-    Clock, 
-    Truck, 
-    CheckCircle, 
-    ChevronUp, 
+import { useParams, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
+import {
+    ArrowLeft,
+    Package,
+    MapPin,
+    Clock,
+    Truck,
+    CheckCircle,
     Share2,
     Store,
     Home,
-    Warehouse
+    Warehouse,
+    Loader2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Commerce, GuestCommerce } from '../../api/commerceApi';
-import type { OrderTracking, TrackingMilestone } from '../../api/api.types';
-import { decodePolyline, interpolateAlong } from '../../utils/tracking';
+import type { OrderStatus, OrderTracking, TrackingAnchors, TrackingMilestone } from '../../api/api.types';
+import { decodePolyline, interpolateAlong, type LatLng } from '../../utils/tracking';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_WEB_KEY;
 const MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
-// Status colors and icons
-const STATUS_CONFIG: Record<string, { color: string, icon: any, label: string }> = {
-    pending: { color: '#fbbf24', icon: Clock, label: 'Order Placed' },
-    confirmed: { color: '#fbbf24', icon: CheckCircle, label: 'Confirmed' },
-    packed: { color: '#60a5fa', icon: Package, label: 'Packed' },
-    handed_to_rider: { color: '#a855f7', icon: Truck, label: 'Handed to Rider' },
-    at_warehouse: { color: '#a855f7', icon: Warehouse, label: 'At Warehouse' },
-    out_for_delivery: { color: '#ec4899', icon: Truck, label: 'Out for Delivery' },
-    delivered: { color: '#22c55e', icon: CheckCircle, label: 'Delivered' },
-    cancelled: { color: '#ef4444', icon: CheckCircle, label: 'Cancelled' },
+type StatusUi = {
+    color: string;
+    icon: React.ComponentType<{ size?: number; className?: string }>;
+    label: string;
+    expectedMinutes?: number;
+    moving?: boolean;
 };
 
-const Polyline: React.FC<{ points: { lat: number, lng: number }[], color: string, dashed?: boolean }> = ({ points, color, dashed }) => {
+const STATUS_CONFIG: Record<string, StatusUi> = {
+    pending: { color: '#fbbf24', icon: Clock, label: 'Order Placed' },
+    confirmed: { color: '#f59e0b', icon: CheckCircle, label: 'Confirmed' },
+    packed: { color: '#60a5fa', icon: Package, label: 'Packed' },
+    handed_to_rider: { color: '#a855f7', icon: Truck, label: 'Handed To Rider', expectedMinutes: 180, moving: true },
+    at_warehouse: { color: '#8b5cf6', icon: Warehouse, label: 'At Warehouse' },
+    out_for_delivery: { color: '#ec4899', icon: Truck, label: 'Out For Delivery', expectedMinutes: 120, moving: true },
+    delivery_attempted: { color: '#f97316', icon: Truck, label: 'Delivery Attempted', expectedMinutes: 120, moving: true },
+    delivered: { color: '#22c55e', icon: CheckCircle, label: 'Delivered' },
+    cancelled: { color: '#ef4444', icon: CheckCircle, label: 'Cancelled' },
+    returned: { color: '#ef4444', icon: Warehouse, label: 'Returned' },
+};
+
+const MOVING_STATUSES = new Set<OrderStatus>(['handed_to_rider', 'out_for_delivery', 'delivery_attempted']);
+const ROUTE_TO_WAREHOUSE = new Set<OrderStatus | 'legacy'>(['handed_to_rider', 'at_warehouse']);
+const ROUTE_TO_CUSTOMER = new Set<OrderStatus>(['out_for_delivery', 'delivery_attempted', 'delivered', 'returned']);
+
+const Polyline: React.FC<{ points: LatLng[]; color: string; dashed?: boolean; weight?: number }> = ({ points, color, dashed, weight = 4 }) => {
     const map = useMap();
     const polylineRef = useRef<google.maps.Polyline | null>(null);
 
     useEffect(() => {
-        if (!map || !points.length) return;
+        if (!map || points.length < 2) return;
 
         polylineRef.current = new google.maps.Polyline({
             path: points,
             geodesic: true,
             strokeColor: color,
-            strokeOpacity: 1.0,
-            strokeWeight: 4,
-            map: map,
-            icons: dashed ? [{
-                icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4 },
-                offset: '0',
-                repeat: '20px'
-            }] : []
+            strokeOpacity: dashed ? 0 : 1,
+            strokeWeight: weight,
+            map,
+            icons: dashed
+                ? [{
+                    icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4 },
+                    offset: '0',
+                    repeat: '20px',
+                }]
+                : [],
         });
 
-        if (dashed) {
-            polylineRef.current.setOptions({ strokeOpacity: 0 });
-        }
-
-        return () => {
-            if (polylineRef.current) {
-                polylineRef.current.setMap(null);
-            }
-        };
-    }, [map, points, color, dashed]);
+        return () => polylineRef.current?.setMap(null);
+    }, [map, points, color, dashed, weight]);
 
     return null;
 };
 
+const asStatus = (value: string): OrderStatus | 'legacy' => {
+    return (value in STATUS_CONFIG ? value : 'legacy') as OrderStatus | 'legacy';
+};
+
+const statusLabel = (value: string): string => {
+    return STATUS_CONFIG[value]?.label ?? value.replace(/_/g, ' ');
+};
+
+const resolvePolyline = (body: unknown): string | null => {
+    if (typeof body === 'string' && body.trim().length > 0) return body;
+    const maybe = body as { polyline?: unknown } | null;
+    if (typeof maybe?.polyline === 'string' && maybe.polyline.trim().length > 0) return maybe.polyline;
+    return null;
+};
+
+const buildFallbackPath = (anchors: TrackingAnchors, status: OrderStatus | 'legacy'): LatLng[] => {
+    const seller = anchors.seller;
+    const warehouse = anchors.warehouse;
+    const customer = anchors.customer;
+
+    if (ROUTE_TO_WAREHOUSE.has(status)) {
+        return warehouse ? [seller, warehouse] : [seller, customer];
+    }
+    if (ROUTE_TO_CUSTOMER.has(status)) {
+        return warehouse ? [warehouse, customer] : [seller, customer];
+    }
+    return [seller, customer];
+};
+
+const getStatusStart = (timelineAsc: TrackingMilestone[], status: string): Date | null => {
+    const match = [...timelineAsc].reverse().find((item) => item.status === status);
+    if (!match) return null;
+    const parsed = new Date(match.occurred_at);
+    return Number.isFinite(parsed.getTime()) ? parsed : null;
+};
+
+const estimateSegmentProgress = (
+    status: OrderStatus | 'legacy',
+    startedAt: Date | null,
+    nowMs: number
+): number => {
+    if (status === 'delivered') return 1;
+    if (status === 'at_warehouse') return 1;
+    if (status === 'delivery_attempted') return 0.95;
+    if (!MOVING_STATUSES.has(status as OrderStatus)) return 0;
+    if (!startedAt) return 0;
+
+    const minutes = STATUS_CONFIG[status]?.expectedMinutes ?? 180;
+    const elapsedMs = Math.max(0, nowMs - startedAt.getTime());
+    const expectedMs = minutes * 60 * 1000;
+    if (expectedMs <= 0) return 0;
+    return Math.min(0.95, elapsedMs / expectedMs);
+};
+
+const formatEtaCountdown = (eta?: string): string | null => {
+    if (!eta) return null;
+    const etaMs = new Date(eta).getTime();
+    if (!Number.isFinite(etaMs)) return null;
+    const delta = etaMs - Date.now();
+    if (delta <= 0) return 'Arriving today';
+
+    const totalMinutes = Math.floor(delta / 60000);
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+};
+
+const makeAbsoluteUrl = (url: string): string => {
+    if (/^https?:\/\//i.test(url)) return url;
+    return `${window.location.origin}${url.startsWith('/') ? url : `/${url}`}`;
+};
+
 const InteractiveTrackingPage: React.FC = () => {
-    const { token, orderId } = useParams<{ token?: string, orderId?: string }>();
-    const [searchParams] = useSearchParams();
+    const { token, orderId } = useParams<{ token?: string; orderId?: string }>();
     const [tracking, setTracking] = useState<OrderTracking | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showTimeline, setShowTimeline] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [isSharing, setIsSharing] = useState(false);
 
     const isPublic = !!token;
+    const previousStatusRef = useRef<string | null>(null);
 
-    // Fetch tracking data
     useEffect(() => {
         const fetchData = async () => {
+            if (!token && !orderId) {
+                setError('Invalid tracking link.');
+                setIsLoading(false);
+                return;
+            }
+
             setIsLoading(true);
             try {
-                const response = isPublic 
+                const trackingResponse = isPublic
                     ? await GuestCommerce.getPublicTracking(token!)
                     : await Commerce.getOrderTracking(orderId!);
 
-                if (response.ok) {
-                    setTracking(response.body);
-                    if (response.body.current_status === 'delivered') {
-                        confetti({
-                            particleCount: 150,
-                            spread: 70,
-                            origin: { y: 0.6 },
-                            colors: ['#ec4899', '#a855f7', '#60a5fa']
-                        });
-                    }
-                } else {
-                    setError('Tracking information not found');
+                if (!trackingResponse.ok || !trackingResponse.body) {
+                    throw new Error(isPublic
+                        ? 'Tracking information not found for this link.'
+                        : 'Unable to load tracking. If this is a guest order, open the shared tracking link.');
                 }
+
+                const nextTracking = trackingResponse.body;
+
+                if (!nextTracking.polyline && !isPublic && orderId) {
+                    const polylineResponse = await Commerce.getOrderTrackingPolyline(orderId);
+                    const resolved = polylineResponse.ok ? resolvePolyline(polylineResponse.body) : null;
+                    if (resolved) {
+                        nextTracking.polyline = resolved;
+                    }
+                }
+
+                const didJustDeliver =
+                    previousStatusRef.current !== 'delivered' &&
+                    nextTracking.current_status === 'delivered';
+
+                setTracking(nextTracking);
+                setError(null);
+
+                if (didJustDeliver) {
+                    confetti({
+                        particleCount: 140,
+                        spread: 75,
+                        origin: { y: 0.6 },
+                        colors: ['#ec4899', '#8b5cf6', '#22c55e'],
+                    });
+                }
+
+                previousStatusRef.current = nextTracking.current_status;
             } catch (err) {
-                setError('Failed to load tracking data');
+                setTracking(null);
+                setError(err instanceof Error ? err.message : 'Failed to load tracking data.');
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 30000); // Poll every 30s
-        return () => clearInterval(interval);
+        const intervalId = window.setInterval(fetchData, 30000);
+        return () => window.clearInterval(intervalId);
     }, [token, orderId, isPublic]);
 
-    // Decode polyline and calculate parcel position
-    const path = useMemo(() => {
-        if (!tracking?.polyline) return [];
-        return decodePolyline(tracking.polyline);
-    }, [tracking?.polyline]);
+    const timelineAsc = useMemo(() => {
+        if (!tracking?.timeline?.length) return [];
+        return [...tracking.timeline].sort(
+            (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
+        );
+    }, [tracking?.timeline]);
 
-    // Simulate movement
+    const timelineDesc = useMemo(() => [...timelineAsc].reverse(), [timelineAsc]);
+
+    const activeStatus = useMemo(() => asStatus(tracking?.current_status ?? 'pending'), [tracking?.current_status]);
+    const statusConfig = STATUS_CONFIG[activeStatus] ?? STATUS_CONFIG.pending;
+
+    const rawPath = useMemo(() => {
+        if (!tracking) return [];
+        if (tracking.polyline) {
+            const decoded = decodePolyline(tracking.polyline);
+            if (decoded.length > 1) return decoded;
+        }
+        return buildFallbackPath(tracking.anchors, activeStatus);
+    }, [tracking, activeStatus]);
+
     useEffect(() => {
-        if (!tracking || path.length === 0) return;
-
-        // In a real app, we'd calculate progress based on segment_started_at
-        // For now, we'll set it based on status
-        let targetProgress = 0;
-        switch (tracking.current_status) {
-            case 'pending':
-            case 'confirmed':
-            case 'packed': targetProgress = 0; break;
-            case 'handed_to_rider': targetProgress = 0.3; break;
-            case 'at_warehouse': targetProgress = 0.6; break;
-            case 'out_for_delivery': targetProgress = 0.85; break;
-            case 'delivered': targetProgress = 1.0; break;
-            default: targetProgress = 0;
+        if (!tracking || rawPath.length < 2) {
+            setProgress(0);
+            return;
         }
 
-        const duration = 2000;
-        const start = performance.now();
-        const initialProgress = progress;
-
-        const animate = (now: number) => {
-            const elapsed = now - start;
-            const p = Math.min(1, elapsed / duration);
-            const currentP = initialProgress + (targetProgress - initialProgress) * p;
-            setProgress(currentP);
-
-            if (p < 1) {
-                requestAnimationFrame(animate);
-            }
+        const refresh = () => {
+            const startedAt = getStatusStart(timelineAsc, tracking.current_status);
+            const next = estimateSegmentProgress(activeStatus, startedAt, Date.now());
+            setProgress(next);
         };
 
-        requestAnimationFrame(animate);
-    }, [tracking?.current_status, path]);
+        refresh();
+        const intervalId = window.setInterval(refresh, 1000);
+        return () => window.clearInterval(intervalId);
+    }, [tracking, rawPath.length, timelineAsc, activeStatus]);
 
-    const parcelPos = useMemo(() => interpolateAlong(path, progress), [path, progress]);
+    const parcelPosition = useMemo(() => {
+        if (rawPath.length < 2) return null;
+        return interpolateAlong(rawPath, progress);
+    }, [rawPath, progress]);
+
+    const traveledPath = useMemo(() => {
+        if (rawPath.length < 2) return [];
+        if (progress <= 0) return [rawPath[0]];
+        const count = Math.max(2, Math.floor(rawPath.length * progress));
+        return rawPath.slice(0, count);
+    }, [rawPath, progress]);
+
+    const remainingPath = useMemo(() => {
+        if (rawPath.length < 2) return [];
+        if (progress >= 1) return [];
+        const startIndex = Math.max(0, Math.floor(rawPath.length * progress) - 1);
+        return rawPath.slice(startIndex);
+    }, [rawPath, progress]);
+
+    const etaCountdown = useMemo(() => formatEtaCountdown(tracking?.estimated_delivery), [tracking?.estimated_delivery]);
+
+    const handleShare = async () => {
+        if (isSharing) return;
+        setIsSharing(true);
+        try {
+            let shareUrl = window.location.href;
+            if (!isPublic && orderId) {
+                const response = await Commerce.shareOrderTracking(orderId);
+                if (response.ok && response.body?.url) {
+                    shareUrl = makeAbsoluteUrl(response.body.url);
+                }
+            }
+
+            const shareText = 'Track this Juno order';
+            if (navigator.share) {
+                await navigator.share({ title: 'Juno Order Tracking', text: shareText, url: shareUrl });
+            } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(shareUrl);
+            }
+        } finally {
+            setIsSharing(false);
+        }
+    };
 
     if (isLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#050505]">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
     }
 
     if (error || !tracking) {
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center bg-[#050505] p-4 text-center">
+            <div className="flex min-h-screen flex-col items-center justify-center bg-[#050505] p-4 text-center text-white">
                 <div className="mb-6 rounded-full bg-red-500/10 p-4 text-red-500">
                     <Package size={48} />
                 </div>
-                <h1 className="mb-2 text-2xl font-black uppercase tracking-tight">Tracking Not Found</h1>
-                <p className="mb-8 text-white/60">We couldn't find any tracking information for this link.</p>
-                <Link to="/" className="rounded-full bg-white px-8 py-3 text-sm font-bold text-black">
-                    Back to Home
+                <h1 className="mb-2 text-2xl font-black uppercase tracking-tight">Tracking Not Available</h1>
+                <p className="mb-8 max-w-md text-white/60">{error || 'Unable to load tracking details.'}</p>
+                <Link to={isPublic ? '/' : '/track'} className="rounded-full bg-white px-8 py-3 text-sm font-bold text-black">
+                    {isPublic ? 'Back to Home' : 'Back to Tracking'}
                 </Link>
             </div>
         );
     }
 
-    const currentStatusConfig = STATUS_CONFIG[tracking.current_status] || STATUS_CONFIG.pending;
-    const StatusIcon = currentStatusConfig.icon;
+    if (!GOOGLE_MAPS_API_KEY) {
+        return (
+            <div className="min-h-screen bg-[#050505] px-4 pb-12 pt-24 text-white">
+                <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+                    <h1 className="text-2xl font-black uppercase tracking-tight">{statusLabel(tracking.current_status)}</h1>
+                    <p className="mt-2 text-white/60">Map key is missing. Timeline is still available below.</p>
+                    <div className="mt-6 space-y-4">
+                        {timelineDesc.map((milestone, index) => (
+                            <div key={`${milestone.status}-${milestone.occurred_at}-${index}`} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                <p className="text-sm font-bold uppercase">{milestone.label}</p>
+                                <p className="mt-1 text-xs text-white/55">
+                                    {new Date(milestone.occurred_at).toLocaleString('en-PK')}
+                                </p>
+                                {milestone.note ? <p className="mt-2 text-sm text-white/70">{milestone.note}</p> : null}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const isAtWarehouse = tracking.current_status === 'at_warehouse';
+    const showParcel = !!parcelPosition && activeStatus !== 'pending' && activeStatus !== 'confirmed' && activeStatus !== 'packed' && activeStatus !== 'cancelled';
 
     return (
         <div className="relative h-screen w-screen overflow-hidden bg-black text-white">
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
                 <Map
                     defaultCenter={tracking.anchors.customer}
-                    defaultZoom={12}
+                    defaultZoom={11}
                     mapId={MAP_ID}
-                    disableDefaultUI={true}
+                    disableDefaultUI
                     className="h-full w-full"
                 >
-                    {/* Polylines */}
-                    {path.length > 0 && (
-                        <>
-                            <Polyline points={path.slice(0, Math.floor(path.length * progress) + 1)} color="#ec4899" />
-                            <Polyline points={path.slice(Math.floor(path.length * progress))} color="#ffffff40" dashed />
-                        </>
-                    )}
+                    {traveledPath.length > 1 ? <Polyline points={traveledPath} color={statusConfig.color} /> : null}
+                    {remainingPath.length > 1 ? <Polyline points={remainingPath} color="#ffffff55" dashed /> : null}
 
-                    {/* Anchors */}
                     <AdvancedMarker position={tracking.anchors.seller}>
                         <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-black shadow-xl">
                             <Store size={20} className="text-white" />
                         </div>
                     </AdvancedMarker>
 
-                    {tracking.anchors.warehouse && (
+                    {tracking.anchors.warehouse ? (
                         <AdvancedMarker position={tracking.anchors.warehouse}>
                             <div className="relative">
-                                {tracking.current_status === 'at_warehouse' && (
+                                {isAtWarehouse ? (
                                     <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full bg-white/20" />
-                                )}
+                                ) : null}
                                 <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-black shadow-xl">
                                     <Warehouse size={20} className="text-white" />
                                 </div>
                             </div>
                         </AdvancedMarker>
-                    )}
+                    ) : null}
 
                     <AdvancedMarker position={tracking.anchors.customer}>
                         <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-primary shadow-xl">
@@ -235,9 +393,8 @@ const InteractiveTrackingPage: React.FC = () => {
                         </div>
                     </AdvancedMarker>
 
-                    {/* Parcel Marker */}
-                    {parcelPos.lat !== 0 && tracking.current_status !== 'delivered' && tracking.current_status !== 'pending' && (
-                        <AdvancedMarker position={parcelPos}>
+                    {showParcel ? (
+                        <AdvancedMarker position={parcelPosition}>
                             <div className="relative">
                                 <div className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-primary/30" />
                                 <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary shadow-2xl ring-2 ring-white">
@@ -245,101 +402,103 @@ const InteractiveTrackingPage: React.FC = () => {
                                 </div>
                             </div>
                         </AdvancedMarker>
-                    )}
+                    ) : null}
                 </Map>
             </APIProvider>
 
-            {/* Header Overlay */}
             <div className="absolute left-0 right-0 top-0 p-4">
                 <div className="flex items-center justify-between gap-4">
-                    <Link to={isPublic ? "/" : "/track"} className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 backdrop-blur-md">
+                    <Link to={isPublic ? '/' : '/track'} className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 backdrop-blur-md">
                         <ArrowLeft size={20} />
                     </Link>
-                    
+
                     <div className="flex-1 rounded-full bg-black/80 px-6 py-3 backdrop-blur-md">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Current Status</p>
                                 <div className="flex items-center gap-2">
-                                    <div className="h-2 w-2 animate-pulse rounded-full" style={{ backgroundColor: currentStatusConfig.color }} />
-                                    <p className="text-sm font-black uppercase tracking-tight">{currentStatusConfig.label}</p>
+                                    <div className="h-2 w-2 animate-pulse rounded-full" style={{ backgroundColor: statusConfig.color }} />
+                                    <p className="text-sm font-black uppercase tracking-tight">{statusLabel(tracking.current_status)}</p>
                                 </div>
                             </div>
-                            {tracking.estimated_delivery && (
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">ETA</p>
-                                    <p className="text-sm font-black uppercase tracking-tight">
-                                        {new Date(tracking.estimated_delivery).toLocaleDateString('en-PK', { day: 'numeric', month: 'short' })}
-                                    </p>
-                                </div>
-                            )}
+                            <div className="text-right">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">ETA</p>
+                                <p className="text-sm font-black uppercase tracking-tight">{etaCountdown || 'TBD'}</p>
+                            </div>
                         </div>
                     </div>
 
-                    <button className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 backdrop-blur-md">
-                        <Share2 size={20} />
+                    <button
+                        onClick={handleShare}
+                        disabled={isSharing}
+                        className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 backdrop-blur-md disabled:opacity-60"
+                        aria-label="Share tracking link"
+                    >
+                        {isSharing ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={20} />}
                     </button>
                 </div>
             </div>
 
-            {/* Bottom Card */}
-            <motion.div 
+            <motion.div
                 drag="y"
                 dragConstraints={{ top: 0, bottom: 0 }}
                 onDragEnd={(_, info) => {
-                    if (info.offset.y < -50) setShowTimeline(true);
-                    if (info.offset.y > 50) setShowTimeline(false);
+                    if (info.offset.y < -40) setShowTimeline(true);
+                    if (info.offset.y > 40) setShowTimeline(false);
                 }}
                 className="absolute bottom-0 left-0 right-0 z-50 rounded-t-[2.5rem] bg-black/90 p-6 shadow-2xl backdrop-blur-xl"
-                initial={{ y: '60%' }}
-                animate={{ y: showTimeline ? '0%' : '60%' }}
+                initial={{ y: '58%' }}
+                animate={{ y: showTimeline ? '0%' : '58%' }}
                 transition={{ type: 'spring', damping: 20, stiffness: 100 }}
             >
-                <div 
-                    className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-white/20" 
-                    onClick={() => setShowTimeline(!showTimeline)}
+                <button
+                    className="mx-auto mb-6 block h-1.5 w-12 rounded-full bg-white/20"
+                    onClick={() => setShowTimeline((prev) => !prev)}
+                    aria-label="Toggle timeline"
                 />
 
                 <div className="mb-8">
                     <h2 className="text-2xl font-black uppercase tracking-tight">Order Timeline</h2>
-                    <p className="text-sm text-white/50">Track every step of your parcel</p>
+                    <p className="text-sm text-white/50">Live milestone updates</p>
                 </div>
 
                 <div className="max-h-[50vh] space-y-8 overflow-y-auto pr-2 custom-scrollbar">
-                    {tracking.timeline.map((milestone, i) => {
+                    {timelineDesc.map((milestone, index) => {
                         const config = STATUS_CONFIG[milestone.status] || STATUS_CONFIG.pending;
                         const Icon = config.icon;
-                        const isLast = i === tracking.timeline.length - 1;
+                        const isLatest = index === 0;
+                        const isLast = index === timelineDesc.length - 1;
 
                         return (
-                            <div key={i} className="relative flex gap-4">
-                                {!isLast && (
-                                    <div className="absolute left-[15px] top-8 h-full w-[2px] bg-white/10" />
-                                )}
-                                <div 
+                            <div key={`${milestone.status}-${milestone.occurred_at}-${index}`} className="relative flex gap-4">
+                                {!isLast ? <div className="absolute left-[15px] top-8 h-full w-[2px] bg-white/10" /> : null}
+                                <div
                                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10"
-                                    style={i === 0 ? { backgroundColor: config.color + '20', ringColor: config.color } : {}}
+                                    style={isLatest ? { backgroundColor: `${config.color}30` } : undefined}
                                 >
-                                    <Icon size={14} className={i === 0 ? "" : "text-white/40"} style={i === 0 ? { color: config.color } : {}} />
+                                    <Icon size={14} className={isLatest ? '' : 'text-white/40'} style={isLatest ? { color: config.color } : undefined} />
                                 </div>
                                 <div className="flex-1">
                                     <div className="flex items-center justify-between gap-2">
-                                        <h3 className={`text-sm font-bold uppercase tracking-tight ${i === 0 ? "text-white" : "text-white/60"}`}>
+                                        <h3 className={`text-sm font-bold uppercase tracking-tight ${isLatest ? 'text-white' : 'text-white/60'}`}>
                                             {milestone.label}
                                         </h3>
                                         <span className="text-[10px] font-medium text-white/40">
-                                            {new Date(milestone.occurred_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(milestone.occurred_at).toLocaleString('en-PK', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })}
                                         </span>
                                     </div>
-                                    {milestone.note && (
-                                        <p className="mt-1 text-xs text-white/40 leading-relaxed">{milestone.note}</p>
-                                    )}
-                                    {milestone.location?.city && (
+                                    {milestone.note ? <p className="mt-1 text-xs leading-relaxed text-white/40">{milestone.note}</p> : null}
+                                    {milestone.location?.city ? (
                                         <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-white/30">
                                             <MapPin size={10} />
                                             {milestone.location.city}
                                         </div>
-                                    )}
+                                    ) : null}
                                 </div>
                             </div>
                         );
@@ -348,16 +507,9 @@ const InteractiveTrackingPage: React.FC = () => {
             </motion.div>
 
             <style>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 10px;
-                }
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
             `}</style>
         </div>
     );

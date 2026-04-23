@@ -8,6 +8,7 @@ Auth:
 - `DELETE /api/v2/commerce/cart/items` — user auth required
 - `GET /api/v2/commerce/cart/shipping-estimate` — user auth required
 - `POST /api/v2/commerce/checkout` — user auth required
+- `POST /api/v2/commerce/checkout/direct` — user auth required
 - `GET /api/v2/commerce/orders` — user auth required
 - `GET /api/v2/commerce/orders/{id}/tracking` — user/seller/admin auth required
 - `POST /api/v2/commerce/orders/{id}/tracking/share` — user auth required
@@ -21,6 +22,7 @@ Auth:
 - `GET /api/v2/commerce/guest/cart/shipping-estimate` — public
 - `PUT /api/v2/commerce/guest/cart/customer` — public guest cart route
 - `POST /api/v2/commerce/guest/checkout` — public guest checkout route
+- `POST /api/v2/commerce/guest/checkout/direct` — public guest direct checkout route
 - `POST /api/v2/commerce/guest/orders/lookup` — public guest order tracking route
 - `GET /api/v2/commerce/seller/orders` — seller auth required
 - `GET /api/v2/commerce/seller/orders/{id}` — seller auth required
@@ -370,6 +372,42 @@ Creates a parent transaction from the current cart and splits it into seller-spe
 
 ---
 
+### Checkout Direct (Payload-Based)
+`POST /api/v2/commerce/checkout/direct`
+
+Auth: user token required
+
+Creates an order directly from request `items` and does not read server cart items. This is intended for clients using optimistic/local cart state where server cart sync may lag.
+
+**Body**
+```json
+{
+  "address_id": "uuid",
+  "payment_method": "cod",
+  "items": [
+    {
+      "product_id": "uuid",
+      "variant_id": "uuid",
+      "quantity": 1
+    }
+  ]
+}
+```
+
+`address_id`, `payment_method`, and non-empty `items` are required. Each item requires `product_id`, `variant_id`, `quantity >= 1`.
+
+**Shipping fee:** Computed using the same city-aware formula as Checkout (based on buyer city from `address_id`).
+
+**Response `201`**: `ParentOrder`
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — missing fields, invalid/empty `items`, or unavailable cart items
+- `401 UNAUTHORIZED` — missing or invalid user token
+- `404 NOT_FOUND` — address not found
+
+---
+
 ## Guest Cart And Checkout Endpoints
 
 ### Get Guest Cart
@@ -510,6 +548,49 @@ The guest cart must already contain saved guest checkout details. The buyer's ci
 **Common errors**
 - `400 INVALID_BODY` — malformed JSON
 - `400` — missing `guest_cart_id`, empty cart, missing saved guest details, missing payment method, or unavailable cart items
+
+---
+
+### Guest Checkout Direct (Payload-Based)
+`POST /api/v2/commerce/guest/checkout/direct`
+
+Auth: none
+
+Creates a guest order directly from request `items` and inline customer details. Does not read guest cart items or saved guest cart customer state.
+
+**Body**
+```json
+{
+  "payment_method": "cod",
+  "items": [
+    {
+      "product_id": "uuid",
+      "variant_id": "uuid",
+      "quantity": 1
+    }
+  ],
+  "customer": {
+    "full_name": "Sara Ahmed",
+    "phone_number": "+923001234567",
+    "email": "sara@example.com",
+    "address_line1": "12 Main Gulberg",
+    "city": "Lahore",
+    "country": "Pakistan",
+    "latitude": 31.5204,
+    "longitude": 74.3587
+  }
+}
+```
+
+`payment_method`, non-empty `items`, and required `customer` fields are mandatory.
+
+**Shipping fee:** Computed using the same city-aware formula as checkout. Buyer city comes from `customer.city`.
+
+**Response `201`**: `ParentOrder`
+
+**Common errors**
+- `400 INVALID_BODY` — malformed JSON
+- `400` — missing payment method, invalid/empty `items`, missing customer details, or unavailable cart items
 
 ---
 
