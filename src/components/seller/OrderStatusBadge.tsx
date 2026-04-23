@@ -6,11 +6,15 @@ export const OrderStatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) 
         pending: { text: 'Pending', className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
         confirmed: { text: 'Confirmed', className: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
         packed: { text: 'Packed', className: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' },
-        booked: { text: 'Booked', className: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
-        shipped: { text: 'Shipped', className: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
+        handed_to_rider: { text: 'Handed To Rider', className: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+        at_warehouse: { text: 'At Warehouse', className: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
+        out_for_delivery: { text: 'Out For Delivery', className: 'bg-pink-500/20 text-pink-400 border-pink-500/30' },
+        delivery_attempted: { text: 'Delivery Attempted', className: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
         delivered: { text: 'Delivered', className: 'bg-green-500/20 text-green-400 border-green-500/30' },
         cancelled: { text: 'Cancelled', className: 'bg-red-500/20 text-red-400 border-red-500/30' },
         returned: { text: 'Returned', className: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
+        refunded: { text: 'Refunded', className: 'bg-gray-500/20 text-gray-300 border-gray-500/30' },
+        fulfilled: { text: 'Fulfilled', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
     };
 
     const config = statusConfig[status] || { text: status, className: 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30' };

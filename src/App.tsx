@@ -18,6 +18,7 @@ const ManageInventory = React.lazy(() => import('./components/seller/ManageInven
 const AdminManageOrders = React.lazy(() => import('./components/admin/ManageOrders'));
 const Analytics = React.lazy(() => import('./components/seller/Analytics'));
 const Profile = React.lazy(() => import('./components/seller/Profile'));
+const SellerOrderDetailPage = React.lazy(() => import('./components/seller/OrderDetailPage'));
 const JunoStudioLanding = React.lazy(() => import('./components/seller/JunoStudioLanding'));
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
 import { JunoStudioProvider } from './contexts/JunoStudioContext';
@@ -206,6 +207,7 @@ function RoutedApp() {
                     <Route index element={<SellerHome />} />
                     <Route path="inventory" element={<ManageInventory />} />
                     <Route path="orders" element={<SellerManageOrders />} />
+                    <Route path="orders/:orderId" element={<SellerOrderDetailPage />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="profile" element={<Profile />} />
                   </Route>
@@ -214,6 +216,7 @@ function RoutedApp() {
                     <Route index element={<SellerHome />} />
                     <Route path="inventory" element={<ManageInventory />} />
                     <Route path="orders" element={<SellerManageOrders />} />
+                    <Route path="orders/:orderId" element={<SellerOrderDetailPage />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="profile" element={<Profile />} />
                   </Route>

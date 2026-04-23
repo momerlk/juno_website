@@ -23,18 +23,25 @@ function normalizeSellerProfile(body: any): TSeller {
 }
 
 function normalizeOrderStatus(status?: string): Order["status"] {
-  switch ((status || "").toLowerCase()) {
+  const normalized = (status || "").toLowerCase();
+  switch (normalized) {
     case "pending":
-    case "shipped":
+    case "confirmed":
+    case "packed":
+    case "handed_to_rider":
+    case "at_warehouse":
+    case "out_for_delivery":
+    case "delivery_attempted":
     case "delivered":
     case "cancelled":
     case "returned":
-    case "confirmed":
-    case "packed":
-    case "booked":
     case "fulfilled":
     case "refunded":
-      return status!.toLowerCase() as Order["status"];
+      return normalized as Order["status"];
+    // Legacy aliases
+    case "shipped":
+    case "booked":
+      return "handed_to_rider";
     default:
       return "pending";
   }
@@ -69,7 +76,12 @@ function normalizeSellerOrder(raw: any): Order {
       updated_at: item?.updated_at ?? raw?.updated_at ?? new Date().toISOString(),
     })),
     shipping_address_id: raw?.shipping_address_id ?? "",
-    shipping_address: raw?.shipping_address,
+    shipping_address: raw?.shipping_address
+      ? {
+          ...raw.shipping_address,
+          name: raw.shipping_address.name ?? raw.shipping_address.full_name,
+        }
+      : undefined,
     billing_address_id: raw?.billing_address_id ?? "",
     billing_address: raw?.billing_address,
     status: normalizeOrderStatus(raw?.status),
@@ -232,19 +244,44 @@ export namespace Seller {
     return await request("/seller/inventory/bulk-update", "POST", updates, token);
   }
 
-  export async function GetOrders(token : string) : Promise<APIResponse<Order[]>> {
-    const response = await request<any[]>(`/seller/orders`, "GET", undefined, token);
+  export async function GetOrders(
+    token: string,
+    params?: { status?: string; search?: string; limit?: number; offset?: number }
+  ) : Promise<APIResponse<Order[]>> {
+    const query = new URLSearchParams();
+    if (params?.status && params.status !== 'all') query.set('status', params.status);
+    if (params?.search) query.set('search', params.search);
+    if (typeof params?.limit === 'number') query.set('limit', String(params.limit));
+    if (typeof params?.offset === 'number') query.set('offset', String(params.offset));
+
+    const qs = query.toString();
+    const response = await request<any>(`/commerce/seller/orders${qs ? `?${qs}` : ''}`, "GET", undefined, token);
+    const rawOrders = Array.isArray(response.body)
+      ? response.body
+      : Array.isArray(response.body?.orders)
+        ? response.body.orders
+        : [];
+
     return {
       ...response,
-      body: response.ok ? (Array.isArray(response.body) ? response.body : []).map(normalizeSellerOrder) : response.body,
+      body: response.ok ? rawOrders.map(normalizeSellerOrder) : response.body,
+    };
+  }
+
+  export async function GetOrderByID(token: string, order_id: string): Promise<APIResponse<Order>> {
+    const response = await request<any>(`/commerce/seller/orders/${order_id}`, "GET", undefined, token);
+    return {
+      ...response,
+      body: response.ok ? normalizeSellerOrder(response.body) : response.body,
     };
   }
 
   export interface StatusUpdatePayload {
-    status: "pending" | "shipped" | "delivered" | "cancelled";
+    status: "confirmed" | "packed" | "handed_to_rider" | "cancelled";
+    note?: string;
   }
   export async function UpdateOrderStatus(token : string, order_id : string, payload : StatusUpdatePayload) : Promise<APIResponse<any>> {
-    return await request(`/seller/orders/${order_id}/status`, "PUT", { status: payload.status }, token);
+    return await request(`/commerce/seller/orders/${order_id}/status`, "PATCH", { status: payload.status, note: payload.note }, token);
   }
 
   export async function GetAirwayBill(order_id: string): Promise<APIResponse<Blob>> {
@@ -282,7 +319,8 @@ export namespace Seller {
   }
 
   export async function FulfillOrder(token: string, order_id: string, tracking_number?: string): Promise<APIResponse<any>> {
-    return await request(`/seller/orders/${order_id}/fulfill`, "POST", { tracking_number }, token);
+    const note = tracking_number ? `Tracking ref: ${tracking_number}` : 'Handed to rider';
+    return await UpdateOrderStatus(token, order_id, { status: 'handed_to_rider', note });
   }
 
   export async function GetInventoryCategories(token: string): Promise<APIResponse<any>> {

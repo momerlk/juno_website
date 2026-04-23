@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowRight,
   Globe,
   Inbox,
@@ -55,6 +56,7 @@ const SellerHome: React.FC = () => {
   const [shopifyAuthUrl, setShopifyAuthUrl] = useState<string | null>(null);
   const [shopifyTab, setShopifyTab] = useState<'oauth' | 'scrape'>('scrape');
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [pendingPriorityOrders, setPendingPriorityOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [liveTournaments, setLiveTournaments] = useState<any[]>([]);
 
@@ -63,10 +65,17 @@ const SellerHome: React.FC = () => {
       if (!seller?.token) return;
       setIsLoadingOrders(true);
       try {
-        const response = await api.Seller.GetOrders(seller.token);
-        if (response.ok && response.body) {
-          const sortedOrders = [...response.body].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const [allOrdersRes, pendingRes] = await Promise.all([
+          api.Seller.GetOrders(seller.token, { limit: 100, offset: 0 }),
+          api.Seller.GetOrders(seller.token, { status: 'pending', limit: 20, offset: 0 }),
+        ]);
+        if (allOrdersRes.ok && allOrdersRes.body) {
+          const sortedOrders = [...allOrdersRes.body].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
           setRecentOrders(sortedOrders.slice(0, 6));
+        }
+        if (pendingRes.ok && pendingRes.body) {
+          const pendingSorted = [...pendingRes.body].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          setPendingPriorityOrders(pendingSorted);
         }
       } catch (error) {
         console.error('Failed to fetch recent orders', error);
@@ -166,6 +175,38 @@ const SellerHome: React.FC = () => {
 
   return (
     <>
+      {pendingPriorityOrders.length > 0 && (
+        <motion.section
+          {...fadeUp}
+          transition={{ duration: 0.35 }}
+          className="mb-4 overflow-hidden rounded-[1.8rem] border border-yellow-500/35 bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.22),transparent_50%),linear-gradient(135deg,rgba(245,158,11,0.14),rgba(255,255,255,0.03))] p-5 shadow-[0_24px_80px_rgba(245,158,11,0.14)]"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="rounded-[1.2rem] border border-yellow-400/40 bg-yellow-400/15 p-3">
+                <AlertTriangle size={20} className="text-yellow-300" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-mono uppercase tracking-[0.25em] text-yellow-200/80">Top Priority</p>
+                <h3 className="mt-2 text-xl font-black uppercase tracking-[-0.03em] text-white">
+                  {pendingPriorityOrders.length} pending order{pendingPriorityOrders.length > 1 ? 's' : ''} need immediate action
+                </h3>
+                <p className="mt-2 text-sm text-yellow-100/80">
+                  Newest pending order: #{pendingPriorityOrders[0]?.order_number || pendingPriorityOrders[0]?.id}
+                </p>
+              </div>
+            </div>
+            <Link
+              to={`${prefix}/dashboard/orders`}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-yellow-300/35 bg-yellow-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-yellow-100 transition-colors hover:bg-yellow-300/20"
+            >
+              Open Orders Queue
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        </motion.section>
+      )}
+
       {queuePendingCount > 0 && (
         <motion.section
           {...fadeUp}
