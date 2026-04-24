@@ -104,6 +104,7 @@ const CampaignProductPage: React.FC = () => {
     const [showAddedFeedback, setShowAddedFeedback] = useState(false);
     const [showSizeGuide, setShowSizeGuide] = useState(false);
     const trackedProductViewRef = useRef<string>('');
+    const imageTouchStartXRef = useRef<number | null>(null);
     const { addItem, setCartOpen } = useGuestCart();
     const navigate = useNavigate();
 
@@ -309,6 +310,51 @@ const CampaignProductPage: React.FC = () => {
         }
     }, [quantity, maxAvailableQuantity]);
 
+    useEffect(() => {
+        if (!campaign || !product) return;
+        const viewKey = `${campaign.slug}:${product.id}`;
+        if (trackedProductViewRef.current === viewKey) return;
+        trackedProductViewRef.current = viewKey;
+
+        setClarityTags({
+            campaign_slug: campaign.slug,
+            campaign_name: campaign.name,
+            campaign_stage: 'product',
+            campaign_product_id: product.id,
+            campaign_product_title: product.title,
+            campaign_seller: product.seller_name || 'unknown',
+        });
+        trackClarityEventWithTags('campaign_product_view', {
+            campaign_slug: campaign.slug,
+            product_id: product.id,
+            variant_id: selectedVariant?.id || 'none',
+            in_stock: String(canPurchase),
+        });
+    }, [campaign?.slug, campaign?.name, product?.id, product?.title, product?.seller_name, selectedVariant?.id, canPurchase]);
+
+    const currentPrice = getBaseProductPrice(product);
+    const compareAt = product?.pricing?.compare_at_price;
+    const discountPercentage = compareAt && currentPrice ? Math.round(((compareAt - currentPrice) / compareAt) * 100) : 0;
+    const imageGallery = useMemo(() => asArray(product?.images), [product?.images]);
+    const description = product?.short_description || product?.description;
+    const eta = product?.shipping_details?.estimated_delivery_days || 3;
+    const currentImage = imageGallery[selectedImageIdx] || '/juno_app_icon.png';
+    const inStock = canPurchase;
+    const stockCount = product?.inventory?.quantity ?? null;
+    const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
+
+    const thumbnailIndices = useMemo(() => {
+        const len = imageGallery.length;
+        if (len <= 6) return imageGallery.map((_, index) => index);
+
+        const indices = new Set<number>([0, len - 1, selectedImageIdx]);
+        for (let offset = -1; offset <= 1; offset += 1) {
+            indices.add((selectedImageIdx + offset + len) % len);
+        }
+
+        return Array.from(indices).sort((a, b) => a - b);
+    }, [imageGallery, selectedImageIdx]);
+
     if (isLoading || !data) {
         return (
             <CampaignLayout campaign={{ name: 'Loading', slug: campaignSlug || '' }} hideBanner>
@@ -338,17 +384,6 @@ const CampaignProductPage: React.FC = () => {
         );
     }
 
-    const currentPrice = getBaseProductPrice(product);
-    const compareAt = product.pricing.compare_at_price;
-    const discountPercentage = compareAt && currentPrice ? Math.round(((compareAt - currentPrice) / compareAt) * 100) : 0;
-    const imageGallery = asArray(product?.images);
-    const description = product?.short_description || product?.description;
-    const eta = product?.shipping_details?.estimated_delivery_days || 3;
-    const currentImage = imageGallery[selectedImageIdx] || '/juno_app_icon.png';
-    const inStock = canPurchase;
-    const stockCount = product.inventory?.quantity ?? null;
-    const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
-
     /* ── Delivery dates ── */
     const today = new Date();
     const processingStart = today;
@@ -377,28 +412,6 @@ const CampaignProductPage: React.FC = () => {
         });
         navigate(`/${campaignSlug}?q=${encodeURIComponent(query)}`);
     };
-
-    useEffect(() => {
-        if (!campaign || !product) return;
-        const viewKey = `${campaign.slug}:${product.id}`;
-        if (trackedProductViewRef.current === viewKey) return;
-        trackedProductViewRef.current = viewKey;
-
-        setClarityTags({
-            campaign_slug: campaign.slug,
-            campaign_name: campaign.name,
-            campaign_stage: 'product',
-            campaign_product_id: product.id,
-            campaign_product_title: product.title,
-            campaign_seller: product.seller_name || 'unknown',
-        });
-        trackClarityEventWithTags('campaign_product_view', {
-            campaign_slug: campaign.slug,
-            product_id: product.id,
-            variant_id: selectedVariant?.id || 'none',
-            in_stock: String(canPurchase),
-        });
-    }, [campaign?.slug, campaign?.name, product?.id, product?.title, product?.seller_name, selectedVariant?.id, canPurchase]);
 
     return (
         <CampaignLayout campaign={campaign} onSearch={handleSearch} hideBanner>
@@ -481,44 +494,45 @@ const CampaignProductPage: React.FC = () => {
                                     </>
                                 ) : null}
 
-                                {/* Swipeable image */}
-                                <motion.div
-                                    drag={imageGallery.length > 1 ? 'x' : false}
-                                    dragConstraints={{ left: 0, right: 0 }}
-                                    dragElastic={0.18}
-                                    onDragEnd={(_, info) => {
-                                        if (info.offset.x < -60) cycleImage(1);
-                                        else if (info.offset.x > 60) cycleImage(-1);
+                                {/* Swipeable image - one layer keeps mobile compositing cheap */}
+                                <div
+                                    onTouchStart={(event) => {
+                                        imageTouchStartXRef.current = event.touches[0]?.clientX ?? null;
                                     }}
-                                    className="w-full touch-pan-y"
+                                    onTouchEnd={(event) => {
+                                        const startX = imageTouchStartXRef.current;
+                                        imageTouchStartXRef.current = null;
+                                        if (startX === null || imageGallery.length < 2) return;
+
+                                        const endX = event.changedTouches[0]?.clientX ?? startX;
+                                        const delta = endX - startX;
+                                        if (delta < -50) cycleImage(1);
+                                        else if (delta > 50) cycleImage(-1);
+                                    }}
+                                    className="relative w-full aspect-[4/5] sm:aspect-[3/4] touch-pan-y"
                                 >
-                                    <AnimatePresence mode="wait">
-                                        <motion.img
-                                            key={currentImage}
-                                            src={currentImage}
-                                            alt={product.title}
-                                            loading="eager"
-                                            fetchpriority="high"
-                                            decoding="async"
-                                            draggable={false}
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.22, ease: 'easeInOut' }}
-                                            className="block w-full max-w-full select-none object-cover aspect-[4/5] sm:aspect-[3/4]"
-                                        />
-                                    </AnimatePresence>
-                                </motion.div>
+                                    <img
+                                        key={currentImage}
+                                        src={currentImage}
+                                        alt={`${product.title} ${selectedImageIdx + 1}`}
+                                        loading={selectedImageIdx === 0 ? 'eager' : 'lazy'}
+                                        fetchPriority={selectedImageIdx === 0 ? 'high' : 'auto'}
+                                        decoding="async"
+                                        draggable={false}
+                                        className="block h-full w-full select-none object-cover"
+                                    />
+                                </div>
                             </div>
 
-                            {/* Thumbnail strip — bigger, touch-friendly */}
+                            {/* Thumbnail strip — windowed so large galleries stay cheap */}
                             {imageGallery.length > 1 ? (
                                 <div className="flex gap-2.5 overflow-x-auto pt-1 pb-2 -mx-1 px-1 scrollbar-none">
-                                    {imageGallery.map((image, i) => {
+                                    {thumbnailIndices.map((i) => {
+                                        const image = imageGallery[i];
                                         const active = selectedImageIdx === i;
                                         return (
                                             <button
-                                                key={image}
+                                                key={`${image}-${i}`}
                                                 onClick={() => {
                                                     trackClarityEventWithTags('campaign_product_thumbnail_click', {
                                                         campaign_slug: campaign?.slug ?? 'unknown',
