@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -23,6 +23,7 @@ import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useProbe';
 import CampaignLayout from './CampaignLayout';
 import SizeGuideModal from '../catalog/SizeGuideModal';
+import { setClarityTags, trackClarityEventWithTags, upgradeClaritySession } from '../../utils/clarity';
 
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
@@ -41,6 +42,20 @@ const getVariantAvailableQuantity = (variant: any, product: any): number | undef
     const productQty = product?.inventory?.available_quantity ?? product?.inventory?.quantity;
     if (typeof productQty === 'number' && Number.isFinite(productQty)) return Math.max(0, productQty);
     return undefined;
+};
+
+type CampaignCartPayload = {
+    productId: string;
+    variantId: string;
+    price: number;
+    meta: {
+        seller_name?: string;
+        product_title?: string;
+        variant_title?: string;
+        variant_options?: Record<string, string>;
+        image_url?: string;
+        source: string;
+    };
 };
 
 const isPurchasableVariant = (variant: any, product: any): boolean => {
@@ -88,6 +103,7 @@ const CampaignProductPage: React.FC = () => {
     const [isBuyingNow, setIsBuyingNow] = useState(false);
     const [showAddedFeedback, setShowAddedFeedback] = useState(false);
     const [showSizeGuide, setShowSizeGuide] = useState(false);
+    const trackedProductViewRef = useRef<string>('');
     const { addItem, setCartOpen } = useGuestCart();
     const navigate = useNavigate();
 
@@ -159,7 +175,7 @@ const CampaignProductPage: React.FC = () => {
     const isVariantAvailable = selectedVariant?.available ?? true;
     const canPurchase = !!product?.inventory?.in_stock && isVariantAvailable;
 
-    const cartPayload = useCallback(() => {
+    const cartPayload = useCallback((): CampaignCartPayload | null => {
         if (!product || !selectedVariant || !campaignSlug) return null;
         const slug = campaignSlug.replace(/-campaign$/, '');
         const basePrice = getBaseProductPrice(product);
@@ -178,13 +194,61 @@ const CampaignProductPage: React.FC = () => {
         };
     }, [product, selectedVariant, campaignSlug]);
 
+    const trackCartAction = useCallback(
+        (
+            action: 'add_to_bag' | 'buy_now',
+            status: 'click' | 'blocked',
+            payload: CampaignCartPayload | null,
+            extra?: Record<string, string>
+        ) => {
+            const eventName = `campaign_${action}_${status}`;
+            const payloadTags = payload
+                ? {
+                    product_id: payload.productId,
+                    variant_id: payload.variantId,
+                    unit_price: String(payload.price),
+                }
+                : {};
+
+            trackClarityEventWithTags(eventName, {
+                campaign_slug: campaign?.slug ?? 'unknown',
+                product_id: product?.id ?? 'unknown',
+                variant_id: selectedVariant?.id ?? 'none',
+                ...payloadTags,
+                ...(extra ?? {}),
+            });
+        },
+        [campaign?.slug, product?.id, selectedVariant?.id]
+    );
+
     const handleAddToCart = useCallback(() => {
         const p = cartPayload();
-        if (!p || !canPurchase) return;
-        if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
-            setQuantity(Math.max(1, maxAvailableQuantity));
+        if (!p) {
+            trackCartAction('add_to_bag', 'blocked', null, {
+                reason: 'missing_payload',
+            });
             return;
         }
+        if (!canPurchase) {
+            trackCartAction('add_to_bag', 'blocked', p, {
+                reason: 'out_of_stock',
+            });
+            return;
+        }
+        if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
+            setQuantity(Math.max(1, maxAvailableQuantity));
+            trackCartAction('add_to_bag', 'blocked', p, {
+                requested_quantity: String(quantity),
+                max_quantity: String(maxAvailableQuantity),
+                reason: 'quantity_exceeded',
+            });
+            return;
+        }
+        trackCartAction('add_to_bag', 'click', p, {
+            quantity: String(quantity),
+            total_price: String(p.price * quantity),
+        });
+        upgradeClaritySession('campaign_add_to_cart');
         setIsAdding(true);
         addItem(p.productId, p.variantId, quantity, p.price, {
             ...p.meta,
@@ -194,15 +258,36 @@ const CampaignProductPage: React.FC = () => {
         setShowAddedFeedback(true);
         setIsAdding(false);
         window.setTimeout(() => setCartOpen(true), 350);
-    }, [cartPayload, quantity, addItem, setCartOpen, canPurchase, maxAvailableQuantity]);
+    }, [cartPayload, quantity, addItem, setCartOpen, canPurchase, maxAvailableQuantity, trackCartAction]);
 
     const handleBuyNow = useCallback(() => {
         const p = cartPayload();
-        if (!p || !canPurchase) return;
-        if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
-            setQuantity(Math.max(1, maxAvailableQuantity));
+        if (!p) {
+            trackCartAction('buy_now', 'blocked', null, {
+                reason: 'missing_payload',
+            });
             return;
         }
+        if (!canPurchase) {
+            trackCartAction('buy_now', 'blocked', p, {
+                reason: 'out_of_stock',
+            });
+            return;
+        }
+        if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
+            setQuantity(Math.max(1, maxAvailableQuantity));
+            trackCartAction('buy_now', 'blocked', p, {
+                requested_quantity: String(quantity),
+                max_quantity: String(maxAvailableQuantity),
+                reason: 'quantity_exceeded',
+            });
+            return;
+        }
+        trackCartAction('buy_now', 'click', p, {
+            quantity: String(quantity),
+            total_price: String(p.price * quantity),
+        });
+        upgradeClaritySession('campaign_buy_now');
         setIsBuyingNow(true);
         addItem(p.productId, p.variantId, quantity, p.price, {
             ...p.meta,
@@ -210,7 +295,7 @@ const CampaignProductPage: React.FC = () => {
             is_available: canPurchase,
         });
         window.setTimeout(() => navigate('/checkout'), 200);
-    }, [cartPayload, quantity, addItem, navigate, canPurchase, maxAvailableQuantity]);
+    }, [cartPayload, quantity, addItem, navigate, canPurchase, maxAvailableQuantity, trackCartAction]);
 
     useEffect(() => {
         if (!showAddedFeedback) return;
@@ -273,12 +358,47 @@ const CampaignProductPage: React.FC = () => {
 
     const cycleImage = (dir: 1 | -1) => {
         if (imageGallery.length < 2) return;
-        setSelectedImageIdx((idx) => (idx + dir + imageGallery.length) % imageGallery.length);
+        const next = (selectedImageIdx + dir + imageGallery.length) % imageGallery.length;
+        trackClarityEventWithTags('campaign_product_image_change', {
+            campaign_slug: campaign?.slug ?? 'unknown',
+            product_id: product?.id ?? 'unknown',
+            direction: dir === 1 ? 'next' : 'prev',
+            from_index: String(selectedImageIdx),
+            to_index: String(next),
+        });
+        setSelectedImageIdx(next);
     };
 
     const handleSearch = (query: string) => {
+        trackClarityEventWithTags('campaign_product_search_submit', {
+            campaign_slug: campaign?.slug ?? 'unknown',
+            product_id: product?.id ?? 'unknown',
+            search_query: query.trim() || 'empty',
+        });
         navigate(`/${campaignSlug}?q=${encodeURIComponent(query)}`);
     };
+
+    useEffect(() => {
+        if (!campaign || !product) return;
+        const viewKey = `${campaign.slug}:${product.id}`;
+        if (trackedProductViewRef.current === viewKey) return;
+        trackedProductViewRef.current = viewKey;
+
+        setClarityTags({
+            campaign_slug: campaign.slug,
+            campaign_name: campaign.name,
+            campaign_stage: 'product',
+            campaign_product_id: product.id,
+            campaign_product_title: product.title,
+            campaign_seller: product.seller_name || 'unknown',
+        });
+        trackClarityEventWithTags('campaign_product_view', {
+            campaign_slug: campaign.slug,
+            product_id: product.id,
+            variant_id: selectedVariant?.id || 'none',
+            in_stock: String(canPurchase),
+        });
+    }, [campaign?.slug, campaign?.name, product?.id, product?.title, product?.seller_name, selectedVariant?.id, canPurchase]);
 
     return (
         <CampaignLayout campaign={campaign} onSearch={handleSearch} hideBanner>
@@ -294,7 +414,14 @@ const CampaignProductPage: React.FC = () => {
 
                     {/* ── Back nav ── */}
                     <button
-                        onClick={() => (window.history.length > 2 ? navigate(-1) : navigate(`/${campaignSlug}`))}
+                        onClick={() => {
+                            trackClarityEventWithTags('campaign_product_back_click', {
+                                campaign_slug: campaign?.slug ?? 'unknown',
+                                product_id: product?.id ?? 'unknown',
+                            });
+                            if (window.history.length > 2) navigate(-1);
+                            else navigate(`/${campaignSlug}`);
+                        }}
                         className="mb-5 inline-flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-[0.28em] text-white/40 transition-all hover:text-white group"
                     >
                         <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] transition-all group-hover:border-white/25 group-hover:bg-white/[0.08]">
@@ -392,7 +519,15 @@ const CampaignProductPage: React.FC = () => {
                                         return (
                                             <button
                                                 key={image}
-                                                onClick={() => setSelectedImageIdx(i)}
+                                                onClick={() => {
+                                                    trackClarityEventWithTags('campaign_product_thumbnail_click', {
+                                                        campaign_slug: campaign?.slug ?? 'unknown',
+                                                        product_id: product?.id ?? 'unknown',
+                                                        from_index: String(selectedImageIdx),
+                                                        to_index: String(i),
+                                                    });
+                                                    setSelectedImageIdx(i);
+                                                }}
                                                 className={`relative shrink-0 overflow-hidden rounded-xl transition-all w-[82px] md:w-[96px] ${
                                                     active
                                                         ? 'ring-2 ring-inset ring-white'
@@ -558,7 +693,14 @@ const CampaignProductPage: React.FC = () => {
                                                 </div>
                                                 {option.name.toLowerCase().includes('size') ? (
                                                     <button
-                                                        onClick={() => setShowSizeGuide(true)}
+                                                        onClick={() => {
+                                                            trackClarityEventWithTags('campaign_size_guide_open', {
+                                                                campaign_slug: campaign?.slug ?? 'unknown',
+                                                                product_id: product?.id ?? 'unknown',
+                                                                variant_id: selectedVariant?.id ?? 'none',
+                                                            });
+                                                            setShowSizeGuide(true);
+                                                        }}
                                                         className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50 transition-colors hover:text-white"
                                                     >
                                                         <Ruler size={11} />
@@ -588,6 +730,12 @@ const CampaignProductPage: React.FC = () => {
                                                             whileTap={{ scale: 0.93 }}
                                                             onClick={() => {
                                                                 if (!isValueAvailable) return;
+                                                                trackClarityEventWithTags('campaign_variant_option_select', {
+                                                                    campaign_slug: campaign?.slug ?? 'unknown',
+                                                                    product_id: product?.id ?? 'unknown',
+                                                                    option_name: option.name,
+                                                                    option_value: value,
+                                                                });
                                                                 setSelectedOptions((cur) => ({ ...cur, [option.name]: value }));
                                                             }}
                                                             disabled={!isValueAvailable}
@@ -621,14 +769,49 @@ const CampaignProductPage: React.FC = () => {
                                     <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white">Quantity</p>
                                     <div className="inline-flex items-center rounded-xl border border-white/12 bg-black/30 overflow-hidden">
                                         <button
-                                            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                                            onClick={() => {
+                                                const next = Math.max(1, quantity - 1);
+                                                if (next !== quantity) {
+                                                    trackClarityEventWithTags('campaign_quantity_change', {
+                                                        campaign_slug: campaign?.slug ?? 'unknown',
+                                                        product_id: product?.id ?? 'unknown',
+                                                        variant_id: selectedVariant?.id ?? 'none',
+                                                        action: 'decrement',
+                                                        quantity: String(next),
+                                                    });
+                                                    setQuantity(next);
+                                                }
+                                            }}
                                             className="flex h-10 w-10 items-center justify-center text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
                                         >
                                             <Minus size={14} />
                                         </button>
                                         <span className="w-10 text-center text-sm font-black text-white">{quantity}</span>
                                         <button
-                                            onClick={() => setQuantity((q) => q + 1)}
+                                            onClick={() => {
+                                                const cap =
+                                                    typeof maxAvailableQuantity === 'number'
+                                                        ? maxAvailableQuantity
+                                                        : Number.POSITIVE_INFINITY;
+                                                const next = Math.min(quantity + 1, cap);
+                                                if (next !== quantity) {
+                                                    trackClarityEventWithTags('campaign_quantity_change', {
+                                                        campaign_slug: campaign?.slug ?? 'unknown',
+                                                        product_id: product?.id ?? 'unknown',
+                                                        variant_id: selectedVariant?.id ?? 'none',
+                                                        action: 'increment',
+                                                        quantity: String(next),
+                                                    });
+                                                    setQuantity(next);
+                                                } else {
+                                                    trackClarityEventWithTags('campaign_quantity_cap_reached', {
+                                                        campaign_slug: campaign?.slug ?? 'unknown',
+                                                        product_id: product?.id ?? 'unknown',
+                                                        variant_id: selectedVariant?.id ?? 'none',
+                                                        max_quantity: String(maxAvailableQuantity ?? 'unknown'),
+                                                    });
+                                                }
+                                            }}
                                             disabled={typeof maxAvailableQuantity === 'number' && quantity >= maxAvailableQuantity}
                                             className="flex h-10 w-10 items-center justify-center text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
                                         >

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { PublicCampaigns } from '../../api/campaignsApi';
 import CampaignLayout from './CampaignLayout';
 import { RefreshCw, AlertCircle, ArrowRight, ShoppingBag } from 'lucide-react';
+import { setClarityTags, trackClarityEventWithTags, upgradeClaritySession } from '../../utils/clarity';
 
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
@@ -78,6 +79,26 @@ const CampaignLandingPage: React.FC = () => {
         if (query) url.searchParams.set('q', query);
         else url.searchParams.delete('q');
         window.history.replaceState({}, '', url);
+
+        const normalizedQuery = query.trim();
+        if (!data?.campaign) return;
+        const matchedCount = !normalizedQuery
+            ? data.products?.length ?? 0
+            : products.length;
+
+        trackClarityEventWithTags('campaign_search_submit', {
+            campaign_slug: data.campaign.slug,
+            campaign_name: data.campaign.name,
+            search_query: normalizedQuery || 'empty',
+            result_count: String(matchedCount),
+        });
+        if (normalizedQuery && matchedCount === 0) {
+            trackClarityEventWithTags('campaign_search_no_results', {
+                campaign_slug: data.campaign.slug,
+                campaign_name: data.campaign.name,
+                search_query: normalizedQuery.toLowerCase(),
+            });
+        }
     };
 
     const handleQueryChange = (query: string) => {
@@ -111,6 +132,37 @@ const CampaignLandingPage: React.FC = () => {
             .slice(0, 5)
             .map((p: any) => ({ keyword: p.title }));
     }, [data, searchQuery]);
+
+    useEffect(() => {
+        if (!data?.campaign) return;
+        setClarityTags({
+            campaign_slug: data.campaign.slug,
+            campaign_name: data.campaign.name,
+            campaign_stage: 'landing',
+            campaign_product_count: String(data.products?.length ?? 0),
+        });
+        trackClarityEventWithTags('campaign_landing_view', {
+            campaign_slug: data.campaign.slug,
+            campaign_name: data.campaign.name,
+        });
+    }, [data?.campaign?.slug, data?.campaign?.name, data?.products?.length]);
+
+    const handleProductClick = (product: CampaignProduct) => {
+        if (!data?.campaign) return;
+        const price = product.pricing.discounted
+            ? product.pricing.discounted_price ?? product.pricing.price
+            : product.pricing.price;
+
+        trackClarityEventWithTags('campaign_product_card_click', {
+            campaign_slug: data.campaign.slug,
+            product_id: product.id,
+            product_title: product.title,
+            seller_name: product.seller_name,
+            product_price: String(price),
+            in_stock: String(product.inventory?.in_stock ?? true),
+        });
+        upgradeClaritySession('campaign_product_interest');
+    };
 
     if (isLoading) {
         return (
@@ -206,6 +258,7 @@ const CampaignLandingPage: React.FC = () => {
                                     product={product}
                                     index={index}
                                     basePath={campaignSlug || ''}
+                                    onClick={handleProductClick}
                                 />
                             ))}
                         </div>
@@ -220,7 +273,8 @@ const CampaignProductCard: React.FC<{
     product: CampaignProduct;
     index: number;
     basePath: string;
-}> = ({ product, index, basePath }) => {
+    onClick: (product: CampaignProduct) => void;
+}> = ({ product, index, basePath, onClick }) => {
     const image = product.images?.[0] ?? '';
     const price = product.pricing.discounted
         ? product.pricing.discounted_price ?? product.pricing.price
@@ -242,6 +296,7 @@ const CampaignProductCard: React.FC<{
         >
             <Link
                 to={`/${basePath}/${product.id}`}
+                onClick={() => onClick(product)}
                 className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.04]"
             >
                 <div className="relative overflow-hidden bg-[#0d0d0e]">

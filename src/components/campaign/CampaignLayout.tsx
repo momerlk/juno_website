@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useGuestCart } from '../../contexts/GuestCartContext';
 import CatalogNavbar from '../catalog/CatalogNavbar';
+import { trackClarityEventWithTags } from '../../utils/clarity';
 
 interface CampaignLayoutProps {
   campaign: {
@@ -32,6 +32,14 @@ const CampaignLayout: React.FC<CampaignLayoutProps> = ({
 }) => {
   const isArgos = campaign.slug === 'argos' || campaign.slug === 'argos-campaign';
   const heroImage = isArgos ? '/argos.jpg' : campaign.landing?.hero_image_url;
+
+  useEffect(() => {
+    if (hideBanner || (!campaign.landing && !isArgos)) return;
+    trackClarityEventWithTags('campaign_banner_view', {
+      campaign_slug: campaign.slug,
+      campaign_name: campaign.name,
+    });
+  }, [campaign.slug, campaign.name, !!campaign.landing, hideBanner, isArgos]);
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col overflow-x-hidden">

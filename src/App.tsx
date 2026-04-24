@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/landing/Hero';
@@ -102,6 +102,17 @@ import { WorkAuthProvider } from './contexts/WorkAuthContext';
 
 // Probe Analytics
 import { useProbeAnalytics } from './hooks/useProbe';
+import {
+  consentClarityV2,
+  getClarityCustomIdFromIdentity,
+  getClarityFriendlyNameFromIdentity,
+  getClarityRoleFromIdentity,
+  identifyClarityFromIdentity,
+  initClarity,
+  resolveClarityIdentityFromStorage,
+  setClarityTags,
+  trackClarityEventWithTags,
+} from './utils/clarity';
 
 const AppShellFallback = () => (
   <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
@@ -124,20 +135,22 @@ const ScrollToTop: React.FC = () => {
 function RoutedApp() {
   // Initialize Probe analytics for automatic page view and session tracking
   useProbeAnalytics();
+  const location = useLocation();
+  const clarityIdentityRef = useRef<ReturnType<typeof resolveClarityIdentityFromStorage>>(null);
   
-  const isCampaignPath = window.location.pathname.split('/').some(s => s.endsWith('-campaign'));
-  const isExcludedPath = window.location.pathname.startsWith('/seller') || 
-                         window.location.pathname.startsWith('/studio') || 
-                         window.location.pathname.startsWith('/admin') || 
-                         window.location.pathname.startsWith('/ambassador') || 
-                         window.location.pathname.startsWith('/work') || 
-                         window.location.pathname.startsWith('/brand-reel') || 
-                         window.location.pathname.startsWith('/catalog') || 
-                         window.location.pathname.startsWith('/checkout') || 
-                         window.location.pathname.startsWith('/track') || 
-                         window.location.pathname.startsWith('/wishlist') || 
-                         window.location.pathname.startsWith('/collections') || 
-                         window.location.pathname.startsWith('/drops') ||
+  const isCampaignPath = location.pathname.split('/').some((s) => s.endsWith('-campaign'));
+  const isExcludedPath = location.pathname.startsWith('/seller') || 
+                         location.pathname.startsWith('/studio') || 
+                         location.pathname.startsWith('/admin') || 
+                         location.pathname.startsWith('/ambassador') || 
+                         location.pathname.startsWith('/work') || 
+                         location.pathname.startsWith('/brand-reel') || 
+                         location.pathname.startsWith('/catalog') || 
+                         location.pathname.startsWith('/checkout') || 
+                         location.pathname.startsWith('/track') || 
+                         location.pathname.startsWith('/wishlist') || 
+                         location.pathname.startsWith('/collections') || 
+                         location.pathname.startsWith('/drops') ||
                          isCampaignPath;
 
   useEffect(() => {
@@ -147,6 +160,42 @@ function RoutedApp() {
       titleElement.removeAttribute('data-default');
     }
   }, []);
+
+  useEffect(() => {
+    initClarity();
+    consentClarityV2({ ad_Storage: 'denied', analytics_Storage: 'granted' });
+    clarityIdentityRef.current = resolveClarityIdentityFromStorage();
+  }, []);
+
+  useEffect(() => {
+    const path = location.pathname;
+    const pathParts = path.split('/').filter(Boolean);
+    const campaignSegment = pathParts.find((segment) => segment.endsWith('-campaign')) || '';
+    const clarityIdentity = clarityIdentityRef.current;
+    const pageType = path.startsWith('/admin')
+      ? 'admin'
+      : path.startsWith('/seller') || path.startsWith('/studio')
+        ? 'seller'
+        : path.startsWith('/checkout')
+          ? 'checkout'
+          : campaignSegment
+            ? 'campaign'
+            : 'website';
+
+    identifyClarityFromIdentity(clarityIdentity, path);
+
+    setClarityTags({
+      route_path: path,
+      route_query: location.search || 'none',
+      page_type: pageType,
+      campaign_slug: campaignSegment ? campaignSegment.replace(/-campaign$/, '') : 'none',
+      actor_role: getClarityRoleFromIdentity(clarityIdentity),
+      actor_id: getClarityCustomIdFromIdentity(clarityIdentity),
+      actor_name: getClarityFriendlyNameFromIdentity(clarityIdentity),
+    });
+
+    trackClarityEventWithTags('spa_page_view', { page_type: pageType });
+  }, [location.pathname, location.search]);
 
   return (
     <AdminAuthProvider>
