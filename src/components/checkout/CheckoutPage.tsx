@@ -299,11 +299,23 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
-    const freeShippingThreshold = shippingEstimate?.free_shipping_threshold ?? DEFAULT_FREE_SHIPPING_THRESHOLD;
-    const displaySubtotal = shippingEstimate?.subtotal ?? cartTotal;
-    const shippingFee = shippingEstimate?.shipping_total ?? (displaySubtotal >= freeShippingThreshold ? 0 : DEFAULT_SHIPPING_FEE);
-    const isFreeShippingApplied = shippingEstimate?.free_shipping_applied ?? shippingFee === 0;
-    const orderTotal = displaySubtotal + shippingFee;
+    const canEstimateShipping = itemCount > 0 && Boolean(formData.city.trim()) && optimisticCart.length > 0;
+    const shouldUseFallbackEstimate = canEstimateShipping && shippingState === 'error';
+    const hasResolvedEstimate = shippingState === 'ready' && shippingEstimate !== null;
+
+    const freeShippingThreshold = hasResolvedEstimate
+        ? shippingEstimate.free_shipping_threshold
+        : DEFAULT_FREE_SHIPPING_THRESHOLD;
+    const displaySubtotal = hasResolvedEstimate ? shippingEstimate.subtotal : cartTotal;
+    const shippingFee = hasResolvedEstimate
+        ? shippingEstimate.shipping_total
+        : shouldUseFallbackEstimate
+            ? (displaySubtotal >= freeShippingThreshold ? 0 : DEFAULT_SHIPPING_FEE)
+            : null;
+    const isFreeShippingApplied = hasResolvedEstimate
+        ? shippingEstimate.free_shipping_applied
+        : shippingFee === 0;
+    const orderTotal = shippingFee === null ? null : displaySubtotal + shippingFee;
     const progressPct = freeShippingThreshold > 0
         ? Math.min(100, Math.round((displaySubtotal / freeShippingThreshold) * 100))
         : 0;
@@ -502,7 +514,12 @@ const CheckoutPage: React.FC = () => {
                                 </div>
                                 <div className="flex justify-between text-[13px]">
                                     <span className="text-white/55">Shipping</span>
-                                    {isFreeShippingApplied ? (
+                                    {shippingFee === null ? (
+                                        <span className="inline-flex items-center gap-1.5 text-white/70">
+                                            <Loader2 size={13} className="animate-spin" />
+                                            <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">Calculating…</span>
+                                        </span>
+                                    ) : isFreeShippingApplied ? (
                                         <span className="inline-flex items-center gap-1.5">
                                             <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                                                 Free
@@ -538,7 +555,7 @@ const CheckoutPage: React.FC = () => {
                                             letterSpacing: '-0.04em',
                                         }}
                                     >
-                                        {formatCurrency(orderTotal)}
+                                        {orderTotal === null ? 'Calculating…' : formatCurrency(orderTotal)}
                                     </span>
                                 </div>
                             </div>
@@ -729,7 +746,7 @@ const CheckoutPage: React.FC = () => {
                                                 textTransform: 'uppercase',
                                             }}
                                         >
-                                            Place order · {formatCurrency(orderTotal)}
+                                            Place order · {orderTotal === null ? 'Calculating…' : formatCurrency(orderTotal)}
                                         </span>
                                     </>
                                 )}
@@ -759,9 +776,16 @@ const CheckoutPage: React.FC = () => {
                                         {formatCurrency(displaySubtotal)}
                                     </Row>
                                     <Row label="Shipping">
-                                        <span className={isFreeShippingApplied ? 'text-white' : 'text-white/80'}>
-                                            {isFreeShippingApplied ? 'Free' : formatCurrency(shippingFee)}
-                                        </span>
+                                        {shippingFee === null ? (
+                                            <span className="inline-flex items-center gap-1.5 text-white/70">
+                                                <Loader2 size={13} className="animate-spin" />
+                                                <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">Calculating…</span>
+                                            </span>
+                                        ) : (
+                                            <span className={isFreeShippingApplied ? 'text-white' : 'text-white/80'}>
+                                                {isFreeShippingApplied ? 'Free' : formatCurrency(shippingFee)}
+                                            </span>
+                                        )}
                                     </Row>
 
                                     {remainingForFreeShip > 0 && (
@@ -801,7 +825,7 @@ const CheckoutPage: React.FC = () => {
                                                 letterSpacing: '-0.04em',
                                             }}
                                         >
-                                            {formatCurrency(orderTotal)}
+                                            {orderTotal === null ? 'Calculating…' : formatCurrency(orderTotal)}
                                         </span>
                                     </div>
                                 </div>
@@ -841,7 +865,7 @@ const CheckoutPage: React.FC = () => {
                                 letterSpacing: '-0.03em',
                             }}
                         >
-                            {formatCurrency(orderTotal)}
+                            {orderTotal === null ? 'Calculating…' : formatCurrency(orderTotal)}
                         </p>
                     </div>
                     <motion.button
