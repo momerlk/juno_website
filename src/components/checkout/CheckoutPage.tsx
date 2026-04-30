@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, Loader2, Zap, Truck } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { GuestCommerce } from '../../api/commerceApi';
@@ -9,6 +9,8 @@ import { useProbeCommerce } from '../../hooks/useProbe';
 
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
+
+const CALCULATING_LABEL = 'Calculating…';
 
 const addDays = (date: Date, days: number) => {
     const d = new Date(date);
@@ -514,20 +516,10 @@ const CheckoutPage: React.FC = () => {
                                 </div>
                                 <div className="flex justify-between text-[13px]">
                                     <span className="text-white/55">Shipping</span>
-                                    {shippingFee === null ? (
-                                        <span className="inline-flex items-center gap-1.5 text-white/70">
-                                            <Loader2 size={13} className="animate-spin" />
-                                            <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">Calculating…</span>
-                                        </span>
-                                    ) : isFreeShippingApplied ? (
-                                        <span className="inline-flex items-center gap-1.5">
-                                            <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                                                Free
-                                            </span>
-                                        </span>
-                                    ) : (
-                                        <span className="font-semibold text-white">{formatCurrency(shippingFee)}</span>
-                                    )}
+                                    <ShippingAmount
+                                        shippingFee={shippingFee}
+                                        isFreeShippingApplied={isFreeShippingApplied}
+                                    />
                                 </div>
                                 {remainingForFreeShip > 0 && (
                                     <div className="pt-1">
@@ -555,7 +547,11 @@ const CheckoutPage: React.FC = () => {
                                             letterSpacing: '-0.04em',
                                         }}
                                     >
-                                        {orderTotal === null ? 'Calculating…' : formatCurrency(orderTotal)}
+                                        <AnimatedEstimateAmount
+                                            isLoading={orderTotal === null}
+                                            value={orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}
+                                            loadingStyle="text"
+                                        />
                                     </span>
                                 </div>
                             </div>
@@ -746,7 +742,7 @@ const CheckoutPage: React.FC = () => {
                                                 textTransform: 'uppercase',
                                             }}
                                         >
-                                            Place order · {orderTotal === null ? 'Calculating…' : formatCurrency(orderTotal)}
+                                            Place order · {orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}
                                         </span>
                                     </>
                                 )}
@@ -776,16 +772,10 @@ const CheckoutPage: React.FC = () => {
                                         {formatCurrency(displaySubtotal)}
                                     </Row>
                                     <Row label="Shipping">
-                                        {shippingFee === null ? (
-                                            <span className="inline-flex items-center gap-1.5 text-white/70">
-                                                <Loader2 size={13} className="animate-spin" />
-                                                <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">Calculating…</span>
-                                            </span>
-                                        ) : (
-                                            <span className={isFreeShippingApplied ? 'text-white' : 'text-white/80'}>
-                                                {isFreeShippingApplied ? 'Free' : formatCurrency(shippingFee)}
-                                            </span>
-                                        )}
+                                        <ShippingAmount
+                                            shippingFee={shippingFee}
+                                            isFreeShippingApplied={isFreeShippingApplied}
+                                        />
                                     </Row>
 
                                     {remainingForFreeShip > 0 && (
@@ -825,7 +815,11 @@ const CheckoutPage: React.FC = () => {
                                                 letterSpacing: '-0.04em',
                                             }}
                                         >
-                                            {orderTotal === null ? 'Calculating…' : formatCurrency(orderTotal)}
+                                            <AnimatedEstimateAmount
+                                                isLoading={orderTotal === null}
+                                                value={orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}
+                                                loadingStyle="text"
+                                            />
                                         </span>
                                     </div>
                                 </div>
@@ -865,7 +859,11 @@ const CheckoutPage: React.FC = () => {
                                 letterSpacing: '-0.03em',
                             }}
                         >
-                            {orderTotal === null ? 'Calculating…' : formatCurrency(orderTotal)}
+                            <AnimatedEstimateAmount
+                                isLoading={orderTotal === null}
+                                value={orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}
+                                loadingStyle="text"
+                            />
                         </p>
                     </div>
                     <motion.button
@@ -945,6 +943,59 @@ const Field: React.FC<{
         </div>
         {error && <p className="mt-1.5 text-[12px] text-red-400">{error}</p>}
     </div>
+);
+
+const AnimatedEstimateAmount: React.FC<{
+    isLoading: boolean;
+    value: string;
+    loadingStyle?: 'spinner' | 'text';
+}> = ({ isLoading, value, loadingStyle = 'spinner' }) => (
+    <span className="relative inline-flex min-w-[9.5rem] justify-end overflow-hidden text-right align-middle">
+        <AnimatePresence mode="wait" initial={false}>
+            {isLoading ? (
+                <motion.span
+                    key="loading"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="inline-flex items-center gap-1.5 text-white/70"
+                >
+                    {loadingStyle === 'spinner' ? (
+                        <>
+                            <Loader2 size={13} className="animate-spin" />
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">{CALCULATING_LABEL}</span>
+                        </>
+                    ) : (
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] animate-pulse">
+                            {CALCULATING_LABEL}
+                        </span>
+                    )}
+                </motion.span>
+            ) : (
+                <motion.span
+                    key={value}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="inline-flex items-center"
+                >
+                    {value}
+                </motion.span>
+            )}
+        </AnimatePresence>
+    </span>
+);
+
+const ShippingAmount: React.FC<{ shippingFee: number | null; isFreeShippingApplied: boolean }> = ({
+    shippingFee,
+    isFreeShippingApplied,
+}) => (
+    <AnimatedEstimateAmount
+        isLoading={shippingFee === null}
+        value={isFreeShippingApplied ? 'Free' : formatCurrency(shippingFee ?? 0)}
+    />
 );
 
 const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (

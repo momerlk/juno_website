@@ -6,7 +6,8 @@
  */
 
 export const api_urls = {
-    testing: "http://localhost:8080/api/v2",
+    //testing: "http://localhost:8080/api/v2",
+    testing : "https://api.junonow.shop/api/v2",
     production: "https://api.junonow.shop/api/v2",
     recsystem: "https://recsys.junonow.shop/api/v2",
 };
