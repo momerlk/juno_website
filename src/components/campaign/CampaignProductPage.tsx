@@ -103,6 +103,7 @@ const CampaignProductPage: React.FC = () => {
     const [isBuyingNow, setIsBuyingNow] = useState(false);
     const [showAddedFeedback, setShowAddedFeedback] = useState(false);
     const [showSizeGuide, setShowSizeGuide] = useState(false);
+    const [imageAspectRatios, setImageAspectRatios] = useState<Record<string, number>>({});
     const trackedProductViewRef = useRef<string>('');
     const imageTouchStartXRef = useRef<number | null>(null);
     const { addItem, setCartOpen } = useGuestCart();
@@ -339,9 +340,20 @@ const CampaignProductPage: React.FC = () => {
     const description = product?.short_description || product?.description;
     const eta = product?.shipping_details?.estimated_delivery_days || 3;
     const currentImage = imageGallery[selectedImageIdx] || '/juno_app_icon.png';
+    const currentImageAspectRatio = imageAspectRatios[currentImage];
+    const useContainedMainImage = typeof currentImageAspectRatio === 'number' && currentImageAspectRatio > 0.95;
     const inStock = canPurchase;
     const stockCount = product?.inventory?.quantity ?? null;
     const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
+
+    const captureImageAspectRatio = useCallback((src: string, width: number, height: number) => {
+        if (!src || width <= 0 || height <= 0) return;
+        const ratio = width / height;
+        setImageAspectRatios((prev) => {
+            if (prev[src] === ratio) return prev;
+            return { ...prev, [src]: ratio };
+        });
+    }, []);
 
     useEffect(() => {
         if (imageGallery.length === 0) {
@@ -517,7 +529,17 @@ const CampaignProductPage: React.FC = () => {
                                         fetchPriority={selectedImageIdx === 0 ? 'high' : 'auto'}
                                         decoding="async"
                                         draggable={false}
-                                        className="block h-full w-full select-none object-cover"
+                                        onLoad={(event) => {
+                                            const target = event.currentTarget;
+                                            captureImageAspectRatio(
+                                                currentImage,
+                                                target.naturalWidth,
+                                                target.naturalHeight
+                                            );
+                                        }}
+                                        className={`block h-full w-full select-none ${
+                                            useContainedMainImage ? 'object-contain bg-[#0a0a0b]' : 'object-cover'
+                                        }`}
                                     />
                                 </div>
                             </div>
