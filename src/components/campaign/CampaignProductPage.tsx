@@ -343,17 +343,15 @@ const CampaignProductPage: React.FC = () => {
     const stockCount = product?.inventory?.quantity ?? null;
     const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
 
-    const thumbnailIndices = useMemo(() => {
-        const len = imageGallery.length;
-        if (len <= 6) return imageGallery.map((_, index) => index);
-
-        const indices = new Set<number>([0, len - 1, selectedImageIdx]);
-        for (let offset = -1; offset <= 1; offset += 1) {
-            indices.add((selectedImageIdx + offset + len) % len);
+    useEffect(() => {
+        if (imageGallery.length === 0) {
+            if (selectedImageIdx !== 0) setSelectedImageIdx(0);
+            return;
         }
-
-        return Array.from(indices).sort((a, b) => a - b);
-    }, [imageGallery, selectedImageIdx]);
+        if (selectedImageIdx >= imageGallery.length) {
+            setSelectedImageIdx(0);
+        }
+    }, [imageGallery.length, selectedImageIdx]);
 
     if (isLoading || !data) {
         return (
@@ -524,15 +522,14 @@ const CampaignProductPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Thumbnail strip — windowed so large galleries stay cheap */}
+                            {/* Thumbnail strip — stable full list (no dynamic windowing/jumping) */}
                             {imageGallery.length > 1 ? (
                                 <div className="flex gap-2.5 overflow-x-auto pt-1 pb-2 -mx-1 px-1 scrollbar-none">
-                                    {thumbnailIndices.map((i) => {
-                                        const image = imageGallery[i];
+                                    {imageGallery.map((image, i) => {
                                         const active = selectedImageIdx === i;
                                         return (
                                             <button
-                                                key={`${image}-${i}`}
+                                                key={`thumb-${i}`}
                                                 onClick={() => {
                                                     trackClarityEventWithTags('campaign_product_thumbnail_click', {
                                                         campaign_slug: campaign?.slug ?? 'unknown',
