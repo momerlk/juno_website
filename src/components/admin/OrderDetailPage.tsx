@@ -12,7 +12,7 @@ import {
   User,
   XCircle,
 } from 'lucide-react';
-import { AdminCommerce, GetProductById, getAllSellers } from '../../api/adminApi';
+import { AdminAPI, AdminCommerce, GetProductById, getAllSellers } from '../../api/adminApi';
 import type { Order, ParentOrder } from '../../api/api.types';
 import type { Product, Variant } from '../../constants/types';
 import type { Seller } from '../../constants/seller';
@@ -59,9 +59,13 @@ const getAvailableInventory = (variant?: Variant, product?: Product): number | n
 };
 
 const ProductLineItem: React.FC<{
+  child: Order;
   item: Order['order_items'][number];
+  itemIndex: number;
   product?: Product;
-}> = ({ item, product }) => {
+  isSavingVariant: boolean;
+  onUpdateVariant: (child: Order, itemIndex: number, nextVariantId: string) => Promise<void>;
+}> = ({ child, item, itemIndex, product, isSavingVariant, onUpdateVariant }) => {
   const variant = product?.variants?.find((v) => String(v.id) === String(item.variant_id));
   const image =
     variant?.images?.[0] ||
@@ -70,6 +74,11 @@ const ProductLineItem: React.FC<{
     'https://via.placeholder.com/120x120?text=No+Image';
 
   const remainingInventory = getAvailableInventory(variant, product);
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(item.variant_id || '');
+
+  useEffect(() => {
+    setSelectedVariantId(item.variant_id || '');
+  }, [item.variant_id]);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -107,6 +116,32 @@ const ProductLineItem: React.FC<{
           <p className="text-xs text-emerald-400 mt-2">
             Remaining inv: {remainingInventory !== null ? remainingInventory : 'N/A'}
           </p>
+        </div>
+      </div>
+
+      <div className="mt-4 border-t border-white/10 pt-3">
+        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2">Manual Variant Correction</p>
+        <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+          <select
+            value={selectedVariantId}
+            onChange={(e) => setSelectedVariantId(e.target.value)}
+            disabled={isSavingVariant || !product?.variants?.length}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-primary disabled:opacity-50"
+          >
+            <option value="">Select variant</option>
+            {(product?.variants || []).map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.title || v.id}{v.available === false ? ' (Unavailable)' : ''}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => void onUpdateVariant(child, itemIndex, selectedVariantId)}
+            disabled={isSavingVariant || !selectedVariantId || selectedVariantId === item.variant_id}
+            className="rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 hover:bg-primary/90 disabled:opacity-50"
+          >
+            {isSavingVariant ? 'Saving...' : 'Update Variant'}
+          </button>
         </div>
       </div>
     </div>
@@ -166,6 +201,7 @@ const OrderDetailPage: React.FC = () => {
   const [warehouseCity, setWarehouseCity] = useState('');
   const [warehouseLabel, setWarehouseLabel] = useState('');
   const [newEta, setNewEta] = useState('');
+  const [updatingVariantKey, setUpdatingVariantKey] = useState<string | null>(null);
 
   const sellerMap = useMemo(() => new Map(sellers.map((s) => [s.id, s])), [sellers]);
 
@@ -300,6 +336,89 @@ const OrderDetailPage: React.FC = () => {
     setCancelReason('');
   };
 
+  const handleUpdateOrderItemVariant = async (child: Order, itemIndex: number, nextVariantId: string) => {
+    const item = child.order_items?.[itemIndex];
+    if (!item) {
+      setError('Order item not found.');
+      return;
+    }
+
+    if (!nextVariantId || nextVariantId === item.variant_id) return;
+
+    const product = products[item.product_id];
+    if (!product) {
+      setError('Product data unavailable for this item. Refresh and try again.');
+      return;
+    }
+
+    const nextVariant = product.variants?.find((v) => String(v.id) === String(nextVariantId));
+    if (!nextVariant) {
+      setError('Selected variant not found on product.');
+      return;
+    }
+
+    const variantKey = `${child.id}:${item.id || itemIndex}`;
+    setUpdatingVariantKey(variantKey);
+    setError(null);
+
+    const updatedItems = (child.order_items || []).map((row, idx) => {
+      if (idx !== itemIndex) return row;
+      const quantity = Math.max(1, Number(row.quantity || 1));
+      const unitPrice = Number.isFinite(nextVariant.price) ? Number(nextVariant.price) : Number(row.unit_price || 0);
+
+      return {
+        ...row,
+        variant_id: nextVariant.id,
+        variant_label: nextVariant.title || row.variant_label,
+        variant_options: nextVariant.options || row.variant_options,
+        unit_price: unitPrice,
+        line_total: unitPrice * quantity,
+        product_image: nextVariant.images?.[0] || row.product_image,
+      };
+    });
+
+    const subtotal = updatedItems.reduce((sum, row) => {
+      const qty = Math.max(1, Number(row.quantity || 1));
+      const lineTotal = Number.isFinite(Number(row.line_total)) ? Number(row.line_total) : Number(row.unit_price || 0) * qty;
+      return sum + lineTotal;
+    }, 0);
+
+    const shippingFee = Number(child.financials?.shipping_fee || 0);
+    const commissionRate = Number(child.financials?.commission_rate || 0);
+    const commission = subtotal * commissionRate;
+    const sellerPayout = subtotal - commission;
+    const total = subtotal + shippingFee;
+
+    try {
+      const res = await AdminAPI.updateOrder(child.id, {
+        status: child.status,
+        order_items: updatedItems,
+        total,
+        financials: {
+          ...(child.financials || {}),
+          subtotal,
+          shipping_fee: shippingFee,
+          commission_rate: commissionRate,
+          commission,
+          seller_payout: sellerPayout,
+          total,
+          currency: child.financials?.currency || 'PKR',
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error((res.body as any)?.message || 'Failed to update order item variant');
+      }
+
+      await fetchData();
+      alert('Variant updated successfully.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update order item variant');
+    } finally {
+      setUpdatingVariantKey(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -411,8 +530,12 @@ const OrderDetailPage: React.FC = () => {
                 (child.order_items || []).map((item, idx) => (
                   <ProductLineItem
                     key={`${child.id}-${item.product_id}-${item.variant_id}-${idx}`}
+                    child={child}
                     item={item}
+                    itemIndex={idx}
                     product={products[item.product_id]}
+                    isSavingVariant={updatingVariantKey === `${child.id}:${item.id || idx}`}
+                    onUpdateVariant={handleUpdateOrderItemVariant}
                   />
                 ))
               )}
