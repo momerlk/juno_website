@@ -20,6 +20,7 @@ import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useProbe';
 import CatalogNavbar from './CatalogNavbar';
 import SizeGuideModal from './SizeGuideModal';
+import { toTikTokProductContent, trackTikTokViewContent } from '../../utils/tiktokPixel';
 
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
@@ -169,6 +170,18 @@ const CatalogProductPage: React.FC = () => {
         loadProduct();
         return () => { cancelled = true; };
     }, [actualProductId]);
+
+    useEffect(() => {
+        if (!product) return;
+        trackTikTokViewContent(
+            toTikTokProductContent({
+                productId: product.id,
+                name: product.title,
+                price: getBaseProductPrice(product),
+                brand: product.seller_name || 'Juno',
+            })
+        );
+    }, [product]);
 
     const selectedVariant = useMemo<ProductVariant | undefined>(() => {
         if (!product) return undefined;

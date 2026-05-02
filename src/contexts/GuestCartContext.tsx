@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import type { CartItem, GuestCart } from '../api/api.types';
 import { useProbeCommerce } from '../hooks/useProbe';
+import { trackTikTokAddToCart } from '../utils/tiktokPixel';
 
 interface OptimisticCartItem extends CartItem {
     seller_name?: string;
@@ -73,7 +74,8 @@ function isValidCartItem(item: Partial<CartItem> | null | undefined): item is Ca
         typeof item.quantity === 'number' &&
         item.quantity > 0 &&
         typeof item.price === 'number' &&
-        Number.isFinite(item.price);
+        Number.isFinite(item.price) &&
+        item.price >= 0;
 }
 
 export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -82,6 +84,7 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [isHydrated, setIsHydrated] = useState(false);
     const [stockLimitNotice, setStockLimitNotice] = useState<{ id: number; message: string } | null>(null);
     const { trackAddToCart, trackRemoveFromCart, trackCartView } = useProbeCommerce();
+    const cartRef = React.useRef<OptimisticCartItem[]>([]);
     const showStockLimitNotice = useCallback((maxQuantity?: number) => {
         const message = typeof maxQuantity === 'number' && maxQuantity > 0
             ? `Only ${maxQuantity} left for this variant.`
@@ -110,6 +113,10 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
     }, []);
 
     useEffect(() => {
+        cartRef.current = optimisticCart;
+    }, [optimisticCart]);
+
+    useEffect(() => {
         if (!isHydrated) return;
         const snapshot: GuestCart = {
             id: 'local-cart',
@@ -119,13 +126,15 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
             updated_at: new Date().toISOString(),
         };
         saveToStorage(STORAGE_KEYS.CART_SNAPSHOT, snapshot);
+    }, [optimisticCart, isHydrated]);
 
-        if (isCartOpen) {
-            const total = optimisticCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-            const count = optimisticCart.reduce((sum, item) => sum + item.quantity, 0);
-            trackCartView(count, total);
-        }
-    }, [optimisticCart, isCartOpen, trackCartView, isHydrated]);
+    useEffect(() => {
+        if (!isHydrated || !isCartOpen) return;
+        const currentCart = cartRef.current;
+        const total = currentCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const count = currentCart.reduce((sum, item) => sum + item.quantity, 0);
+        trackCartView(count, total);
+    }, [isCartOpen, isHydrated, trackCartView]);
 
     useEffect(() => {
         if (!stockLimitNotice) return;
@@ -140,84 +149,122 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
         price: number,
         metadata?: Partial<OptimisticCartItem>
     ) => {
-        if (!product_id || !variant_id || quantity <= 0 || !Number.isFinite(price)) return;
+        if (!product_id || !variant_id || quantity <= 0 || !Number.isFinite(price) || price < 0) return;
 
-        setOptimisticCart((prev) => {
-            const index = prev.findIndex((item) => item.product_id === product_id && item.variant_id === variant_id);
-            const safeQty = Math.max(1, Math.floor(quantity));
-            if (index >= 0) {
-                const current = prev[index];
-                const maxQuantity = normalizeMaxQuantity(metadata?.max_quantity ?? current.max_quantity);
-                if (maxQuantity === 0) {
-                    showStockLimitNotice(maxQuantity);
-                    return prev;
-                }
-                const nextQuantity = current.quantity + safeQty;
-                const clampedQuantity = typeof maxQuantity === 'number'
-                    ? Math.min(nextQuantity, maxQuantity)
-                    : nextQuantity;
-                if (clampedQuantity <= current.quantity) {
-                    if (typeof maxQuantity === 'number') showStockLimitNotice(maxQuantity);
-                    return prev;
-                }
-                if (typeof maxQuantity === 'number' && clampedQuantity < nextQuantity) {
-                    showStockLimitNotice(maxQuantity);
-                }
-                const next = [...prev];
-                next[index] = { ...current, quantity: clampedQuantity, ...metadata };
-                trackAddToCart(product_id, clampedQuantity - current.quantity, price);
-                return next;
+        const prev = cartRef.current;
+        const index = prev.findIndex((item) => item.product_id === product_id && item.variant_id === variant_id);
+        const safeQty = Math.max(1, Math.floor(quantity));
+
+        let next = prev;
+        let trackedQuantity = 0;
+        let trackedTitle: string | undefined;
+        let trackedSeller: string | undefined;
+        let noticeMaxQuantity: number | undefined;
+
+        if (index >= 0) {
+            const current = prev[index];
+            const maxQuantity = normalizeMaxQuantity(metadata?.max_quantity ?? current.max_quantity);
+            if (maxQuantity === 0) {
+                showStockLimitNotice(maxQuantity);
+                return;
             }
+            const nextQuantity = current.quantity + safeQty;
+            const clampedQuantity = typeof maxQuantity === 'number'
+                ? Math.min(nextQuantity, maxQuantity)
+                : nextQuantity;
+            if (clampedQuantity <= current.quantity) {
+                if (typeof maxQuantity === 'number') showStockLimitNotice(maxQuantity);
+                return;
+            }
+            if (typeof maxQuantity === 'number' && clampedQuantity < nextQuantity) {
+                noticeMaxQuantity = maxQuantity;
+            }
+
+            trackedQuantity = clampedQuantity - current.quantity;
+            trackedTitle = metadata?.product_title || current.product_title;
+            trackedSeller = metadata?.seller_name || current.seller_name;
+
+            next = [...prev];
+            next[index] = { ...current, quantity: clampedQuantity, ...metadata };
+        } else {
             const maxQuantity = normalizeMaxQuantity(metadata?.max_quantity);
             if (maxQuantity === 0) {
                 showStockLimitNotice(maxQuantity);
-                return prev;
+                return;
             }
             const clampedQuantity = typeof maxQuantity === 'number'
                 ? Math.min(safeQty, maxQuantity)
                 : safeQty;
-            if (clampedQuantity <= 0) return prev;
+            if (clampedQuantity <= 0) return;
             if (typeof maxQuantity === 'number' && clampedQuantity < safeQty) {
-                showStockLimitNotice(maxQuantity);
+                noticeMaxQuantity = maxQuantity;
             }
-            trackAddToCart(product_id, clampedQuantity, price);
-            return [...prev, { product_id, variant_id, quantity: clampedQuantity, price: Math.max(0, price), ...metadata }];
-        });
+
+            trackedQuantity = clampedQuantity;
+            trackedTitle = metadata?.product_title;
+            trackedSeller = metadata?.seller_name;
+            next = [...prev, { product_id, variant_id, quantity: clampedQuantity, price: Math.max(0, price), ...metadata }];
+        }
+
+        setOptimisticCart(next);
+        cartRef.current = next;
+
+        if (typeof noticeMaxQuantity === 'number') {
+            showStockLimitNotice(noticeMaxQuantity);
+        }
+        if (trackedQuantity > 0) {
+            trackAddToCart(product_id, trackedQuantity, price);
+            trackTikTokAddToCart([{
+                product_id,
+                quantity: trackedQuantity,
+                price,
+                product_title: trackedTitle,
+                seller_name: trackedSeller,
+            }]);
+        }
     }, [trackAddToCart, showStockLimitNotice]);
 
     const removeItem = useCallback((product_id: string, variant_id: string) => {
         trackRemoveFromCart(product_id);
-        setOptimisticCart((prev) =>
-            prev.filter((item) => !(item.product_id === product_id && item.variant_id === variant_id))
-        );
+        const next = cartRef.current.filter((item) => !(item.product_id === product_id && item.variant_id === variant_id));
+        setOptimisticCart(next);
+        cartRef.current = next;
     }, [trackRemoveFromCart]);
 
     const updateQuantity = useCallback((product_id: string, variant_id: string, newQuantity: number) => {
+        const prev = cartRef.current;
+        const index = prev.findIndex((item) => item.product_id === product_id && item.variant_id === variant_id);
+        if (index < 0) return;
+
         if (newQuantity <= 0) {
             removeItem(product_id, variant_id);
             return;
         }
-        setOptimisticCart((prev) =>
-            prev.flatMap((item) => {
-                if (item.product_id !== product_id || item.variant_id !== variant_id) return [item];
-                const maxQuantity = normalizeMaxQuantity(item.max_quantity);
-                const safeQuantity = typeof maxQuantity === 'number'
-                    ? Math.min(Math.max(1, Math.floor(newQuantity)), maxQuantity)
-                    : Math.max(1, Math.floor(newQuantity));
-                if (typeof maxQuantity === 'number' && newQuantity > maxQuantity) {
-                    showStockLimitNotice(maxQuantity);
-                }
-                if (safeQuantity <= 0) {
-                    showStockLimitNotice(0);
-                    return [];
-                }
-                return [{ ...item, quantity: safeQuantity }];
-            })
-        );
+
+        const target = prev[index];
+        const maxQuantity = normalizeMaxQuantity(target.max_quantity);
+        const safeQuantity = typeof maxQuantity === 'number'
+            ? Math.min(Math.max(1, Math.floor(newQuantity)), maxQuantity)
+            : Math.max(1, Math.floor(newQuantity));
+
+        if (typeof maxQuantity === 'number' && newQuantity > maxQuantity) {
+            showStockLimitNotice(maxQuantity);
+        }
+        if (safeQuantity <= 0) {
+            showStockLimitNotice(0);
+            removeItem(product_id, variant_id);
+            return;
+        }
+
+        const next = [...prev];
+        next[index] = { ...target, quantity: safeQuantity };
+        setOptimisticCart(next);
+        cartRef.current = next;
     }, [removeItem, showStockLimitNotice]);
 
     const clearCart = useCallback(() => {
         setOptimisticCart([]);
+        cartRef.current = [];
         localStorage.removeItem(STORAGE_KEYS.CART_SNAPSHOT);
     }, []);
 

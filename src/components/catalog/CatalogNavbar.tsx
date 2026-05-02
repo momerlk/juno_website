@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ShoppingBag, Search, Heart, ArrowRight } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Catalog } from '../../api/catalogApi';
+import { trackTikTokSearch } from '../../utils/tiktokPixel';
 
 interface CatalogNavbarProps {
     homeHref?: string;
@@ -88,6 +89,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
         }
 
         setSearchQuery(trimmed);
+        trackTikTokSearch(trimmed);
         
         if (onSearch) {
             onSearch(trimmed);

@@ -6,6 +6,12 @@ import { useGuestCart } from '../../contexts/GuestCartContext';
 import { GuestCommerce } from '../../api/commerceApi';
 import type { GuestCheckoutDetails, ShippingEstimateResponse } from '../../api/api.types';
 import { useProbeCommerce } from '../../hooks/useProbe';
+import {
+    identifyTikTokUser,
+    trackTikTokAddPaymentInfo,
+    trackTikTokInitiateCheckout,
+    trackTikTokPurchase,
+} from '../../utils/tiktokPixel';
 
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
@@ -98,11 +104,10 @@ const CheckoutPage: React.FC = () => {
     const [shippingEstimate, setShippingEstimate] = useState<ShippingEstimateResponse | null>(null);
     const [shippingState, setShippingState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
     const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
+    const hasTrackedCheckoutStart = React.useRef(false);
+    const hasTrackedInitiateCheckout = React.useRef(false);
 
     useEffect(() => {
-        // Track checkout start
-        trackCheckoutStart(cartTotal, itemCount);
-
         const savedDraft = localStorage.getItem(STORAGE_KEYS.CHECKOUT_DRAFT);
         if (savedDraft) {
             try {
@@ -125,7 +130,19 @@ const CheckoutPage: React.FC = () => {
                 email: lastEmail || prev.email,
             }));
         }
+    }, []);
+
+    useEffect(() => {
+        if (hasTrackedCheckoutStart.current || itemCount <= 0) return;
+        trackCheckoutStart(cartTotal, itemCount);
+        hasTrackedCheckoutStart.current = true;
     }, [cartTotal, itemCount, trackCheckoutStart]);
+
+    useEffect(() => {
+        if (hasTrackedInitiateCheckout.current || optimisticCart.length === 0) return;
+        trackTikTokInitiateCheckout(optimisticCart);
+        hasTrackedInitiateCheckout.current = true;
+    }, [optimisticCart]);
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
@@ -241,6 +258,13 @@ const CheckoutPage: React.FC = () => {
                 throw new Error('Your bag is empty. Please add items to your cart first.');
             }
 
+            await identifyTikTokUser({
+                email: formData.email,
+                phoneNumber: formData.phone_number,
+                externalId: formData.phone_number || formData.email,
+            });
+            trackTikTokAddPaymentInfo(optimisticCart);
+
             const checkoutResponse = await GuestCommerce.checkoutDirect({
                 payment_method: 'cod',
                 items,
@@ -265,6 +289,12 @@ const CheckoutPage: React.FC = () => {
             // Track checkout completion
             if (order) {
                 trackCheckoutComplete(order.id, order.total_amount);
+                await identifyTikTokUser({
+                    email: formData.email,
+                    phoneNumber: formData.phone_number,
+                    externalId: formData.phone_number || formData.email,
+                });
+                trackTikTokPurchase(optimisticCart, order.total_amount);
             }
 
             if (formData.phone_number) {

@@ -5,6 +5,7 @@ import { ArrowRight, ChevronDown, Download } from 'lucide-react';
 import * as sellerApi from '../api/sellerApi';
 import { Product, Variant } from '../constants/types';
 import { useProbe, useTrackProductView, useProbeCommerce } from '../hooks/useProbe';
+import { toTikTokProductContent, trackTikTokViewContent } from '../utils/tiktokPixel';
 
 const ProductPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -65,6 +66,18 @@ const ProductPage: React.FC = () => {
         setSelectedVariant(variant || null);
     }
   }, [selectedOptions, product]);
+
+  useEffect(() => {
+    if (!product) return;
+    trackTikTokViewContent(
+      toTikTokProductContent({
+        productId: product.id,
+        name: product.title,
+        price: product.pricing.price,
+        brand: product.seller_name || 'Juno',
+      })
+    );
+  }, [product]);
 
   const handleOptionSelect = (optionName: string, value: string) => {
     setSelectedOptions(prev => ({ ...prev, [optionName]: value }));
