@@ -36,6 +36,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_FREE_SHIPPING_THRESHOLD = 5900;
 const DEFAULT_SHIPPING_FEE = 199;
+const SHOW_FREE_SHIPPING_UI = false;
 
 const sanitizeCity = (value: unknown): string => {
     if (typeof value !== 'string') return '';
@@ -434,41 +435,42 @@ const CheckoutPage: React.FC = () => {
                 <div className="grid gap-6 md:gap-8 lg:grid-cols-[1fr_0.8fr]">
                     {/* Left — Forms */}
                     <div className="space-y-5 md:space-y-6">
-                        {/* Delivery Promise */}
-                        <motion.section
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.05 }}
-                            className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 md:p-6"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] border border-white/10">
-                                    <Truck size={18} className="text-white/80" />
+                        {SHOW_FREE_SHIPPING_UI && (
+                            <motion.section
+                                initial={{ opacity: 0, y: 16 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.05 }}
+                                className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 md:p-6"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] border border-white/10">
+                                        <Truck size={18} className="text-white/80" />
+                                    </div>
+                                    <div>
+                                        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/40">
+                                            Free delivery over {formatCurrency(freeShippingThreshold)}
+                                        </p>
+                                        <p
+                                            className="mt-0.5 text-white"
+                                            style={{
+                                                fontFamily: 'Montserrat, sans-serif',
+                                                fontWeight: 800,
+                                                fontSize: '0.95rem',
+                                                letterSpacing: '-0.02em',
+                                            }}
+                                        >
+                                            Order will arrive {fmtDay(deliveryStart)} — {fmtDay(deliveryEnd)}
+                                        </p>
+                                        {shippingState === 'loading' && (
+                                            <p className="mt-1 text-[11px] text-white/45">Estimating shipping for {formData.city || 'your city'}...</p>
+                                        )}
+                                        {shippingState === 'error' && formData.city.trim() && (
+                                            <p className="mt-1 text-[11px] text-white/45">Using fallback estimate. Final shipping confirmed on order placement.</p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/40">
-                                        Free delivery over {formatCurrency(freeShippingThreshold)}
-                                    </p>
-                                    <p
-                                        className="mt-0.5 text-white"
-                                        style={{
-                                            fontFamily: 'Montserrat, sans-serif',
-                                            fontWeight: 800,
-                                            fontSize: '0.95rem',
-                                            letterSpacing: '-0.02em',
-                                        }}
-                                    >
-                                        Order will arrive {fmtDay(deliveryStart)} — {fmtDay(deliveryEnd)}
-                                    </p>
-                                    {shippingState === 'loading' && (
-                                        <p className="mt-1 text-[11px] text-white/45">Estimating shipping for {formData.city || 'your city'}...</p>
-                                    )}
-                                    {shippingState === 'error' && formData.city.trim() && (
-                                        <p className="mt-1 text-[11px] text-white/45">Using fallback estimate. Final shipping confirmed on order placement.</p>
-                                    )}
-                                </div>
-                            </div>
-                        </motion.section>
+                            </motion.section>
+                        )}
 
                         {/* Order Summary */}
                         <motion.section
@@ -551,7 +553,7 @@ const CheckoutPage: React.FC = () => {
                                         isFreeShippingApplied={isFreeShippingApplied}
                                     />
                                 </div>
-                                {remainingForFreeShip > 0 && (
+                                {SHOW_FREE_SHIPPING_UI && remainingForFreeShip > 0 && (
                                     <div className="pt-1">
                                         <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
                                             <motion.div
@@ -808,7 +810,7 @@ const CheckoutPage: React.FC = () => {
                                         />
                                     </Row>
 
-                                    {remainingForFreeShip > 0 && (
+                                    {SHOW_FREE_SHIPPING_UI && remainingForFreeShip > 0 && (
                                         <div className="pt-1">
                                             <div className="flex items-center justify-between mb-1.5">
                                                 <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-white/40">
