@@ -27,6 +27,11 @@ import { setClarityTags, trackClarityEventWithTags, upgradeClaritySession } from
 
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
+const BEST_SELLER_PRODUCT_IDS = new Set([
+    '56b4e2bb-b401-41dc-92cf-51bdff4475bd',
+    '8e41a417-81c7-4ffa-928e-45dbd483ad43',
+]);
+const CONTRAST_STAR_REGLAN_ID = '56b4e2bb-b401-41dc-92cf-51bdff4475bd';
 
 const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
 
@@ -172,6 +177,7 @@ const CampaignProductPage: React.FC = () => {
 
     const product = data?.product;
     const campaign = data?.campaign;
+    const resolvedProductId = typeof product?.id === 'string' ? product.id : '';
     const variants = asArray(product?.variants);
     const maxAvailableQuantity = getVariantAvailableQuantity(selectedVariant, product);
     const isVariantAvailable = selectedVariant?.available ?? true;
@@ -345,6 +351,8 @@ const CampaignProductPage: React.FC = () => {
     const inStock = canPurchase;
     const stockCount = product?.inventory?.quantity ?? null;
     const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
+    const isBestSeller = BEST_SELLER_PRODUCT_IDS.has(resolvedProductId);
+    const isContrastStarReglan = resolvedProductId === CONTRAST_STAR_REGLAN_ID;
 
     const captureImageAspectRatio = useCallback((src: string, width: number, height: number) => {
         if (!src || width <= 0 || height <= 0) return;
@@ -383,6 +391,30 @@ const CampaignProductPage: React.FC = () => {
                     <h1 className="text-2xl font-black uppercase tracking-tight text-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
                         {error}
                     </h1>
+                    <button
+                        onClick={() => navigate(`/${campaignSlug}`)}
+                        className="w-full py-4 rounded-full bg-white text-black font-black uppercase tracking-widest hover:bg-neutral-200 transition-all"
+                    >
+                        Back to Campaign
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!campaign || !product) {
+        return (
+            <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
+                <div className="max-w-md w-full text-center space-y-6">
+                    <div className="inline-flex p-4 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
+                        <span className="text-4xl">!</span>
+                    </div>
+                    <h1 className="text-2xl font-black uppercase tracking-tight text-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                        Product unavailable
+                    </h1>
+                    <p className="text-sm text-white/60">
+                        This campaign product payload is incomplete right now.
+                    </p>
                     <button
                         onClick={() => navigate(`/${campaignSlug}`)}
                         className="w-full py-4 rounded-full bg-white text-black font-black uppercase tracking-widest hover:bg-neutral-200 transition-all"
@@ -461,11 +493,21 @@ const CampaignProductPage: React.FC = () => {
                             <div className="group relative w-full overflow-hidden rounded-2xl bg-[#0d0d0e]">
 
                                 {/* Floating badges — top-left, no backdrop dimming image */}
-                                {(discountPercentage > 0 || lowStock) ? (
+                                {(discountPercentage > 0 || lowStock || isBestSeller) ? (
                                     <div className="pointer-events-none absolute left-3 top-3 z-20 flex flex-col items-start gap-1.5">
                                         {discountPercentage > 0 ? (
                                             <span className="rounded-md bg-primary px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-[0_4px_12px_rgba(220,10,40,0.35)]">
                                                 −{discountPercentage}%
+                                            </span>
+                                        ) : null}
+                                        {isBestSeller ? (
+                                            <span className="rounded-md border border-amber-100/60 bg-gradient-to-r from-amber-300 via-amber-200 to-amber-300 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black shadow-[0_8px_20px_rgba(255,184,0,0.4)]">
+                                                Best Seller
+                                            </span>
+                                        ) : null}
+                                        {isContrastStarReglan ? (
+                                            <span className="rounded-md border border-primary/50 bg-primary px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-[0_8px_20px_rgba(220,10,40,0.45)]">
+                                                100+ orders 🔥
                                             </span>
                                         ) : null}
                                         {lowStock ? (
@@ -526,7 +568,7 @@ const CampaignProductPage: React.FC = () => {
                                         src={currentImage}
                                         alt={`${product.title} ${selectedImageIdx + 1}`}
                                         loading={selectedImageIdx === 0 ? 'eager' : 'lazy'}
-                                        fetchPriority={selectedImageIdx === 0 ? 'high' : 'auto'}
+                                        fetchpriority={selectedImageIdx === 0 ? 'high' : 'auto'}
                                         decoding="async"
                                         draggable={false}
                                         onLoad={(event) => {

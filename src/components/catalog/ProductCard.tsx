@@ -32,6 +32,10 @@ const getVariantAvailableQuantity = (variant: any, product: CatalogProduct): num
     if (typeof productQty === 'number' && Number.isFinite(productQty)) return Math.max(0, productQty);
     return undefined;
 };
+const BEST_SELLER_PRODUCT_IDS = new Set([
+    '56b4e2bb-b401-41dc-92cf-51bdff4475bd',
+    '8e41a417-81c7-4ffa-928e-45dbd483ad43',
+]);
 
 const ProductCard: React.FC<ProductCardProps> = ({
     product,
@@ -64,6 +68,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         : 0;
 
     const hasDiscount = product.pricing.discounted && discountPercentage > 0;
+    const isBestSeller = BEST_SELLER_PRODUCT_IDS.has(product.id);
     const isSoldOut = !product.inventory?.in_stock;
     const productImage = getProductImage(product);
     const hoverImage = product.images?.[1];
@@ -173,6 +178,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         {hasDiscount ? (
                             <span className="rounded-full border border-primary/40 bg-primary/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-white shadow-[0_12px_32px_rgba(255,24,24,0.26)]">
                                 -{discountPercentage}%
+                            </span>
+                        ) : null}
+                        {isBestSeller ? (
+                            <span className="rounded-full border border-amber-200/35 bg-amber-300/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-black shadow-[0_12px_32px_rgba(255,184,0,0.24)]">
+                                Best Seller
                             </span>
                         ) : null}
                         {isNew ? (

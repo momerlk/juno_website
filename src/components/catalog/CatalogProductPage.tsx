@@ -41,6 +41,10 @@ const getVariantAvailableQuantity = (variant: any, product: CatalogProduct | nul
     if (typeof productQty === 'number' && Number.isFinite(productQty)) return Math.max(0, productQty);
     return undefined;
 };
+const BEST_SELLER_PRODUCT_IDS = new Set([
+    '56b4e2bb-b401-41dc-92cf-51bdff4475bd',
+    '8e41a417-81c7-4ffa-928e-45dbd483ad43',
+]);
 
 /* ── Skeleton (zero-CLS placeholder that reserves full layout) ── */
 const SkeletonPulse = 'animate-pulse rounded-lg bg-white/[0.06]';
@@ -197,6 +201,7 @@ const CatalogProductPage: React.FC = () => {
     const maxAvailableQuantity = getVariantAvailableQuantity(selectedVariant, product);
     const isVariantAvailable = selectedVariant?.available ?? true;
     const canPurchase = !!product?.inventory?.in_stock && isVariantAvailable;
+    const isBestSeller = !!product && BEST_SELLER_PRODUCT_IDS.has(product.id);
 
     const currentPrice = getBaseProductPrice(product);
     const compareAt = product?.pricing.compare_at_price;
@@ -315,6 +320,11 @@ const CatalogProductPage: React.FC = () => {
                                 {discountPercentage > 0 ? (
                                     <span className="rounded-full border border-primary/40 bg-primary/85 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-white">
                                         Save {discountPercentage}%
+                                    </span>
+                                ) : null}
+                                {isBestSeller ? (
+                                    <span className="rounded-full border border-amber-200/35 bg-amber-300/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-black">
+                                        Best Seller
                                     </span>
                                 ) : null}
                             </div>
