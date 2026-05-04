@@ -500,7 +500,7 @@ const CampaignProductPage: React.FC = () => {
                                                 −{discountPercentage}%
                                             </span>
                                         ) : null}
-                                        {isBestSeller ? (
+                                        {isBestSeller && !isContrastStarReglan ? (
                                             <span className="rounded-md border border-amber-100/60 bg-gradient-to-r from-amber-300 via-amber-200 to-amber-300 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black shadow-[0_8px_20px_rgba(255,184,0,0.4)]">
                                                 Best Seller
                                             </span>
