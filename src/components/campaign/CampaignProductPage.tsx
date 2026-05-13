@@ -32,6 +32,7 @@ const BEST_SELLER_PRODUCT_IDS = new Set([
     '8e41a417-81c7-4ffa-928e-45dbd483ad43',
 ]);
 const CONTRAST_STAR_REGLAN_ID = '56b4e2bb-b401-41dc-92cf-51bdff4475bd';
+const EXPECTED_DELIVERY_DAYS = 8;
 
 const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
 
@@ -77,7 +78,6 @@ const addDays = (date: Date, days: number) => {
     return d;
 };
 const fmtDay = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-const fmtRange = (a: Date, b: Date) => `${fmtDay(a)} — ${fmtDay(b)}`;
 
 /* ── Skeleton ── */
 const ProductSkeleton: React.FC = () => (
@@ -344,7 +344,6 @@ const CampaignProductPage: React.FC = () => {
     const discountPercentage = compareAt && currentPrice ? Math.round(((compareAt - currentPrice) / compareAt) * 100) : 0;
     const imageGallery = useMemo(() => asArray(product?.images), [product?.images]);
     const description = product?.short_description || product?.description;
-    const eta = product?.shipping_details?.estimated_delivery_days || 3;
     const currentImage = imageGallery[selectedImageIdx] || '/juno_app_icon.png';
     const currentImageAspectRatio = imageAspectRatios[currentImage];
     const useContainedMainImage = typeof currentImageAspectRatio === 'number' && currentImageAspectRatio > 0.95;
@@ -428,10 +427,10 @@ const CampaignProductPage: React.FC = () => {
 
     /* ── Delivery dates ── */
     const today = new Date();
-    const processingStart = today;
-    const processingEnd = addDays(today, 1);
-    const deliveryStart = addDays(today, Math.max(eta - 1, 1));
-    const deliveryEnd = addDays(today, eta);
+    const purchasedDate = today;
+    const customMakingDate = addDays(today, 3);
+    const readyToShipDate = addDays(today, 6);
+    const deliveryDate = addDays(today, EXPECTED_DELIVERY_DAYS);
 
     const cycleImage = (dir: 1 | -1) => {
         if (imageGallery.length < 2) return;
@@ -713,8 +712,8 @@ const CampaignProductPage: React.FC = () => {
                                 {/* Delivery promise */}
                                 <div className="border-b border-white/[0.06] px-4 py-3">
                                     <p className="text-[11px] leading-snug text-white/70">
-                                        Order will arrive on{' '}
-                                        <span className="font-bold text-white">{fmtRange(deliveryStart, deliveryEnd)}</span>
+                                        Expected delivery by{' '}
+                                        <span className="font-bold text-white">{fmtDay(deliveryDate)}</span>
                                     </p>
                                 </div>
 
@@ -723,14 +722,15 @@ const CampaignProductPage: React.FC = () => {
                                     <div className="relative flex items-start justify-between">
                                         {/* Progress rail */}
                                         <div className="absolute left-5 right-5 top-5 h-px -translate-y-1/2 bg-white/10" />
-                                        <div className="absolute left-5 top-5 h-px w-[15%] -translate-y-1/2 bg-white/60" />
+                                        <div className="absolute left-5 top-5 h-px w-[10%] -translate-y-1/2 bg-white/60" />
 
                                         {[
-                                            { icon: CreditCard, label: 'Purchased', date: fmtDay(today), active: true },
-                                            { icon: Package, label: 'Processing', date: fmtRange(processingStart, processingEnd), active: false },
-                                            { icon: Truck, label: 'Delivered', date: fmtRange(deliveryStart, deliveryEnd), active: false },
+                                            { icon: CreditCard, label: 'Purchased', date: fmtDay(purchasedDate), active: true },
+                                            { icon: Package, label: 'Custom making', date: fmtDay(customMakingDate), active: false },
+                                            { icon: Package, label: 'Ready to ship', date: fmtDay(readyToShipDate), active: false },
+                                            { icon: Truck, label: 'Delivered', date: fmtDay(deliveryDate), active: false },
                                         ].map(({ icon: Icon, label, date, active }) => (
-                                            <div key={label} className="relative z-10 flex flex-col items-center gap-2 text-center" style={{ width: '33%' }}>
+                                            <div key={label} className="relative z-10 flex flex-col items-center gap-2 text-center" style={{ width: '25%' }}>
                                                 <div
                                                     className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
                                                         active
@@ -984,7 +984,7 @@ const CampaignProductPage: React.FC = () => {
                         >
                             {/* Delivery strip */}
                             <div className="mb-2.5 text-center text-[10px] text-white/55">
-                                Arrives <span className="font-bold text-white">{fmtRange(deliveryStart, deliveryEnd)}</span>
+                                Arrives <span className="font-bold text-white">{fmtDay(deliveryDate)}</span>
                             </div>
 
                             <div className="mx-auto flex max-w-lg items-stretch gap-2">
