@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, Download, RefreshCw, ShieldAlert, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,20 @@ const TABS: Array<{ id: LogisticsTab; label: string }> = [
 
 const formatCurrency = (v?: number) => `Rs ${(v ?? 0).toLocaleString()}`;
 
+const fuzzyMatch = (text: string, query: string) => {
+  const source = String(text || '').toLowerCase();
+  const needle = String(query || '').toLowerCase().trim();
+  if (!needle) return true;
+  if (source.includes(needle)) return true;
+
+  let i = 0;
+  for (const ch of source) {
+    if (ch === needle[i]) i += 1;
+    if (i === needle.length) return true;
+  }
+  return false;
+};
+
 const AdminLogistics: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<LogisticsTab>('ready');
@@ -29,6 +43,9 @@ const AdminLogistics: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [bookingByOrderId, setBookingByOrderId] = useState<Record<string, any>>({});
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [searchOrderNumber, setSearchOrderNumber] = useState('');
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [agingRows, setAgingRows] = useState<any[]>([]);
   const [exportRows, setExportRows] = useState<any[]>([]);
@@ -45,12 +62,27 @@ const AdminLogistics: React.FC = () => {
   const [confirmationMessageByOrderId, setConfirmationMessageByOrderId] = useState<Record<string, string>>({});
 
   const loadOrdersAndBookingData = async () => {
-    const parentRes = await AdminCommerce.listParentOrders({ status: 'all', limit: 20, offset: 0 });
-    if (!parentRes.ok) {
-      throw new Error((parentRes.body as any)?.message || 'Failed to fetch orders');
+    const pageSize = 100;
+    const parents: ParentOrder[] = [];
+    let offset = 0;
+    let total = Number.POSITIVE_INFINITY;
+
+    while (offset < total) {
+      const parentRes = await AdminCommerce.listParentOrders({ status: 'all', limit: pageSize, offset });
+      if (!parentRes.ok) {
+        throw new Error((parentRes.body as any)?.message || 'Failed to fetch orders');
+      }
+
+      const body = parentRes.body as any;
+      const batch = (body?.orders || []) as ParentOrder[];
+      const resolvedTotal = Number(body?.total);
+      if (Number.isFinite(resolvedTotal) && resolvedTotal >= 0) total = resolvedTotal;
+      parents.push(...batch);
+
+      if (batch.length < pageSize) break;
+      offset += pageSize;
     }
 
-    const parents = ((parentRes.body as any)?.orders || []) as ParentOrder[];
     const detailResponses = await Promise.all(parents.map((p) => AdminCommerce.getParentOrder(p.id)));
     const children: Order[] = detailResponses
       .filter((res) => res.ok)
@@ -96,7 +128,9 @@ const AdminLogistics: React.FC = () => {
       if (activeTab === 'exports') {
         const exRes = await AdminLogisticsAPI.getExports({ carrier, limit: 50, page: 1 });
         if (!exRes.ok) throw new Error((exRes.body as any)?.message || 'Failed to fetch exports');
-        const rows = Array.isArray(exRes.body) ? exRes.body : ((exRes.body as any)?.exports || []);
+        const rows = Array.isArray(exRes.body)
+          ? exRes.body
+          : ((exRes.body as any)?.rows || (exRes.body as any)?.data?.rows || (exRes.body as any)?.exports || []);
         setExportRows(rows);
       }
 
@@ -131,20 +165,88 @@ const AdminLogistics: React.FC = () => {
   const classifiedOrders = useMemo(() => {
     const rows = orders.map((order) => {
       const booking = bookingByOrderId[order.id] || {};
+      const orderStatus = String((order as any)?.status || '').toLowerCase();
+      const isCancelled = orderStatus === 'cancelled' || orderStatus === 'canceled';
       const bookingStatus = (order as any)?.booking?.status || booking?.parcel?.booking?.status || '';
       const booked = ['booked', 'picked_up', 'in_transit', 'delivered', 'exported'].includes(String(bookingStatus).toLowerCase()) || Boolean((order as any)?.consignment_number);
-      return { order, booking, booked };
+      return { order, booking, booked, isCancelled };
     });
 
-    if (activeTab === 'ready') return rows.filter((row) => row.booking?.valid && !row.booked);
-    if (activeTab === 'review') return rows.filter((row) => !row.booking?.valid && !row.booked);
-    if (activeTab === 'booked') return rows.filter((row) => row.booked);
+    if (activeTab === 'ready') return rows.filter((row) => !row.isCancelled && row.booking?.valid && !row.booked);
+    if (activeTab === 'review') return rows.filter((row) => !row.isCancelled && !row.booking?.valid && !row.booked);
+    if (activeTab === 'booked') return rows.filter((row) => !row.isCancelled && row.booked);
     return rows;
   }, [activeTab, bookingByOrderId, orders]);
 
-  const toggleSelect = (orderId: string) => {
-    setSelectedOrderIds((prev) => (prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]));
+  const filteredClassifiedOrders = useMemo(() => {
+    const query = searchOrderNumber.trim().toLowerCase();
+    if (!query) return classifiedOrders;
+    return classifiedOrders.filter(({ order }) => {
+      const orderText = `${order.order_number || ''} ${order.id || ''}`;
+      const customerName = String(order.customer_name || '');
+      return fuzzyMatch(orderText, query) || fuzzyMatch(customerName, query);
+    });
+  }, [classifiedOrders, searchOrderNumber]);
+
+  const visibleOrderIds = useMemo(
+    () => filteredClassifiedOrders.map(({ order }) => order.id),
+    [filteredClassifiedOrders]
+  );
+
+  const isBookingTab = activeTab === 'ready' || activeTab === 'review' || activeTab === 'booked';
+
+  const setManySelected = (ids: string[], selected: boolean) => {
+    setSelectedOrderIds((prev) => {
+      if (selected) {
+        const next = new Set(prev);
+        ids.forEach((id) => next.add(id));
+        return Array.from(next);
+      }
+      const removeSet = new Set(ids);
+      return prev.filter((id) => !removeSet.has(id));
+    });
   };
+
+  const toggleSelect = (orderId: string, index?: number, shiftKey?: boolean) => {
+    if (shiftKey && lastSelectedIndex !== null && typeof index === 'number') {
+      const from = Math.min(lastSelectedIndex, index);
+      const to = Math.max(lastSelectedIndex, index);
+      const rangeIds = filteredClassifiedOrders.slice(from, to + 1).map(({ order }) => order.id);
+      setManySelected(rangeIds, true);
+      return;
+    }
+
+    setSelectedOrderIds((prev) => (prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]));
+    if (typeof index === 'number') setLastSelectedIndex(index);
+  };
+
+  useEffect(() => {
+    if (!isBookingTab) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isTypingContext = tag === 'input' || tag === 'textarea' || tag === 'select' || Boolean(target?.isContentEditable);
+
+      if (event.key === '/' && !isTypingContext) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          setSelectedOrderIds([]);
+          return;
+        }
+        setManySelected(visibleOrderIds, true);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isBookingTab, visibleOrderIds]);
 
   const handleExport = async () => {
     if (selectedOrderIds.length === 0) {
@@ -494,9 +596,32 @@ const AdminLogistics: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="text-xs text-neutral-400">Orders shown: <span className="text-white font-bold">{classifiedOrders.length}</span></div>
+          {isBookingTab && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 md:p-4">
+              <div className="flex flex-col md:flex-row md:items-center gap-3">
+                <input
+                  ref={searchInputRef}
+                  value={searchOrderNumber}
+                  onChange={(e) => setSearchOrderNumber(e.target.value)}
+                  placeholder="Search by order number (shortcut: /)"
+                  className="w-full md:max-w-sm bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
+                />
+                <div className="text-xs text-neutral-300">
+                  Showing <span className="text-white font-bold">{filteredClassifiedOrders.length}</span> of <span className="text-white font-bold">{classifiedOrders.length}</span> • Selected <span className="text-primary font-bold">{selectedOrderIds.length}</span>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button onClick={() => setManySelected(visibleOrderIds, true)} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90">Select Visible</button>
+                <button onClick={() => setManySelected(visibleOrderIds, false)} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10">Deselect Visible</button>
+                <button onClick={() => setSelectedOrderIds([])} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10">Clear Selection</button>
+                <div className="text-[11px] text-neutral-500 self-center">Shift+click: range select • Cmd/Ctrl+A: select visible • Cmd/Ctrl+Shift+A: clear</div>
+              </div>
+            </div>
+          )}
+
+          <div className="text-xs text-neutral-400">Orders shown: <span className="text-white font-bold">{filteredClassifiedOrders.length}</span></div>
           <div className="space-y-3">
-            {classifiedOrders.map(({ order, booking }) => {
+            {filteredClassifiedOrders.map(({ order, booking }, idx) => {
               const blockingErrors = (booking?.blocking_errors || []) as string[];
               const warnings = (booking?.warnings || []) as string[];
               const location = booking?.location_resolution || {};
@@ -515,9 +640,23 @@ const AdminLogistics: React.FC = () => {
                       <p className="text-xs text-neutral-500">Dispatch: {dispatch.dispatch_mode || 'carrier_pickup'} • DEX-ready: {dispatch.dex_ready_parcel_count ?? '-'} / {dispatch.dex_pickup_threshold ?? '-'}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="inline-flex items-center gap-2 text-xs text-neutral-300">
-                        <input type="checkbox" checked={selectedOrderIds.includes(order.id)} onChange={() => toggleSelect(order.id)} /> Select
-                      </label>
+                      <button
+                        type="button"
+                        onClick={(e) => toggleSelect(order.id, idx, e.shiftKey)}
+                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${selectedOrderIds.includes(order.id) ? 'border-primary/50 bg-primary/20 text-primary' : 'border-white/15 text-neutral-300 hover:bg-white/10'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-[#f43f5e]"
+                          checked={selectedOrderIds.includes(order.id)}
+                          readOnly
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSelect(order.id, idx, (e as React.MouseEvent<HTMLInputElement>).shiftKey);
+                          }}
+                        />
+                        {selectedOrderIds.includes(order.id) ? 'Selected' : 'Select'}
+                      </button>
                       {booking?.valid ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-[10px] text-green-300"><CheckCircle2 size={12} /> Ready</span>
                       ) : (
