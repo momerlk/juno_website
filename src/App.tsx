@@ -17,6 +17,9 @@ const ProtectedRoute = React.lazy(() => import('./components/seller/ProtectedRou
 const SellerHome = React.lazy(() => import('./components/seller/SellerHome'));
 const ManageInventory = React.lazy(() => import('./components/seller/ManageInventory'));
 const AdminManageOrders = React.lazy(() => import('./components/admin/ManageOrders'));
+const AdminLogistics = React.lazy(() => import('./components/admin/AdminLogistics'));
+const AdminFinancialsPage = React.lazy(() => import('./components/admin/AdminFinancials'));
+const AdminReceiptPage = React.lazy(() => import('./components/admin/AdminReceiptPage'));
 const Analytics = React.lazy(() => import('./components/seller/Analytics'));
 const Profile = React.lazy(() => import('./components/seller/Profile'));
 const SellerOrderDetailPage = React.lazy(() => import('./components/seller/OrderDetailPage'));
@@ -282,6 +285,7 @@ function RoutedApp() {
                     
                     {/* Probe Engine */}
                     <Route path="probe/real-time" element={<ProbeRealTime />} />
+                    <Route path="financials" element={<AdminFinancialsPage />} />
                     <Route path="probe/commerce" element={<ProbeCommerce />} />
                     <Route path="probe/users" element={<ProbeUsers />} />
 
@@ -296,6 +300,8 @@ function RoutedApp() {
 
                     {/* Operations */}
                     <Route path="orders" element={<AdminManageOrders />} />
+                    <Route path="logistics" element={<AdminLogistics />} />
+                    <Route path="logistics/receipt/:orderId" element={<AdminReceiptPage />} />
                     <Route path="orders/:orderId" element={<OrderDetailPage />} />
                     <Route path="sellers" element={<ManageSellers />} />
                     <Route path="users" element={<ManageUsers />} />

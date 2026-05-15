@@ -13,6 +13,8 @@ Auth:
 - `GET /api/v2/commerce/orders/{id}/tracking` — user/seller/admin auth required
 - `POST /api/v2/commerce/orders/{id}/tracking/share` — user auth required
 - `GET /api/v2/commerce/orders/{id}/support-link` — user/seller/admin auth required
+- `GET /api/v2/commerce/orders/{id}/receipt` — user/seller/admin auth required
+- `POST /api/v2/commerce/orders/{id}/receipt/resend` — user/seller/admin auth required
 - `POST /api/v2/commerce/shipping/estimate` — public
 - `GET /api/v2/support/link` — public
 - `GET /api/v2/track/{token}` — public route
@@ -25,6 +27,7 @@ Auth:
 - `POST /api/v2/commerce/guest/checkout/direct` — public guest direct checkout route
 - `POST /api/v2/commerce/guest/orders/lookup` — public guest order tracking route
 - `GET /api/v2/commerce/guest/orders/{id}/tracking` — public guest tracking route (requires matching phone/email query)
+- `GET /api/v2/commerce/guest/orders/{id}/receipt` — public guest receipt route (requires matching phone/email query)
 - `GET /api/v2/commerce/seller/orders` — seller auth required
 - `GET /api/v2/commerce/seller/orders/{id}` — seller auth required
 - `PATCH /api/v2/commerce/seller/orders/{id}/status` — seller auth required
@@ -646,6 +649,37 @@ Provide exactly one contact proof query param:
 
 ---
 
+### Get Guest Order Receipt
+`GET /api/v2/commerce/guest/orders/{id}/receipt?phone_number={phone}` or `?email={email}`
+
+Auth: none
+
+Returns the branded receipt payload for a specific guest parent order when contact proof matches.
+
+Provide exactly one contact proof query param:
+- `phone_number`
+- `email`
+
+**Response `200`**
+```json
+{
+  "parent_order_id": "parent-order-id",
+  "order_number": "ORD-150526-0001",
+  "subject": "Juno Order Confirmed: parent-o",
+  "tracking_url": "https://juno.com.pk/checkout/track/parent-order-id?email=guest%40example.com",
+  "support_url": "https://wa.me/923158972405?text=Hi%20Juno%20support...",
+  "customer_email": "guest@example.com",
+  "html": "<!doctype html> ...",
+  "generated_at": "2026-05-15T19:00:00Z"
+}
+```
+
+**Common errors**
+- `400` — missing both `phone_number` and `email`
+- `404 NOT_FOUND` — order not found, not a guest order, or contact proof does not match
+
+---
+
 ### Get Guest Cart Shipping Estimate
 `GET /api/v2/commerce/guest/cart/shipping-estimate?buyer_city={city}`
 
@@ -815,6 +849,46 @@ Generates a signed token for public, read-only tracking access.
   "url": "/track/signed_jwt_token"
 }
 ```
+
+---
+
+### Get Order Receipt
+`GET /api/v2/commerce/orders/{id}/receipt`
+
+Auth: user/seller/admin token required (must have access to order)
+
+Returns the same branded receipt payload used for transactional order confirmation emails, including:
+- `tracking_url`
+- `support_url`
+- `html` receipt content
+
+**Response `200`**: `OrderReceiptResponse`
+
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid token
+- `403 FORBIDDEN` — not your order
+- `404 NOT_FOUND` — order not found
+
+---
+
+### Resend Order Receipt
+`POST /api/v2/commerce/orders/{id}/receipt/resend`
+
+Auth: user/seller/admin token required (must have access to order)
+
+Re-sends the order confirmation receipt email to the customer email on the parent order.
+
+**Response `200`**
+```json
+{
+  "message": "receipt resent"
+}
+```
+
+**Common errors**
+- `401 UNAUTHORIZED` — missing or invalid token
+- `403 FORBIDDEN` — not your order
+- `404 NOT_FOUND` — order not found
 
 ---
 

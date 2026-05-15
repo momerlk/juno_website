@@ -107,6 +107,174 @@ export namespace AdminCommerce {
     export async function updateETA(orderId: string, eta: string): Promise<APIResponse<{ message: string }>> {
         return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/tracking/eta`, 'PATCH', { eta }, getToken());
     }
+
+    export async function getOrderReceipt(orderId: string): Promise<APIResponse<any>> {
+        return request(`/commerce/orders/${encodeURIComponent(orderId)}/receipt`, 'GET', undefined, getToken());
+    }
+
+    export async function resendOrderReceipt(orderId: string): Promise<APIResponse<{ message: string }>> {
+        return request(`/commerce/orders/${encodeURIComponent(orderId)}/receipt/resend`, 'POST', {}, getToken());
+    }
+
+    export async function getOrderSupportLink(orderId: string, category?: string): Promise<APIResponse<any>> {
+        const query = category ? `?category=${encodeURIComponent(category)}` : '';
+        return request(`/commerce/orders/${encodeURIComponent(orderId)}/support-link${query}`, 'GET', undefined, getToken());
+    }
+}
+
+export type LogisticsCarrier = 'smartlane' | 'dex';
+
+export namespace AdminLogistics {
+    const BASE_PATH = '/admin/logistics';
+
+    export async function getOperationalConfig(): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/operational-config`, 'GET', undefined, getToken());
+    }
+
+    export async function getOrderBookingData(orderId: string, carrier: LogisticsCarrier): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/booking-data?carrier=${encodeURIComponent(carrier)}`, 'GET', undefined, getToken());
+    }
+
+    export async function getBulkBookingData(payload: {
+        carrier: LogisticsCarrier;
+        order_ids: string[];
+        include_location_resolution?: boolean;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/booking-data/bulk`, 'POST', payload, getToken());
+    }
+
+    export async function createExport(payload: {
+        carrier: LogisticsCarrier;
+        order_ids: string[];
+        format?: 'xlsx';
+        require_human_verified_locations?: boolean;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/exports`, 'POST', payload, getToken());
+    }
+
+    export async function getExports(params?: {
+        carrier?: LogisticsCarrier;
+        status?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<APIResponse<any>> {
+        const search = new URLSearchParams();
+        if (params?.carrier) search.set('carrier', params.carrier);
+        if (params?.status) search.set('status', params.status);
+        if (typeof params?.page === 'number') search.set('page', String(params.page));
+        if (typeof params?.limit === 'number') search.set('limit', String(params.limit));
+        const qs = search.toString();
+        return request(`${BASE_PATH}/exports${qs ? `?${qs}` : ''}`, 'GET', undefined, getToken());
+    }
+
+    export async function markManualBooking(orderId: string, payload: {
+        carrier: LogisticsCarrier;
+        consignment_number: string;
+        airway_bill_number?: string;
+        tracking_url?: string;
+        booked_at?: string;
+        notes?: string;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/manual-booking`, 'POST', payload, getToken());
+    }
+
+    export async function verifyDexLocation(orderId: string, payload: {
+        province: string;
+        district: string;
+        ward?: string;
+        specific_address: string;
+        apply_as_override?: boolean;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/dex-location-verification`, 'POST', payload, getToken());
+    }
+
+    export async function dispatchOverride(orderId: string, payload: {
+        dispatch_mode: 'carrier_pickup' | 'seller_center_dropoff' | 'manual_override';
+        reason: string;
+        approval_reference?: string;
+        approved_by?: string;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/dispatch-override`, 'POST', payload, getToken());
+    }
+
+    export async function createPickupStrike(sellerId: string, payload: {
+        order_id: string;
+        reason: string;
+        carrier?: string;
+        notes?: string;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/pickup-strikes`, 'POST', payload, getToken());
+    }
+
+    export async function getPickupAging(params?: {
+        seller_id?: string;
+        carrier?: string;
+    }): Promise<APIResponse<any>> {
+        const search = new URLSearchParams();
+        if (params?.seller_id) search.set('seller_id', params.seller_id);
+        if (params?.carrier) search.set('carrier', params.carrier);
+        const qs = search.toString();
+        return request(`${BASE_PATH}/pickup-aging${qs ? `?${qs}` : ''}`, 'GET', undefined, getToken());
+    }
+
+    export async function processPickupAging(): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/pickup-aging/process`, 'POST', {}, getToken());
+    }
+
+    export async function generateOrderConfirmationMessage(orderId: string, payload?: {
+        channel?: 'whatsapp' | 'sms' | 'email';
+        tone?: 'friendly' | 'formal';
+    }): Promise<APIResponse<{
+        order_id: string;
+        order_number: string;
+        message_primary: string;
+        message_variant_confirmation: string;
+        combined?: string;
+    }>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/confirmation-message`, 'POST', payload || {}, getToken());
+    }
+}
+
+export namespace AdminFinancials {
+    const BASE_PATH = '/admin/financials';
+
+    export async function getSummary(params?: {
+        from?: string;
+        to?: string;
+        carrier?: string;
+        city?: string;
+        seller_id?: string;
+        order_status?: string;
+        payment_method?: string;
+        booked_state?: string;
+    }): Promise<APIResponse<any>> {
+        const search = new URLSearchParams();
+        Object.entries(params || {}).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && String(v).length > 0) search.set(k, String(v));
+        });
+        const qs = search.toString();
+        return request(`${BASE_PATH}/summary${qs ? `?${qs}` : ''}`, 'GET', undefined, getToken());
+    }
+
+    export async function getOrders(params?: {
+        from?: string;
+        to?: string;
+        page?: number;
+        limit?: number;
+        carrier?: string;
+        city?: string;
+        seller_id?: string;
+        order_status?: string;
+        payment_method?: string;
+        booked_state?: string;
+    }): Promise<APIResponse<any>> {
+        const search = new URLSearchParams();
+        Object.entries(params || {}).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && String(v).length > 0) search.set(k, String(v));
+        });
+        const qs = search.toString();
+        return request(`${BASE_PATH}/orders${qs ? `?${qs}` : ''}`, 'GET', undefined, getToken());
+    }
 }
 
 export namespace AdminAPI {
@@ -136,7 +304,15 @@ export namespace AdminAPI {
     export const updateSeller     = (sellerId: string, data: any): Promise<APIResponse<any>> => request(`/admin/sellers/${sellerId}`, 'PUT', data, getToken());
 
     export const getAllUsers          = (): Promise<APIResponse<any[]>> => request('/admin/users', 'GET', undefined, getToken());
-    export const getUserDetails       = (userId: string): Promise<APIResponse<any>> => request(`/admin/users/${userId}`, 'GET', undefined, getToken());
+    export const getUserDetails       = async (userId: string): Promise<APIResponse<any>> => {
+        const usersRes = await request('/admin/users', 'GET', undefined, getToken());
+        if (usersRes.ok && Array.isArray(usersRes.body)) {
+            const matched = usersRes.body.find((user: any) => String(user?.id) === String(userId));
+            if (matched) return { ...usersRes, body: matched };
+            return { ...usersRes, ok: false, status: 404, body: { message: 'User not found' } as any };
+        }
+        return usersRes as APIResponse<any>;
+    };
     export const getWaitlist          = (): Promise<APIResponse<any[]>> => request('/admin/waitlist', 'GET', undefined, getToken());
 
     export const getProductQueue = (): Promise<APIResponse<any[]>> => request('/admin/products-queue', 'GET', undefined, getToken());
@@ -159,14 +335,14 @@ export namespace AdminAPI {
     };
 
     export const updateOrder      = (orderId: string, data: any): Promise<APIResponse<any>> => request(`/admin/orders/${orderId}`, 'PUT', data, getToken());
-    export const updateOrderStatus = (orderId: string, status: string, note?: string): Promise<APIResponse<any>> => 
-        request(`/admin/orders/${orderId}/status`, 'PATCH', { status, note }, getToken());
-    export const appendOrderMilestone = (orderId: string, milestone: { label: string, note?: string, location?: any }): Promise<APIResponse<any>> => 
+    export const updateOrderStatus = (orderId: string, status: string, note?: string): Promise<APIResponse<any>> =>
+        request(`/commerce/admin/orders/${orderId}/status`, 'PATCH', { status, note }, getToken());
+    export const appendOrderMilestone = (orderId: string, milestone: { label: string, note?: string, location?: any }): Promise<APIResponse<any>> =>
         request(`/admin/orders/${orderId}/tracking/milestone`, 'POST', milestone, getToken());
-    export const setOrderWarehouseAnchor = (orderId: string, anchor: { lat: number, lng: number, city?: string, label?: string }): Promise<APIResponse<any>> => 
-        request(`/admin/orders/${orderId}/tracking/warehouse`, 'PUT', anchor, getToken());
-    export const updateOrderETA = (orderId: string, eta: string): Promise<APIResponse<any>> => 
-        request(`/admin/orders/${orderId}/tracking/eta`, 'PATCH', { eta }, getToken());
+    export const setOrderWarehouseAnchor = (orderId: string, anchor: { lat: number, lng: number, city?: string, label?: string }): Promise<APIResponse<any>> =>
+        request(`/commerce/admin/orders/${orderId}/tracking/warehouse`, 'PUT', anchor, getToken());
+    export const updateOrderETA = (orderId: string, eta: string): Promise<APIResponse<any>> =>
+        request(`/commerce/admin/orders/${orderId}/tracking/eta`, 'PATCH', { eta }, getToken());
     export const getAllCarts       = (): Promise<APIResponse<any[]>> => request('/admin/carts', 'GET', undefined, getToken());
 
     export const getAllOTPs       = (): Promise<APIResponse<any[]>> => request('/admin/otps', 'GET', undefined, getToken());

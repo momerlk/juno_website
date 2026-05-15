@@ -22,6 +22,19 @@ Router coverage:
 - `GET /api/v2/admin/sellers`
 - `GET /api/v2/admin/sellers/{id}`
 - `PUT /api/v2/admin/sellers/{id}/approve`
+- `GET /api/v2/admin/financials/summary`
+- `GET /api/v2/admin/financials/orders`
+- `GET /api/v2/admin/logistics/operational-config`
+- `GET /api/v2/admin/logistics/orders/{orderID}/booking-data`
+- `POST /api/v2/admin/logistics/booking-data/bulk`
+- `POST /api/v2/admin/logistics/exports`
+- `GET /api/v2/admin/logistics/exports`
+- `POST /api/v2/admin/logistics/orders/{orderID}/manual-booking`
+- `POST /api/v2/admin/logistics/orders/{orderID}/dex-location-verification`
+- `POST /api/v2/admin/logistics/orders/{orderID}/dispatch-override`
+- `POST /api/v2/admin/logistics/sellers/{sellerID}/pickup-strikes`
+- `GET /api/v2/admin/logistics/pickup-aging`
+- `POST /api/v2/admin/logistics/pickup-aging/process`
 
 ---
 
@@ -109,6 +122,63 @@ Auth: admin token required
 
 **Common errors**
 - `401 UNAUTHORIZED` — missing or invalid admin token
+
+---
+
+## Logistics Operations
+
+### Operational Config
+`GET /api/v2/admin/logistics/operational-config`
+
+Returns the runtime policy currently enforced by the backend: DEX pickup threshold, seller-center dropoff SLA, strike expiry, strike suspension threshold, penalty amounts, DEX seller-center CSV source, phone export format, COD split behavior, DEX location strictness, wallet deduction policy, and seller-center late-dispatch liability policy.
+
+The defaults are:
+- DEX pickup threshold: `5`
+- Seller-center dropoff SLA: `24` hours
+- Strike expiry: `30` days
+- Suspension threshold: `3` active strikes
+- Penalties: read from env vars and default to `0` until approved
+
+### Dispatch Override
+`POST /api/v2/admin/logistics/orders/{orderID}/dispatch-override`
+
+Use this to override DEX dispatch mode after ops review.
+
+**Body**
+```json
+{
+  "dispatch_mode": "carrier_pickup",
+  "reason": "Strategic seller approved for pickup below threshold",
+  "approval_reference": "OPS-2026-0515-001",
+  "approved_by": "ops-lead@juno"
+}
+```
+
+If the seller has fewer than the DEX pickup threshold and the override changes the parcel to `carrier_pickup` or `manual_override`, `approval_reference` is required. `approved_by` defaults to the acting admin.
+
+### Pickup Aging
+`GET /api/v2/admin/logistics/pickup-aging?seller_id=seller-1&carrier=dex`
+
+Returns ready parcels that are still waiting for carrier pickup or seller-center dropoff, including `seller_dispatch_due_at`, `days_waiting_for_pickup`, `pickup_urgency`, threshold state, and strike eligibility.
+
+`POST /api/v2/admin/logistics/pickup-aging/process`
+
+Processes the aging queue and auto-creates a strike when a row is breached and no active strike already exists for the same order/reason.
+
+### Pickup Strikes
+`POST /api/v2/admin/logistics/sellers/{sellerID}/pickup-strikes`
+
+**Body**
+```json
+{
+  "order_id": "order-1",
+  "reason": "seller_center_dropoff_missed",
+  "carrier": "dex",
+  "notes": "Seller missed seller-center dropoff due time"
+}
+```
+
+The response includes active strike count, expiry time, penalty type, and penalty amount. On the configured active strike threshold, the seller is suspended.
 
 ---
 

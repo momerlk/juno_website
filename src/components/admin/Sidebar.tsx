@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Users, BarChart2, Bell, X, LogOut, Package, Settings,
-  ShieldCheck, Globe, Zap, Megaphone, Users2, Database, Layers, ChevronLeft, ChevronRight
+  ShieldCheck, Globe, Zap, Megaphone, Users2, Database, Layers, ChevronLeft, ChevronRight, Truck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -12,15 +12,17 @@ export const navigation = [
     group: 'Core',
     items: [
       { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, subtitle: 'Platform-wide fulfillment' },
+      { name: 'Logistics', href: '/admin/logistics', icon: Truck, subtitle: 'Booking, exports, and dispatch ops' },
       { name: 'Campaigns', href: '/admin/campaigns', icon: Megaphone, subtitle: 'Acquisition campaigns' },
       { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Queue and catalog management' },
       { name: 'Sellers', href: '/admin/sellers', icon: ShieldCheck, subtitle: 'Seller onboarding and moderation' },
     ]
   },
-  { 
+  {
     group: 'Insights',
     items: [
       { name: 'Probe Overview', href: '/admin', icon: LayoutDashboard, subtitle: 'Platform KPIs and trends' },
+      { name: 'Financials', href: '/admin/financials', icon: BarChart2, subtitle: 'GMV, take rate, and income' },
       { name: 'Real-time', href: '/admin/probe/real-time', icon: Zap, subtitle: 'Live event stream' },
       { name: 'Commerce', href: '/admin/probe/commerce', icon: BarChart2, subtitle: 'Sales and funnel analytics' },
       { name: 'User Growth', href: '/admin/probe/users', icon: Users2, subtitle: 'Acquisition and retention' },

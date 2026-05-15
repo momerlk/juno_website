@@ -16,6 +16,7 @@ import type { Order } from "../constants/orders";
 
 export namespace AdminAPI {
     const BASE_PATH = '/admin';
+    const COMMERCE_ADMIN_ORDERS_PATH = '/commerce/admin/orders';
 
     function getAdminToken(): string | undefined {
         return localStorage.getItem('admin_token') ?? undefined;
@@ -84,7 +85,13 @@ export namespace AdminAPI {
      * interactions, and session data.
      */
     export async function getUserDetails(userId: string): Promise<APIResponse<any>> {
-        return request(`${BASE_PATH}/users/${userId}`, 'GET', undefined, getAdminToken());
+        const usersRes = await request(`${BASE_PATH}/users`, 'GET', undefined, getAdminToken());
+        if (usersRes.ok && Array.isArray(usersRes.body)) {
+            const matched = usersRes.body.find((user: any) => String(user?.id) === String(userId));
+            if (matched) return { ...usersRes, body: matched };
+            return { ...usersRes, ok: false, status: 404, body: { message: 'User not found' } as any };
+        }
+        return usersRes as APIResponse<any>;
     }
 
     // ========================================================================
@@ -107,7 +114,13 @@ export namespace AdminAPI {
      * payment info, and fulfillment status.
      */
     export async function getOrderById(orderId: string): Promise<APIResponse<Order>> {
-        return request(`${BASE_PATH}/orders/${orderId}`, 'GET', undefined, getAdminToken());
+        const ordersRes = await request<Order[]>(`${BASE_PATH}/orders`, 'GET', undefined, getAdminToken());
+        if (ordersRes.ok && Array.isArray(ordersRes.body)) {
+            const matched = ordersRes.body.find((order: any) => String(order?.id) === String(orderId));
+            if (matched) return { ...ordersRes, body: matched };
+            return { ...ordersRes, ok: false, status: 404, body: { message: 'Order not found' } as any };
+        }
+        return ordersRes as APIResponse<Order>;
     }
 
     /**
@@ -126,7 +139,7 @@ export namespace AdminAPI {
      * Triggers the interactive tracking timeline and state machine.
      */
     export async function updateOrderStatus(orderId: string, status: string, note?: string): Promise<APIResponse<any>> {
-        return request(`${BASE_PATH}/orders/${orderId}/status`, 'PATCH', { status, note }, getAdminToken());
+        return request(`${COMMERCE_ADMIN_ORDERS_PATH}/${orderId}/status`, 'PATCH', { status, note }, getAdminToken());
     }
 
     /**
@@ -144,7 +157,7 @@ export namespace AdminAPI {
      * Sets the map anchor for the courier warehouse hub.
      */
     export async function setOrderWarehouseAnchor(orderId: string, anchor: { lat: number, lng: number, city?: string, label?: string }): Promise<APIResponse<any>> {
-        return request(`${BASE_PATH}/orders/${orderId}/tracking/warehouse`, 'PUT', anchor, getAdminToken());
+        return request(`${COMMERCE_ADMIN_ORDERS_PATH}/${orderId}/tracking/warehouse`, 'PUT', anchor, getAdminToken());
     }
 
     /**
@@ -153,7 +166,7 @@ export namespace AdminAPI {
      * Overrides the estimated delivery timestamp.
      */
     export async function updateOrderETA(orderId: string, eta: string): Promise<APIResponse<any>> {
-        return request(`${BASE_PATH}/orders/${orderId}/tracking/eta`, 'PATCH', { eta }, getAdminToken());
+        return request(`${COMMERCE_ADMIN_ORDERS_PATH}/${orderId}/tracking/eta`, 'PATCH', { eta }, getAdminToken());
     }
 
     /**
