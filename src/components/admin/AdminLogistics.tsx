@@ -408,14 +408,22 @@ const AdminLogistics: React.FC = () => {
     const month = etaDate.toLocaleDateString('en-US', { month: 'long' });
     const year = etaDate.getFullYear();
 
-    const firstItem = order.order_items?.[0];
-    const variantText = firstItem?.variant_label
-      || Object.values(firstItem?.variant_options || {}).join(' | ')
-      || firstItem?.variant_id
-      || 'selected variant';
-
     const primary = `Hi ${order.customer_name || 'there'} thank you for ordering from juno! Your Order number is ${order.order_number || order.id} and you will receive your parcel by ${weekday}, ${day} ${month}, ${year}`;
-    const followUp = `Just want to confirm the variant is ${variantText} ?`;
+    const items = order.order_items || [];
+    const itemSummaries = items
+      .map((item, index) => {
+        const variantText = item.variant_label
+          || Object.values(item.variant_options || {}).join(' / ')
+          || item.variant_id
+          || 'selected variant';
+        const productText = item.product_name ? ` for ${item.product_name}` : '';
+        return { index, text: `${variantText}${productText}` };
+      })
+      .filter(Boolean);
+
+    const followUp = itemSummaries.length <= 1
+      ? `Just want to confirm the variant is ${itemSummaries[0]?.text || 'selected variant'}?`
+      : `Just want to confirm these variants:\n${itemSummaries.map((item) => `${item.index + 1}. ${item.text}`).join('\n')}`;
     const combined = `${primary}\n\n${followUp}`;
 
     setConfirmationMessageByOrderId((prev) => ({ ...prev, [order.id]: combined }));
