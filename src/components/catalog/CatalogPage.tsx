@@ -1,30 +1,16 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Loader2, X } from 'lucide-react';
-import { Catalog, type CatalogProduct } from '../../api/api';
-import { useGuestCart } from '../../contexts/GuestCartContext';
+import { AlertCircle, Loader2, RefreshCw, X } from 'lucide-react';
+import { Catalog, type CatalogProduct, type Collection } from '../../api/api';
 import CatalogNavbar from './CatalogNavbar';
-import CatalogHero from './CatalogHero';
-import CatalogDiscovery from './CatalogDiscovery';
-import ProductCard from './ProductCard';
+import EditorialProductCard from '../shared/editorial/EditorialProductCard';
+import EditorialShowcaseBanner from '../shared/editorial/EditorialShowcaseBanner';
 
 type SortValue = 'newest' | 'price_asc' | 'price_desc';
 type CatalogCategoryOption = { id: string; name: string; slug?: string };
 
 const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
-const getBaseProductPrice = (product: CatalogProduct): number =>
-    product.pricing.discounted
-        ? product.pricing.discounted_price ?? product.pricing.price
-        : product.pricing.price;
-const getVariantAvailableQuantity = (variant: any, product: CatalogProduct): number | undefined => {
-    const variantQty = variant?.inventory?.available_quantity ?? variant?.inventory?.quantity;
-    if (typeof variantQty === 'number' && Number.isFinite(variantQty)) return Math.max(0, variantQty);
-    const productQty = product.inventory?.available_quantity ?? product.inventory?.quantity;
-    if (typeof productQty === 'number' && Number.isFinite(productQty)) return Math.max(0, productQty);
-    return undefined;
-};
 
-// Product diversification algorithm - separates similar products
 const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
     if (products.length <= 1) return products;
 
@@ -32,20 +18,16 @@ const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
     const maxIterations = diversified.length * 2;
     let iterations = 0;
 
-    // Create a similarity key based on brand and category
     const getSimilarityKey = (product: CatalogProduct) => {
         const brand = product.seller_id || '';
         const category = product.categories?.[0]?.id || '';
-        const type = product.product_type || '';
         return `${brand}:${category}`;
     };
 
-    // Diversify: move similar products apart
     for (let i = 0; i < diversified.length - 1 && iterations < maxIterations; i++) {
         const currentKey = getSimilarityKey(diversified[i]);
         const nextKey = getSimilarityKey(diversified[i + 1]);
 
-        // If adjacent products are too similar, find a different product to swap
         if (currentKey === nextKey && i + 2 < diversified.length) {
             for (let j = i + 2; j < diversified.length; j++) {
                 const swapKey = getSimilarityKey(diversified[j]);
@@ -59,7 +41,6 @@ const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
         iterations++;
     }
 
-    // Second pass: ensure brand diversity in each row of 4
     const rowSize = 4;
     for (let rowStart = 0; rowStart < diversified.length - rowSize; rowStart += rowSize) {
         const row = diversified.slice(rowStart, rowStart + rowSize);
@@ -70,7 +51,6 @@ const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
             brandCounts.set(brand, (brandCounts.get(brand) || 0) + 1);
         });
 
-        // If any brand appears more than twice in a row, try to swap
         for (const [brand, count] of brandCounts.entries()) {
             if (count > 2) {
                 const brandIndices = row
@@ -96,21 +76,17 @@ const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
 const CatalogPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [products, setProducts] = useState<CatalogProduct[]>([]);
-    const [displayProducts, setDisplayProducts] = useState<CatalogProduct[]>([]);
     const [categories, setCategories] = useState<CatalogCategoryOption[]>([]);
+    const [featuredCollection, setFeaturedCollection] = useState<Collection | null>(null);
+    const [showcaseImage, setShowcaseImage] = useState('/juno_app_icon.png');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [addingProductId, setAddingProductId] = useState<string | null>(null);
-    const [addedProductIds, setAddedProductIds] = useState<Set<string>>(new Set());
-    const { addItem } = useGuestCart();
-
-    // Pagination state
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [totalProducts, setTotalProducts] = useState(0);
-
-    // Search debounce state
     const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get('q') ?? '');
+
+    const observerTarget = useRef<HTMLDivElement>(null);
 
     const query = searchParams.get('q') ?? '';
     const categoryId = searchParams.get('category') ?? '';
@@ -118,29 +94,48 @@ const CatalogPage: React.FC = () => {
     const sellerId = searchParams.get('seller_id') ?? '';
     const sort = (searchParams.get('sort') as SortValue | null) ?? 'newest';
 
-    // Debounce search query
     useEffect(() => {
-        const timeoutId = setTimeout(() => {
+        const timeoutId = window.setTimeout(() => {
             setDebouncedQuery(query);
         }, 400);
 
-        return () => clearTimeout(timeoutId);
+        return () => window.clearTimeout(timeoutId);
     }, [query]);
 
-    // Reset page when filters change
     useEffect(() => {
         setPage(1);
         setHasMore(true);
     }, [debouncedQuery, categoryId, collectionId, sellerId, sort]);
 
     useEffect(() => {
-        const loadFilters = async () => {
-            const response = await Catalog.getFilters();
-            if (!response.ok || !('categories' in response.body)) return;
-            setCategories(asArray(response.body.categories));
+        const loadMeta = async () => {
+            const [filtersResponse, collectionsResponse, popularResponse] = await Promise.all([
+                Catalog.getFilters(),
+                Catalog.getCollections(),
+                Catalog.getPopularProducts(1),
+            ]);
+
+            if (filtersResponse.ok && 'categories' in filtersResponse.body) {
+                setCategories(asArray(filtersResponse.body.categories));
+            }
+
+            if (collectionsResponse.ok) {
+                const activeCollection =
+                    collectionsResponse.body.find((collection) => collection.is_active) ||
+                    collectionsResponse.body[0] ||
+                    null;
+                setFeaturedCollection(activeCollection);
+
+                const fallbackImage = popularResponse.ok
+                    ? asArray(popularResponse.body)[0]?.images?.[0]
+                    : undefined;
+                setShowcaseImage(activeCollection?.image_url || fallbackImage || '/juno_app_icon.png');
+            } else if (popularResponse.ok) {
+                setShowcaseImage(asArray(popularResponse.body)[0]?.images?.[0] || '/juno_app_icon.png');
+            }
         };
 
-        loadFilters();
+        loadMeta();
     }, []);
 
     const loadProducts = useCallback(
@@ -157,29 +152,26 @@ const CatalogPage: React.FC = () => {
                       ? { sort: 'price' as const, order: 'desc' as const }
                       : { sort: 'created_at' as const, order: 'desc' as const };
 
-            let response;
             const shouldUseFilterEndpoint = Boolean(
                 debouncedQuery || categoryId || collectionId || sellerId
             );
 
-            if (shouldUseFilterEndpoint) {
-                response = await Catalog.filterProducts({
-                    ...(debouncedQuery ? { keyword: debouncedQuery } : {}),
-                    ...(categoryId ? { category_id: categoryId } : {}),
-                    ...(collectionId ? { collection_id: collectionId } : {}),
-                    ...(sellerId ? { seller_id: sellerId } : {}),
-                    sort: requestSort.sort,
-                    order: requestSort.order,
-                    limit: '48',
-                    page: pageNum.toString(),
-                });
-            } else {
-                response = await Catalog.getProducts({
-                    ...requestSort,
-                    limit: 48,
-                    page: pageNum,
-                });
-            }
+            const response = shouldUseFilterEndpoint
+                ? await Catalog.filterProducts({
+                      ...(debouncedQuery ? { keyword: debouncedQuery } : {}),
+                      ...(categoryId ? { category_id: categoryId } : {}),
+                      ...(collectionId ? { collection_id: collectionId } : {}),
+                      ...(sellerId ? { seller_id: sellerId } : {}),
+                      sort: requestSort.sort,
+                      order: requestSort.order,
+                      limit: '48',
+                      page: pageNum.toString(),
+                  })
+                : await Catalog.getProducts({
+                      ...requestSort,
+                      limit: 48,
+                      page: pageNum,
+                  });
 
             if (response.ok) {
                 let nextProducts = asArray(response.body);
@@ -189,19 +181,13 @@ const CatalogPage: React.FC = () => {
                     if (fallback.ok) nextProducts = asArray(fallback.body);
                 }
 
-                // Apply diversification algorithm
                 const diversified = diversifyProducts(nextProducts);
-
                 setProducts((prev) => (append ? [...prev, ...diversified] : diversified));
-                setDisplayProducts((prev) => (append ? [...prev, ...diversified] : diversified));
                 setTotalProducts((prev) => (append ? prev + nextProducts.length : nextProducts.length));
                 setHasMore(nextProducts.length === 48);
-            } else {
-                if (!append) {
-                    setProducts([]);
-                    setDisplayProducts([]);
-                    setError((response.body as { message?: string }).message ?? 'Unable to load the catalogue.');
-                }
+            } else if (!append) {
+                setProducts([]);
+                setError((response.body as { message?: string }).message ?? 'Unable to load the catalog.');
             }
 
             setIsLoading(false);
@@ -213,183 +199,165 @@ const CatalogPage: React.FC = () => {
         loadProducts(page, page > 1);
     }, [page, loadProducts]);
 
-    // Infinite scroll with IntersectionObserver
-    const observerTarget = useRef<HTMLDivElement>(null);
-
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting && hasMore && !isLoading) {
+                if (entries[0]?.isIntersecting && hasMore && !isLoading) {
                     setPage((prev) => prev + 1);
                 }
             },
             { threshold: 0.1 }
         );
 
-        if (observerTarget.current) {
-            observer.observe(observerTarget.current);
-        }
-
+        if (observerTarget.current) observer.observe(observerTarget.current);
         return () => observer.disconnect();
     }, [hasMore, isLoading]);
 
     const activeCategory = categories.find((item) => item.id === categoryId);
+    const showShowcase = !debouncedQuery && !categoryId && !collectionId && !sellerId;
 
     const clearFilters = () => {
         const next = new URLSearchParams(searchParams);
         next.delete('category');
         next.delete('collection');
         next.delete('seller_id');
+        next.delete('q');
         setSearchParams(next);
     };
 
-    const handleQuickAdd = (product: CatalogProduct) => {
-        const variant = product.variants?.[0];
-        if (!variant) return;
-        if (!variant.available || !product.inventory?.in_stock) return;
-        const maxVariantQuantity = getVariantAvailableQuantity(variant, product);
-        if (typeof maxVariantQuantity === 'number' && maxVariantQuantity <= 0) return;
-
-        setAddingProductId(product.id);
-
-        addItem(
-            product.id,
-            variant.id,
-            1,
-            getBaseProductPrice(product),
-            {
-                seller_name: product.seller_name,
-                product_title: product.title,
-                variant_title: variant.title,
-                variant_options: variant.options,
-                image_url: getProductImage(product),
-                max_quantity: maxVariantQuantity,
-                is_available: variant.available && !!product.inventory?.in_stock,
-            }
-        );
-
-        setAddedProductIds((prev) => new Set(prev).add(product.id));
-        setAddingProductId(null);
-
-        setTimeout(() => {
-            setAddedProductIds((prev) => {
-                const next = new Set(prev);
-                next.delete(product.id);
-                return next;
-            });
-        }, 2000);
-    };
-
-    const getProductImage = (product: Partial<CatalogProduct>) =>
-        asArray(product.images)[0] || '/juno_app_icon.png';
-
-    // Check if we should show discovery mode (no filters active)
-    const isDiscoveryMode = !debouncedQuery && !categoryId && !collectionId && !sellerId && page === 1;
+    const sectionTitle = debouncedQuery ? 'Search results' : showShowcase ? 'Featured pieces' : 'Catalog edit';
+    const sectionLabel = debouncedQuery
+        ? `Search: "${debouncedQuery}"`
+        : activeCategory?.name || featuredCollection?.title || 'The catalog';
 
     return (
-        <div className="min-h-screen bg-background pb-16 pt-24 text-white">
+        <div className="min-h-screen bg-[#050505] pb-16 text-white">
             <CatalogNavbar />
 
-            <div className="container mx-auto px-4">
-                {/* Hero Section */}
-                {isDiscoveryMode && <CatalogHero />}
+            <div className="pointer-events-none fixed inset-0 z-0">
+                <div className="absolute -top-32 -left-32 h-[36rem] w-[36rem] rounded-full bg-primary/10 blur-[140px]" />
+                <div className="absolute bottom-0 right-0 h-[28rem] w-[28rem] rounded-full bg-secondary/10 blur-[160px]" />
+            </div>
 
-                {/* Main Content - Full Width (No Sidebar) */}
-                <div className="mt-8">
-                        {/* Results Bar */}
-                        {!isDiscoveryMode && (
-                            <div className="mb-4 flex flex-col gap-3 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 md:flex-row md:items-center md:justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-white">
-                                        {totalProducts} products
-                                    </p>
-                                    <p className="text-sm text-neutral-400">
-                                        {debouncedQuery
-                                            ? `Search: "${debouncedQuery}"`
-                                            : 'Full catalog'}
-                                        {activeCategory ? ` • ${activeCategory.name}` : ''}
-                                    </p>
-                                </div>
+            <div className="relative z-10">
+                {showShowcase ? (
+                    <EditorialShowcaseBanner
+                        imageUrl={showcaseImage}
+                        eyebrow="Juno · Catalog"
+                        badgeLabel="Curated now"
+                        title={featuredCollection?.title || 'The Catalog'}
+                        subtitle={
+                            featuredCollection?.description ||
+                            "Pakistan's independent labels, cut with the same editorial energy as the campaign drops."
+                        }
+                    />
+                ) : null}
+
+                <div className="mx-auto max-w-7xl px-4 pb-16 pt-8 md:px-6 md:pt-12 md:pb-24">
+                    <div className="mb-6 flex items-end justify-between gap-4 md:mb-10">
+                        <div>
+                            <div className="mb-2 flex items-center gap-2.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                                <p className="font-mono text-[9px] uppercase tracking-[0.32em] text-white/40 md:text-[10px]">
+                                    {sectionLabel}
+                                </p>
+                            </div>
+                            <h2
+                                className="text-white"
+                                style={{
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    fontWeight: 900,
+                                    fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
+                                    lineHeight: 0.92,
+                                    letterSpacing: '-0.045em',
+                                    textTransform: 'uppercase',
+                                }}
+                            >
+                                {sectionTitle}
+                            </h2>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-3">
+                            {(debouncedQuery || categoryId || collectionId || sellerId) ? (
                                 <button
                                     onClick={clearFilters}
-                                    className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary"
+                                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/65 transition-colors hover:border-white/20 hover:text-white"
                                 >
-                                    <X size={14} />
-                                    Clear filters
+                                    <X size={12} />
+                                    Clear
                                 </button>
+                            ) : null}
+                            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
+                                {totalProducts} {totalProducts === 1 ? 'piece' : 'pieces'}
+                            </p>
+                        </div>
+                    </div>
+
+                    {isLoading && page === 1 ? (
+                        <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+                            <div className="flex flex-col items-center gap-4">
+                                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                                <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40">
+                                    Fetching pieces...
+                                </p>
                             </div>
-                        )}
+                        </div>
+                    ) : error ? (
+                        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 py-20 text-center">
+                            <div className="mx-auto flex max-w-md flex-col items-center gap-5 px-6">
+                                <span className="inline-flex rounded-full border border-red-500/20 bg-red-500/10 p-4 text-red-400">
+                                    <AlertCircle size={28} />
+                                </span>
+                                <div>
+                                    <p className="text-2xl font-black uppercase text-white">Catalog unavailable</p>
+                                    <p className="mt-2 text-sm text-red-100/80">{error}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : products.length === 0 ? (
+                        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] py-32 text-center">
+                            <p className="text-sm font-mono uppercase tracking-[0.3em] text-white/30">
+                                {debouncedQuery ? 'No matches found.' : 'No pieces in this edit yet.'}
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 xl:grid-cols-3">
+                                {products.map((product, index) => (
+                                    <EditorialProductCard
+                                        key={product.id}
+                                        title={product.title}
+                                        sellerName={product.seller_name}
+                                        images={product.images}
+                                        pricing={product.pricing}
+                                        inventory={product.inventory}
+                                        index={index}
+                                        to={`/catalog/${product.id}`}
+                                    />
+                                ))}
+                            </div>
 
-                        {/* Discovery Mode - Show curated sections */}
-                        {isDiscoveryMode && (
-                            <CatalogDiscovery />
-                        )}
+                            <div ref={observerTarget} className="h-20" />
 
-                        {/* Products Grid */}
-                        {!isDiscoveryMode && (
-                            <>
+                            {isLoading && page > 1 ? (
+                                <div className="flex items-center justify-center gap-3 py-8 text-sm font-bold uppercase tracking-[0.2em] text-white/60">
+                                    <Loader2 size={18} className="animate-spin text-primary" />
+                                    Loading more pieces
+                                </div>
+                            ) : null}
 
-                                {/* Loading State */}
-                                {isLoading && page === 1 ? (
-                                    <div className="flex min-h-[320px] items-center justify-center rounded-[2rem] border border-white/10 bg-white/[0.03]">
-                                        <div className="inline-flex items-center gap-3 text-sm font-bold uppercase tracking-[0.2em] text-white/60">
-                                            <Loader2 size={18} className="animate-spin text-primary" />
-                                            Loading products
-                                        </div>
-                                    </div>
-                                ) : error ? (
-                                    <div className="rounded-[2rem] border border-red-500/20 bg-red-500/5 p-8 text-center">
-                                        <p className="text-xl font-bold text-white">Couldn't load the catalogue</p>
-                                        <p className="mt-2 text-sm text-red-100/80">{error}</p>
-                                    </div>
-                                ) : displayProducts.length === 0 ? (
-                                    <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-10 text-center">
-                                        <p className="text-xl font-bold text-white">No products found</p>
-                                        <p className="mt-2 text-sm text-neutral-400">
-                                            Try a broader search or remove a few filters.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {/* Product Grid - 4 per row on laptop, 2 on tablet, 1 on mobile */}
-                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                                            {displayProducts.map((product, index) => (
-                                                <ProductCard
-                                                    key={product.id}
-                                                    product={product}
-                                                    index={index}
-                                                    onQuickAdd={handleQuickAdd}
-                                                    showQuickAdd={true}
-                                                />
-                                            ))}
-                                        </div>
-
-                                        {/* Infinite Scroll Sentinel */}
-                                        <div ref={observerTarget} className="h-20" />
-
-                                        {/* Loading More Indicator */}
-                                        {isLoading && page > 1 && (
-                                            <div className="flex items-center justify-center gap-3 py-8 text-sm font-bold uppercase tracking-[0.2em] text-white/60">
-                                                <Loader2 size={18} className="animate-spin text-primary" />
-                                                Loading more products
-                                            </div>
-                                        )}
-
-                                        {/* End of Results */}
-                                        {!hasMore && displayProducts.length > 0 && (
-                                            <div className="mt-8 text-center">
-                                                <p className="text-sm font-bold uppercase tracking-[0.16em] text-white/50">
-                                                    You've reached the end
-                                                </p>
-                                                <p className="mt-1 text-xs text-white/30">
-                                                    {displayProducts.length} products total
-                                                </p>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </>
-                        )}
+                            {!hasMore ? (
+                                <div className="mt-8 text-center">
+                                    <p className="text-sm font-bold uppercase tracking-[0.16em] text-white/50">
+                                        You've reached the end
+                                    </p>
+                                    <p className="mt-1 text-xs text-white/30">
+                                        {products.length} products total
+                                    </p>
+                                </div>
+                            ) : null}
+                        </>
+                    )}
                 </div>
             </div>
         </div>

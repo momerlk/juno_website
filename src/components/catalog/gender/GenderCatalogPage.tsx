@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { Catalog } from '../../../api/api';
 import type { GenderOverview, GenderBrand } from '../../../api/api.types';
 import CatalogNavbar from '../CatalogNavbar';
@@ -9,15 +9,16 @@ import GenderHeader from './GenderHeader';
 import ProductGrid from './ProductGrid';
 import BrandList from './BrandList';
 
-const GenderCatalogPage: React.FC = () => {
-    const { genderOrId } = useParams<{ genderOrId: string }>();
+const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) => {
+    const { genderOrId } = useParams<{ genderOrId?: string }>();
     const [searchParams] = useSearchParams();
     const [overview, setOverview] = useState<GenderOverview | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const validGender =
+    const routeGender =
         genderOrId === 'men' || genderOrId === 'women' ? (genderOrId as 'men' | 'women') : null;
+    const validGender = gender ?? routeGender;
 
     const brand = searchParams.get('brand') || undefined;
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -33,7 +34,7 @@ const GenderCatalogPage: React.FC = () => {
 
     useEffect(() => {
         if (!validGender) {
-            setError(`Invalid gender category: ${genderOrId}. Must be 'men' or 'women'.`);
+            setError(`Invalid gender category: ${genderOrId || 'unknown'}. Must be 'men' or 'women'.`);
             setIsLoading(false);
             return;
         }
@@ -116,21 +117,43 @@ const GenderCatalogPage: React.FC = () => {
             <div className="relative mx-auto max-w-7xl px-4 pt-8 md:px-6">
                 <GenderHeader gender={validGender} />
 
-                {activeBrandName ? (
-                    <motion.section
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.06 }}
-                        className="mb-5 border border-white/10 bg-white/[0.03] px-4 py-3 md:px-5"
-                    >
-                        <p
-                            className="text-lg uppercase text-white"
-                            style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, letterSpacing: '-0.03em' }}
+                <div className="mb-6 flex items-end justify-between gap-4 md:mb-10">
+                    <div>
+                        <div className="mb-2 flex items-center gap-2.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                            <p className="font-mono text-[9px] uppercase tracking-[0.32em] text-white/40 md:text-[10px]">
+                                {activeBrandName || `${validGender} edit`}
+                            </p>
+                        </div>
+                        <h2
+                            className="text-white"
+                            style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontWeight: 900,
+                                fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
+                                lineHeight: 0.92,
+                                letterSpacing: '-0.045em',
+                                textTransform: 'uppercase',
+                            }}
                         >
-                            {activeBrandName}
+                            Featured pieces
+                        </h2>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                        {activeBrandName ? (
+                            <Link
+                                to={`/catalog/${validGender}`}
+                                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/65 transition-colors hover:border-white/20 hover:text-white"
+                            >
+                                <X size={12} />
+                                Clear
+                            </Link>
+                        ) : null}
+                        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
+                            {filteredOverview?.total ?? 0} {(filteredOverview?.total ?? 0) === 1 ? 'piece' : 'pieces'}
                         </p>
-                    </motion.section>
-                ) : null}
+                    </div>
+                </div>
 
                 {error ? (
                     <div className="mb-6 border border-red-500/20 bg-red-500/5 p-6 text-center">
@@ -145,79 +168,24 @@ const GenderCatalogPage: React.FC = () => {
                 ) : null}
 
                 {!isLoading && overview && overview.brands.length > 0 ? (
-                    <div className="mb-5 lg:hidden">
-                        <MobileBrandChips brands={overview.brands} gender={validGender} />
+                    <div className="mb-5">
+                        <BrandList brands={overview.brands} gender={validGender} />
+                    </div>
+                ) : isLoading ? (
+                    <div className="mb-5 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+                        <div className="flex items-center gap-3 text-sm uppercase tracking-[0.2em] text-white/45">
+                            <Loader2 size={16} className="animate-spin text-primary" />
+                            Loading labels
+                        </div>
                     </div>
                 ) : null}
 
-                <div className="flex flex-col gap-5 lg:flex-row lg:gap-8">
-                    <aside className="hidden w-72 shrink-0 lg:block">
-                        {!isLoading && overview ? (
-                            <BrandList brands={overview.brands} gender={validGender} />
-                        ) : (
-                            <div className="border border-white/10 bg-white/[0.04] p-5">
-                                <div className="flex items-center gap-3 text-sm uppercase tracking-[0.2em] text-white/45">
-                                    <Loader2 size={16} className="animate-spin text-primary" />
-                                    Loading labels
-                                </div>
-                            </div>
-                        )}
-                    </aside>
-
-                    <main className="min-w-0 flex-1">
-                        <ProductGrid products={filteredOverview?.products ?? []} isLoading={isLoading} />
-                    </main>
-                </div>
+                <main className="min-w-0">
+                    <ProductGrid products={filteredOverview?.products ?? []} isLoading={isLoading} />
+                </main>
             </div>
         </div>
     );
 };
-
-const MobileBrandChips: React.FC<{ brands: GenderBrand[]; gender: 'men' | 'women' }> = ({
-    brands,
-    gender,
-}) => {
-    const [searchParams] = useSearchParams();
-    const activeBrandId = searchParams.get('brand');
-
-    return (
-        <div className="overflow-hidden border border-white/10 bg-white/[0.03] p-4">
-            <div className="mb-3 inline-flex items-center gap-3">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/35">
-                    Label filter
-                </p>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-                <ChipLink href={`/catalog/${gender}`} active={!activeBrandId} text="All" />
-                {brands.map((brand) => (
-                    <ChipLink
-                        key={brand.id}
-                        href={`/catalog/${gender}?brand=${brand.id}`}
-                        active={activeBrandId === brand.id}
-                        text={brand.name}
-                    />
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const ChipLink: React.FC<{ href: string; active: boolean; text: string }> = ({
-    href,
-    active,
-    text,
-}) => (
-    <Link
-        to={href}
-            className={`shrink-0 rounded-full border px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em] transition-all ${
-            active
-                ? 'border-white/20 bg-white/[0.10] text-white'
-                : 'border-white/10 bg-white/[0.04] text-white/65 hover:border-white/20 hover:text-white'
-        }`}
-    >
-        {text}
-    </Link>
-);
 
 export default GenderCatalogPage;
