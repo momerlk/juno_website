@@ -218,6 +218,11 @@ export interface ProductPricing {
     discounted: boolean;
     discount_value?: number;
     discounted_price?: number;
+    brand_price?: number;
+    shipping_included?: boolean;
+    commission_rate?: number;
+    seller_payout?: number;
+    cost_price?: number;
 }
 
 export interface ProductVariant {
@@ -253,6 +258,13 @@ export interface CatalogProduct {
     seller_logo?: string;
     categories: ProductCategory[];
     product_type: string;
+    gender?: string;
+    enrichment?: {
+        product_type?: string;
+        gender?: string;
+        sizing_guide?: Record<string, unknown>;
+        [key: string]: unknown;
+    };
     pricing: ProductPricing;
     images: string[];
     variants: ProductVariant[];
@@ -268,6 +280,7 @@ export interface CatalogProduct {
     review_count?: number;
     is_trending?: boolean;
     is_featured?: boolean;
+    seller_city?: string;
 }
 
 export interface GenderOverviewProduct {
@@ -289,6 +302,8 @@ export interface GenderOverviewProduct {
 export interface GenderBrand {
     id: string;
     name: string;
+    product_count?: number;
+    logo?: string;
 }
 
 export interface GenderOverview {
@@ -303,7 +318,7 @@ export interface FilterOptions {
     price_ranges: { min: number; max: number }[];
     categories: ProductCategory[];
     colors: string[];
-    brands: { id: string; name: string }[];
+    brands: { id: string; name: string; product_count?: number }[];
     materials: string[];
     occasions: string[];
     product_types: string[];
@@ -312,18 +327,61 @@ export interface FilterOptions {
 export interface ProductFilterRequest {
     category_id?: string;
     seller_id?: string;
+    seller_ids?: string[];
+    seller_names?: string[];
     min_price?: string;
     max_price?: string;
     sort?: string;
     order?: string;
     page?: string;
+    cursor?: string;
     limit?: string;
     keyword?: string;
+    in_stock?: boolean;
     sizes?: string[];
     colors?: string[];
     materials?: string[];
     product_types?: string[];
     occasions?: string[];
+    tags?: string[];
+}
+
+export type CatalogSort =
+    | 'created_at'
+    | 'updated_at'
+    | 'price'
+    | 'rating'
+    | 'popularity'
+    | 'title';
+
+export interface CatalogPagination {
+    limit: number;
+    returned: number;
+    has_more: boolean;
+    next_cursor?: string;
+}
+
+export interface CatalogQueryParams {
+    category?: string;
+    category_id?: string;
+    seller_id?: string;
+    seller_ids?: string[];
+    brand_ids?: string[];
+    brands?: string[];
+    min_price?: number;
+    max_price?: number;
+    in_stock?: boolean;
+    sizes?: string[];
+    colors?: string[];
+    product_types?: string[];
+    materials?: string[];
+    occasions?: string[];
+    tags?: string[];
+    sort?: CatalogSort;
+    order?: 'asc' | 'desc';
+    limit?: number;
+    cursor?: string;
+    page?: number;
 }
 
 export interface Collection {

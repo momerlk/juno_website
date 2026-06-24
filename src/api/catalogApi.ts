@@ -18,6 +18,7 @@ import type {
     BrandStorefront,
     TrendingSearch,
     GenderOverview,
+    CatalogQueryParams,
 } from "./api.types";
 
 // ============================================================================
@@ -27,23 +28,24 @@ import type {
 export namespace Catalog {
     const BASE_PATH = '/catalog';
 
+    function toSearchParams(params?: Record<string, unknown>): string {
+        const query = new URLSearchParams();
+        Object.entries(params ?? {}).forEach(([key, value]) => {
+            if (value === undefined || value === null || value === '') return;
+            query.set(key, Array.isArray(value) ? value.join(',') : String(value));
+        });
+        return query.toString();
+    }
+
     /**
      * List products with optional filters
      * 
      * Query parameters: category, seller_id, min_price, max_price,
      * sort (price|created_at), order (asc|desc), page, limit
      */
-    export async function getProducts(params?: {
-        category?: string;
-        seller_id?: string;
-        min_price?: number;
-        max_price?: number;
-        sort?: 'price' | 'created_at';
-        order?: 'asc' | 'desc';
-        page?: number;
-        limit?: number;
-    }): Promise<APIResponse<CatalogProduct[]>> {
-        const qp = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+    export async function getProducts(params?: CatalogQueryParams): Promise<APIResponse<CatalogProduct[]>> {
+        const query = toSearchParams(params);
+        const qp = query ? `?${query}` : '';
         return request(`${BASE_PATH}/products${qp}`, 'GET', undefined, undefined, true);
     }
 
@@ -62,8 +64,8 @@ export namespace Catalog {
      * 
      * Full-text search across product titles, descriptions, and tags.
      */
-    export async function searchProducts(params: { keyword: string; page?: number; limit?: number }): Promise<APIResponse<CatalogProduct[]>> {
-        const qp = new URLSearchParams(params as any).toString();
+    export async function searchProducts(params: { keyword: string } & CatalogQueryParams): Promise<APIResponse<CatalogProduct[]>> {
+        const qp = toSearchParams(params);
         return request(`${BASE_PATH}/products/search?${qp}`, 'GET', undefined, undefined, true);
     }
 

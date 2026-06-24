@@ -7,6 +7,12 @@ const GenderLandingPage: React.FC = () => {
 
     return (
         <div className="relative flex min-h-screen w-full flex-col overflow-hidden bg-black md:flex-row">
+            <Link
+                to="/catalog/all"
+                className="absolute left-1/2 top-6 z-30 -translate-x-1/2 rounded-full border border-white/20 bg-black/45 px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.22em] text-white backdrop-blur-md transition hover:border-primary/60 hover:bg-black/70"
+            >
+                Shop all
+            </Link>
             {/* ── WOMEN SIDE ─────────────────────────────────────── */}
             <motion.div
                 className="relative flex-1 cursor-pointer overflow-hidden"

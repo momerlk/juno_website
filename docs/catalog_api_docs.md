@@ -9,23 +9,87 @@ Public product browsing, search, and filtering. No authentication required.
 ### List Products
 `GET /api/v2/catalog/products`
 
-Returns a paginated list of products with optional filters via query parameters.
+Returns products with optional filters. Cursor pagination is the recommended way to
+load the complete Juno catalog. The response keeps products in `data` and publishes
+pagination state in `meta.pagination`.
 
 **Query Parameters**
 
 | Param | Type | Description |
 |-------|------|-------------|
-| `category` | string | Filter by category ID |
-| `seller_id` | string | Filter by seller/brand ID |
+| `category` / `category_id` | string | Filter by category ID |
+| `seller_id` | string | Filter by one seller/brand ID |
+| `seller_ids` / `brand_ids` | string | Comma-separated seller/brand IDs. IDs are the preferred stable brand filter |
+| `brands` / `brand` | string | Comma-separated exact brand names, matched case-insensitively |
 | `min_price` | number | Minimum price |
 | `max_price` | number | Maximum price |
-| `sort` | string | Sort field: `price` or `created_at` |
+| `in_stock` | boolean | `true` for available products, `false` for unavailable products |
+| `sizes` | string | Comma-separated variant sizes |
+| `colors` | string | Comma-separated variant colors |
+| `product_types` | string | Comma-separated product types |
+| `materials` | string | Comma-separated material tags |
+| `occasions` | string | Comma-separated occasion tags |
+| `tags` | string | Comma-separated product tags |
+| `sort` | string | `created_at` (default), `updated_at`, `price`, `rating`, `popularity`, or `title` |
 | `order` | string | Sort direction: `asc` or `desc` |
-| `page` | int | Page number (default: 1) |
-| `limit` | int | Items per page (default: 20) |
-| `tags` | string | Comma-separated tags to filter by (e.g. `male,unisex`) |
+| `limit` | int | Items per page. Default `20`, maximum `100` |
+| `cursor` | string | Opaque `next_cursor` from the previous response |
+| `page` | int | Legacy page number. Ignored when `cursor` is supplied |
 
-**Response `200`** — array of `Product` objects.
+**Response `200`**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": "product-1", "title": "Printed Lawn Suit" }
+  ],
+  "meta": {
+    "pagination": {
+      "limit": 100,
+      "returned": 100,
+      "has_more": true,
+      "next_cursor": "eyJ2IjoxLCJzb3J0IjoiY3JlYXRlZF9hdCIsLi4ufQ"
+    }
+  }
+}
+```
+
+**How a client fetches every product**
+
+1. Request `GET /api/v2/catalog/products?limit=100`.
+2. Append `data` to the local result set.
+3. If `meta.pagination.has_more` is `true`, request the same URL and filters
+   with `cursor=<meta.pagination.next_cursor>`.
+4. Continue until `has_more` is `false`.
+
+The sort, order, and filters must remain unchanged while following a cursor.
+Cursors are opaque and clients must not decode or modify them.
+
+```ts
+async function fetchEntireCatalog() {
+  const products = [];
+  let cursor: string | undefined;
+
+  do {
+    const params = new URLSearchParams({ limit: "100" });
+    if (cursor) params.set("cursor", cursor);
+
+    const response = await fetch(`/api/v2/catalog/products?${params}`);
+    const body = await response.json();
+    products.push(...body.data);
+    cursor = body.meta.pagination.has_more
+      ? body.meta.pagination.next_cursor
+      : undefined;
+  } while (cursor);
+
+  return products;
+}
+```
+
+Page-number pagination remains available for older clients, but cursor pagination
+avoids increasingly expensive database skips on deep pages and gives deterministic
+ordering using the product ID as a tie-breaker.
 
 ---
 
@@ -138,17 +202,30 @@ Returns full details for a single product.
 ### Search Products
 `GET /api/v2/catalog/products/search`
 
-Full-text keyword search across product titles, descriptions, and tags.
+Ranked fuzzy search powered by the MongoDB Atlas Search index `products_search`.
+Search covers product titles, descriptions, short descriptions, HTML body text,
+tags, brand names, product types, and category names. Title and brand matches are
+boosted above generic description matches.
 
 **Query Parameters**
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
 | `keyword` | string | yes | Search term |
-| `page` | int | no | Page number |
-| `limit` | int | no | Items per page |
+| `seller_id` | string | no | One seller/brand ID |
+| `seller_ids` / `brand_ids` | string | no | Comma-separated seller/brand IDs |
+| `brands` / `brand` | string | no | Comma-separated exact brand names |
+| `category` | string | no | Category ID |
+| `min_price` / `max_price` | number | no | Price range |
+| `in_stock` | boolean | no | Inventory availability |
+| `sizes`, `colors`, `product_types`, `materials`, `occasions`, `tags` | string | no | Comma-separated filters |
+| `cursor` | string | no | Atlas Search `next_cursor` from the previous response |
+| `page` | int | no | Legacy page number |
+| `limit` | int | no | Default `20`, maximum `100` |
 
-**Response `200`** — array of matching `Product` objects.
+The response uses the same `data` and `meta.pagination` structure as List Products.
+Search cursors are generated by Atlas Search and are only valid for the same keyword,
+filters, and sort semantics.
 
 ---
 
@@ -162,13 +239,16 @@ Advanced multi-criteria filtering via JSON body. Use when query params are insuf
 {
   "category_id": "uuid",
   "seller_id": "uuid",
+  "seller_ids": ["brand-1", "brand-2"],
+  "seller_names": ["Khaadi", "Sapphire"],
   "min_price": "500",
   "max_price": "5000",
   "sort": "price",
   "order": "asc",
-  "page": "1",
   "limit": "20",
+  "cursor": "",
   "keyword": "lawn",
+  "in_stock": true,
   "sizes": ["S", "M"],
   "colors": ["White", "Blue"],
   "materials": ["Cotton"],
@@ -176,16 +256,20 @@ Advanced multi-criteria filtering via JSON body. Use when query params are insuf
   "occasions": ["Casual"]
 }
 ```
-All fields optional.
+All fields are optional. If `keyword` is present, this endpoint uses Atlas Search;
+otherwise it uses the normal catalog listing query. Multi-value filters use OR
+within one field and AND across different fields.
 
-**Response `200`** — array of `Product` objects.
+**Response `200`** — products in `data`, with cursor state in `meta.pagination`.
 
 ---
 
 ### Get Filter Options
 `GET /api/v2/catalog/products/filters`
 
-Returns all available filter values to populate a search sidebar/filter UI.
+Returns filter values derived from active products belonging to active sellers.
+Brands include their current active product count. Materials and occasions are
+derived from normalized `material:*` and `occasion:*` product tags.
 
 **Response `200`**
 ```json
@@ -194,7 +278,7 @@ Returns all available filter values to populate a search sidebar/filter UI.
   "price_ranges": [{ "min": 0, "max": 1000 }, { "min": 1000, "max": 3000 }],
   "categories": [{ "id": "...", "name": "Tops", "slug": "tops" }],
   "colors": ["Black", "White", "Red"],
-  "brands": [{ "id": "...", "name": "Khaadi" }],
+  "brands": [{ "id": "...", "name": "Khaadi", "product_count": 142 }],
   "materials": ["Cotton", "Chiffon"],
   "occasions": ["Casual", "Formal"],
   "product_types": ["Eastern", "Western"]

@@ -36,6 +36,8 @@ export interface APIResponse<T> {
     status: number;
     /** True if request succeeded (2xx status code) */
     ok: boolean;
+    /** Optional response metadata (pagination, totals, etc.). */
+    meta?: Record<string, unknown>;
     /** 
      * Response body.
      * - On success: unwrapped data (T)
@@ -310,7 +312,8 @@ export async function request<T>(
     return {
         status: resp.status,
         ok: isSuccess,
-        body: isSuccess ? unwrapSuccessBody(body) : unwrapErrorBody(body)
+        body: isSuccess ? unwrapSuccessBody(body) : unwrapErrorBody(body),
+        ...(isSuccess && body?.meta ? { meta: body.meta } : {})
     };
 }
 

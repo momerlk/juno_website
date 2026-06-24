@@ -9,7 +9,7 @@ interface CatalogDiscoveryProps {
     onProductClick?: (product: CatalogProduct) => void;
 }
 
-const CatalogDiscovery: React.FC<CatalogDiscoveryProps> = ({ onProductClick }) => {
+const CatalogDiscovery: React.FC<CatalogDiscoveryProps> = () => {
     const [popularProducts, setPopularProducts] = useState<CatalogProduct[]>([]);
     const [collections, setCollections] = useState<CollectionType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -71,7 +71,7 @@ const CatalogDiscovery: React.FC<CatalogDiscoveryProps> = ({ onProductClick }) =
                             </h2>
                         </div>
                         <Link
-                            to="/catalog?sort=newest"
+                            to="/catalog/all?sort=created_at&order=desc"
                             className="hidden items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-primary transition-colors hover:text-white md:inline-flex"
                         >
                             View All
@@ -93,7 +93,7 @@ const CatalogDiscovery: React.FC<CatalogDiscoveryProps> = ({ onProductClick }) =
                     {/* Mobile View All */}
                     <div className="mt-6 md:hidden">
                         <Link
-                            to="/catalog?sort=newest"
+                            to="/catalog/all?sort=created_at&order=desc"
                             className="flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-xs font-bold uppercase tracking-[0.16em] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
                         >
                             View All Products
@@ -162,7 +162,7 @@ const CollectionCard: React.FC<{ collection: CollectionType; index: number }> = 
             transition={{ delay: index * 0.1 }}
         >
             <Link
-                to={`/catalog?collection=${collection.id}`}
+                to={`/catalog/all?collection=${collection.id}`}
                 className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-primary/10 via-black to-secondary/10 p-6 transition-all hover:-translate-y-1 hover:border-primary/30"
             >
                 <div className="relative z-10">
@@ -230,7 +230,7 @@ const BrandShortcuts: React.FC = () => {
             {brands.map((brand, index) => (
                 <motion.a
                     key={brand.id}
-                    href={`/catalog?seller_id=${brand.id}`}
+                    href={`/catalog/all?seller_id=${brand.id}`}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.03 }}

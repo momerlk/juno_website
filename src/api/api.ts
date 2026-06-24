@@ -98,6 +98,9 @@ export type {
     GenderOverview,
     GenderOverviewProduct,
     GenderBrand,
+    CatalogSort,
+    CatalogPagination,
+    CatalogQueryParams,
     
     // Campaign types
     Campaign,

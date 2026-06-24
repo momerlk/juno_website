@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ShoppingBag, Search, Heart, ArrowRight } from 'lucide-react';
+import { X, ShoppingBag, Search, Heart, ArrowRight } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Catalog } from '../../api/catalogApi';
 import { trackTikTokSearch } from '../../utils/tiktokPixel';
@@ -21,7 +21,6 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
     suggestionsOverride,
     initialQuery = ''
 }) => {
-    const location = useLocation();
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
@@ -94,7 +93,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
         if (onSearch) {
             onSearch(trimmed);
         } else {
-            navigate(`/catalog?q=${encodeURIComponent(trimmed)}`);
+            navigate(`/catalog/all?q=${encodeURIComponent(trimmed)}`);
         }
         setSearchOpen(false);
     };

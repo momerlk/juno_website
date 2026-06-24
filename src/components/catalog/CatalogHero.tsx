@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Clock, Flame } from 'lucide-react';
@@ -74,7 +74,7 @@ const CatalogHero: React.FC<CatalogHeroProps> = ({ onFilterChange }) => {
         if (onFilterChange) {
             onFilterChange({});
         }
-        window.location.href = `/catalog?q=${encodeURIComponent(term)}`;
+        window.location.href = `/catalog/all?q=${encodeURIComponent(term)}`;
     };
 
     if (isLoading) {
@@ -187,7 +187,7 @@ const CatalogHero: React.FC<CatalogHeroProps> = ({ onFilterChange }) => {
                         </Link>
                     ) : featuredCollection ? (
                         <Link
-                            to={`/catalog?collection=${featuredCollection.id}`}
+                            to={`/catalog/all?collection=${featuredCollection.id}`}
                             className="relative z-20 block p-8 md:p-12 lg:p-16 group"
                         >
                             <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">

@@ -83,6 +83,7 @@ const ProductPage = React.lazy(() => import('./components/ProductPage'));
 const CatalogProductPage = React.lazy(() => import('./components/catalog/CatalogProductPage'));
 const GenderLandingPage = React.lazy(() => import('./components/catalog/gender/GenderLandingPage'));
 const GenderCatalogPage = React.lazy(() => import('./components/catalog/gender/GenderCatalogPage'));
+const CatalogPage = React.lazy(() => import('./components/catalog/CatalogPage'));
 const DownloadRedirect = React.lazy(() => import('./components/DownloadRedirect'));
 const ChapterFormPage = React.lazy(() => import('./components/chapter/ChapterFormPage'));
 const BrandReelGraphic = React.lazy(() => import('./components/BrandReelGraphic'));
@@ -232,6 +233,7 @@ function RoutedApp() {
                 
                 {/* Catalog navigation */}
                 <Route path="/catalog" element={<GenderLandingPage />} />
+                <Route path="/catalog/all" element={<CatalogPage />} />
                 <Route path="/catalog/women" element={<GenderCatalogPage gender="women" />} />
                 <Route path="/catalog/men" element={<GenderCatalogPage gender="men" />} />
                 <Route path="/catalog/:productId" element={<CatalogProductPage />} />

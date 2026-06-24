@@ -1,18 +1,19 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Loader2, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Catalog } from '../../../api/api';
-import type { GenderOverview, GenderBrand } from '../../../api/api.types';
+import type { FilterOptions, GenderOverview } from '../../../api/api.types';
 import CatalogNavbar from '../CatalogNavbar';
+import CatalogFilters from '../CatalogFilters';
 import GenderHeader from './GenderHeader';
 import ProductGrid from './ProductGrid';
 import BrandList from './BrandList';
 
 const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) => {
     const { genderOrId } = useParams<{ genderOrId?: string }>();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [overview, setOverview] = useState<GenderOverview | null>(null);
+    const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -20,9 +21,9 @@ const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) =
         genderOrId === 'men' || genderOrId === 'women' ? (genderOrId as 'men' | 'women') : null;
     const validGender = gender ?? routeGender;
 
-    const brand = searchParams.get('brand') || undefined;
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const sort = (searchParams.get('sort') as 'price' | 'created_at' | undefined) || 'created_at';
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
+    const sortValue = searchParams.get('sort') || 'created_at';
+    const sort = (sortValue === 'price' ? 'price' : 'created_at') as 'price' | 'created_at';
     const order = (searchParams.get('order') as 'asc' | 'desc' | undefined) || 'desc';
     const minPrice = searchParams.get('min_price')
         ? parseInt(searchParams.get('min_price') || '0', 10)
@@ -31,6 +32,13 @@ const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) =
         ? parseInt(searchParams.get('max_price') || '0', 10)
         : undefined;
     const category = searchParams.get('category') || undefined;
+    const pageSize = 20;
+
+    useEffect(() => {
+        Catalog.getFilters().then((response) => {
+            if (response.ok && 'categories' in response.body) setFilterOptions(response.body);
+        });
+    }, []);
 
     useEffect(() => {
         if (!validGender) {
@@ -46,7 +54,7 @@ const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) =
             try {
                 const response = await Catalog.getGenderOverview(validGender, {
                     page,
-                    limit: 20,
+                    limit: pageSize,
                     sort,
                     order,
                     min_price: minPrice,
@@ -70,23 +78,14 @@ const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) =
         loadGenderOverview();
     }, [validGender, genderOrId, page, sort, order, minPrice, maxPrice, category]);
 
-    const filteredOverview = useMemo(() => {
-        if (!overview) return null;
-        if (!brand) return overview;
-
-        const activeBrand = overview.brands.find((item) => item.id === brand);
-        const matchingProducts = overview.products.filter((product) => {
-            const sellerName = product.seller_name?.trim().toLowerCase();
-            const brandName = activeBrand?.name?.trim().toLowerCase();
-            return sellerName && brandName ? sellerName === brandName : false;
-        });
-
-        return {
-            ...overview,
-            products: matchingProducts,
-            total: matchingProducts.length,
-        };
-    }, [overview, brand]);
+    const totalPages = Math.max(1, Math.ceil((overview?.total ?? 0) / pageSize));
+    const goToPage = (nextPage: number) => {
+        const next = new URLSearchParams(searchParams);
+        if (nextPage <= 1) next.delete('page');
+        else next.set('page', String(nextPage));
+        setSearchParams(next);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     if (!validGender) {
         return (
@@ -104,8 +103,6 @@ const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) =
         );
     }
 
-    const activeBrandName = filteredOverview?.brands.find((item) => item.id === brand)?.name;
-
     return (
         <div className="relative min-h-screen overflow-hidden bg-[#050505] pb-16 text-white">
             <CatalogNavbar />
@@ -116,13 +113,18 @@ const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) =
 
             <div className="relative mx-auto max-w-7xl px-4 pt-8 md:px-6">
                 <GenderHeader gender={validGender} />
+                <CatalogFilters
+                    options={filterOptions}
+                    compact
+                    supportedKeys={['category', 'min_price', 'max_price', 'sort']}
+                />
 
                 <div className="mb-6 flex items-end justify-between gap-4 md:mb-10">
                     <div>
                         <div className="mb-2 flex items-center gap-2.5">
                             <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                             <p className="font-mono text-[9px] uppercase tracking-[0.32em] text-white/40 md:text-[10px]">
-                                {activeBrandName || `${validGender} edit`}
+                                {`${validGender} edit`}
                             </p>
                         </div>
                         <h2
@@ -140,17 +142,8 @@ const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) =
                         </h2>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
-                        {activeBrandName ? (
-                            <Link
-                                to={`/catalog/${validGender}`}
-                                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/65 transition-colors hover:border-white/20 hover:text-white"
-                            >
-                                <X size={12} />
-                                Clear
-                            </Link>
-                        ) : null}
                         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
-                            {filteredOverview?.total ?? 0} {(filteredOverview?.total ?? 0) === 1 ? 'piece' : 'pieces'}
+                            {overview?.total ?? 0} {(overview?.total ?? 0) === 1 ? 'piece' : 'pieces'}
                         </p>
                     </div>
                 </div>
@@ -181,7 +174,33 @@ const GenderCatalogPage: React.FC<{ gender?: 'men' | 'women' }> = ({ gender }) =
                 ) : null}
 
                 <main className="min-w-0">
-                    <ProductGrid products={filteredOverview?.products ?? []} isLoading={isLoading} />
+                    <ProductGrid products={overview?.products ?? []} isLoading={isLoading} />
+
+                    {!isLoading && !error && (overview?.total ?? 0) > 0 ? (
+                        <nav className="mt-10 flex items-center justify-between border-t border-white/[0.08] pt-6" aria-label="Catalog pages">
+                            <button
+                                type="button"
+                                disabled={page <= 1}
+                                onClick={() => goToPage(page - 1)}
+                                className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.18em] text-white/70 transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                            >
+                                <ChevronLeft size={14} />
+                                Previous
+                            </button>
+                            <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-white/40">
+                                Page {page} of {totalPages}
+                            </span>
+                            <button
+                                type="button"
+                                disabled={page >= totalPages}
+                                onClick={() => goToPage(page + 1)}
+                                className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.18em] text-white/70 transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                            >
+                                Next
+                                <ChevronRight size={14} />
+                            </button>
+                        </nav>
+                    ) : null}
                 </main>
             </div>
         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { GenderBrand } from '../../../api/api.types';
 
 type Props = {
@@ -8,9 +8,6 @@ type Props = {
 };
 
 const BrandList: React.FC<Props> = ({ brands, gender }) => {
-    const [searchParams] = useSearchParams();
-    const activeBrandId = searchParams.get('brand');
-
     if (brands.length === 0) return null;
 
     return (
@@ -26,11 +23,10 @@ const BrandList: React.FC<Props> = ({ brands, gender }) => {
                 <BrandLink
                     href={`/catalog/${gender}`}
                     name="All Brands"
-                    active={!activeBrandId}
+                    active
                     initials="∞"
                 />
                 {brands.map((brand) => {
-                    const isActive = activeBrandId === brand.id;
                     const initials = brand.name
                         .split(' ')
                         .slice(0, 2)
@@ -40,9 +36,9 @@ const BrandList: React.FC<Props> = ({ brands, gender }) => {
                     return (
                         <BrandLink
                             key={brand.id}
-                            href={`/catalog/${gender}?brand=${brand.id}`}
+                            href={`/catalog/all?brand_ids=${brand.id}`}
                             name={brand.name}
-                            active={isActive}
+                            active={false}
                             count={brand.product_count}
                             initials={initials}
                             logo={brand.logo}
