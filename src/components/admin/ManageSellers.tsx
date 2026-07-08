@@ -1,269 +1,552 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Search, CheckCircle, XCircle, MoreVertical, Eye, LogIn, Store } from 'lucide-react';
-import { adminGetAllSellers, approveSeller, updateSeller, getSellerDetails } from '../../api/adminApi';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  CheckCircle2,
+  Edit3,
+  Eye,
+  LogIn,
+  RefreshCw,
+  Search,
+  Store,
+  Wallet,
+  X,
+  XCircle,
+} from 'lucide-react';
+import { AdminPortal, approveSeller } from '../../api/adminApi';
 import { Auth as SellerAuth } from '../../api/sellerApi';
-import { Seller } from '../../constants/seller';
+
+type SellerStatus = 'all' | 'pending' | 'active' | 'suspended' | 'rejected';
+type DrawerTab = 'profile' | 'inventory' | 'wallet' | 'draft';
+
+const STATUS_OPTIONS: SellerStatus[] = ['all', 'pending', 'active', 'suspended', 'rejected'];
+
+const asArray = (value: any): any[] => {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object') return [];
+  for (const key of ['sellers', 'rows', 'items', 'data', 'drafts']) {
+    if (Array.isArray(value[key])) return value[key];
+  }
+  return [];
+};
+
+const getSellerId = (seller: any) => String(seller?.id || seller?._id || seller?.seller_id || '');
+const getSellerName = (seller: any) => seller?.business_name || seller?.brand_name || seller?.legal_name || seller?.name || 'Unnamed seller';
+const getSellerEmail = (seller: any) => seller?.email || seller?.contact?.email || '';
+const getSellerPhone = (seller: any) => seller?.phone_number || seller?.contact?.phone_number || seller?.phone || '';
+const getSellerCity = (seller: any) => seller?.city || seller?.location?.city || '';
+const getSellerStatus = (seller: any) => String(seller?.status || 'pending').toLowerCase();
+
+const dateText = (value?: string) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+};
+
+const money = (value?: number) => `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
+
+const statusClass = (status: string) => {
+  if (status === 'active') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+  if (status === 'pending') return 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300';
+  if (status === 'suspended') return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+  return 'border-red-500/30 bg-red-500/10 text-red-300';
+};
 
 const ManageSellers: React.FC = () => {
-  const [sellers, setSellers] = useState<Seller[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
+  const [status, setStatus] = useState<SellerStatus>('pending');
+  const [query, setQuery] = useState('');
+  const [sellers, setSellers] = useState<any[]>([]);
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedSeller, setSelectedSeller] = useState<any | null>(null);
+  const [drawerTab, setDrawerTab] = useState<DrawerTab>('profile');
+  const [profileDraft, setProfileDraft] = useState<Record<string, string>>({});
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [walletData, setWalletData] = useState<any | null>(null);
+  const [walletDraft, setWalletDraft] = useState({ amount: '', direction: 'debit' as 'debit' | 'credit', reason: 'late_dispatch_penalty', adjustment_type: 'penalty', related_order_id: '' });
+  const [bulkStatus, setBulkStatus] = useState<'active' | 'suspended' | 'rejected'>('active');
+  const [bulkNote, setBulkNote] = useState('Reviewed by admin');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchSellers = async () => {
-    setIsLoading(true);
+  const load = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const response = await adminGetAllSellers();
-      if (response.ok) {
-        setSellers(response.body);
-      }
-    } catch (error) {
-      console.error('Failed to fetch sellers:', error);
+      const [sellerRes, draftRes] = await Promise.all([
+        AdminPortal.listSellers({ status: status === 'all' ? undefined : status, q: query || undefined, limit: 100 }),
+        AdminPortal.listSellerDrafts({ page: 1, limit: 100 }),
+      ]);
+      if (!sellerRes.ok) throw new Error((sellerRes.body as any)?.message || 'Failed to load sellers');
+      setSellers(asArray(sellerRes.body));
+      if (draftRes.ok) setDrafts(asArray(draftRes.body));
+      setSelectedIds([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unexpected seller loading error');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSellers();
-  }, []);
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
-  const handleViewDetails = async (seller: Seller) => {
+  const filteredSellers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sellers;
+    return sellers.filter((seller) => [
+      getSellerId(seller),
+      getSellerName(seller),
+      getSellerEmail(seller),
+      getSellerPhone(seller),
+      getSellerCity(seller),
+      seller.legal_name,
+    ].join(' ').toLowerCase().includes(q));
+  }, [query, sellers]);
+
+  const metrics = useMemo(() => {
+    const source = status === 'all' ? sellers : [...sellers, ...filteredSellers];
+    return {
+      pending: sellers.filter((s) => getSellerStatus(s) === 'pending').length,
+      active: sellers.filter((s) => getSellerStatus(s) === 'active').length,
+      suspended: sellers.filter((s) => getSellerStatus(s) === 'suspended').length,
+      rejected: sellers.filter((s) => getSellerStatus(s) === 'rejected').length,
+      drafts: drafts.length,
+      shown: source.length,
+    };
+  }, [drafts.length, filteredSellers, sellers, status]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+
+  const toggleVisible = () => {
+    const visibleIds = filteredSellers.map(getSellerId).filter(Boolean);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) => allSelected ? prev.filter((id) => !visibleIds.includes(id)) : Array.from(new Set([...prev, ...visibleIds])));
+  };
+
+  const openSeller = async (seller: any, tab: DrawerTab = 'profile') => {
+    const id = getSellerId(seller);
     setSelectedSeller(seller);
-    setIsModalOpen(true);
-    try {
-      const response = await getSellerDetails(seller.id!);
-      if (response.ok) {
-        setSelectedSeller(response.body);
-      }
-    } catch (error) {
-      console.error('Failed to fetch seller details:', error);
+    setDrawerTab(tab);
+    setProfileDraft({
+      business_name: getSellerName(seller),
+      contact_person: seller.contact_person || seller.contact?.contact_person_name || '',
+      phone_number: getSellerPhone(seller),
+      email: getSellerEmail(seller),
+      legal_name: seller.legal_name || '',
+      commission_rate: String(seller.commission_rate ?? seller.commission_settings?.commission_rate ?? ''),
+      city: getSellerCity(seller),
+    });
+    setInventory([]);
+    setWalletData(null);
+
+    const detailRes = await AdminPortal.listSellers({ q: id, limit: 1 });
+    if (detailRes.ok) {
+      const detail = asArray(detailRes.body)[0] || seller;
+      setSelectedSeller(detail);
     }
   };
 
-  const handleLoginAsSeller = async (seller: Seller) => {
-    if (!seller.email) {
-      alert("Seller does not have an email address.");
+  const loadInventory = async () => {
+    if (!selectedSeller) return;
+    const res = await AdminPortal.getSellerInventory(getSellerId(selectedSeller));
+    if (res.ok) setInventory(asArray(res.body));
+    else setError((res.body as any)?.message || 'Failed to load inventory');
+  };
+
+  const loadWallet = async () => {
+    if (!selectedSeller) return;
+    const res = await AdminPortal.getSellerWallet(getSellerId(selectedSeller));
+    if (res.ok) setWalletData(res.body);
+    else setError((res.body as any)?.message || 'Failed to load wallet');
+  };
+
+  useEffect(() => {
+    if (!selectedSeller) return;
+    if (drawerTab === 'inventory') void loadInventory();
+    if (drawerTab === 'wallet') void loadWallet();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawerTab, selectedSeller?.id]);
+
+  const saveProfile = async () => {
+    if (!selectedSeller) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const commission = Number(profileDraft.commission_rate);
+      const res = await AdminPortal.updateSellerProfile(getSellerId(selectedSeller), {
+        business_name: profileDraft.business_name,
+        contact_person: profileDraft.contact_person,
+        phone_number: profileDraft.phone_number,
+        email: profileDraft.email,
+        legal_name: profileDraft.legal_name,
+        commission_rate: Number.isFinite(commission) ? commission : undefined,
+        city: profileDraft.city,
+      });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to update seller profile');
+      await load();
+      setSelectedSeller((prev: any) => ({ ...prev, ...profileDraft }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update seller profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setSellerStatus = async (sellerIds: string[], nextStatus: 'active' | 'suspended' | 'rejected', note = bulkNote) => {
+    if (sellerIds.length === 0) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await AdminPortal.bulkUpdateSellerStatus({ seller_ids: sellerIds, status: nextStatus, note });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to update seller status');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update seller status');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const approve = async (seller: any, approved: boolean) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await approveSeller(getSellerId(seller), approved, approved ? 'KYC verified' : 'Rejected by admin');
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Approval action failed');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Approval action failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateInventoryRow = async (row: any, quantity: number) => {
+    if (!selectedSeller) return;
+    setSaving(true);
+    try {
+      const res = await AdminPortal.updateSellerInventory(getSellerId(selectedSeller), {
+        product_id: row.product_id,
+        variant_id: row.variant_id,
+        available_quantity: quantity,
+      });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Inventory update failed');
+      await loadInventory();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Inventory update failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const adjustWallet = async () => {
+    if (!selectedSeller) return;
+    const amount = Number(walletDraft.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('Enter a valid wallet adjustment amount.');
       return;
     }
-    
-    if (window.confirm(`Login to Juno Studio for ${seller.business_name}?`)) {
-      try {
-        const response = await SellerAuth.Login(seller.email, "JunoPakistan12#");
-        
-        if (response.ok) {
-          localStorage.setItem('seller', JSON.stringify(response.body));
-          if (response.body.token) {
-             localStorage.setItem('token', response.body.token);
-          }
-          window.open('/seller/dashboard', '_blank');
-        } else {
-          alert(`Login failed: ${response.body?.message || 'Unknown error'}`);
-        }
-      } catch (error) {
-        console.error("Login as seller error:", error);
-        alert("Failed to login as seller.");
-      }
+    setSaving(true);
+    try {
+      const res = await AdminPortal.adjustSellerWallet(getSellerId(selectedSeller), {
+        amount,
+        direction: walletDraft.direction,
+        reason: walletDraft.reason,
+        adjustment_type: walletDraft.adjustment_type,
+        related_order_id: walletDraft.related_order_id || undefined,
+      });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Wallet adjustment failed');
+      setWalletDraft((prev) => ({ ...prev, amount: '', related_order_id: '' }));
+      await loadWallet();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Wallet adjustment failed');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleApprove = async (id: string) => {
-    if (window.confirm("Are you sure you want to approve this seller?")) {
-        try {
-            const response = await approveSeller(id);
-            if (response.ok) {
-                alert("Seller approved successfully!");
-                fetchSellers();
-            } else {
-                alert("Failed to approve seller.");
-            }
-        } catch (error) {
-            console.error("Error approving seller:", error);
-        }
+  const loginAsSeller = async (seller: any) => {
+    const email = getSellerEmail(seller);
+    if (!email) {
+      setError('Seller has no email address.');
+      return;
     }
+    const response = await SellerAuth.Login(email, 'JunoPakistan12#');
+    if (response.ok) {
+      localStorage.setItem('seller', JSON.stringify(response.body));
+      if ((response.body as any).token) localStorage.setItem('token', (response.body as any).token);
+      window.open('/seller/dashboard', '_blank');
+      return;
+    }
+    setError((response.body as any)?.message || 'Seller login failed');
   };
 
-  const handleReject = async (id: string) => {
-      if (window.confirm("Are you sure you want to reject this seller?")) {
-          try {
-              const response = await approveSeller(id, false, "Rejected by admin");
-              if (response.ok) {
-                  alert("Seller rejected.");
-                  fetchSellers();
-              } else {
-                  alert("Failed to reject seller.");
-              }
-          } catch (error) {
-              console.error("Error rejecting seller:", error);
-          }
-      }
-  };
-
-  const filteredSellers = sellers.filter(seller =>
-    seller.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    seller.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const visibleIds = filteredSellers.map(getSellerId).filter(Boolean);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="glass-panel p-6 mt-6"
-    >
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-            <Store size={24} className="text-primary"/> Manage Sellers
-        </h2>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search sellers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="glass-input pl-10 pr-4 py-2 w-64 text-white"
-          />
+    <div className="space-y-4">
+      <div className="rounded-lg border border-white/10 bg-[#111]">
+        <div className="flex flex-col gap-4 border-b border-white/10 p-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Store size={18} className="text-primary" />
+              <h2 className="text-lg font-semibold text-white">Sellers</h2>
+            </div>
+            <p className="mt-1 text-xs text-neutral-400">Approval queue, account remediation, inventory checks, and seller wallet operations.</p>
+          </div>
+          <button onClick={() => void load()} className="inline-flex w-fit items-center gap-1 rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10">
+            <RefreshCw size={14} /> Refresh
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-px border-b border-white/10 bg-white/10 text-xs md:grid-cols-5">
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Pending</p><p className="mt-1 text-lg font-semibold text-yellow-300">{metrics.pending}</p></div>
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Active</p><p className="mt-1 text-lg font-semibold text-emerald-300">{metrics.active}</p></div>
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Suspended</p><p className="mt-1 text-lg font-semibold text-amber-300">{metrics.suspended}</p></div>
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Rejected</p><p className="mt-1 text-lg font-semibold text-red-300">{metrics.rejected}</p></div>
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Drafts</p><p className="mt-1 text-lg font-semibold text-white">{metrics.drafts}</p></div>
+        </div>
+
+        <div className="flex flex-wrap gap-1 border-b border-white/10 px-3 py-2">
+          {STATUS_OPTIONS.map((option) => (
+            <button key={option} onClick={() => setStatus(option)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${status === option ? 'bg-white text-black' : 'text-neutral-300 hover:bg-white/10'}`}>
+              {option[0].toUpperCase() + option.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-3 border-b border-white/10 p-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="relative w-full xl:max-w-lg">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search seller, email, phone, city"
+              className="w-full rounded-md border border-white/10 bg-black/30 py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-primary/60"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-neutral-400">{selectedIds.length} selected</span>
+            <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as any)} className="rounded-md border border-white/10 bg-black/30 px-2 py-2 text-xs text-white">
+              <option value="active">active</option>
+              <option value="suspended">suspended</option>
+              <option value="rejected">rejected</option>
+            </select>
+            <input value={bulkNote} onChange={(e) => setBulkNote(e.target.value)} className="w-48 rounded-md border border-white/10 bg-black/30 px-2 py-2 text-xs text-white" />
+            <button disabled={saving || selectedIds.length === 0} onClick={() => void setSellerStatus(selectedIds, bulkStatus)} className="rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10 disabled:opacity-40">Apply</button>
+          </div>
+        </div>
+
+        {error && <div className="border-b border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1050px] text-left text-sm">
+            <thead className="border-b border-white/10 text-xs uppercase text-neutral-500">
+              <tr>
+                <th className="w-10 p-3"><input type="checkbox" checked={allVisibleSelected} onChange={toggleVisible} className="accent-[#f43f5e]" /></th>
+                <th className="p-3">Seller</th>
+                <th className="p-3">Contact</th>
+                <th className="p-3">City</th>
+                <th className="p-3">Status</th>
+                <th className="p-3">Commission</th>
+                <th className="p-3">Registered</th>
+                <th className="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={8} className="p-10 text-center text-neutral-400">Loading sellers...</td></tr>
+              ) : filteredSellers.length === 0 ? (
+                <tr><td colSpan={8} className="p-10 text-center text-neutral-500">No sellers match this view.</td></tr>
+              ) : filteredSellers.map((seller) => {
+                const id = getSellerId(seller);
+                const sellerStatus = getSellerStatus(seller);
+                return (
+                  <tr key={id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                    <td className="p-3"><input type="checkbox" checked={selectedIds.includes(id)} onChange={() => toggleSelected(id)} className="accent-[#f43f5e]" /></td>
+                    <td className="p-3">
+                      <p className="font-medium text-white">{getSellerName(seller)}</p>
+                      <p className="mt-0.5 max-w-[220px] truncate font-mono text-[11px] text-neutral-500">{id}</p>
+                    </td>
+                    <td className="p-3">
+                      <p className="text-neutral-300">{getSellerEmail(seller) || '-'}</p>
+                      <p className="text-xs text-neutral-500">{getSellerPhone(seller) || '-'}</p>
+                    </td>
+                    <td className="p-3 text-neutral-300">{getSellerCity(seller) || '-'}</td>
+                    <td className="p-3"><span className={`rounded-full border px-2 py-1 text-[11px] ${statusClass(sellerStatus)}`}>{sellerStatus}</span></td>
+                    <td className="p-3 text-neutral-300">{seller.commission_rate ?? seller.commission_settings?.commission_rate ?? '-'}</td>
+                    <td className="p-3 text-neutral-400">{dateText(seller.created_at)}</td>
+                    <td className="p-3">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => void loginAsSeller(seller)} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10" title="Login as seller"><LogIn size={14} /></button>
+                        <button onClick={() => void openSeller(seller, 'profile')} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10" title="View seller"><Eye size={14} /></button>
+                        <button onClick={() => void openSeller(seller, 'wallet')} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10" title="Wallet"><Wallet size={14} /></button>
+                        {sellerStatus === 'pending' && (
+                          <>
+                            <button onClick={() => void approve(seller, true)} className="rounded-md border border-emerald-500/30 p-2 text-emerald-300 hover:bg-emerald-500/10" title="Approve"><CheckCircle2 size={14} /></button>
+                            <button onClick={() => void approve(seller, false)} className="rounded-md border border-red-500/30 p-2 text-red-300 hover:bg-red-500/10" title="Reject"><XCircle size={14} /></button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-white/10">
-              <th className="p-4 text-sm font-semibold text-neutral-400">Business Name</th>
-              <th className="p-4 text-sm font-semibold text-neutral-400">Email</th>
-              <th className="p-4 text-sm font-semibold text-neutral-400">Status</th>
-              <th className="p-4 text-sm font-semibold text-neutral-400">Registered</th>
-              <th className="p-4 text-sm font-semibold text-neutral-400">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={5} className="text-center p-8 text-neutral-400">Loading sellers...</td></tr>
-            ) : filteredSellers.length === 0 ? (
-              <tr><td colSpan={5} className="text-center p-8 text-neutral-400">{searchTerm ? 'No sellers found matching your search.' : 'No sellers found.'}</td></tr>
-            ) : (
-              filteredSellers.map(seller => (
-                <tr key={seller.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                  <td className="p-4 text-white font-medium">{seller.business_name}</td>
-                  <td className="p-4 text-neutral-300">{seller.email}</td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${
-                      seller.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                      seller.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                      'bg-red-500/10 text-red-400 border-red-500/20'
-                    }`}>
-                      {seller.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="p-4 text-neutral-300">{new Date(seller.created_at).toLocaleDateString()}</td>
-                  <td className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <button onClick={() => handleLoginAsSeller(seller)} className="p-2 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors" title="Login as Seller"><LogIn size={18} /></button>
-                      <button onClick={() => handleViewDetails(seller)} className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"><Eye size={18} /></button>
-                      {seller.status === 'pending' && (
-                        <>
-                          <button onClick={() => handleApprove(seller.id!)} className="p-2 text-green-400 hover:bg-green-500/20 rounded-lg transition-colors" title="Approve"><CheckCircle size={18} /></button>
-                          <button onClick={() => handleReject(seller.id!)} className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors" title="Reject"><XCircle size={18} /></button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {isModalOpen && selectedSeller && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass-panel p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                <h2 className="text-2xl font-bold text-white">{selectedSeller.business_name}</h2>
-                <button onClick={() => setIsModalOpen(false)} className="text-neutral-400 hover:text-white"><XCircle size={24}/></button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                <h3 className="text-lg font-semibold text-primary mb-3">Location</h3>
-                <div className="space-y-2 text-sm">
-                    <p><span className="text-neutral-400">Address:</span> <span className="text-white">{selectedSeller.location?.address}</span></p>
-                    <p><span className="text-neutral-400">City:</span> <span className="text-white">{selectedSeller.location?.city}</span></p>
-                    <p><span className="text-neutral-400">Country:</span> <span className="text-white">{selectedSeller.location?.country}</span></p>
-                </div>
-              </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                <h3 className="text-lg font-semibold text-primary mb-3">Contact</h3>
-                <div className="space-y-2 text-sm">
-                    <p><span className="text-neutral-400">Phone:</span> <span className="text-white">{selectedSeller.contact?.phone_number}</span></p>
-                    <p><span className="text-neutral-400">Person:</span> <span className="text-white">{selectedSeller.contact?.contact_person_name}</span></p>
-                </div>
-              </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                <h3 className="text-lg font-semibold text-primary mb-3">Bank Details</h3>
-                <div className="space-y-2 text-sm">
-                    <p><span className="text-neutral-400">Bank:</span> <span className="text-white">{selectedSeller.bank_details?.bank_name}</span></p>
-                    <p><span className="text-neutral-400">Account:</span> <span className="text-white">{selectedSeller.bank_details?.account_title}</span></p>
-                    <p><span className="text-neutral-400">Number:</span> <span className="text-white font-mono">{selectedSeller.bank_details?.account_number}</span></p>
-                    <p><span className="text-neutral-400">IBAN:</span> <span className="text-white font-mono">{selectedSeller.bank_details?.iban}</span></p>
-                </div>
-              </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                <h3 className="text-lg font-semibold text-primary mb-3">Business Details</h3>
-                <div className="space-y-2 text-sm">
-                    <p><span className="text-neutral-400">Legal Name:</span> <span className="text-white">{selectedSeller.legal_name}</span></p>
-                    <p><span className="text-neutral-400">Type:</span> <span className="text-white">{selectedSeller.business_details?.business_type}</span></p>
-                </div>
-              </div>
-              <div className="col-span-1 md:col-span-2 bg-white/5 p-4 rounded-xl border border-white/5">
-                <h3 className="text-lg font-semibold text-primary mb-3">KYC Documents</h3>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <p className="text-sm text-neutral-400 mb-2">CNIC Front</p>
-                    <img src={selectedSeller.kyc_documents?.cnic_front} alt="CNIC Front" className="w-full h-48 object-cover rounded-lg border border-white/10" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-neutral-400 mb-2">CNIC Back</p>
-                    <img src={selectedSeller.kyc_documents?.cnic_back} alt="CNIC Back" className="w-full h-48 object-cover rounded-lg border border-white/10" />
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                <h3 className="text-lg font-semibold text-primary mb-3">Seller Metrics</h3>
-                <div className="space-y-2 text-sm">
-                    <p><span className="text-neutral-400">Rating:</span> <span className="text-yellow-400 font-bold">{selectedSeller.seller_metrics?.rating || 'N/A'}</span></p>
-                    <p><span className="text-neutral-400">Total Sales:</span> <span className="text-white">{selectedSeller.seller_metrics?.total_sales || 0}</span></p>
-                </div>
-              </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                <h3 className="text-lg font-semibold text-primary mb-3">Shipping Settings</h3>
-                <div className="space-y-2 text-sm">
-                    <p><span className="text-neutral-400">Self Shipping:</span> <span className={selectedSeller.shipping_settings?.self_shipping ? "text-green-400" : "text-neutral-500"}>{selectedSeller.shipping_settings?.self_shipping ? 'Yes' : 'No'}</span></p>
-                    <p><span className="text-neutral-400">Platform Shipping:</span> <span className={selectedSeller.shipping_settings?.platform_shipping ? "text-green-400" : "text-neutral-500"}>{selectedSeller.shipping_settings?.platform_shipping ? 'Yes' : 'No'}</span></p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-8 flex justify-end gap-3">
-                 {selectedSeller.status === 'pending' && (
-                    <>
-                        <button onClick={() => { handleApprove(selectedSeller.id!); setIsModalOpen(false); }} className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors">Approve Seller</button>
-                        <button onClick={() => { handleReject(selectedSeller.id!); setIsModalOpen(false); }} className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors">Reject Seller</button>
-                    </>
-                 )}
-                <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors">Close</button>
-            </div>
-          </motion.div>
+      {drafts.length > 0 && (
+        <div className="rounded-lg border border-white/10 bg-[#111]">
+          <div className="border-b border-white/10 p-3">
+            <h3 className="text-sm font-semibold text-white">Registration drafts</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="border-b border-white/10 text-xs uppercase text-neutral-500">
+                <tr><th className="p-3">Email</th><th className="p-3">Step</th><th className="p-3">Business</th><th className="p-3">Updated</th></tr>
+              </thead>
+              <tbody>
+                {drafts.slice(0, 8).map((draft, index) => (
+                  <tr key={draft.id || draft.email || index} className="border-b border-white/5">
+                    <td className="p-3 text-white">{draft.email || '-'}</td>
+                    <td className="p-3 text-neutral-300">{draft.step ?? draft.current_step ?? '-'}</td>
+                    <td className="p-3 text-neutral-300">{draft.business_name || draft.legal_name || '-'}</td>
+                    <td className="p-3 text-neutral-400">{dateText(draft.updated_at || draft.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-    </motion.div>
+
+      {selectedSeller && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60">
+          <button className="flex-1" onClick={() => setSelectedSeller(null)} aria-label="Close drawer" />
+          <aside className="h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#111] shadow-2xl">
+            <div className="sticky top-0 z-10 border-b border-white/10 bg-[#111] p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-neutral-500">Seller</p>
+                  <h3 className="mt-1 text-lg font-semibold text-white">{getSellerName(selectedSeller)}</h3>
+                  <p className="text-xs text-neutral-500">{getSellerEmail(selectedSeller)}</p>
+                </div>
+                <button onClick={() => setSelectedSeller(null)} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10"><X size={16} /></button>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-1">
+                {(['profile', 'inventory', 'wallet'] as DrawerTab[]).map((tab) => (
+                  <button key={tab} onClick={() => setDrawerTab(tab)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${drawerTab === tab ? 'bg-white text-black' : 'text-neutral-300 hover:bg-white/10'}`}>
+                    {tab[0].toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-5">
+              {drawerTab === 'profile' && (
+                <div className="space-y-5">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {[
+                      ['business_name', 'Business name'],
+                      ['legal_name', 'Legal name'],
+                      ['contact_person', 'Contact person'],
+                      ['email', 'Email'],
+                      ['phone_number', 'Phone'],
+                      ['city', 'City'],
+                      ['commission_rate', 'Commission rate'],
+                    ].map(([key, label]) => (
+                      <label key={key} className="text-xs text-neutral-400">
+                        {label}
+                        <input value={profileDraft[key] || ''} onChange={(e) => setProfileDraft((prev) => ({ ...prev, [key]: e.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary/60" />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button disabled={saving} onClick={() => void saveProfile()} className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-black disabled:opacity-50"><Edit3 size={14} /> Save profile</button>
+                    <button disabled={saving} onClick={() => void setSellerStatus([getSellerId(selectedSeller)], 'suspended', 'Suspended from seller drawer')} className="rounded-md border border-amber-500/30 px-3 py-2 text-sm text-amber-300 hover:bg-amber-500/10 disabled:opacity-50">Suspend</button>
+                    <button disabled={saving} onClick={() => void setSellerStatus([getSellerId(selectedSeller)], 'active', 'Activated from seller drawer')} className="rounded-md border border-emerald-500/30 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50">Activate</button>
+                  </div>
+                </div>
+              )}
+
+              {drawerTab === 'inventory' && (
+                <div className="space-y-3">
+                  <button onClick={() => void loadInventory()} className="rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10">Refresh inventory</button>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-left text-sm">
+                      <thead className="border-b border-white/10 text-xs uppercase text-neutral-500">
+                        <tr><th className="p-2">Product</th><th className="p-2">Variant</th><th className="p-2">SKU</th><th className="p-2">Price</th><th className="p-2">Qty</th><th className="p-2"></th></tr>
+                      </thead>
+                      <tbody>
+                        {inventory.length === 0 ? (
+                          <tr><td colSpan={6} className="p-8 text-center text-neutral-500">No inventory rows loaded.</td></tr>
+                        ) : inventory.map((row, index) => (
+                          <tr key={`${row.product_id}-${row.variant_id}-${index}`} className="border-b border-white/5">
+                            <td className="p-2 text-white">{row.product_title || row.product_id}</td>
+                            <td className="p-2 text-neutral-300">{row.variant_title || row.variant_id}</td>
+                            <td className="p-2 text-neutral-400">{row.sku || '-'}</td>
+                            <td className="p-2 text-neutral-300">{money(row.price)}</td>
+                            <td className="p-2"><input defaultValue={row.available_quantity ?? 0} id={`qty-${index}`} type="number" className="w-20 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-sm text-white" /></td>
+                            <td className="p-2 text-right">
+                              <button disabled={saving} onClick={() => {
+                                const input = document.getElementById(`qty-${index}`) as HTMLInputElement | null;
+                                void updateInventoryRow(row, Number(input?.value || 0));
+                              }} className="rounded-md border border-white/10 px-2 py-1 text-xs text-white/80 hover:bg-white/10 disabled:opacity-40">Save</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {drawerTab === 'wallet' && (
+                <div className="space-y-5">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-md border border-white/10 bg-black/20 p-3"><p className="text-xs text-neutral-500">Balance</p><p className="mt-1 text-lg font-semibold text-white">{money(walletData?.balance ?? walletData?.current_balance)}</p></div>
+                    <div className="rounded-md border border-white/10 bg-black/20 p-3"><p className="text-xs text-neutral-500">Ledger rows</p><p className="mt-1 text-lg font-semibold text-white">{asArray(walletData?.ledger || walletData?.entries || walletData).length}</p></div>
+                    <div className="rounded-md border border-white/10 bg-black/20 p-3"><p className="text-xs text-neutral-500">Seller</p><p className="mt-1 truncate text-sm font-semibold text-white">{getSellerId(selectedSeller)}</p></div>
+                  </div>
+
+                  <div className="grid gap-2 md:grid-cols-5">
+                    <input value={walletDraft.amount} onChange={(e) => setWalletDraft((prev) => ({ ...prev, amount: e.target.value }))} placeholder="Amount" type="number" className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
+                    <select value={walletDraft.direction} onChange={(e) => setWalletDraft((prev) => ({ ...prev, direction: e.target.value as any }))} className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"><option value="debit">debit</option><option value="credit">credit</option></select>
+                    <input value={walletDraft.reason} onChange={(e) => setWalletDraft((prev) => ({ ...prev, reason: e.target.value }))} placeholder="Reason" className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
+                    <input value={walletDraft.related_order_id} onChange={(e) => setWalletDraft((prev) => ({ ...prev, related_order_id: e.target.value }))} placeholder="Order ID" className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
+                    <button disabled={saving} onClick={() => void adjustWallet()} className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-black disabled:opacity-50">Adjust</button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[620px] text-left text-sm">
+                      <thead className="border-b border-white/10 text-xs uppercase text-neutral-500"><tr><th className="p-2">Date</th><th className="p-2">Type</th><th className="p-2">Reason</th><th className="p-2 text-right">Amount</th></tr></thead>
+                      <tbody>
+                        {asArray(walletData?.ledger || walletData?.entries || walletData).map((row, index) => (
+                          <tr key={row.id || index} className="border-b border-white/5">
+                            <td className="p-2 text-neutral-400">{dateText(row.created_at)}</td>
+                            <td className="p-2 text-neutral-300">{row.direction || row.type || '-'}</td>
+                            <td className="p-2 text-neutral-300">{row.reason || row.adjustment_type || '-'}</td>
+                            <td className="p-2 text-right text-white">{money(row.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
+    </div>
   );
 };
 

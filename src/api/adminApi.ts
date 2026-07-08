@@ -178,6 +178,18 @@ export namespace AdminLogistics {
         return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/manual-booking`, 'POST', payload, getToken());
     }
 
+    export async function bulkManualBooking(payload: {
+        bookings: Array<{
+            order_id: string;
+            carrier: LogisticsCarrier;
+            consignment_number: string;
+            airway_bill_number?: string;
+            tracking_url?: string;
+        }>;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/manual-booking/bulk`, 'POST', payload, getToken());
+    }
+
     export async function verifyDexLocation(orderId: string, payload: {
         province: string;
         district: string;
@@ -195,6 +207,21 @@ export namespace AdminLogistics {
         approved_by?: string;
     }): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/dispatch-override`, 'POST', payload, getToken());
+    }
+
+    export async function bulkDispatchOverride(payload: {
+        overrides: Array<{
+            order_id: string;
+            dispatch_mode: 'carrier_pickup' | 'seller_center_dropoff' | 'manual_override';
+            reason: string;
+            approval_reference?: string;
+        }>;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/dispatch-override/bulk`, 'POST', payload, getToken());
+    }
+
+    export async function updateOperationalConfig(payload: Record<string, any>): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/operational-config`, 'PUT', payload, getToken());
     }
 
     export async function createPickupStrike(sellerId: string, payload: {
@@ -274,6 +301,172 @@ export namespace AdminFinancials {
         });
         const qs = search.toString();
         return request(`${BASE_PATH}/orders${qs ? `?${qs}` : ''}`, 'GET', undefined, getToken());
+    }
+}
+
+export namespace AdminPortal {
+    const BASE_PATH = '/admin';
+
+    const withQuery = (path: string, params?: Record<string, string | number | undefined | null>) => {
+        const search = new URLSearchParams();
+        Object.entries(params || {}).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && String(value).length > 0) {
+                search.set(key, String(value));
+            }
+        });
+        const query = search.toString();
+        return `${path}${query ? `?${query}` : ''}`;
+    };
+
+    export async function getHealth(): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/health`, 'GET', undefined, getToken());
+    }
+
+    export async function listUsers(params?: {
+        page?: number;
+        limit?: number;
+        q?: string;
+        role?: string;
+        account_status?: string;
+    }): Promise<APIResponse<any>> {
+        return request(withQuery(`${BASE_PATH}/users`, params), 'GET', undefined, getToken());
+    }
+
+    export async function listSellers(params?: {
+        status?: 'pending' | 'active' | 'suspended' | 'rejected';
+        q?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<APIResponse<any>> {
+        return request(withQuery(`${BASE_PATH}/sellers`, params), 'GET', undefined, getToken());
+    }
+
+    export async function updateSellerProfile(sellerId: string, payload: {
+        business_name?: string;
+        contact_person?: string;
+        phone_number?: string;
+        email?: string;
+        legal_name?: string;
+        commission_rate?: number;
+        city?: string;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/profile`, 'PATCH', payload, getToken());
+    }
+
+    export async function bulkUpdateSellerStatus(payload: {
+        seller_ids: string[];
+        status: 'pending' | 'active' | 'suspended' | 'rejected';
+        note?: string;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/status`, 'PATCH', payload, getToken());
+    }
+
+    export async function getSellerInventory(sellerId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/inventory`, 'GET', undefined, getToken());
+    }
+
+    export async function updateSellerInventory(sellerId: string, payload: {
+        product_id: string;
+        variant_id: string;
+        available_quantity: number;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/inventory`, 'PUT', payload, getToken());
+    }
+
+    export async function bulkUpdateSellerInventory(payload: {
+        seller_id: string;
+        updates: Array<{ product_id: string; variant_id: string; available_quantity: number }>;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/inventory/bulk`, 'PUT', payload, getToken());
+    }
+
+    export async function getSellerWallet(sellerId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/wallet`, 'GET', undefined, getToken());
+    }
+
+    export async function adjustSellerWallet(sellerId: string, payload: {
+        amount: number;
+        direction: 'debit' | 'credit';
+        reason: string;
+        adjustment_type: string;
+        related_order_id?: string;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/wallet/adjustments`, 'POST', payload, getToken());
+    }
+
+    export async function listSellerDrafts(params?: {
+        email?: string;
+        step?: number;
+        page?: number;
+        limit?: number;
+    }): Promise<APIResponse<any>> {
+        return request(withQuery(`${BASE_PATH}/seller-drafts`, params), 'GET', undefined, getToken());
+    }
+
+    export async function listProducts(params?: {
+        seller_id?: string;
+        status?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<APIResponse<any>> {
+        return request(withQuery(`${BASE_PATH}/products`, params), 'GET', undefined, getToken());
+    }
+
+    export async function listProductQueue(): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products-queue`, 'GET', undefined, getToken());
+    }
+
+    export async function rejectProductQueueItem(queueId: string, reason: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products-queue/${encodeURIComponent(queueId)}/reject`, 'POST', { reason }, getToken());
+    }
+
+    export async function bulkPromoteProductQueue(payload: { queue_ids: string[] }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products-queue/bulk/promote`, 'POST', payload, getToken());
+    }
+
+    export async function bulkRejectProductQueue(payload: { queue_ids: string[]; reason: string }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products-queue/bulk/reject`, 'POST', payload, getToken());
+    }
+
+    export async function bulkDeleteProductQueue(payload: { queue_ids: string[] }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products-queue/bulk/delete`, 'POST', payload, getToken());
+    }
+
+    export async function listOrders(): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders`, 'GET', undefined, getToken());
+    }
+
+    export async function getOrder(orderId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}`, 'GET', undefined, getToken());
+    }
+
+    export async function bulkUpdateOrders(payload: {
+        updates: Array<{ order_id: string; status: string; note?: string }>;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/status`, 'PATCH', payload, getToken());
+    }
+
+    export async function bulkCancelOrders(payload: { order_ids: string[]; reason: string }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/bulk-cancel`, 'POST', payload, getToken());
+    }
+
+    export async function updateOrderCustomer(orderId: string, payload: {
+        name?: string;
+        email?: string;
+        phone?: string;
+        address_line1?: string;
+        address_line2?: string;
+        city?: string;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/customer`, 'PATCH', payload, getToken());
+    }
+
+    export async function cancelOrder(orderId: string, reason: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/cancel`, 'POST', { reason }, getToken());
+    }
+
+    export async function getWaitlist(): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/waitlist`, 'GET', undefined, getToken());
     }
 }
 

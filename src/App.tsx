@@ -34,6 +34,7 @@ const TermsConditions = React.lazy(() => import('./components/policies/TermsCond
 
 const AdminAuth = React.lazy(() => import("./components/admin/AdminAuth"));
 const AdminDashboard = React.lazy(() => import("./components/admin/AdminDashboard"));
+const AdminControlTower = React.lazy(() => import("./components/admin/AdminControlTower"));
 const AdminProtectedRoute = React.lazy(() => import("./components/admin/ProtectedRoute"));
 const SellerManageOrders = React.lazy(() => import('./components/seller/ManageOrders'));
 const ShopifySuccess = React.lazy(() => import('./components/seller/ShopifySuccess'));
@@ -283,9 +284,10 @@ function RoutedApp() {
                   <Route path="/shopify/success" element={<ShopifySuccess />} />
 
                   <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}>
-                    <Route index element={<PlatformStats />} />
+                    <Route index element={<AdminControlTower />} />
                     
                     {/* Probe Engine */}
+                    <Route path="probe/overview" element={<PlatformStats />} />
                     <Route path="probe/real-time" element={<ProbeRealTime />} />
                     <Route path="financials" element={<AdminFinancialsPage />} />
                     <Route path="probe/commerce" element={<ProbeCommerce />} />

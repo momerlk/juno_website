@@ -9,19 +9,20 @@ import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 export const navigation = [
   {
-    group: 'Core',
+    group: 'Operations',
     items: [
-      { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, subtitle: 'Platform-wide fulfillment' },
-      { name: 'Logistics', href: '/admin/logistics', icon: Truck, subtitle: 'Booking, exports, and dispatch ops' },
+      { name: 'Control Tower', href: '/admin', icon: LayoutDashboard, subtitle: 'Queues, bottlenecks, and finance posture' },
+      { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, subtitle: 'Platform-wide fulfillment desk' },
+      { name: 'Logistics', href: '/admin/logistics', icon: Truck, subtitle: 'Booking, exports, and pickup management' },
+      { name: 'Sellers', href: '/admin/sellers', icon: ShieldCheck, subtitle: 'Approvals, remediation, and wallet ops' },
+      { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Queue moderation and live catalog control' },
       { name: 'Campaigns', href: '/admin/campaigns', icon: Megaphone, subtitle: 'Acquisition campaigns' },
-      { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Queue and catalog management' },
-      { name: 'Sellers', href: '/admin/sellers', icon: ShieldCheck, subtitle: 'Seller onboarding and moderation' },
     ]
   },
   {
-    group: 'Insights',
+    group: 'Intelligence',
     items: [
-      { name: 'Probe Overview', href: '/admin', icon: LayoutDashboard, subtitle: 'Platform KPIs and trends' },
+      { name: 'Probe Overview', href: '/admin/probe/overview', icon: LayoutDashboard, subtitle: 'Platform KPIs and trend intelligence' },
       { name: 'Financials', href: '/admin/financials', icon: BarChart2, subtitle: 'GMV, take rate, and income' },
       { name: 'Real-time', href: '/admin/probe/real-time', icon: Zap, subtitle: 'Live event stream' },
       { name: 'Commerce', href: '/admin/probe/commerce', icon: BarChart2, subtitle: 'Sales and funnel analytics' },
@@ -51,8 +52,8 @@ export const navigation = [
   {
     group: 'System',
     items: [
-      { name: 'Infrastructure', href: '/admin/system', icon: Settings, subtitle: 'Global system tools' },
-      { name: 'API Status', href: '/admin/api-status', icon: Database, subtitle: 'Health and error logs' },
+      { name: 'Infrastructure', href: '/admin/system', icon: Settings, subtitle: 'Health, waitlist, OTPs, and tooling' },
+      { name: 'API Status', href: '/admin/api-status', icon: Database, subtitle: 'Health docs and endpoint coverage' },
     ]
   }
 ];

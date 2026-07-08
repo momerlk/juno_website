@@ -1,56 +1,96 @@
 # Admin Module
 
-Platform administration endpoints.
+Platform administration endpoints for ops, moderation, catalog control, seller onboarding, logistics, finance, and user management.
 
 Auth:
-- Every endpoint in this module requires admin auth.
+- Every endpoint in this module requires admin auth except `POST /api/v2/admin/auth/login`.
 - Send `Authorization: Bearer <admin_token>`.
 
-Router coverage:
+---
+
+## Router Coverage
+
+### Auth + System
 - `POST /api/v2/admin/auth/login`
 - `GET /api/v2/admin/health`
-- `GET /api/v2/admin/orders`
-- `PUT /api/v2/admin/orders/{orderID}`
-- `GET /api/v2/admin/carts`
-- `GET /api/v2/admin/products-queue`
-- `PUT /api/v2/admin/products-queue/{id}/enrich`
-- `POST /api/v2/admin/products-queue/{id}/promote`
-- `DELETE /api/v2/admin/products-queue/{id}`
-- `GET /api/v2/admin/otps`
-- `GET /api/v2/admin/waitlist`
+
+### User Management
 - `GET /api/v2/admin/users`
+- `POST /api/v2/admin/users`
+- `GET /api/v2/admin/users/{id}`
+- `PATCH /api/v2/admin/users/{id}`
+- `PATCH /api/v2/admin/users/{id}/status`
+- `GET /api/v2/admin/otps`
+
+### Seller Management
 - `GET /api/v2/admin/sellers`
 - `GET /api/v2/admin/sellers/{id}`
+- `PATCH /api/v2/admin/sellers/{id}/profile`
 - `PUT /api/v2/admin/sellers/{id}/approve`
-- `GET /api/v2/admin/financials/summary`
-- `GET /api/v2/admin/financials/orders`
+- `PATCH /api/v2/admin/sellers/{id}/status`
+- `PATCH /api/v2/admin/sellers/status`
+- `GET /api/v2/admin/sellers/{id}/inventory`
+- `PUT /api/v2/admin/sellers/{id}/inventory`
+- `PUT /api/v2/admin/sellers/inventory/bulk`
+- `GET /api/v2/admin/sellers/{sellerID}/wallet`
+- `POST /api/v2/admin/sellers/{sellerID}/wallet/adjustments`
+- `GET /api/v2/admin/seller-drafts`
+
+### Product Management
+- `GET /api/v2/admin/products`
+- `POST /api/v2/admin/products`
+- `PATCH /api/v2/admin/products/bulk`
+- `POST /api/v2/admin/products/bulk-delete`
+- `GET /api/v2/admin/products/{id}`
+- `PATCH /api/v2/admin/products/{id}`
+- `DELETE /api/v2/admin/products/{id}`
+
+### Product Queue Management
+- `GET /api/v2/admin/products-queue`
+- `POST /api/v2/admin/products-queue/bulk/promote`
+- `POST /api/v2/admin/products-queue/bulk/reject`
+- `POST /api/v2/admin/products-queue/bulk/delete`
+- `GET /api/v2/admin/products-queue/{id}`
+- `PUT /api/v2/admin/products-queue/{id}`
+- `PUT /api/v2/admin/products-queue/{id}/enrich`
+- `POST /api/v2/admin/products-queue/{id}/promote`
+- `POST /api/v2/admin/products-queue/{id}/reject`
+- `DELETE /api/v2/admin/products-queue/{id}`
+
+### Order Management
+- `GET /api/v2/admin/orders`
+- `GET /api/v2/admin/orders/{orderID}`
+- `PUT /api/v2/admin/orders/{orderID}`
+- `PATCH /api/v2/admin/orders/status`
+- `POST /api/v2/admin/orders/bulk-cancel`
+- `PATCH /api/v2/admin/orders/{orderID}/customer`
+- `POST /api/v2/admin/orders/{orderID}/cancel`
+- `GET /api/v2/admin/carts`
+
+### Logistics Operations
 - `GET /api/v2/admin/logistics/operational-config`
+- `PUT /api/v2/admin/logistics/operational-config`
 - `GET /api/v2/admin/logistics/orders/{orderID}/booking-data`
 - `POST /api/v2/admin/logistics/booking-data/bulk`
 - `POST /api/v2/admin/logistics/exports`
 - `GET /api/v2/admin/logistics/exports`
 - `POST /api/v2/admin/logistics/orders/{orderID}/manual-booking`
+- `POST /api/v2/admin/logistics/orders/manual-booking/bulk`
 - `POST /api/v2/admin/logistics/orders/{orderID}/dex-location-verification`
 - `POST /api/v2/admin/logistics/orders/{orderID}/dispatch-override`
+- `POST /api/v2/admin/logistics/orders/dispatch-override/bulk`
 - `POST /api/v2/admin/logistics/sellers/{sellerID}/pickup-strikes`
 - `GET /api/v2/admin/logistics/pickup-aging`
 - `POST /api/v2/admin/logistics/pickup-aging/process`
 
+### Financials + Misc
+- `GET /api/v2/admin/financials/summary`
+- `GET /api/v2/admin/financials/orders`
+- `GET /api/v2/admin/waitlist`
+
 ---
 
-## Shared Response Schemas
-
-### `Admin`
-```json
-{
-  "id": "uuid",
-  "email": "admin@juno.api",
-  "name": "Admin Name",
-  "role": "admin",
-  "created_at": "2026-03-29T10:30:00Z",
-  "updated_at": "2026-03-29T10:30:00Z"
-}
-```
+## Shared Schemas
 
 ### `AdminAuthResponse`
 ```json
@@ -67,6 +107,14 @@ Router coverage:
 }
 ```
 
+### `ApprovalResponse`
+```json
+{
+  "message": "Seller approved",
+  "welcome_email_queued": true
+}
+```
+
 ### `HealthResponse`
 ```json
 {
@@ -79,24 +127,14 @@ Router coverage:
 }
 ```
 
-### `ApprovalResponse`
-```json
-{
-  "message": "Seller approved",
-  "welcome_email_queued": true
-}
-```
-
-The same schema is used for rejection/suspension responses, with `message` changed accordingly.
-
 ---
 
-## Authentication
+## Auth + System
 
 ### Admin Login
 `POST /api/v2/admin/auth/login`
 
-**Body**
+Body:
 ```json
 {
   "email": "omer@juno",
@@ -104,242 +142,343 @@ The same schema is used for rejection/suspension responses, with `message` chang
 }
 ```
 
-**Response `200`**: `AdminAuthResponse`
-
-**Common errors**
-- `401 UNAUTHORIZED` — invalid credentials
-
----
-
-## System
+Response `200`: `AdminAuthResponse`
 
 ### System Health
 `GET /api/v2/admin/health`
 
-Auth: admin token required
-
-**Response `200`**: `HealthResponse`
-
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
+Response `200`: `HealthResponse`
 
 ---
 
-## Logistics Operations
+## User Management
 
-### Operational Config
-`GET /api/v2/admin/logistics/operational-config`
+### List Users
+`GET /api/v2/admin/users`
 
-Returns the runtime policy currently enforced by the backend: DEX pickup threshold, seller-center dropoff SLA, strike expiry, strike suspension threshold, penalty amounts, DEX seller-center CSV source, phone export format, COD split behavior, DEX location strictness, wallet deduction policy, and seller-center late-dispatch liability policy.
+Returns all registered users.
 
-The defaults are:
-- DEX pickup threshold: `5`
-- Seller-center dropoff SLA: `24` hours
-- Strike expiry: `30` days
-- Suspension threshold: `3` active strikes
-- Penalties: read from env vars and default to `0` until approved
+### Create User
+`POST /api/v2/admin/users`
 
-### Dispatch Override
-`POST /api/v2/admin/logistics/orders/{orderID}/dispatch-override`
-
-Use this to override DEX dispatch mode after ops review.
-
-**Body**
+Body:
 ```json
 {
-  "dispatch_mode": "carrier_pickup",
-  "reason": "Strategic seller approved for pickup below threshold",
-  "approval_reference": "OPS-2026-0515-001",
-  "approved_by": "ops-lead@juno"
+  "name": "Sara Ahmed",
+  "email": "sara@example.com",
+  "phone_number": "+923001234567",
+  "password": "StrongPass123",
+  "role": "user"
 }
 ```
 
-If the seller has fewer than the DEX pickup threshold and the override changes the parcel to `carrier_pickup` or `manual_override`, `approval_reference` is required. `approved_by` defaults to the acting admin.
+Creates an active, verified account directly from admin.
 
-### Pickup Aging
-`GET /api/v2/admin/logistics/pickup-aging?seller_id=seller-1&carrier=dex`
+### Get User
+`GET /api/v2/admin/users/{id}`
 
-Returns ready parcels that are still waiting for carrier pickup or seller-center dropoff, including `seller_dispatch_due_at`, `days_waiting_for_pickup`, `pickup_urgency`, threshold state, and strike eligibility.
+Returns a single user profile.
 
-`POST /api/v2/admin/logistics/pickup-aging/process`
+### Update User
+`PATCH /api/v2/admin/users/{id}`
 
-Processes the aging queue and auto-creates a strike when a row is breached and no active strike already exists for the same order/reason.
-
-### Pickup Strikes
-`POST /api/v2/admin/logistics/sellers/{sellerID}/pickup-strikes`
-
-**Body**
+Body:
 ```json
 {
-  "order_id": "order-1",
-  "reason": "seller_center_dropoff_missed",
-  "carrier": "dex",
-  "notes": "Seller missed seller-center dropoff due time"
+  "name": "Sara A.",
+  "institute": "LUMS",
+  "gender": "female",
+  "role": "staff",
+  "account_status": "active"
 }
 ```
 
-The response includes active strike count, expiry time, penalty type, and penalty amount. On the configured active strike threshold, the seller is suspended.
+Use this for profile edits plus role/status corrections in one request.
 
----
+### Update User Status
+`PATCH /api/v2/admin/users/{id}/status`
 
-## Orders
-
-### Get All Orders
-`GET /api/v2/admin/orders`
-
-Auth: admin token required
-
-Returns all child orders across all sellers and users.
-
-**Response `200`**
+Body:
 ```json
-[
-  {
-    "id": "uuid",
-    "parent_order_id": "parent-1",
-    "order_number": "ORD-00123",
-    "seller_id": "seller-1",
-    "user_id": "user-1",
-    "order_items": [
-      {
-        "id": "item-1",
-        "product_id": "prod-1",
-        "variant_id": "var-1",
-        "quantity": 1,
-        "unit_price": 3500
-      }
-    ],
-    "status": "confirmed",
-    "total": 3700,
-    "created_at": "2026-03-28T14:30:00Z"
-  }
-]
-```
-
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
-
----
-
-### Update Order
-`PUT /api/v2/admin/orders/{orderID}` (Legacy)
-`PATCH /api/v2/commerce/admin/orders/{id}/status` (Recommended for Tracking)
-
-Auth: admin token required
-
-The `PATCH` route under commerce module is recommended as it supports the **Interactive Order Tracking** timeline and FSM validation.
-
-**Body (PATCH commerce route)**
-```json
-{ 
-  "status": "at_warehouse",
-  "note": "Optional update note"
+{
+  "account_status": "suspended",
+  "role": "user"
 }
 ```
 
-See [Commerce Module Tracking Docs](../commerce/docs.md#admin-order-management) for additional interactive tracking endpoints:
-- `PUT /api/v2/commerce/admin/orders/{id}/tracking/warehouse` — Set map anchor
-- `PATCH /api/v2/commerce/admin/orders/{id}/tracking/eta` — Manual ETA override
+Use this when the admin action is specifically account access or role control.
 
-**Common errors**
-- `400 INVALID_BODY` — malformed JSON
-- `400` — invalid order status
-- `401 UNAUTHORIZED` — missing or invalid admin token
+### Get Active OTPs
+`GET /api/v2/admin/otps`
+
+Returns users with active, non-expired OTPs.
 
 ---
 
-### Get All Carts
-`GET /api/v2/admin/carts`
+## Seller Management
 
-Auth: admin token required
+### List Sellers
+`GET /api/v2/admin/sellers?status=pending&q=studio`
 
-**Response `200`**
+Filters:
+- `status` — `pending`, `active`, `suspended`, `rejected`
+- `q` — matches seller ID, name, email, business name, or legal name
+
+### Get Seller
+`GET /api/v2/admin/sellers/{id}`
+
+Returns the full seller profile.
+
+### Update Seller Profile
+`PATCH /api/v2/admin/sellers/{id}/profile`
+
+Body:
 ```json
-[
-  {
-    "id": "uuid",
-    "user_id": "uuid",
-    "items": [
-      {
-        "product_id": "uuid",
-        "variant_id": "uuid",
-        "quantity": 2,
-        "price": 3500
-      }
-    ],
-    "gift_details": null,
-    "created_at": "2026-03-28T14:30:00Z",
-    "updated_at": "2026-03-28T15:00:00Z"
-  }
-]
+{
+  "business_name": "Luna Atelier",
+  "contact_person": "Ayesha Khan",
+  "phone_number": "+923001112233",
+  "email": "ops@lunaatelier.pk",
+  "legal_name": "Luna Atelier Pvt Ltd",
+  "commission_rate": 0.15,
+  "city": "Karachi"
+}
 ```
 
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
+Use this for end-to-end admin intervention during approval, remediation, or account cleanup.
+
+### Approve or Suspend Seller
+`PUT /api/v2/admin/sellers/{id}/approve`
+
+Body:
+```json
+{
+  "approved": true,
+  "note": "KYC verified"
+}
+```
+
+### Update Seller Status
+`PATCH /api/v2/admin/sellers/{id}/status`
+
+Body:
+```json
+{
+  "status": "rejected",
+  "note": "Banking information incomplete"
+}
+```
+
+Allowed statuses:
+- `pending`
+- `active`
+- `suspended`
+- `rejected`
+
+### Bulk Update Seller Status
+`PATCH /api/v2/admin/sellers/status`
+
+Body:
+```json
+{
+  "seller_ids": ["seller-1", "seller-2"],
+  "status": "active",
+  "note": "Approved in weekly batch"
+}
+```
+
+### Get Seller Inventory
+`GET /api/v2/admin/sellers/{id}/inventory`
+
+Returns an admin inventory checklist flattened by product variant:
+- `product_id`
+- `product_title`
+- `variant_id`
+- `variant_title`
+- `sku`
+- `available_quantity`
+- `price`
+- `in_stock`
+
+### Update Seller Inventory
+`PUT /api/v2/admin/sellers/{id}/inventory`
+
+Body:
+```json
+{
+  "product_id": "prod-1",
+  "variant_id": "var-1",
+  "available_quantity": 18
+}
+```
+
+Updates the selected variant and recomputes product-level stock totals.
+
+### Bulk Update Seller Inventory
+`PUT /api/v2/admin/sellers/inventory/bulk`
+
+Body:
+```json
+{
+  "seller_id": "seller-1",
+  "updates": [
+    {
+      "product_id": "prod-1",
+      "variant_id": "var-s",
+      "available_quantity": 10
+    },
+    {
+      "product_id": "prod-2",
+      "variant_id": "var-m",
+      "available_quantity": 0
+    }
+  ]
+}
+```
+
+Returns per-row success, missing, or failed results.
+
+### Seller Wallet
+`GET /api/v2/admin/sellers/{sellerID}/wallet`
+
+Returns current balance plus recent ledger entries.
+
+### Adjust Seller Wallet
+`POST /api/v2/admin/sellers/{sellerID}/wallet/adjustments`
+
+Body:
+```json
+{
+  "amount": 500,
+  "direction": "debit",
+  "reason": "late_dispatch_penalty",
+  "adjustment_type": "penalty",
+  "related_order_id": "order-1"
+}
+```
+
+### List Seller Registration Drafts
+`GET /api/v2/admin/seller-drafts?email=brand@example.com&step=3&page=1&limit=50`
+
+Shows onboarding drafts that have not yet become full seller accounts.
 
 ---
 
-## Product Queue
+## Product Management
 
-### Get Products Queue
+### List Catalog Products
+`GET /api/v2/admin/products?seller_id=seller-1&status=active&page=1&limit=50`
+
+Admin listing for live catalog operations.
+
+### Create Catalog Product
+`POST /api/v2/admin/products`
+
+Body: full `catalog.Product` payload.
+
+Admin product creation is direct-to-catalog:
+- seller identity is validated
+- seller name/logo/city are refreshed from seller profile
+- empty product IDs are auto-generated
+- empty status defaults to `active`
+- `published_at` is auto-set when creating an active product
+
+### Get Catalog Product
+`GET /api/v2/admin/products/{id}`
+
+Returns the active catalog product.
+
+### Update Catalog Product
+`PATCH /api/v2/admin/products/{id}`
+
+Body: `catalog.UpdateProductRequest`
+
+Example:
+```json
+{
+  "title": "Updated product title",
+  "short_description": "Sharper admin-managed merchandising copy",
+  "pricing": {
+    "price": 3999,
+    "compare_at_price": 4500,
+    "currency": "PKR",
+    "discounted": true,
+    "discount_value": 11.13,
+    "discounted_price": 3999,
+    "brand_price": 3900,
+    "shipping_included": false
+  },
+  "status": "active",
+  "is_featured": true
+}
+```
+
+### Delete Catalog Product
+`DELETE /api/v2/admin/products/{id}`
+
+Removes the catalog product.
+
+### Bulk Update Catalog Products
+`PATCH /api/v2/admin/products/bulk`
+
+Body:
+```json
+{
+  "product_ids": ["prod-1", "prod-2"],
+  "update": {
+    "status": "archived",
+    "is_featured": false
+  }
+}
+```
+
+Applies the same partial update payload to every listed product.
+
+### Bulk Delete Catalog Products
+`POST /api/v2/admin/products/bulk-delete`
+
+Body:
+```json
+{
+  "product_ids": ["prod-3", "prod-4", "prod-5"]
+}
+```
+
+Deletes many products in one request and reports per-product outcomes.
+
+---
+
+## Product Queue Management
+
+Queue status flow:
+- `queued`
+- `synced`
+- `enrichment_pending`
+- `ready`
+- `promoted`
+- `failed`
+
+### List Products Queue
 `GET /api/v2/admin/products-queue`
 
-Auth: admin token required
+Returns all queue items across sellers.
 
-Returns all seller queue items regardless of status.
+### Get Queue Item
+`GET /api/v2/admin/products-queue/{id}`
 
-**Response `200`**
-```json
-[
-  {
-    "id": "queue-1",
-    "seller_id": "seller-1",
-    "product": {
-      "id": "prod-1",
-      "handle": "floral-lawn-suit",
-      "title": "Floral Lawn Suit",
-      "description": "Printed 3-piece lawn suit",
-      "seller_id": "seller-1",
-      "seller_name": "Raza Fabrics",
-      "categories": [],
-      "product_type": "Eastern",
-      "pricing": { "price": 3500, "currency": "PKR", "discounted": false },
-      "images": [],
-      "variants": [],
-      "options": [],
-      "tags": [],
-      "inventory": { "in_stock": true, "available_quantity": 12 },
-      "shipping_details": { "free_shipping": false },
-      "status": "draft",
-      "created_at": "2026-03-28T14:30:00Z",
-      "updated_at": "2026-03-28T14:30:00Z",
-      "rating": 0,
-      "review_count": 0,
-      "is_trending": false,
-      "is_featured": false
-    },
-    "status": "queued",
-    "source": "manual",
-    "errors": [],
-    "created_at": "2026-03-28T14:30:00Z",
-    "updated_at": "2026-03-28T15:00:00Z"
-  }
-]
-```
+Returns one queue item including seller, product snapshot, enrichment, and errors.
 
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
+### Update Queue Product
+`PUT /api/v2/admin/products-queue/{id}`
 
----
+Body: full `catalog.Product` payload
+
+Use this when ops or merchandising needs to fix copy, variants, images, tags, or pricing before promotion. Seller linkage and queue enrichment are preserved.
 
 ### Enrich Queue Item
 `PUT /api/v2/admin/products-queue/{id}/enrich`
 
-Auth: admin token required
-
-Enriches a queued product for any seller by queue item ID.
-
-**Body**
+Body:
 ```json
 {
   "product_type": "Eastern",
@@ -351,152 +490,384 @@ Enriches a queued product for any seller by queue item ID.
 }
 ```
 
-**Response `200`**
-```json
-{ "message": "Queue item enriched successfully" }
-```
-
-**Common errors**
-- `400 BAD_REQUEST` — invalid body or invalid queue status
-- `401 UNAUTHORIZED` — missing or invalid admin token
-- `404 NOT_FOUND` — queue item not found
-
----
-
 ### Promote Queue Item
 `POST /api/v2/admin/products-queue/{id}/promote`
 
-Auth: admin token required
+Queue item must already be `ready`.
 
-Promotes a queue item to the active catalog. Queue item must already be in `ready` status.
+### Reject Queue Item
+`POST /api/v2/admin/products-queue/{id}/reject`
 
-**Response `200`**
+Body:
 ```json
-{ "message": "Queue item promoted successfully" }
+{
+  "reason": "Missing size chart and inconsistent SKU structure"
+}
 ```
 
-**Common errors**
-- `400 BAD_REQUEST` — queue item is not in `ready` status
-- `401 UNAUTHORIZED` — missing or invalid admin token
-- `404 NOT_FOUND` — queue item not found
+Sets the queue item to `failed`, appends the rejection reason to queue errors, and emails the seller.
 
----
+### Bulk Promote Queue Items
+`POST /api/v2/admin/products-queue/bulk/promote`
+
+Body:
+```json
+{
+  "queue_ids": ["queue-1", "queue-2"]
+}
+```
+
+Promotes multiple `ready` queue items in one request.
+
+### Bulk Reject Queue Items
+`POST /api/v2/admin/products-queue/bulk/reject`
+
+Body:
+```json
+{
+  "queue_ids": ["queue-3", "queue-4"],
+  "reason": "Missing imagery and invalid variant setup"
+}
+```
+
+Rejects multiple queue items with one shared reason.
+
+### Bulk Delete Queue Items
+`POST /api/v2/admin/products-queue/bulk/delete`
+
+Body:
+```json
+{
+  "queue_ids": ["queue-5", "queue-6"]
+}
+```
+
+Deletes multiple queue items and returns per-item results.
 
 ### Delete Queue Item
 `DELETE /api/v2/admin/products-queue/{id}`
 
-Auth: admin token required
-
-Deletes a queue item from the moderation queue.
-
-**Response `200`**
-```json
-{ "message": "Queue item deleted successfully" }
-```
-
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
-- `404 NOT_FOUND` — queue item not found
+Hard-removes the queue record.
 
 ---
 
-## Users and OTPs
+## Order Management
 
-### Get All Users
-`GET /api/v2/admin/users`
+### List Orders
+`GET /api/v2/admin/orders`
 
-Auth: admin token required
+Returns all child orders across the platform.
 
-Returns all registered users.
+### Get Order
+`GET /api/v2/admin/orders/{orderID}`
 
-**Response `200`**: array of `identity.User` objects
+Returns the full child order including tracking snapshot and shipping address.
 
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
+### Update Order Status (Legacy)
+`PUT /api/v2/admin/orders/{orderID}`
 
----
-
-### Get Active OTPs
-`GET /api/v2/admin/otps`
-
-Auth: admin token required
-
-Returns users with active, non-expired OTPs.
-
-**Response `200`**: array of `identity.User` objects
-
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
-
----
-
-## Sellers
-
-### Get All Sellers
-`GET /api/v2/admin/sellers`
-
-Auth: admin token required
-
-Returns all seller accounts across statuses.
-
-**Response `200`**: array of `seller.SellerProfile` objects
-
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
-
----
-
-### Get Seller
-`GET /api/v2/admin/sellers/{id}`
-
-Auth: admin token required
-
-Returns the full seller profile.
-
-**Response `200`**: `seller.SellerProfile`
-
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
-- `404 NOT_FOUND` — seller not found
-
----
-
-### Approve or Suspend Seller
-`PUT /api/v2/admin/sellers/{id}/approve`
-
-Auth: admin token required
-
-Approves a seller when `approved` is true, or suspends the seller when false. Rejection notes are stored as `rejection_reason`. The email send is asynchronous and does not block the response.
-
-**Body**
+Body:
 ```json
 {
-  "approved": true,
-  "note": "KYC verified"
+  "status": "packed"
 }
 ```
 
-**Response `200`**: `ApprovalResponse`
+### Bulk Update Orders
+`PATCH /api/v2/admin/orders/status`
 
-Examples:
+Body:
 ```json
 {
-  "message": "Seller approved",
-  "welcome_email_queued": true
+  "updates": [
+    { "order_id": "order-1", "status": "packed" },
+    { "order_id": "order-2", "status": "at_warehouse" },
+    { "order_id": "order-3", "status": "cancelled", "note": "Ops cancellation" }
+  ]
 }
 ```
 
+Supported statuses:
+- `pending`
+- `confirmed`
+- `packed`
+- `handed_to_rider`
+- `at_warehouse`
+- `out_for_delivery`
+- `delivery_attempted`
+- `delivered`
+- `cancelled`
+- `returned`
+
+### Bulk Cancel Orders
+`POST /api/v2/admin/orders/bulk-cancel`
+
+Body:
 ```json
 {
-  "message": "Seller suspended",
-  "welcome_email_queued": true
+  "order_ids": ["order-10", "order-11", "order-12"],
+  "reason": "Inventory audit failed"
 }
 ```
 
-**Common errors**
-- `400 INVALID_BODY` — malformed JSON
-- `401 UNAUTHORIZED` — missing or invalid admin token
-- `404 NOT_FOUND` — seller not found
+Cancels multiple orders and appends the same cancellation reason to each tracking history.
+
+### Update Order Customer
+`PATCH /api/v2/admin/orders/{orderID}/customer`
+
+Body:
+```json
+{
+  "name": "Sara Ahmed",
+  "email": "sara@example.com",
+  "phone": "+923001234567",
+  "address_line1": "12 Main Gulberg",
+  "address_line2": "Near Stadium Road",
+  "city": "Lahore"
+}
+```
+
+Use this to repair buyer-facing delivery details without a low-level DB edit.
+
+### Cancel Order
+`POST /api/v2/admin/orders/{orderID}/cancel`
+
+Body:
+```json
+{
+  "reason": "Fraud review failed"
+}
+```
+
+Adds a cancellation milestone to tracking and persists the cancelled state.
+
+### Get All Carts
+`GET /api/v2/admin/carts`
+
+Returns all carts, including guest carts stored by `X-Guest-Cart-Id`.
+
+### Recommended Cross-Module Admin Order Tracking
+
+For sequential tracking transitions and interactive timeline management, also use:
+- `GET /api/v2/commerce/admin/orders`
+- `GET /api/v2/commerce/admin/orders/{id}`
+- `POST /api/v2/commerce/admin/orders/{id}/cancel`
+- `PATCH /api/v2/commerce/admin/orders/{id}/status`
+- `PUT /api/v2/commerce/admin/orders/{id}/tracking/warehouse`
+- `PATCH /api/v2/commerce/admin/orders/{id}/tracking/eta`
+
+Documentation: [Commerce Module Tracking Docs](../commerce/docs.md#admin-order-management)
+
+---
+
+## Logistics Operations
+
+### Get Operational Config
+`GET /api/v2/admin/logistics/operational-config`
+
+Returns the active runtime policy enforced by the backend:
+- DEX pickup threshold
+- seller-center dropoff SLA
+- strike expiry
+- strike suspension threshold
+- configured penalties
+- seller-center source
+- recipient phone export format
+- COD split policy
+- DEX location strictness
+- wallet deduction policy
+- seller-center liability policy
+- supported carriers
+
+### Update Operational Config
+`PUT /api/v2/admin/logistics/operational-config`
+
+Body:
+```json
+{
+  "max_strikes_before_suspension": 4,
+  "strike_expiry_days": 45,
+  "dex_pickup_threshold": 7,
+  "sla_hours": 36,
+  "supported_carriers": ["DEX", "Smartlane", "Trax"]
+}
+```
+
+This updates the in-memory operational overrides used by admin logistics workflows.
+
+### Booking Data
+`GET /api/v2/admin/logistics/orders/{orderID}/booking-data?carrier=dex`
+
+Returns booking validation, warnings, parcel data, carrier payload, export preview, and location resolution when available.
+
+### Bulk Booking Data
+`POST /api/v2/admin/logistics/booking-data/bulk`
+
+Body:
+```json
+{
+  "carrier": "dex",
+  "order_ids": ["order-1", "order-2"],
+  "include_location_resolution": true
+}
+```
+
+### Create Logistics Export
+`POST /api/v2/admin/logistics/exports`
+
+Body:
+```json
+{
+  "carrier": "smartlane",
+  "order_ids": ["order-1", "order-2"],
+  "format": "xlsx",
+  "require_human_verified_locations": false
+}
+```
+
+### List Logistics Exports
+`GET /api/v2/admin/logistics/exports?carrier=dex&status=ready&page=1&limit=20`
+
+### Manual Booking
+`POST /api/v2/admin/logistics/orders/{orderID}/manual-booking`
+
+Body:
+```json
+{
+  "carrier": "dex",
+  "consignment_number": "CN-12345",
+  "airway_bill_number": "AWB-12345",
+  "tracking_url": "https://carrier.example.com/track/CN-12345",
+  "notes": "Booked by ops after portal outage"
+}
+```
+
+### Bulk Manual Booking
+`POST /api/v2/admin/logistics/orders/manual-booking/bulk`
+
+Body:
+```json
+{
+  "bookings": [
+    {
+      "order_id": "order-1",
+      "carrier": "dex",
+      "consignment_number": "CN-1001",
+      "airway_bill_number": "AWB-1001"
+    },
+    {
+      "order_id": "order-2",
+      "carrier": "smartlane",
+      "consignment_number": "CN-1002",
+      "tracking_url": "https://carrier.example.com/track/CN-1002"
+    }
+  ]
+}
+```
+
+Writes manual booking rows for multiple orders and returns per-order outcomes.
+
+### DEX Location Verification
+`POST /api/v2/admin/logistics/orders/{orderID}/dex-location-verification`
+
+Body:
+```json
+{
+  "province": "Punjab",
+  "district": "Lahore",
+  "ward": "Gulberg",
+  "specific_address": "12 Main Gulberg",
+  "apply_as_override": true
+}
+```
+
+### Dispatch Override
+`POST /api/v2/admin/logistics/orders/{orderID}/dispatch-override`
+
+Body:
+```json
+{
+  "dispatch_mode": "carrier_pickup",
+  "reason": "Strategic seller approved for pickup below threshold",
+  "approval_reference": "OPS-2026-0515-001",
+  "approved_by": "ops-lead@juno"
+}
+```
+
+### Bulk Dispatch Override
+`POST /api/v2/admin/logistics/orders/dispatch-override/bulk`
+
+Body:
+```json
+{
+  "overrides": [
+    {
+      "order_id": "order-30",
+      "dispatch_mode": "carrier_pickup",
+      "reason": "Approved pickup exception",
+      "approval_reference": "OPS-2026-0709-01"
+    },
+    {
+      "order_id": "order-31",
+      "dispatch_mode": "manual_override",
+      "reason": "DEX routing correction"
+    }
+  ]
+}
+```
+
+Applies dispatch overrides across multiple orders with per-order success or failure reporting.
+
+### Pickup Strikes
+`POST /api/v2/admin/logistics/sellers/{sellerID}/pickup-strikes`
+
+Body:
+```json
+{
+  "order_id": "order-1",
+  "reason": "seller_center_dropoff_missed",
+  "carrier": "dex",
+  "notes": "Seller missed seller-center dropoff due time"
+}
+```
+
+### Pickup Aging
+`GET /api/v2/admin/logistics/pickup-aging?seller_id=seller-1&carrier=dex`
+
+Returns rows with:
+- `seller_dispatch_due_at`
+- `days_waiting_for_pickup`
+- `pickup_urgency`
+- threshold state
+- strike eligibility
+
+### Process Pickup Aging
+`POST /api/v2/admin/logistics/pickup-aging/process?seller_id=seller-1&carrier=dex`
+
+Creates overdue strikes where policy conditions are met and no active strike already exists for the same order/reason.
+
+---
+
+## Financials
+
+### Financial Summary
+`GET /api/v2/admin/financials/summary?from=2026-07-01&to=2026-07-31&carrier=dex`
+
+Returns:
+- GMV
+- commission revenue
+- shipping revenue
+- generated revenue
+- take rate
+- courier shipping cost
+- gross income
+- seller payout
+- booked/unbooked order counts
+
+### Financial Orders
+`GET /api/v2/admin/financials/orders?from=2026-07-01&to=2026-07-31&carrier=smartlane&page=1&limit=50`
+
+Returns order-level financial rows for reconciliation and export checks.
 
 ---
 
@@ -505,53 +876,38 @@ Examples:
 ### Get Waitlist
 `GET /api/v2/admin/waitlist`
 
-Auth: admin token required
-
 Returns all waitlist entries.
-
-**Response `200`**: array of `waitlist.WaitlistEntry` objects
-
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid admin token
-
----
 
 ---
 
 ## Cross-Module Admin Endpoints
 
-While this document covers core platform administration, specialized admin features are documented within their respective modules:
+Specialized admin functionality also exists in other modules:
 
-### Admin Catalog
-Management of collections and drops for discovery.
-- `POST /api/v2/admin/catalog/collections` — Create discovery collection
-- `GET /api/v2/admin/catalog/drops` — List all seller drops
-- `PATCH /api/v2/admin/catalog/drops/{id}/status` — Approve/Live status
-- Documentation: [Catalog Admin Docs](../catalog/docs.md)
+### Catalog Admin
+- `POST /api/v2/admin/catalog/collections`
+- `GET /api/v2/admin/catalog/drops`
+- `PATCH /api/v2/admin/catalog/drops/{id}/status`
+- `POST /api/v2/admin/catalog/drops/{id}/products`
+- `PATCH /api/v2/admin/catalog/products/{id}`
+- `DELETE /api/v2/admin/catalog/products/{id}`
 
-### Admin Campaigns
-Marketing and acquisition campaign management.
-- `POST /api/v2/admin/campaigns` — Create new marketing campaign
-- `GET /api/v2/admin/campaigns/{id}/metrics` — Performance tracking
-- Documentation: [Campaigns Docs](../campaigns/docs.md)
+Docs: [Catalog Admin Docs](../catalog/docs.md)
 
-### Admin Analytics (Probe Engine)
-Comprehensive platform-wide business intelligence and real-time monitoring across 23 modules.
-- `GET /admin/probe/overview` — Platform KPIs (DAU, Revenue, Orders, Conversion)
-- `GET /admin/probe/real-time` — Live event stream and concurrent user activity
-- `GET /admin/probe/users` — Acquisition funnels, retention cohorts, and user segments
-- `GET /admin/probe/commerce` — Sales analytics, category performance, and conversion funnels
-- `GET /admin/probe/operations` — Operational health (seller onboarding, logistics performance)
-- Documentation: [Probe Analytics Docs](../analytics/docs.md)
+### Analytics
+- `GET /admin/probe/overview`
+- `GET /admin/probe/real-time`
+- `GET /admin/probe/users`
+- `GET /admin/probe/commerce`
+- `GET /admin/probe/operations`
 
+Docs: [Probe Analytics Docs](../analytics/docs.md)
 
 ### Notifications
-- `POST /api/v2/admin/notifications/broadcast` — Send to all users
-- Documentation: [Notifications Docs](../notifications/docs.md)
+- `POST /api/v2/admin/notifications/broadcast`
 
 ### Ambassador
-- `POST /api/v2/admin/ambassador/tasks` — Assign tasks to ambassadors
-- Documentation: [Ambassador Docs](../ambassador/docs.md)
+- `POST /api/v2/admin/ambassador/tasks`
 
 ---
 
@@ -560,6 +916,7 @@ Comprehensive platform-wide business intelligence and real-time monitoring acros
 | Code | Meaning |
 |------|---------|
 | `400 INVALID_BODY` | Malformed JSON request body |
-| `400` | Invalid admin action, such as unsupported order status |
+| `400 INVALID_QUERY` | Query string validation failed |
+| `400 BAD_REQUEST` | Invalid admin action or unsupported value |
 | `401 UNAUTHORIZED` | Missing or invalid admin token |
-| `404 NOT_FOUND` | Seller not found |
+| `404 NOT_FOUND` | Requested user, seller, queue item, product, or order was not found |

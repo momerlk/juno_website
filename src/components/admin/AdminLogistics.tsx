@@ -1,803 +1,625 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, Download, RefreshCw, ShieldAlert, Truck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { AdminCommerce, AdminFinancials, AdminLogistics as AdminLogisticsAPI, type LogisticsCarrier } from '../../api/adminApi';
-import type { Order, ParentOrder } from '../../api/api.types';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  Eye,
+  FileText,
+  RefreshCw,
+  Search,
+  Settings,
+  ShieldAlert,
+  Truck,
+  X,
+} from 'lucide-react';
+import { AdminFinancials, AdminLogistics as LogisticsAPI, AdminPortal, type LogisticsCarrier } from '../../api/adminApi';
 
-type LogisticsTab = 'ready' | 'review' | 'booked' | 'exceptions' | 'exports' | 'financials';
+type LogisticsView = 'ready' | 'review' | 'booked' | 'exceptions' | 'exports' | 'config' | 'financials';
 
-const TABS: Array<{ id: LogisticsTab; label: string }> = [
-  { id: 'ready', label: 'Ready To Book' },
-  { id: 'review', label: 'Needs Review' },
+const VIEWS: Array<{ id: LogisticsView; label: string }> = [
+  { id: 'ready', label: 'Ready' },
+  { id: 'review', label: 'Needs review' },
   { id: 'booked', label: 'Booked' },
-  { id: 'exceptions', label: 'Pickup Exceptions' },
-  { id: 'exports', label: 'Carrier Exports' },
+  { id: 'exceptions', label: 'Pickup aging' },
+  { id: 'exports', label: 'Exports' },
+  { id: 'config', label: 'Policy' },
   { id: 'financials', label: 'Financials' },
 ];
 
-const formatCurrency = (v?: number) => `Rs ${(v ?? 0).toLocaleString()}`;
-
-const fuzzyMatch = (text: string, query: string) => {
-  const source = String(text || '').toLowerCase();
-  const needle = String(query || '').toLowerCase().trim();
-  if (!needle) return true;
-  if (source.includes(needle)) return true;
-
-  let i = 0;
-  for (const ch of source) {
-    if (ch === needle[i]) i += 1;
-    if (i === needle.length) return true;
+const asArray = (value: any): any[] => {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object') return [];
+  for (const key of ['rows', 'orders', 'items', 'exports', 'data']) {
+    if (Array.isArray(value[key])) return value[key];
   }
-  return false;
+  return [];
+};
+
+const money = (value?: number) => `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
+
+const dateText = (value?: string) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+};
+
+const getOrderId = (order: any) => String(order?.id || order?.order_id || '');
+const getOrderNumber = (order: any) => String(order?.order_number || order?.id || order?.order_id || '');
+const getOrderStatus = (order: any) => String(order?.status || 'pending').toLowerCase();
+const getBookingStatus = (order: any, booking: any) => String(order?.booking_status || order?.booking?.status || booking?.parcel?.booking?.status || booking?.booking_status || '').toLowerCase();
+
+const statusClass = (status: string) => {
+  if (['booked', 'exported', 'picked_up', 'delivered'].includes(status)) return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+  if (['invalid', 'failed', 'blocked', 'delivery_attempted'].includes(status)) return 'border-red-500/30 bg-red-500/10 text-red-300';
+  if (['warning', 'urgent', 'overdue'].includes(status)) return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+  return 'border-white/15 bg-white/5 text-neutral-300';
 };
 
 const AdminLogistics: React.FC = () => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<LogisticsTab>('ready');
+  const [view, setView] = useState<LogisticsView>('ready');
   const [carrier, setCarrier] = useState<LogisticsCarrier>('dex');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [operationalConfig, setOperationalConfig] = useState<any>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [bookingByOrderId, setBookingByOrderId] = useState<Record<string, any>>({});
-  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
-  const [searchOrderNumber, setSearchOrderNumber] = useState('');
-  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-
+  const [orders, setOrders] = useState<any[]>([]);
+  const [bookingById, setBookingById] = useState<Record<string, any>>({});
   const [agingRows, setAgingRows] = useState<any[]>([]);
   const [exportRows, setExportRows] = useState<any[]>([]);
-
-  const [summary, setSummary] = useState<any>(null);
   const [financialRows, setFinancialRows] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any | null>(null);
+  const [config, setConfig] = useState<any | null>(null);
+  const [configDraft, setConfigDraft] = useState<Record<string, string>>({});
+  const [query, setQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [locationDraft, setLocationDraft] = useState({ province: '', district: '', ward: '', specific_address: '' });
+  const [manualDraft, setManualDraft] = useState({ consignment_number: '', airway_bill_number: '', tracking_url: '' });
+  const [overrideDraft, setOverrideDraft] = useState({ dispatch_mode: 'carrier_pickup' as 'carrier_pickup' | 'seller_center_dropoff' | 'manual_override', reason: '', approval_reference: '' });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [verificationDraft, setVerificationDraft] = useState<Record<string, { province: string; district: string; ward: string; specific_address: string }>>({});
-  const [manualBookingDraft, setManualBookingDraft] = useState<Record<string, { consignment_number: string; airway_bill_number: string; tracking_url: string }>>({});
-  const [dispatchOverrideDraft, setDispatchOverrideDraft] = useState<Record<string, { dispatch_mode: 'carrier_pickup' | 'seller_center_dropoff' | 'manual_override'; reason: string; approval_reference: string }>>({});
-  const [printReceiptHtml, setPrintReceiptHtml] = useState<string>('');
-  const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
-  const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
-  const [confirmationMessageByOrderId, setConfirmationMessageByOrderId] = useState<Record<string, string>>({});
-
-  const loadOrdersAndBookingData = async () => {
-    const pageSize = 100;
-    const parents: ParentOrder[] = [];
-    let offset = 0;
-    let total = Number.POSITIVE_INFINITY;
-
-    while (offset < total) {
-      const parentRes = await AdminCommerce.listParentOrders({ status: 'all', limit: pageSize, offset });
-      if (!parentRes.ok) {
-        throw new Error((parentRes.body as any)?.message || 'Failed to fetch orders');
-      }
-
-      const body = parentRes.body as any;
-      const batch = (body?.orders || []) as ParentOrder[];
-      const resolvedTotal = Number(body?.total);
-      if (Number.isFinite(resolvedTotal) && resolvedTotal >= 0) total = resolvedTotal;
-      parents.push(...batch);
-
-      if (batch.length < pageSize) break;
-      offset += pageSize;
+  const loadConfig = async () => {
+    const res = await LogisticsAPI.getOperationalConfig();
+    if (res.ok) {
+      setConfig(res.body);
+      setConfigDraft({
+        max_strikes_before_suspension: String((res.body as any)?.max_strikes_before_suspension ?? (res.body as any)?.strike_suspension_threshold ?? ''),
+        strike_expiry_days: String((res.body as any)?.strike_expiry_days ?? ''),
+        dex_pickup_threshold: String((res.body as any)?.dex_pickup_threshold ?? ''),
+        sla_hours: String((res.body as any)?.sla_hours ?? (res.body as any)?.dex_seller_center_dropoff_sla_hours ?? ''),
+        supported_carriers: Array.isArray((res.body as any)?.supported_carriers) ? (res.body as any).supported_carriers.join(', ') : '',
+      });
     }
+  };
 
-    const detailResponses = await Promise.all(parents.map((p) => AdminCommerce.getParentOrder(p.id)));
-    const children: Order[] = detailResponses
-      .filter((res) => res.ok)
-      .flatMap((res) => (((res.body as any)?.children || []) as Order[]));
+  const loadOrders = async () => {
+    const res = await AdminPortal.listOrders();
+    if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to load orders');
+    const rows = asArray(res.body)
+      .filter((order) => !['cancelled', 'returned'].includes(getOrderStatus(order)))
+      .sort((a, b) => Date.parse(b.created_at || '') - Date.parse(a.created_at || ''));
 
-    setOrders(children);
+    setOrders(rows);
 
-    const bookingEntries = await Promise.all(
-      children.map(async (child) => {
-        const res = await AdminLogisticsAPI.getOrderBookingData(child.id, carrier);
-        return [child.id, res.ok ? res.body : { valid: false, blocking_errors: [(res.body as any)?.message || 'Booking data unavailable'] }] as const;
-      })
-    );
+    const sample = rows.slice(0, 80);
+    const bookingEntries = await Promise.all(sample.map(async (order) => {
+      const orderId = getOrderId(order);
+      const bookingRes = await LogisticsAPI.getOrderBookingData(orderId, carrier);
+      return [orderId, bookingRes.ok ? bookingRes.body : { valid: false, blocking_errors: [(bookingRes.body as any)?.message || 'Booking data unavailable'] }] as const;
+    }));
 
     const map: Record<string, any> = {};
-    bookingEntries.forEach(([id, data]) => {
-      map[id] = data;
-    });
-
-    setBookingByOrderId(map);
+    bookingEntries.forEach(([id, booking]) => { map[id] = booking; });
+    setBookingById(map);
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const load = async () => {
+    setLoading(true);
     setError(null);
     try {
-      const configRes = await AdminLogisticsAPI.getOperationalConfig();
-      if (configRes.ok) {
-        setOperationalConfig(configRes.body);
+      await loadConfig();
+
+      if (['ready', 'review', 'booked'].includes(view)) {
+        await loadOrders();
       }
 
-      if (activeTab === 'ready' || activeTab === 'review' || activeTab === 'booked') {
-        await loadOrdersAndBookingData();
+      if (view === 'exceptions') {
+        const res = await LogisticsAPI.getPickupAging({ carrier });
+        if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to load pickup aging');
+        setAgingRows(asArray(res.body));
       }
 
-      if (activeTab === 'exceptions') {
-        const agingRes = await AdminLogisticsAPI.getPickupAging({ carrier });
-        if (!agingRes.ok) throw new Error((agingRes.body as any)?.message || 'Failed to fetch pickup aging');
-        const rows = Array.isArray(agingRes.body) ? agingRes.body : ((agingRes.body as any)?.rows || []);
-        setAgingRows(rows);
+      if (view === 'exports') {
+        const res = await LogisticsAPI.getExports({ carrier, page: 1, limit: 100 });
+        if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to load exports');
+        setExportRows(asArray(res.body));
       }
 
-      if (activeTab === 'exports') {
-        const exRes = await AdminLogisticsAPI.getExports({ carrier, limit: 50, page: 1 });
-        if (!exRes.ok) throw new Error((exRes.body as any)?.message || 'Failed to fetch exports');
-        const rows = Array.isArray(exRes.body)
-          ? exRes.body
-          : ((exRes.body as any)?.rows || (exRes.body as any)?.data?.rows || (exRes.body as any)?.exports || []);
-        setExportRows(rows);
-      }
-
-      if (activeTab === 'financials') {
-        const today = new Date();
-        const from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-        const to = today.toISOString().slice(0, 10);
-
-        const [sumRes, rowsRes] = await Promise.all([
+      if (view === 'financials') {
+        const now = new Date();
+        const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+        const to = now.toISOString().slice(0, 10);
+        const [summaryRes, ordersRes] = await Promise.all([
           AdminFinancials.getSummary({ from, to, carrier }),
-          AdminFinancials.getOrders({ from, to, carrier, page: 1, limit: 50 }),
+          AdminFinancials.getOrders({ from, to, carrier, page: 1, limit: 100 }),
         ]);
-
-        if (!sumRes.ok) throw new Error((sumRes.body as any)?.message || 'Failed to fetch financial summary');
-        if (!rowsRes.ok) throw new Error((rowsRes.body as any)?.message || 'Failed to fetch financial orders');
-
-        setSummary(sumRes.body);
-        setFinancialRows(Array.isArray(rowsRes.body) ? rowsRes.body : ((rowsRes.body as any)?.orders || []));
+        if (!summaryRes.ok) throw new Error((summaryRes.body as any)?.message || 'Failed to load financial summary');
+        if (!ordersRes.ok) throw new Error((ordersRes.body as any)?.message || 'Failed to load financial rows');
+        setSummary(summaryRes.body);
+        setFinancialRows(asArray(ordersRes.body));
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unexpected error');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unexpected logistics loading error');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadData();
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, carrier]);
+  }, [view, carrier]);
 
-  const classifiedOrders = useMemo(() => {
-    const rows = orders.map((order) => {
-      const booking = bookingByOrderId[order.id] || {};
-      const orderStatus = String((order as any)?.status || '').toLowerCase();
-      const isCancelled = orderStatus === 'cancelled' || orderStatus === 'canceled';
-      const bookingStatus = (order as any)?.booking?.status || booking?.parcel?.booking?.status || '';
-      const booked = ['booked', 'picked_up', 'in_transit', 'delivered', 'exported'].includes(String(bookingStatus).toLowerCase()) || Boolean((order as any)?.consignment_number);
-      return { order, booking, booked, isCancelled };
-    });
-
-    if (activeTab === 'ready') return rows.filter((row) => !row.isCancelled && row.booking?.valid && !row.booked);
-    if (activeTab === 'review') return rows.filter((row) => !row.isCancelled && !row.booking?.valid && !row.booked);
-    if (activeTab === 'booked') return rows.filter((row) => !row.isCancelled && row.booked);
-    return rows;
-  }, [activeTab, bookingByOrderId, orders]);
-
-  const filteredClassifiedOrders = useMemo(() => {
-    const query = searchOrderNumber.trim().toLowerCase();
-    if (!query) return classifiedOrders;
-    return classifiedOrders.filter(({ order }) => {
-      const orderText = `${order.order_number || ''} ${order.id || ''}`;
-      const customerName = String(order.customer_name || '');
-      return fuzzyMatch(orderText, query) || fuzzyMatch(customerName, query);
-    });
-  }, [classifiedOrders, searchOrderNumber]);
-
-  const visibleOrderIds = useMemo(
-    () => filteredClassifiedOrders.map(({ order }) => order.id),
-    [filteredClassifiedOrders]
-  );
-
-  const isBookingTab = activeTab === 'ready' || activeTab === 'review' || activeTab === 'booked';
-
-  const setManySelected = (ids: string[], selected: boolean) => {
-    setSelectedOrderIds((prev) => {
-      if (selected) {
-        const next = new Set(prev);
-        ids.forEach((id) => next.add(id));
-        return Array.from(next);
-      }
-      const removeSet = new Set(ids);
-      return prev.filter((id) => !removeSet.has(id));
-    });
-  };
-
-  const toggleSelect = (orderId: string, index?: number, shiftKey?: boolean) => {
-    if (shiftKey && lastSelectedIndex !== null && typeof index === 'number') {
-      const from = Math.min(lastSelectedIndex, index);
-      const to = Math.max(lastSelectedIndex, index);
-      const rangeIds = filteredClassifiedOrders.slice(from, to + 1).map(({ order }) => order.id);
-      setManySelected(rangeIds, true);
-      return;
-    }
-
-    setSelectedOrderIds((prev) => (prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]));
-    if (typeof index === 'number') setLastSelectedIndex(index);
-  };
-
-  useEffect(() => {
-    if (!isBookingTab) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName?.toLowerCase();
-      const isTypingContext = tag === 'input' || tag === 'textarea' || tag === 'select' || Boolean(target?.isContentEditable);
-
-      if (event.key === '/' && !isTypingContext) {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select();
-        return;
-      }
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
-        event.preventDefault();
-        if (event.shiftKey) {
-          setSelectedOrderIds([]);
-          return;
-        }
-        setManySelected(visibleOrderIds, true);
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isBookingTab, visibleOrderIds]);
-
-  const handleExport = async () => {
-    if (selectedOrderIds.length === 0) {
-      alert('Select at least one order.');
-      return;
-    }
-
-    const res = await AdminLogisticsAPI.createExport({
-      carrier,
-      order_ids: selectedOrderIds,
-      format: 'xlsx',
-      require_human_verified_locations: carrier === 'dex',
-    });
-
-    if (!res.ok) {
-      alert((res.body as any)?.message || 'Export failed');
-      return;
-    }
-
-    alert('Export created successfully.');
-    setSelectedOrderIds([]);
-    if (activeTab !== 'exports') setActiveTab('exports');
-    else void loadData();
-  };
-
-  const handleVerifyDexLocation = async (orderId: string) => {
-    const d = verificationDraft[orderId];
-    if (!d?.province || !d?.district || !d?.specific_address) {
-      alert('Province, district, and specific address are required.');
-      return;
-    }
-
-    const res = await AdminLogisticsAPI.verifyDexLocation(orderId, {
-      province: d.province,
-      district: d.district,
-      ward: d.ward || undefined,
-      specific_address: d.specific_address,
-      apply_as_override: true,
-    });
-
-    if (!res.ok) {
-      alert((res.body as any)?.message || 'Location verification failed');
-      return;
-    }
-
-    alert('DEX location verified.');
-    await loadData();
-  };
-
-  const handleManualBooking = async (orderId: string) => {
-    const d = manualBookingDraft[orderId];
-    if (!d?.consignment_number) {
-      alert('Consignment number is required.');
-      return;
-    }
-
-    const res = await AdminLogisticsAPI.markManualBooking(orderId, {
-      carrier,
-      consignment_number: d.consignment_number,
-      airway_bill_number: d.airway_bill_number || undefined,
-      tracking_url: d.tracking_url || undefined,
-      booked_at: new Date().toISOString(),
-      notes: 'Manual booking from admin logistics workspace',
-    });
-
-    if (!res.ok) {
-      alert((res.body as any)?.message || 'Manual booking failed');
-      return;
-    }
-
-    alert('Order marked as manually booked.');
-    await loadData();
-  };
-
-  const handleDispatchOverride = async (orderId: string) => {
-    const d = dispatchOverrideDraft[orderId];
-    if (!d?.reason || !d?.dispatch_mode) {
-      alert('Dispatch mode and reason are required.');
-      return;
-    }
-
-    const res = await AdminLogisticsAPI.dispatchOverride(orderId, {
-      dispatch_mode: d.dispatch_mode,
-      reason: d.reason,
-      approval_reference: d.approval_reference || undefined,
-    });
-
-    if (!res.ok) {
-      alert((res.body as any)?.message || 'Dispatch override failed');
-      return;
-    }
-
-    alert('Dispatch override applied.');
-    await loadData();
-  };
-
-  const handleResendReceipt = async (orderId: string) => {
-    const res = await AdminCommerce.resendOrderReceipt(orderId);
-    if (!res.ok) {
-      alert((res.body as any)?.message || 'Failed to resend receipt');
-      return;
-    }
-    alert((res.body as any)?.message || 'Receipt resent');
-  };
-
-  const handlePrintReceipt = async (order: Order) => {
-    setPrintingOrderId(order.id);
-    try {
-      const res = await AdminCommerce.getOrderReceipt(order.id);
-      if (!res.ok) {
-        alert((res.body as any)?.message || 'Failed to fetch receipt');
-        return;
-      }
-
-      const html = String((res.body as any)?.html || '').trim();
-      if (!html) {
-        alert('Receipt HTML is missing in API response.');
-        return;
-      }
-
-      const originalTitle = document.title;
-      const fileName = order.order_number || `receipt-${order.id}`;
-      document.title = fileName;
-      setPrintReceiptHtml(html);
-      setIsPrintingReceipt(true);
-
-      window.setTimeout(() => window.print(), 80);
-
-      const onAfterPrint = () => {
-        setIsPrintingReceipt(false);
-        setPrintReceiptHtml('');
-        document.title = originalTitle;
-        window.removeEventListener('afterprint', onAfterPrint);
-      };
-      window.addEventListener('afterprint', onAfterPrint);
-    } finally {
-      setPrintingOrderId(null);
-    }
-  };
-
-  const handleGenerateConfirmationMessage = (order: Order) => {
-    const getOrdinal = (n: number) => {
-      const v = n % 100;
-      if (v >= 11 && v <= 13) return `${n}th`;
-      switch (n % 10) {
-        case 1: return `${n}st`;
-        case 2: return `${n}nd`;
-        case 3: return `${n}rd`;
-        default: return `${n}th`;
-      }
-    };
-
-    const etaDate = order.tracking?.estimated_delivery
-      ? new Date(order.tracking.estimated_delivery)
-      : new Date(Date.now() + 8 * 24 * 60 * 60 * 1000);
-
-    const weekday = etaDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    const day = getOrdinal(etaDate.getDate());
-    const month = etaDate.toLocaleDateString('en-US', { month: 'long' });
-    const year = etaDate.getFullYear();
-
-    const primary = `Hi ${order.customer_name || 'there'} thank you for ordering from juno! Your Order number is ${order.order_number || order.id} and you will receive your parcel by ${weekday}, ${day} ${month}, ${year}`;
-    const items = order.order_items || [];
-    const itemSummaries = items
-      .map((item, index) => {
-        const variantText = item.variant_label
-          || Object.values(item.variant_options || {}).join(' / ')
-          || item.variant_id
-          || 'selected variant';
-        const productText = item.product_name ? ` for ${item.product_name}` : '';
-        return { index, text: `${variantText}${productText}` };
+  const classifiedRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return orders
+      .map((order) => {
+        const id = getOrderId(order);
+        const booking = bookingById[id] || {};
+        const bookingStatus = getBookingStatus(order, booking);
+        const booked = ['booked', 'exported', 'picked_up', 'in_transit', 'delivered'].includes(bookingStatus) || Boolean(order.consignment_number);
+        const valid = Boolean(booking.valid);
+        return { order, booking, booked, valid, bookingStatus };
       })
-      .filter(Boolean);
+      .filter((row) => {
+        if (view === 'ready' && (!row.valid || row.booked)) return false;
+        if (view === 'review' && (row.valid || row.booked)) return false;
+        if (view === 'booked' && !row.booked) return false;
+        if (!q) return true;
+        return [
+          getOrderId(row.order),
+          getOrderNumber(row.order),
+          row.order.customer_name,
+          row.order.customer_phone,
+          row.order.seller_name,
+          row.order.seller_id,
+          row.order.shipping_address?.city,
+        ].join(' ').toLowerCase().includes(q);
+      });
+  }, [bookingById, orders, query, view]);
 
-    const followUp = itemSummaries.length <= 1
-      ? `Just want to confirm the variant is ${itemSummaries[0]?.text || 'selected variant'}?`
-      : `Just want to confirm these variants:\n${itemSummaries.map((item) => `${item.index + 1}. ${item.text}`).join('\n')}`;
-    const combined = `${primary}\n\n${followUp}`;
+  const metrics = useMemo(() => {
+    const rows = orders.map((order) => {
+      const booking = bookingById[getOrderId(order)] || {};
+      const bookingStatus = getBookingStatus(order, booking);
+      const booked = ['booked', 'exported', 'picked_up', 'in_transit', 'delivered'].includes(bookingStatus) || Boolean(order.consignment_number);
+      return { valid: Boolean(booking.valid), booked };
+    });
+    return {
+      ready: rows.filter((row) => row.valid && !row.booked).length,
+      review: rows.filter((row) => !row.valid && !row.booked).length,
+      booked: rows.filter((row) => row.booked).length,
+      aging: agingRows.length,
+      exports: exportRows.length,
+    };
+  }, [agingRows.length, bookingById, exportRows.length, orders]);
 
-    setConfirmationMessageByOrderId((prev) => ({ ...prev, [order.id]: combined }));
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
+
+  const toggleVisible = () => {
+    const visibleIds = classifiedRows.map(({ order }) => getOrderId(order)).filter(Boolean);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) => allSelected ? prev.filter((id) => !visibleIds.includes(id)) : Array.from(new Set([...prev, ...visibleIds])));
+  };
+
+  const createExport = async () => {
+    if (selectedIds.length === 0) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await LogisticsAPI.createExport({
+        carrier,
+        order_ids: selectedIds,
+        format: 'xlsx',
+        require_human_verified_locations: carrier === 'dex',
+      });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Export failed');
+      setSelectedIds([]);
+      setView('exports');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openOrder = (row: any) => {
+    const booking = bookingById[getOrderId(row)] || {};
+    const location = booking.location_resolution || booking.parcel?.location_resolution || {};
+    setSelectedOrder(row);
+    setLocationDraft({
+      province: location.province || '',
+      district: location.district || '',
+      ward: location.ward || '',
+      specific_address: location.specific_address || row.shipping_address?.address_line1 || '',
+    });
+    setManualDraft({ consignment_number: row.consignment_number || '', airway_bill_number: row.airway_bill_number || '', tracking_url: row.tracking_url || '' });
+    setOverrideDraft({ dispatch_mode: 'carrier_pickup', reason: '', approval_reference: '' });
+  };
+
+  const verifyLocation = async () => {
+    if (!selectedOrder) return;
+    setSaving(true);
+    try {
+      const res = await LogisticsAPI.verifyDexLocation(getOrderId(selectedOrder), { ...locationDraft, apply_as_override: true });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Location verification failed');
+      await loadOrders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Location verification failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const markManualBooking = async () => {
+    if (!selectedOrder) return;
+    setSaving(true);
+    try {
+      const res = await LogisticsAPI.markManualBooking(getOrderId(selectedOrder), {
+        carrier,
+        consignment_number: manualDraft.consignment_number,
+        airway_bill_number: manualDraft.airway_bill_number || undefined,
+        tracking_url: manualDraft.tracking_url || undefined,
+        booked_at: new Date().toISOString(),
+        notes: 'Manual booking from admin logistics',
+      });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Manual booking failed');
+      setSelectedOrder(null);
+      await loadOrders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Manual booking failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const applyDispatchOverride = async () => {
+    if (!selectedOrder) return;
+    setSaving(true);
+    try {
+      const res = await LogisticsAPI.dispatchOverride(getOrderId(selectedOrder), overrideDraft);
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Dispatch override failed');
+      await loadOrders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Dispatch override failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const recordStrike = async (order: any) => {
+    setSaving(true);
+    try {
+      const res = await LogisticsAPI.createPickupStrike(order.seller_id, {
+        order_id: getOrderId(order),
+        carrier,
+        reason: 'seller_center_dropoff_missed',
+        notes: 'Recorded from admin logistics',
+      });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Pickup strike failed');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Pickup strike failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const processAging = async () => {
+    setSaving(true);
+    try {
+      const res = await LogisticsAPI.processPickupAging();
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to process aging');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to process aging');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveConfig = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = {
+        max_strikes_before_suspension: Number(configDraft.max_strikes_before_suspension),
+        strike_expiry_days: Number(configDraft.strike_expiry_days),
+        dex_pickup_threshold: Number(configDraft.dex_pickup_threshold),
+        sla_hours: Number(configDraft.sla_hours),
+        supported_carriers: configDraft.supported_carriers.split(',').map((x) => x.trim()).filter(Boolean),
+      };
+      const res = await LogisticsAPI.updateOperationalConfig(payload);
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to save operational config');
+      await loadConfig();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save operational config');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const visibleIds = classifiedRows.map(({ order }) => getOrderId(order));
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="glass-panel p-6 mt-6"
-    >
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-white/10 pb-5 mb-5">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2"><Truck size={22} className="text-primary" /> Logistics Workspace</h2>
-          <p className="text-xs text-neutral-400 mt-1">Smartlane + DEX booking, verification, exports, pickup exceptions, and financial snapshots.</p>
-          {operationalConfig && (
-            <p className="text-[11px] text-neutral-500 mt-2">
-              DEX threshold: <span className="text-white">{operationalConfig.dex_pickup_threshold ?? 5}</span> • Dropoff SLA: <span className="text-white">{operationalConfig.dex_seller_center_dropoff_sla_hours ?? 24}h</span> • Strike threshold: <span className="text-white">{operationalConfig.strike_suspension_threshold ?? 3}</span>
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={carrier}
-            onChange={(e) => setCarrier(e.target.value as LogisticsCarrier)}
-            className="bg-white/5 border border-white/10 text-neutral-300 rounded-lg px-3 py-2 text-xs uppercase tracking-wider font-bold"
-          >
-            <option value="dex">DEX</option>
-            <option value="smartlane">Smartlane</option>
-          </select>
-          <button
-            onClick={() => void loadData()}
-            className="px-3 py-2 rounded-lg border border-white/10 text-white/70 hover:text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider"
-          >
-            <RefreshCw size={13} className="inline mr-1" /> Refresh
-          </button>
-          {(activeTab === 'ready' || activeTab === 'review') && (
-            <button
-              onClick={() => void handleExport()}
-              className="px-3 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 text-xs font-bold uppercase tracking-wider"
-            >
-              <Download size={13} className="inline mr-1" /> Export Selected
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-5">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold rounded-full border transition-colors ${activeTab === tab.id ? 'bg-primary/20 border-primary/30 text-primary' : 'border-white/10 text-neutral-400 hover:bg-white/10'}`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {error && <div className="mb-4 rounded-lg border border-red-600/40 bg-red-900/20 p-3 text-sm text-red-300">{error}</div>}
-
-      {isLoading ? (
-        <div className="py-16 text-center text-neutral-400">Loading logistics data...</div>
-      ) : activeTab === 'exceptions' ? (
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <button
-              onClick={async () => {
-                const res = await AdminLogisticsAPI.processPickupAging();
-                if (!res.ok) alert((res.body as any)?.message || 'Failed to process pickup aging');
-                else await loadData();
-              }}
-              className="px-3 py-2 rounded-lg border border-white/10 text-white/80 hover:bg-white/10 text-xs"
-            >
-              Process Aging Queue
-            </button>
+    <div className="space-y-4">
+      <div className="rounded-lg border border-white/10 bg-[#111]">
+        <div className="flex flex-col gap-4 border-b border-white/10 p-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Truck size={18} className="text-primary" />
+              <h2 className="text-lg font-semibold text-white">Logistics</h2>
+            </div>
+            <p className="mt-1 text-xs text-neutral-400">Carrier booking, export readiness, pickup aging, dispatch overrides, and runtime policy.</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-white/10 text-neutral-400 uppercase tracking-wider">
-                <tr>
-                  <th className="p-3">Order</th>
-                  <th className="p-3">Seller</th>
-                  <th className="p-3">Dispatch Mode</th>
-                  <th className="p-3">Days Waiting</th>
-                  <th className="p-3">Urgency</th>
-                  <th className="p-3">Due</th>
-                </tr>
-              </thead>
-              <tbody>
-                {agingRows.map((row, idx) => (
-                  <tr key={`${row.order_id || idx}`} className="border-b border-white/5">
-                    <td className="p-3 text-white font-mono">{row.order_number || row.order_id}</td>
-                    <td className="p-3">{row.seller_name || row.seller_id}</td>
-                    <td className="p-3">{row.dispatch_mode || '-'}</td>
-                    <td className="p-3">{row.days_waiting_for_pickup ?? 0}</td>
-                    <td className="p-3">{row.pickup_urgency || '-'}</td>
-                    <td className="p-3">{row.seller_dispatch_due_at ? new Date(row.seller_dispatch_due_at).toLocaleString() : '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-wrap gap-2">
+            <select value={carrier} onChange={(event) => setCarrier(event.target.value as LogisticsCarrier)} className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-xs text-white">
+              <option value="dex">DEX</option>
+              <option value="smartlane">Smartlane</option>
+            </select>
+            <button onClick={() => void load()} className="inline-flex items-center gap-1 rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10">
+              <RefreshCw size={14} /> Refresh
+            </button>
+            {['ready', 'review'].includes(view) && (
+              <button disabled={saving || selectedIds.length === 0} onClick={() => void createExport()} className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-xs font-semibold text-black disabled:opacity-40">
+                <Download size={14} /> Export selected
+              </button>
+            )}
           </div>
         </div>
-      ) : activeTab === 'exports' ? (
+
+        <div className="grid grid-cols-2 gap-px border-b border-white/10 bg-white/10 text-xs md:grid-cols-5">
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Ready</p><p className="mt-1 text-lg font-semibold text-emerald-300">{metrics.ready}</p></div>
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Needs review</p><p className="mt-1 text-lg font-semibold text-amber-300">{metrics.review}</p></div>
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Booked</p><p className="mt-1 text-lg font-semibold text-white">{metrics.booked}</p></div>
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Pickup aging</p><p className="mt-1 text-lg font-semibold text-red-300">{metrics.aging}</p></div>
+          <div className="bg-[#111] p-3"><p className="text-neutral-500">Exports</p><p className="mt-1 text-lg font-semibold text-white">{metrics.exports}</p></div>
+        </div>
+
+        <div className="flex flex-wrap gap-1 border-b border-white/10 px-3 py-2">
+          {VIEWS.map((tab) => (
+            <button key={tab.id} onClick={() => setView(tab.id)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${view === tab.id ? 'bg-white text-black' : 'text-neutral-300 hover:bg-white/10'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {['ready', 'review', 'booked'].includes(view) && (
+          <div className="flex flex-col gap-3 border-b border-white/10 p-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="relative w-full xl:max-w-lg">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search order, customer, seller, city"
+                className="w-full rounded-md border border-white/10 bg-black/30 py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-primary/60"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-neutral-400">{selectedIds.length} selected</span>
+              <button onClick={toggleVisible} className="rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10">
+                {allVisibleSelected ? 'Deselect visible' : 'Select visible'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {error && <div className="border-b border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-white/10 text-neutral-400 uppercase tracking-wider">
-              <tr>
-                <th className="p-3">Export ID</th>
-                <th className="p-3">Carrier</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Orders</th>
-                <th className="p-3">Created</th>
-                <th className="p-3">File</th>
-              </tr>
-            </thead>
-            <tbody>
-              {exportRows.map((row: any) => (
-                <tr key={row.export_id || row.id} className="border-b border-white/5">
-                  <td className="p-3 text-white font-mono">{row.export_id || row.id}</td>
-                  <td className="p-3">{row.carrier || '-'}</td>
-                  <td className="p-3">{row.status || '-'}</td>
-                  <td className="p-3">{row.order_count ?? row.count ?? 0}</td>
-                  <td className="p-3">{row.created_at ? new Date(row.created_at).toLocaleString() : '-'}</td>
-                  <td className="p-3">
-                    {row.file_url ? (
-                      <a href={row.file_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">Open</a>
-                    ) : '-'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : activeTab === 'financials' ? (
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3"><p className="text-[10px] text-neutral-500 uppercase">GMV</p><p className="text-white font-bold">{formatCurrency(summary?.gmv)}</p></div>
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3"><p className="text-[10px] text-neutral-500 uppercase">Revenue</p><p className="text-white font-bold">{formatCurrency(summary?.revenue_generated)}</p></div>
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3"><p className="text-[10px] text-neutral-500 uppercase">Courier Cost</p><p className="text-white font-bold">{formatCurrency(summary?.courier_shipping_cost)}</p></div>
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3"><p className="text-[10px] text-neutral-500 uppercase">Gross Income</p><p className="text-emerald-300 font-bold">{formatCurrency(summary?.gross_income)}</p></div>
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3"><p className="text-[10px] text-neutral-500 uppercase">Seller Payout</p><p className="text-white font-bold">{formatCurrency(summary?.seller_payout)}</p></div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-white/10 text-neutral-400 uppercase tracking-wider">
+          {loading ? (
+            <div className="p-10 text-center text-neutral-400">Loading logistics workspace...</div>
+          ) : ['ready', 'review', 'booked'].includes(view) ? (
+            <table className="w-full min-w-[1120px] text-left text-sm">
+              <thead className="border-b border-white/10 text-xs uppercase text-neutral-500">
                 <tr>
+                  <th className="w-10 p-3"><input type="checkbox" checked={allVisibleSelected} onChange={toggleVisible} className="accent-[#f43f5e]" /></th>
                   <th className="p-3">Order</th>
-                  <th className="p-3">Carrier</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">GMV</th>
-                  <th className="p-3">Revenue</th>
-                  <th className="p-3">Courier Cost</th>
-                  <th className="p-3">Gross Income</th>
-                  <th className="p-3">Seller Payout</th>
+                  <th className="p-3">Customer</th>
+                  <th className="p-3">Seller</th>
+                  <th className="p-3">Carrier state</th>
+                  <th className="p-3">Errors</th>
+                  <th className="p-3 text-right">Total</th>
+                  <th className="p-3">Dispatch</th>
+                  <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {financialRows.map((row: any, idx) => (
-                  <tr key={row.order_id || row.order_number || idx} className="border-b border-white/5">
-                    <td className="p-3 text-white font-mono">{row.order_number || row.order_id}</td>
-                    <td className="p-3">{row.carrier || '-'}</td>
-                    <td className="p-3">{row.booking_status || row.status || '-'}</td>
-                    <td className="p-3">{formatCurrency(row.gmv || row.order_total)}</td>
-                    <td className="p-3">{formatCurrency(row.revenue_generated)}</td>
-                    <td className="p-3">{formatCurrency(row.courier_shipping_cost)}</td>
-                    <td className="p-3">{formatCurrency(row.gross_income)}</td>
-                    <td className="p-3">{formatCurrency(row.seller_payout)}</td>
+                {classifiedRows.length === 0 ? (
+                  <tr><td colSpan={9} className="p-10 text-center text-neutral-500">No orders in this logistics view.</td></tr>
+                ) : classifiedRows.map(({ order, booking, valid, bookingStatus }) => {
+                  const id = getOrderId(order);
+                  const errors = asArray(booking.blocking_errors || booking.errors);
+                  const dispatch = booking.dispatch || booking.parcel?.dispatch || {};
+                  return (
+                    <tr key={id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                      <td className="p-3"><input type="checkbox" checked={selectedIds.includes(id)} onChange={() => toggleSelected(id)} className="accent-[#f43f5e]" /></td>
+                      <td className="p-3"><p className="font-mono text-xs text-white">{getOrderNumber(order)}</p><p className="mt-0.5 max-w-[180px] truncate font-mono text-[11px] text-neutral-500">{id}</p></td>
+                      <td className="p-3"><p className="text-white">{order.customer_name || '-'}</p><p className="text-xs text-neutral-500">{order.customer_phone || '-'}</p></td>
+                      <td className="p-3 text-neutral-300">{order.seller_name || order.seller_id || '-'}</td>
+                      <td className="p-3">
+                        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] ${valid ? statusClass('booked') : statusClass('failed')}`}>
+                          {valid ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
+                          {bookingStatus || (valid ? 'ready' : 'needs review')}
+                        </span>
+                      </td>
+                      <td className="p-3 text-xs text-neutral-400">{errors.length ? errors.slice(0, 2).join(' | ') : '-'}</td>
+                      <td className="p-3 text-right font-medium text-white">{money(order.total ?? order.total_amount)}</td>
+                      <td className="p-3 text-neutral-300">{dispatch.dispatch_mode || order.dispatch_mode || 'carrier_pickup'}</td>
+                      <td className="p-3">
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => openOrder(order)} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10" title="Open logistics actions"><Eye size={14} /></button>
+                          <Link to={`/admin/logistics/receipt/${id}`} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10" title="Receipt"><FileText size={14} /></Link>
+                          <button onClick={() => void recordStrike(order)} className="rounded-md border border-red-500/30 p-2 text-red-300 hover:bg-red-500/10" title="Record strike"><ShieldAlert size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : view === 'exceptions' ? (
+            <div>
+              <div className="border-b border-white/10 p-3">
+                <button disabled={saving} onClick={() => void processAging()} className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-xs font-semibold text-black disabled:opacity-40">
+                  <ShieldAlert size={14} /> Process aging queue
+                </button>
+              </div>
+              <table className="w-full min-w-[920px] text-left text-sm">
+                <thead className="border-b border-white/10 text-xs uppercase text-neutral-500"><tr><th className="p-3">Order</th><th className="p-3">Seller</th><th className="p-3">Dispatch</th><th className="p-3">Days</th><th className="p-3">Urgency</th><th className="p-3">Due</th></tr></thead>
+                <tbody>
+                  {agingRows.map((row, index) => (
+                    <tr key={row.order_id || index} className="border-b border-white/5">
+                      <td className="p-3 font-mono text-xs text-white">{row.order_number || row.order_id}</td>
+                      <td className="p-3 text-neutral-300">{row.seller_name || row.seller_id}</td>
+                      <td className="p-3 text-neutral-300">{row.dispatch_mode || '-'}</td>
+                      <td className="p-3 text-white">{row.days_waiting_for_pickup ?? 0}</td>
+                      <td className="p-3"><span className={`rounded-full border px-2 py-1 text-[11px] ${statusClass(String(row.pickup_urgency || 'normal').toLowerCase())}`}>{row.pickup_urgency || '-'}</span></td>
+                      <td className="p-3 text-neutral-400">{dateText(row.seller_dispatch_due_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : view === 'exports' ? (
+            <table className="w-full min-w-[920px] text-left text-sm">
+              <thead className="border-b border-white/10 text-xs uppercase text-neutral-500"><tr><th className="p-3">Export</th><th className="p-3">Carrier</th><th className="p-3">Status</th><th className="p-3">Orders</th><th className="p-3">Created</th><th className="p-3">File</th></tr></thead>
+              <tbody>
+                {exportRows.map((row, index) => (
+                  <tr key={row.export_id || row.id || index} className="border-b border-white/5">
+                    <td className="p-3 font-mono text-xs text-white">{row.export_id || row.id}</td>
+                    <td className="p-3 text-neutral-300">{row.carrier || '-'}</td>
+                    <td className="p-3"><span className={`rounded-full border px-2 py-1 text-[11px] ${statusClass(String(row.status || '').toLowerCase())}`}>{row.status || '-'}</span></td>
+                    <td className="p-3 text-white">{row.order_count ?? row.count ?? 0}</td>
+                    <td className="p-3 text-neutral-400">{dateText(row.created_at)}</td>
+                    <td className="p-3">{row.file_url ? <a className="text-primary hover:underline" href={row.file_url} target="_blank" rel="noreferrer">Open</a> : '-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {isBookingTab && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 md:p-4">
-              <div className="flex flex-col md:flex-row md:items-center gap-3">
-                <input
-                  ref={searchInputRef}
-                  value={searchOrderNumber}
-                  onChange={(e) => setSearchOrderNumber(e.target.value)}
-                  placeholder="Search by order number (shortcut: /)"
-                  className="w-full md:max-w-sm bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
-                />
-                <div className="text-xs text-neutral-300">
-                  Showing <span className="text-white font-bold">{filteredClassifiedOrders.length}</span> of <span className="text-white font-bold">{classifiedOrders.length}</span> • Selected <span className="text-primary font-bold">{selectedOrderIds.length}</span>
-                </div>
+          ) : view === 'config' ? (
+            <div className="max-w-4xl p-4">
+              <div className="mb-4 flex items-center gap-2 text-white"><Settings size={16} /><h3 className="font-semibold">Operational policy</h3></div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  ['max_strikes_before_suspension', 'Max strikes before suspension'],
+                  ['strike_expiry_days', 'Strike expiry days'],
+                  ['dex_pickup_threshold', 'DEX pickup threshold'],
+                  ['sla_hours', 'SLA hours'],
+                  ['supported_carriers', 'Supported carriers'],
+                ].map(([key, label]) => (
+                  <label key={key} className="text-xs text-neutral-400">
+                    {label}
+                    <input value={configDraft[key] || ''} onChange={(event) => setConfigDraft((prev) => ({ ...prev, [key]: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary/60" />
+                  </label>
+                ))}
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={() => setManySelected(visibleOrderIds, true)} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90">Select Visible</button>
-                <button onClick={() => setManySelected(visibleOrderIds, false)} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10">Deselect Visible</button>
-                <button onClick={() => setSelectedOrderIds([])} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10">Clear Selection</button>
-                <div className="text-[11px] text-neutral-500 self-center">Shift+click: range select • Cmd/Ctrl+A: select visible • Cmd/Ctrl+Shift+A: clear</div>
+              <button disabled={saving} onClick={() => void saveConfig()} className="mt-4 rounded-md bg-white px-3 py-2 text-sm font-semibold text-black disabled:opacity-40">Save policy</button>
+              {config && <pre className="mt-4 max-h-80 overflow-auto rounded-md border border-white/10 bg-black/30 p-3 text-xs text-neutral-300">{JSON.stringify(config, null, 2)}</pre>}
+            </div>
+          ) : (
+            <div>
+              <div className="grid grid-cols-2 gap-px border-b border-white/10 bg-white/10 text-xs md:grid-cols-5">
+                <div className="bg-[#111] p-3"><p className="text-neutral-500">GMV</p><p className="mt-1 font-semibold text-white">{money(summary?.gmv)}</p></div>
+                <div className="bg-[#111] p-3"><p className="text-neutral-500">Revenue</p><p className="mt-1 font-semibold text-white">{money(summary?.revenue_generated)}</p></div>
+                <div className="bg-[#111] p-3"><p className="text-neutral-500">Courier cost</p><p className="mt-1 font-semibold text-white">{money(summary?.courier_shipping_cost)}</p></div>
+                <div className="bg-[#111] p-3"><p className="text-neutral-500">Gross income</p><p className="mt-1 font-semibold text-emerald-300">{money(summary?.gross_income)}</p></div>
+                <div className="bg-[#111] p-3"><p className="text-neutral-500">Seller payout</p><p className="mt-1 font-semibold text-white">{money(summary?.seller_payout)}</p></div>
               </div>
+              <table className="w-full min-w-[960px] text-left text-sm">
+                <thead className="border-b border-white/10 text-xs uppercase text-neutral-500"><tr><th className="p-3">Order</th><th className="p-3">Carrier</th><th className="p-3">Status</th><th className="p-3 text-right">GMV</th><th className="p-3 text-right">Gross income</th><th className="p-3 text-right">Seller payout</th></tr></thead>
+                <tbody>
+                  {financialRows.map((row, index) => (
+                    <tr key={row.order_id || row.order_number || index} className="border-b border-white/5">
+                      <td className="p-3 font-mono text-xs text-white">{row.order_number || row.order_id}</td>
+                      <td className="p-3 text-neutral-300">{row.carrier || '-'}</td>
+                      <td className="p-3 text-neutral-300">{row.booking_status || row.status || '-'}</td>
+                      <td className="p-3 text-right text-white">{money(row.gmv || row.order_total)}</td>
+                      <td className="p-3 text-right text-emerald-300">{money(row.gross_income)}</td>
+                      <td className="p-3 text-right text-white">{money(row.seller_payout)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
+        </div>
+      </div>
 
-          <div className="text-xs text-neutral-400">Orders shown: <span className="text-white font-bold">{filteredClassifiedOrders.length}</span></div>
-          <div className="space-y-3">
-            {filteredClassifiedOrders.map(({ order, booking }, idx) => {
-              const blockingErrors = (booking?.blocking_errors || []) as string[];
-              const warnings = (booking?.warnings || []) as string[];
-              const location = booking?.location_resolution || {};
-              const dispatch = booking?.dispatch || {};
-              const draft = verificationDraft[order.id] || { province: location?.province || '', district: location?.district || '', ward: location?.ward || '', specific_address: location?.specific_address || '' };
-              const manual = manualBookingDraft[order.id] || { consignment_number: '', airway_bill_number: '', tracking_url: '' };
-              const override = dispatchOverrideDraft[order.id] || { dispatch_mode: 'carrier_pickup' as const, reason: '', approval_reference: '' };
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60">
+          <button className="flex-1" onClick={() => setSelectedOrder(null)} aria-label="Close drawer" />
+          <aside className="h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#111] shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-white/10 bg-[#111] p-5">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-neutral-500">Logistics actions</p>
+                <h3 className="mt-1 text-lg font-semibold text-white">{getOrderNumber(selectedOrder)}</h3>
+                <p className="text-xs text-neutral-500">{selectedOrder.customer_name} · {selectedOrder.seller_name || selectedOrder.seller_id}</p>
+              </div>
+              <button onClick={() => setSelectedOrder(null)} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10"><X size={16} /></button>
+            </div>
 
-              return (
-                <div key={order.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-white font-mono text-xs">{order.order_number || order.id}</p>
-                      <p className="text-xs text-neutral-300">{order.customer_name} • {order.customer_phone} • {order.shipping_address?.city || 'N/A'}</p>
-                      <p className="text-xs text-neutral-500">Seller: {order.seller_name || order.seller_id}</p>
-                      <p className="text-xs text-neutral-500">Dispatch: {dispatch.dispatch_mode || 'carrier_pickup'} • DEX-ready: {dispatch.dex_ready_parcel_count ?? '-'} / {dispatch.dex_pickup_threshold ?? '-'}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => toggleSelect(order.id, idx, e.shiftKey)}
-                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${selectedOrderIds.includes(order.id) ? 'border-primary/50 bg-primary/20 text-primary' : 'border-white/15 text-neutral-300 hover:bg-white/10'}`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 accent-[#f43f5e]"
-                          checked={selectedOrderIds.includes(order.id)}
-                          readOnly
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSelect(order.id, idx, (e as React.MouseEvent<HTMLInputElement>).shiftKey);
-                          }}
-                        />
-                        {selectedOrderIds.includes(order.id) ? 'Selected' : 'Select'}
-                      </button>
-                      {booking?.valid ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-[10px] text-green-300"><CheckCircle2 size={12} /> Ready</span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] text-red-300"><AlertTriangle size={12} /> Needs Review</span>
-                      )}
-                    </div>
+            <div className="space-y-6 p-5">
+              {carrier === 'dex' && (
+                <section>
+                  <h4 className="mb-3 text-sm font-semibold text-white">DEX location verification</h4>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {[
+                      ['province', 'Province'],
+                      ['district', 'District'],
+                      ['ward', 'Ward'],
+                      ['specific_address', 'Specific address'],
+                    ].map(([key, label]) => (
+                      <label key={key} className="text-xs text-neutral-400">
+                        {label}
+                        <input value={(locationDraft as any)[key] || ''} onChange={(event) => setLocationDraft((prev) => ({ ...prev, [key]: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary/60" />
+                      </label>
+                    ))}
                   </div>
+                  <button disabled={saving} onClick={() => void verifyLocation()} className="mt-3 rounded-md border border-white/10 px-3 py-2 text-sm text-white/80 hover:bg-white/10 disabled:opacity-40">Verify location</button>
+                </section>
+              )}
 
-                  <div className="mt-3 grid grid-cols-2 lg:grid-cols-5 gap-2 text-[11px]">
-                    <div className="rounded-md bg-black/20 p-2"><p className="text-neutral-500">Order Total</p><p className="text-white">{formatCurrency(order.total)}</p></div>
-                    <div className="rounded-md bg-black/20 p-2"><p className="text-neutral-500">Commission</p><p className="text-white">{formatCurrency(order.financials?.commission)}</p></div>
-                    <div className="rounded-md bg-black/20 p-2"><p className="text-neutral-500">Seller Payout</p><p className="text-white">{formatCurrency(order.financials?.seller_payout)}</p></div>
-                    <div className="rounded-md bg-black/20 p-2"><p className="text-neutral-500">Courier Cost</p><p className="text-white">{formatCurrency(booking?.parcel?.financials?.courier_cost || booking?.financials?.courier_cost)}</p></div>
-                    <div className="rounded-md bg-black/20 p-2"><p className="text-neutral-500">Gross Income</p><p className="text-emerald-300">{formatCurrency(booking?.parcel?.financials?.gross_income || booking?.financials?.gross_income)}</p></div>
-                  </div>
-
-                  {blockingErrors.length > 0 && (
-                    <div className="mt-3 rounded-md border border-red-500/30 bg-red-900/10 p-2 text-[11px] text-red-300">
-                      <p className="font-bold uppercase tracking-wider mb-1">Blocking Errors</p>
-                      {blockingErrors.map((e, idx) => <p key={idx}>• {e}</p>)}
-                    </div>
-                  )}
-
-                  {warnings.length > 0 && (
-                    <div className="mt-2 rounded-md border border-yellow-500/30 bg-yellow-900/10 p-2 text-[11px] text-yellow-300">
-                      <p className="font-bold uppercase tracking-wider mb-1">Warnings</p>
-                      {warnings.map((w, idx) => <p key={idx}>• {w}</p>)}
-                    </div>
-                  )}
-
-                  {carrier === 'dex' && (
-                    <div className="mt-3 grid gap-2 lg:grid-cols-5">
-                      <input value={draft.province} onChange={(e) => setVerificationDraft((prev) => ({ ...prev, [order.id]: { ...draft, province: e.target.value } }))} placeholder="Province" className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs" />
-                      <input value={draft.district} onChange={(e) => setVerificationDraft((prev) => ({ ...prev, [order.id]: { ...draft, district: e.target.value } }))} placeholder="District" className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs" />
-                      <input value={draft.ward} onChange={(e) => setVerificationDraft((prev) => ({ ...prev, [order.id]: { ...draft, ward: e.target.value } }))} placeholder="Ward (optional)" className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs" />
-                      <input value={draft.specific_address} onChange={(e) => setVerificationDraft((prev) => ({ ...prev, [order.id]: { ...draft, specific_address: e.target.value } }))} placeholder="Specific address" className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs" />
-                      <button onClick={() => void handleVerifyDexLocation(order.id)} className="rounded-lg border border-primary/30 text-primary hover:bg-primary/10 text-xs px-3 py-1.5">Verify DEX Location</button>
-                    </div>
-                  )}
-
-                  <div className="mt-3 grid gap-2 lg:grid-cols-6">
-                    <input value={manual.consignment_number} onChange={(e) => setManualBookingDraft((prev) => ({ ...prev, [order.id]: { ...manual, consignment_number: e.target.value } }))} placeholder="Consignment #" className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs" />
-                    <input value={manual.airway_bill_number} onChange={(e) => setManualBookingDraft((prev) => ({ ...prev, [order.id]: { ...manual, airway_bill_number: e.target.value } }))} placeholder="Airway Bill #" className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs" />
-                    <input value={manual.tracking_url} onChange={(e) => setManualBookingDraft((prev) => ({ ...prev, [order.id]: { ...manual, tracking_url: e.target.value } }))} placeholder="Tracking URL" className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs" />
-                    <select value={override.dispatch_mode} onChange={(e) => setDispatchOverrideDraft((prev) => ({ ...prev, [order.id]: { ...override, dispatch_mode: e.target.value as any } }))} className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs">
-                      <option value="carrier_pickup">carrier_pickup</option>
-                      <option value="seller_center_dropoff">seller_center_dropoff</option>
-                      <option value="manual_override">manual_override</option>
-                    </select>
-                    <input value={override.reason} onChange={(e) => setDispatchOverrideDraft((prev) => ({ ...prev, [order.id]: { ...override, reason: e.target.value } }))} placeholder="Override reason" className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs" />
-                    <input value={override.approval_reference} onChange={(e) => setDispatchOverrideDraft((prev) => ({ ...prev, [order.id]: { ...override, approval_reference: e.target.value } }))} placeholder="Approval ref (if below threshold)" className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs" />
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button onClick={() => void handleManualBooking(order.id)} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90">Mark Manual Booking</button>
-                    <button onClick={() => void handleDispatchOverride(order.id)} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10">Apply Dispatch Override</button>
-                    <button onClick={() => navigate(`/admin/logistics/receipt/${order.id}`)} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10">View Receipt</button>
-                    <button onClick={() => void handlePrintReceipt(order)} disabled={printingOrderId === order.id} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10 disabled:opacity-50">
-                      {printingOrderId === order.id ? 'Preparing Print...' : 'Print Receipt'}
-                    </button>
-                    <button onClick={() => void handleResendReceipt(order.id)} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10">Resend Receipt</button>
-                    <button onClick={() => handleGenerateConfirmationMessage(order)} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10">
-                      Generate Confirmation Msg
-                    </button>
-                    <button
-                      onClick={async () => {
-                        const res = await AdminLogisticsAPI.createPickupStrike(order.seller_id, {
-                          order_id: order.id,
-                          carrier,
-                          reason: 'seller_center_dropoff_missed',
-                          notes: 'Recorded from admin logistics workspace',
-                        });
-                        if (!res.ok) alert((res.body as any)?.message || 'Strike action failed');
-                        else alert('Pickup strike recorded');
-                      }}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 inline-flex items-center gap-1"
-                    >
-                      <ShieldAlert size={12} /> Record Strike
-                    </button>
-                  </div>
-
-                  {confirmationMessageByOrderId[order.id] && (
-                    <div className="mt-3 rounded-lg border border-white/10 bg-black/30 p-3">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <p className="text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Confirmation Message</p>
-                        <button
-                          onClick={async () => {
-                            await navigator.clipboard.writeText(confirmationMessageByOrderId[order.id]);
-                            alert('Confirmation message copied.');
-                          }}
-                          className="text-xs px-2 py-1 rounded border border-white/10 text-white/80 hover:bg-white/10"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                      <textarea
-                        readOnly
-                        value={confirmationMessageByOrderId[order.id]}
-                        className="w-full min-h-24 bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-neutral-200"
-                      />
-                    </div>
-                  )}
+              <section>
+                <h4 className="mb-3 text-sm font-semibold text-white">Manual booking</h4>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <input value={manualDraft.consignment_number} onChange={(event) => setManualDraft((prev) => ({ ...prev, consignment_number: event.target.value }))} placeholder="Consignment number" className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
+                  <input value={manualDraft.airway_bill_number} onChange={(event) => setManualDraft((prev) => ({ ...prev, airway_bill_number: event.target.value }))} placeholder="Airway bill" className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
+                  <input value={manualDraft.tracking_url} onChange={(event) => setManualDraft((prev) => ({ ...prev, tracking_url: event.target.value }))} placeholder="Tracking URL" className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
                 </div>
-              );
-            })}
-          </div>
+                <button disabled={saving || !manualDraft.consignment_number} onClick={() => void markManualBooking()} className="mt-3 rounded-md bg-white px-3 py-2 text-sm font-semibold text-black disabled:opacity-40">Mark booked</button>
+              </section>
+
+              <section>
+                <h4 className="mb-3 text-sm font-semibold text-white">Dispatch override</h4>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <select value={overrideDraft.dispatch_mode} onChange={(event) => setOverrideDraft((prev) => ({ ...prev, dispatch_mode: event.target.value as any }))} className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
+                    <option value="carrier_pickup">carrier_pickup</option>
+                    <option value="seller_center_dropoff">seller_center_dropoff</option>
+                    <option value="manual_override">manual_override</option>
+                  </select>
+                  <input value={overrideDraft.reason} onChange={(event) => setOverrideDraft((prev) => ({ ...prev, reason: event.target.value }))} placeholder="Reason" className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
+                  <input value={overrideDraft.approval_reference} onChange={(event) => setOverrideDraft((prev) => ({ ...prev, approval_reference: event.target.value }))} placeholder="Approval reference" className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
+                </div>
+                <button disabled={saving || !overrideDraft.reason} onClick={() => void applyDispatchOverride()} className="mt-3 rounded-md border border-white/10 px-3 py-2 text-sm text-white/80 hover:bg-white/10 disabled:opacity-40">Apply override</button>
+              </section>
+            </div>
+          </aside>
         </div>
       )}
-
-      {isPrintingReceipt && (
-        <>
-          <style>{`
-            @media print {
-              @page { size: A4; margin: 8mm; }
-              body * { visibility: hidden !important; }
-              #logistics-print-root, #logistics-print-root * { visibility: visible !important; }
-              #logistics-print-root {
-                position: fixed !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                background: #fff !important;
-                z-index: 999999 !important;
-              }
-              #logistics-print-root table { width: 100% !important; max-width: 100% !important; }
-              #logistics-print-root img { max-width: 100% !important; height: auto !important; }
-            }
-          `}</style>
-          <div id="logistics-print-root" dangerouslySetInnerHTML={{ __html: printReceiptHtml }} />
-        </>
-      )}
-
-    </motion.div>
+    </div>
   );
 };
 

@@ -1,22 +1,29 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar, { navigation } from './Sidebar';
-import { Menu } from 'lucide-react';
+import { Clock3, Menu } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
 
-  const getTitle = () => {
+  const pageMeta = useMemo(() => {
     const allItems = navigation.flatMap(group => group.items);
     const sortedNav = [...allItems].sort((a, b) => b.href.length - a.href.length);
     const currentRoute = sortedNav.find(item => location.pathname.startsWith(item.href));
-    return currentRoute ? currentRoute.name : 'Dashboard';
-  };
+    return currentRoute ?? { name: 'Dashboard', subtitle: 'Admin workspace' };
+  }, [location.pathname]);
+
+  const todayLabel = useMemo(() => new Intl.DateTimeFormat('en-PK', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date()), []);
 
   return (
-    <div className="flex h-screen text-white overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-background text-white">
       <Sidebar
         isOpen={isSidebarOpen}
         setIsOpen={setSidebarOpen}
@@ -30,14 +37,31 @@ const AdminDashboard: React.FC = () => {
            <div className="absolute bottom-[10%] right-[10%] w-96 h-96 bg-secondary/10 rounded-full blur-[100px] opacity-50"></div>
         </div>
 
-        <header className="flex justify-between items-center p-4 bg-black/20 backdrop-blur-xl border-b border-white/5 md:hidden z-20">
+        <header className="z-20 flex items-center justify-between border-b border-white/5 bg-black/20 p-4 backdrop-blur-xl md:hidden">
           <button onClick={() => setSidebarOpen(true)} className="text-neutral-200 hover:text-white transition-colors">
             <Menu />
           </button>
-          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-400">{getTitle()}</h1>
+          <h1 className="bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-xl font-bold text-transparent">{pageMeta.name}</h1>
           <div className="w-8" />
         </header>
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto scrollbar-hide">
+
+        <div className="hidden border-b border-white/5 bg-black/10 px-6 py-5 backdrop-blur-xl md:block">
+          <div className="flex items-end justify-between gap-6">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/35">Juno Admin</p>
+              <h1 className="mt-2 text-3xl font-black uppercase tracking-[-0.05em] text-white">{pageMeta.name}</h1>
+              <p className="mt-2 text-sm text-neutral-400">{pageMeta.subtitle}</p>
+            </div>
+            <div className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-medium text-white/65">
+              <span className="inline-flex items-center gap-2">
+                <Clock3 size={13} />
+                {todayLabel}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <main className="flex-1 overflow-y-auto p-4 scrollbar-hide md:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
