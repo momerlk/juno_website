@@ -2,11 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Globe, Package, RefreshCw, Search, Trash2 } from 'lucide-react';
 import {
   AdminPortal,
-  deleteProductQueueItem,
-  enrichProductQueueItem,
-  getAllSellers,
-  getProductQueue,
-  promoteProductQueueItem,
   scrapeSellerProducts,
 } from '../../api/adminApi';
 
@@ -51,6 +46,9 @@ interface QueueItem {
 }
 
 interface QueueEditDraft {
+  title: string;
+  short_description: string;
+  tagsInput: string;
   product_type: string;
   gender: string;
 }
@@ -305,6 +303,9 @@ const ManageProducts: React.FC = () => {
 
   const [queueEditId, setQueueEditId] = useState('');
   const [queueEditDraft, setQueueEditDraft] = useState<QueueEditDraft>({
+    title: '',
+    short_description: '',
+    tagsInput: '',
     product_type: '',
     gender: '',
   });
@@ -353,7 +354,7 @@ const ManageProducts: React.FC = () => {
   });
 
   const fetchQueueData = async () => {
-    const [queueResp, sellersResp] = await Promise.all([getProductQueue(), getAllSellers()]);
+    const [queueResp, sellersResp] = await Promise.all([AdminPortal.listProductQueue(), AdminPortal.listSellers()]);
     setQueue(asArray(queueResp.body) as QueueItem[]);
     const sellerList = asArray(sellersResp.body) as SellerProfile[];
     setSellers(sellerList);
@@ -647,6 +648,9 @@ const ManageProducts: React.FC = () => {
     setQueueEditError('');
     const guideSeed = item.enrichment?.sizing_guide || item.product?.sizing_guide || {};
     setQueueEditDraft({
+      title: item.product?.title || '',
+      short_description: item.product?.short_description || item.product?.description || '',
+      tagsInput: Array.isArray(item.product?.tags) ? item.product?.tags.join(', ') : '',
       product_type: item.enrichment?.product_type || item.product?.product_type || '',
       gender: inferGender(item),
     });
@@ -887,30 +891,66 @@ const ManageProducts: React.FC = () => {
     }
   };
 
-  const handleEnrich = async (item: QueueItem) => {
-    if (!queueEditDraft.product_type || !queueEditDraft.gender) {
-      setQueueEditError('Product type and gender are required.');
+  const handleSaveQueueItem = async (item: QueueItem) => {
+    if (!queueEditDraft.title.trim()) {
+      setQueueEditError('Title is required.');
       return;
     }
 
     const sizingGuidePayload = buildSizingGuidePayload(sizingDraft);
+    const tags = queueEditDraft.tagsInput.split(',').map((tag) => tag.trim()).filter(Boolean);
     setQueueEditError('');
-    setActionKey(`${item.id}:enrich`);
+    setActionKey(`${item.id}:saveQueue`);
     try {
-      const response = await enrichProductQueueItem(item.id, {
-        product_type: queueEditDraft.product_type,
-        gender: queueEditDraft.gender,
-        sizing_guide: sizingGuidePayload,
+      const updateResponse = await AdminPortal.updateProductQueueItem(item.id, {
+        ...(item.product || {}),
+        title: queueEditDraft.title.trim(),
+        short_description: queueEditDraft.short_description.trim(),
+        tags,
       });
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to enrich queue item';
+      if (!updateResponse.ok) {
+        const msg = typeof updateResponse.body === 'object' && updateResponse.body && 'message' in updateResponse.body ? String((updateResponse.body as any).message) : 'Failed to update queue item';
         throw new Error(msg);
       }
+
+      if (queueEditDraft.product_type && queueEditDraft.gender) {
+        const enrichResponse = await AdminPortal.enrichProductQueueItem(item.id, {
+          product_type: queueEditDraft.product_type,
+          gender: queueEditDraft.gender,
+          sizing_guide: sizingGuidePayload,
+        });
+        if (!enrichResponse.ok) {
+          const msg = typeof enrichResponse.body === 'object' && enrichResponse.body && 'message' in enrichResponse.body ? String((enrichResponse.body as any).message) : 'Failed to enrich queue item';
+          throw new Error(msg);
+        }
+      } else if (Object.keys(sizingGuidePayload).length > 0) {
+        throw new Error('Product type and gender are required to save sizing guide enrichment.');
+      }
+
       await fetchQueueData();
       cancelQueueEdit();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to enrich queue item';
+      const msg = error instanceof Error ? error.message : 'Failed to save queue item';
       setQueueEditError(msg);
+    } finally {
+      setActionKey('');
+    }
+  };
+
+  const handleReject = async (item: QueueItem) => {
+    const reason = window.prompt(`Reject queue item ${item.id} with reason:`, 'Rejected by admin ops');
+    if (!reason) return;
+    setActionKey(`${item.id}:reject`);
+    try {
+      const response = await AdminPortal.rejectProductQueueItem(item.id, reason);
+      if (!response.ok) {
+        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to reject queue item';
+        throw new Error(msg);
+      }
+      await fetchQueueData();
+      if (queueEditId === item.id) cancelQueueEdit();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to reject queue item');
     } finally {
       setActionKey('');
     }
@@ -919,7 +959,7 @@ const ManageProducts: React.FC = () => {
   const handlePromote = async (item: QueueItem) => {
     setActionKey(`${item.id}:promote`);
     try {
-      const response = await promoteProductQueueItem(item.id);
+      const response = await AdminPortal.promoteProductQueueItem(item.id);
       if (!response.ok) {
         const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to promote queue item';
         throw new Error(msg);
@@ -936,7 +976,7 @@ const ManageProducts: React.FC = () => {
     if (!window.confirm(`Delete queue item ${item.id}?`)) return;
     setActionKey(`${item.id}:delete`);
     try {
-      const response = await deleteProductQueueItem(item.id);
+      const response = await AdminPortal.deleteProductQueueItem(item.id);
       if (!response.ok) {
         const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to delete queue item';
         throw new Error(msg);
@@ -959,27 +999,14 @@ const ManageProducts: React.FC = () => {
     setActionKey('bulkDelete');
     try {
       const ids = targetItems.map((item) => item.id);
-      const BATCH_SIZE = 12;
-      let failed = 0;
-
-      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-        const batch = ids.slice(i, i + BATCH_SIZE);
-        const results = await Promise.allSettled(batch.map((id) => deleteProductQueueItem(id)));
-        results.forEach((result) => {
-          if (result.status === 'rejected') {
-            failed += 1;
-            return;
-          }
-          if (!result.value.ok) failed += 1;
-        });
+      const response = await AdminPortal.bulkDeleteProductQueue({ queue_ids: ids });
+      if (!response.ok) {
+        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Bulk delete failed';
+        throw new Error(msg);
       }
 
       await fetchQueueData();
       if (queueEditId && ids.includes(queueEditId)) cancelQueueEdit();
-
-      if (failed > 0) {
-        window.alert(`Bulk delete finished with ${failed} failure(s).`);
-      }
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'Bulk delete failed');
     } finally {
@@ -1839,6 +1866,13 @@ const ManageProducts: React.FC = () => {
                               Promote
                             </button>
                             <button
+                              onClick={() => handleReject(item)}
+                              disabled={!!actionKey}
+                              className="rounded border border-amber-400/30 px-2 py-1 text-[10px] text-amber-300 disabled:opacity-40"
+                            >
+                              Reject
+                            </button>
+                            <button
                               onClick={() => handleDeleteQueueItem(item)}
                               disabled={!!actionKey}
                               className="inline-flex items-center gap-1 rounded border border-red-400/30 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40"
@@ -1924,6 +1958,27 @@ const ManageProducts: React.FC = () => {
                               </div>
 
                               <div className="space-y-2 rounded border border-white/10 bg-[#0a0a0a] p-2">
+                                <div className="grid gap-2 xl:grid-cols-2">
+                                  <input
+                                    value={queueEditDraft.title}
+                                    onChange={(e) => setQueueEditDraft((p) => ({ ...p, title: e.target.value }))}
+                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100"
+                                    placeholder="Queue title"
+                                  />
+                                  <input
+                                    value={queueEditDraft.tagsInput}
+                                    onChange={(e) => setQueueEditDraft((p) => ({ ...p, tagsInput: e.target.value }))}
+                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100"
+                                    placeholder="Tags: festive, summer"
+                                  />
+                                </div>
+                                <textarea
+                                  value={queueEditDraft.short_description}
+                                  onChange={(e) => setQueueEditDraft((p) => ({ ...p, short_description: e.target.value }))}
+                                  rows={4}
+                                  className="w-full rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100"
+                                  placeholder="Short description"
+                                />
                                 <div className="grid gap-2 xl:grid-cols-4">
                                   <select
                                     value={queueEditDraft.product_type}
@@ -1983,11 +2038,11 @@ const ManageProducts: React.FC = () => {
                                   <button onClick={applyStepIncrement} className="rounded border border-white/15 px-2 py-1 text-[10px]">Apply Step</button>
                                   <button onClick={applyColumnStepIncrement} className="rounded border border-white/15 px-2 py-1 text-[10px]">Apply Per-Column</button>
                                   <button
-                                    onClick={() => handleEnrich(item)}
-                                    disabled={actionKey === `${item.id}:enrich`}
+                                    onClick={() => handleSaveQueueItem(item)}
+                                    disabled={actionKey === `${item.id}:saveQueue`}
                                     className="ml-auto rounded border border-white/15 bg-[#1a1a1a] px-3 py-1.5 text-xs disabled:opacity-40"
                                   >
-                                    {actionKey === `${item.id}:enrich` ? 'Saving...' : 'Save Enrichment'}
+                                    {actionKey === `${item.id}:saveQueue` ? 'Saving...' : 'Save Queue Item'}
                                   </button>
                                 </div>
 

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
+  Ban,
   CheckSquare,
   ChevronLeft,
   ChevronRight,
@@ -13,7 +14,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { AdminPortal, getAllCarts } from '../../api/adminApi';
+import { AdminPortal } from '../../api/adminApi';
 
 type OrderView = 'all' | 'open' | 'pending' | 'confirmed' | 'packed' | 'delivery' | 'exceptions' | 'closed' | 'carts';
 
@@ -94,7 +95,7 @@ const ManageOrders: React.FC = () => {
     try {
       const [ordersRes, cartsRes] = await Promise.all([
         AdminPortal.listOrders(),
-        getAllCarts(),
+        AdminPortal.listCarts(),
       ]);
 
       if (!ordersRes.ok) throw new Error((ordersRes.body as any)?.message || 'Failed to load orders');
@@ -232,6 +233,24 @@ const ManageOrders: React.FC = () => {
     }
   };
 
+  const cancelSingleOrder = async (order: any) => {
+    const orderId = getOrderId(order);
+    if (!orderId) return;
+    const reason = window.prompt(`Cancel order ${order.order_number || orderId} with reason:`, cancelReason || 'Cancelled by admin');
+    if (!reason) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await AdminPortal.cancelOrder(orderId, reason);
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to cancel order');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel order');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const views: Array<{ id: OrderView; label: string; count?: number }> = [
     { id: 'open', label: 'Open', count: metrics.open },
     { id: 'pending', label: 'Pending' },
@@ -253,7 +272,7 @@ const ManageOrders: React.FC = () => {
               <ShoppingCart size={18} className="text-primary" />
               <h2 className="text-lg font-semibold text-white">Orders</h2>
             </div>
-            <p className="mt-1 text-xs text-neutral-400">Child order desk with bulk status, cancellation, and customer repair tools.</p>
+            <p className="mt-1 text-xs text-neutral-400">Admin order desk for status batches, single-order cancellation, carts, and customer repair.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => void load()} className="inline-flex items-center gap-1 rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10">
@@ -372,6 +391,11 @@ const ManageOrders: React.FC = () => {
                         <div className="flex justify-end gap-1">
                           <Link to={`/admin/orders/${id}`} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10" title="View order"><Eye size={14} /></Link>
                           <button onClick={() => openCustomerEditor(order)} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10" title="Edit customer"><Edit3 size={14} /></button>
+                          {!['cancelled', 'delivered', 'returned'].includes(status) ? (
+                            <button onClick={() => void cancelSingleOrder(order)} className="rounded-md border border-red-500/30 p-2 text-red-300 hover:bg-red-500/10" title="Cancel order">
+                              <Ban size={14} />
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

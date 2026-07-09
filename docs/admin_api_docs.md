@@ -5,6 +5,7 @@ Platform administration endpoints for ops, moderation, catalog control, seller o
 Auth:
 - Every endpoint in this module requires admin auth except `POST /api/v2/admin/auth/login`.
 - Send `Authorization: Bearer <admin_token>`.
+- `POST /api/v2/admin/auth/refresh` rotates refresh tokens and returns a new access token.
 
 ---
 
@@ -97,6 +98,8 @@ Auth:
 ```json
 {
   "token": "jwt_token_here",
+  "access_token": "jwt_token_here",
+  "refresh_token": "refresh_token_here",
   "admin": {
     "id": "uuid",
     "email": "admin@juno.api",

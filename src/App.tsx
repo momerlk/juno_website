@@ -17,9 +17,6 @@ const ProtectedRoute = React.lazy(() => import('./components/seller/ProtectedRou
 const SellerHome = React.lazy(() => import('./components/seller/SellerHome'));
 const ManageInventory = React.lazy(() => import('./components/seller/ManageInventory'));
 const AdminManageOrders = React.lazy(() => import('./components/admin/ManageOrders'));
-const AdminLogistics = React.lazy(() => import('./components/admin/AdminLogistics'));
-const AdminFinancialsPage = React.lazy(() => import('./components/admin/AdminFinancials'));
-const AdminReceiptPage = React.lazy(() => import('./components/admin/AdminReceiptPage'));
 const Analytics = React.lazy(() => import('./components/seller/Analytics'));
 const Profile = React.lazy(() => import('./components/seller/Profile'));
 const SellerOrderDetailPage = React.lazy(() => import('./components/seller/OrderDetailPage'));
@@ -34,37 +31,14 @@ const TermsConditions = React.lazy(() => import('./components/policies/TermsCond
 
 const AdminAuth = React.lazy(() => import("./components/admin/AdminAuth"));
 const AdminDashboard = React.lazy(() => import("./components/admin/AdminDashboard"));
-const AdminControlTower = React.lazy(() => import("./components/admin/AdminControlTower"));
 const AdminProtectedRoute = React.lazy(() => import("./components/admin/ProtectedRoute"));
 const SellerManageOrders = React.lazy(() => import('./components/seller/ManageOrders'));
 const ShopifySuccess = React.lazy(() => import('./components/seller/ShopifySuccess'));
 const ManageSellers = React.lazy(() => import('./components/admin/ManageSellers'));
-const ManageUsers = React.lazy(() => import('./components/admin/ManageUsers'));
 const ManageInvites = React.lazy(() => import('./components/admin/ManageInvites'));
-const LocationMap = React.lazy(() => import('./components/admin/LocationMap'));
-const DeliveryCoverage = React.lazy(() => import('./components/admin/DeliveryCoverage'));
-const InteractionAnalytics = React.lazy(() => import('./components/admin/InteractionAnalytics'));
-const ProductPerformance = React.lazy(() => import('./components/admin/ProductPerformance'));
 const ManageNotifications = React.lazy(() => import('./components/admin/ManageNotifications'));
-const PlatformStats = React.lazy(() => import('./components/admin/PlatformStats'));
-const ApiStatus = React.lazy(() => import('./components/admin/ApiStatus'));
 const ManageProducts = React.lazy(() => import('./components/admin/ManageProducts'));
 const OrderDetailPage = React.lazy(() => import('./components/admin/OrderDetailPage'));
-const SystemTools = React.lazy(() => import('./components/admin/SystemTools'));
-const SalesFunnel = React.lazy(() => import('./components/admin/SalesFunnel'));
-const AmbassadorTasks = React.lazy(() => import('./components/admin/AmbassadorTasks'));
-
-// Admin Catalog & Campaigns
-const ManageCollections = React.lazy(() => import('./components/admin/ManageCollections'));
-const ManageDrops = React.lazy(() => import('./components/admin/ManageDrops'));
-const ManageCampaigns = React.lazy(() => import('./components/admin/ManageCampaigns'));
-const CampaignDetail = React.lazy(() => import('./components/admin/CampaignDetail'));
-const CreateCampaignPage = React.lazy(() => import('./components/admin/CreateCampaignPage'));
-
-// Probe Analytics
-const ProbeRealTime = React.lazy(() => import('./components/admin/ProbeRealTime'));
-const ProbeCommerce = React.lazy(() => import('./components/admin/ProbeCommerce'));
-const ProbeUsers = React.lazy(() => import('./components/admin/ProbeUsers'));
 const BrandsSection = React.lazy(() => import('./components/landing/BrandsSection'));
 const BrandShowcase = React.lazy(() => import('./components/landing/BrandShowcase'));
 const CatchyProducts = React.lazy(() => import('./components/landing/CatchyProducts'));
@@ -250,40 +224,13 @@ function RoutedApp() {
                   <Route path="/shopify/success" element={<ShopifySuccess />} />
 
                   <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}>
-                    <Route index element={<AdminControlTower />} />
-                    
-                    {/* Probe Engine */}
-                    <Route path="probe/overview" element={<PlatformStats />} />
-                    <Route path="probe/real-time" element={<ProbeRealTime />} />
-                    <Route path="financials" element={<AdminFinancialsPage />} />
-                    <Route path="probe/commerce" element={<ProbeCommerce />} />
-                    <Route path="probe/users" element={<ProbeUsers />} />
-
-                    {/* Catalog */}
-                    <Route path="catalog/collections" element={<ManageCollections />} />
-                    <Route path="catalog/drops" element={<ManageDrops />} />
-
-                    {/* Marketing */}
-                    <Route path="campaigns" element={<ManageCampaigns />} />
-                    <Route path="campaigns/new" element={<CreateCampaignPage />} />
-                    <Route path="campaigns/:id" element={<CampaignDetail />} />
-
-                    {/* Operations */}
+                    <Route index element={<Navigate to="orders" replace />} />
                     <Route path="orders" element={<AdminManageOrders />} />
-                    <Route path="logistics" element={<AdminLogistics />} />
-                    <Route path="logistics/receipt/:orderId" element={<AdminReceiptPage />} />
                     <Route path="orders/:orderId" element={<OrderDetailPage />} />
                     <Route path="sellers" element={<ManageSellers />} />
-                    <Route path="users" element={<ManageUsers />} />
                     <Route path="products" element={<ManageProducts />} />
-                    
                     <Route path="invites" element={<ManageInvites />} />
-                    <Route path="locations" element={<LocationMap />} />
-                    <Route path="delivery" element={<DeliveryCoverage />} />
                     <Route path="notifications" element={<ManageNotifications />} />
-                    <Route path="system" element={<SystemTools />} />
-                    <Route path="api-status" element={<ApiStatus />} />
-                    <Route path="ambassador-tasks" element={<AmbassadorTasks />} />
                   </Route>
                   <Route path="/admin/login" element={<AdminAuth />} />
 

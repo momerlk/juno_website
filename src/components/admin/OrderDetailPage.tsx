@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
+  Ban,
   Calendar,
   CreditCard,
   MapPin,
@@ -12,7 +13,7 @@ import {
   User,
   XCircle,
 } from 'lucide-react';
-import { AdminAPI, AdminCommerce, GetProductById, getAllSellers } from '../../api/adminApi';
+import { AdminCommerce, AdminPortal, GetProductById } from '../../api/adminApi';
 import type { Order, ParentOrder } from '../../api/api.types';
 import type { Product, Variant } from '../../constants/types';
 import type { Seller } from '../../constants/seller';
@@ -219,7 +220,7 @@ const OrderDetailPage: React.FC = () => {
     try {
       const [orderRes, sellersRes] = await Promise.all([
         AdminCommerce.getParentOrder(orderId),
-        getAllSellers(),
+        AdminPortal.listSellers(),
       ]);
 
       if (!orderRes.ok) {
@@ -299,10 +300,19 @@ const OrderDetailPage: React.FC = () => {
   const handleUpdateStatus = async () => {
     if (!selectedChildId) return;
     await runUpdate(
-      () => AdminCommerce.updateOrderStatus(selectedChildId, newStatus, statusNote || undefined),
+      () => AdminPortal.bulkUpdateOrders({ updates: [{ order_id: selectedChildId, status: newStatus, note: statusNote || undefined }] }),
       'Order status updated.'
     );
     setStatusNote('');
+  };
+
+  const handleCancelSelectedChild = async () => {
+    if (!selectedChildId) return;
+    if (!window.confirm('Cancel the selected child order?')) return;
+    await runUpdate(
+      () => AdminPortal.cancelOrder(selectedChildId, cancelReason || 'Cancelled by admin'),
+      'Child order cancelled.'
+    );
   };
 
   const handleSetWarehouse = async () => {
@@ -390,7 +400,7 @@ const OrderDetailPage: React.FC = () => {
     const total = subtotal + shippingFee;
 
     try {
-      const res = await AdminAPI.updateOrder(child.id, {
+      const res = await AdminPortal.updateOrder(child.id, {
         status: child.status,
         order_items: updatedItems,
         total,
@@ -588,6 +598,17 @@ const OrderDetailPage: React.FC = () => {
               className="w-full rounded-xl bg-primary text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-primary/90 disabled:opacity-50"
             >
               {isUpdating ? 'Updating...' : 'Push Status'}
+            </button>
+
+            <button
+              onClick={handleCancelSelectedChild}
+              disabled={isUpdating || !selectedChildId}
+              className="w-full rounded-xl border border-red-500/30 text-red-300 text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-red-500/10 disabled:opacity-50"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Ban size={14} />
+                Cancel Child Order
+              </span>
             </button>
 
             <div className="pt-3 border-t border-white/10 grid grid-cols-2 gap-2">

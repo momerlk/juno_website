@@ -180,6 +180,3 @@ export { Logistics } from "./logisticsApi";
 
 // Extended seller API
 export { SellerAPI } from "./sellerApi.types";
-
-// Extended admin API
-export { AdminAPI } from "./adminApi.types";

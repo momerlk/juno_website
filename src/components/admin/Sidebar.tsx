@@ -1,8 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, ShoppingCart, Users, BarChart2, Bell, X, LogOut, Package, Settings,
-  ShieldCheck, Globe, Zap, Megaphone, Users2, Database, Layers, ChevronLeft, ChevronRight, Truck
+  ShoppingCart, X, LogOut, Package, Bell, Settings, ShieldCheck, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -11,49 +10,22 @@ export const navigation = [
   {
     group: 'Operations',
     items: [
-      { name: 'Control Tower', href: '/admin', icon: LayoutDashboard, subtitle: 'Queues, bottlenecks, and finance posture' },
       { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, subtitle: 'Platform-wide fulfillment desk' },
-      { name: 'Logistics', href: '/admin/logistics', icon: Truck, subtitle: 'Booking, exports, and pickup management' },
       { name: 'Sellers', href: '/admin/sellers', icon: ShieldCheck, subtitle: 'Approvals, remediation, and wallet ops' },
       { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Queue moderation and live catalog control' },
-      { name: 'Campaigns', href: '/admin/campaigns', icon: Megaphone, subtitle: 'Acquisition campaigns' },
-    ]
-  },
-  {
-    group: 'Intelligence',
-    items: [
-      { name: 'Probe Overview', href: '/admin/probe/overview', icon: LayoutDashboard, subtitle: 'Platform KPIs and trend intelligence' },
-      { name: 'Financials', href: '/admin/financials', icon: BarChart2, subtitle: 'GMV, take rate, and income' },
-      { name: 'Real-time', href: '/admin/probe/real-time', icon: Zap, subtitle: 'Live event stream' },
-      { name: 'Commerce', href: '/admin/probe/commerce', icon: BarChart2, subtitle: 'Sales and funnel analytics' },
-      { name: 'User Growth', href: '/admin/probe/users', icon: Users2, subtitle: 'Acquisition and retention' },
-    ]
-  },
-  {
-    group: 'Catalog',
-    items: [
-      { name: 'Collections', href: '/admin/catalog/collections', icon: Layers, subtitle: 'Discovery and curation' },
-      { name: 'Drops', href: '/admin/catalog/drops', icon: Globe, subtitle: 'Exclusive release management' },
-    ]
-  },
-  {
-    group: 'Marketing',
-    items: [
       { name: 'Notifications', href: '/admin/notifications', icon: Bell, subtitle: 'Platform broadcasts' },
-      { name: 'Ambassador', href: '/admin/ambassador-tasks', icon: Users2, subtitle: 'Campus and affiliate tasks' },
-    ]
+    ],
   },
   {
     group: 'Management',
     items: [
-      { name: 'Users', href: '/admin/users', icon: Users, subtitle: 'Identity and access management' },
+      { name: 'Invites', href: '/admin/invites', icon: Bell, subtitle: 'Admin invite coordination' },
     ]
   },
   {
     group: 'System',
     items: [
       { name: 'Infrastructure', href: '/admin/system', icon: Settings, subtitle: 'Health, waitlist, OTPs, and tooling' },
-      { name: 'API Status', href: '/admin/api-status', icon: Database, subtitle: 'Health docs and endpoint coverage' },
     ]
   }
 ];

@@ -5,6 +5,7 @@ Seller registration, authentication, onboarding, catalog management, queue proce
 Route groups and auth:
 - `POST /api/v2/seller/auth/register` — public
 - `POST /api/v2/seller/auth/login` — public
+- `POST /api/v2/seller/auth/refresh` — public
 - `POST /api/v2/seller/auth/register/draft` — public
 - `GET /api/v2/seller/auth/register/draft` — public
 - All other `/api/v2/seller/*` endpoints require seller auth: `Authorization: Bearer <seller_token>`
@@ -17,6 +18,8 @@ Route groups and auth:
 ```json
 {
   "token": "<seller_jwt>",
+  "access_token": "<seller_jwt>",
+  "refresh_token": "<seller_refresh_token>",
   "seller": {
     "id": "uuid",
     "name": "Ahmed Raza",
