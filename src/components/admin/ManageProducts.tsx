@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Globe, Package, RefreshCw, Search, Trash2 } from 'lucide-react';
 import {
+  AdminPortal,
   deleteProductQueueItem,
   enrichProductQueueItem,
   getAllSellers,
@@ -8,7 +9,6 @@ import {
   promoteProductQueueItem,
   scrapeSellerProducts,
 } from '../../api/adminApi';
-import { AdminCatalog, Catalog } from '../../api/catalogApi';
 
 type TabKey = 'catalog' | 'queue';
 
@@ -334,6 +334,23 @@ const ManageProducts: React.FC = () => {
 
   const [queuePage, setQueuePage] = useState(1);
   const [catalogPage, setCatalogPage] = useState(1);
+  const [selectedQueueIds, setSelectedQueueIds] = useState<string[]>([]);
+  const [selectedCatalogIds, setSelectedCatalogIds] = useState<string[]>([]);
+  const [lastSelectedQueueIndex, setLastSelectedQueueIndex] = useState<number | null>(null);
+  const [lastSelectedCatalogIndex, setLastSelectedCatalogIndex] = useState<number | null>(null);
+  const [bulkQueueProductType, setBulkQueueProductType] = useState('');
+  const [bulkQueueGender, setBulkQueueGender] = useState('');
+  const [bulkQueueAllowUnenriched, setBulkQueueAllowUnenriched] = useState(false);
+  const [bulkQueuePatch, setBulkQueuePatch] = useState({
+    title: '',
+    short_description: '',
+    tagsInput: '',
+  });
+  const [bulkCatalogPatch, setBulkCatalogPatch] = useState({
+    status: '',
+    is_featured: '',
+    tagsInput: '',
+  });
 
   const fetchQueueData = async () => {
     const [queueResp, sellersResp] = await Promise.all([getProductQueue(), getAllSellers()]);
@@ -344,7 +361,7 @@ const ManageProducts: React.FC = () => {
   };
 
   const fetchCatalogData = async () => {
-    const catalogResp = await Catalog.getProducts({ limit: 500 });
+    const catalogResp = await AdminPortal.listProducts({ limit: 500 });
     setProducts(asArray(catalogResp.body));
   };
 
@@ -367,6 +384,10 @@ const ManageProducts: React.FC = () => {
   useEffect(() => {
     setQueuePage(1);
     setCatalogPage(1);
+    setSelectedQueueIds([]);
+    setSelectedCatalogIds([]);
+    setLastSelectedQueueIndex(null);
+    setLastSelectedCatalogIndex(null);
   }, [searchTerm, statusFilter, activeTab, queueSort, queueFlagFilters, queueBrandFilter]);
 
   useEffect(() => {
@@ -527,6 +548,72 @@ const ManageProducts: React.FC = () => {
     () => getPageSlice(filteredCatalog, Math.min(catalogPage, catalogTotalPages), PAGE_SIZE),
     [filteredCatalog, catalogPage, catalogTotalPages]
   );
+
+  const queuePageIds = useMemo(() => queuePageItems.map((item) => item.id), [queuePageItems]);
+  const catalogPageIds = useMemo(() => catalogPageItems.map((product) => String(product.id)).filter(Boolean), [catalogPageItems]);
+  const allQueuePageSelected = queuePageIds.length > 0 && queuePageIds.every((id) => selectedQueueIds.includes(id));
+  const allCatalogPageSelected = catalogPageIds.length > 0 && catalogPageIds.every((id) => selectedCatalogIds.includes(id));
+
+  const toggleQueueSelection = (item: QueueItem, pageIndex: number, event?: React.MouseEvent | React.ChangeEvent<HTMLInputElement>) => {
+    const absoluteIndex = ((Math.min(queuePage, queueTotalPages) - 1) * PAGE_SIZE) + pageIndex;
+    const shiftKey = Boolean((event as React.MouseEvent | undefined)?.shiftKey || (event as React.ChangeEvent<HTMLInputElement> | undefined)?.nativeEvent instanceof MouseEvent && (event as React.ChangeEvent<HTMLInputElement>).nativeEvent.shiftKey);
+    if (shiftKey && lastSelectedQueueIndex !== null) {
+      const start = Math.min(lastSelectedQueueIndex, absoluteIndex);
+      const end = Math.max(lastSelectedQueueIndex, absoluteIndex);
+      const ids = filteredQueue.slice(start, end + 1).map((row) => row.id);
+      setSelectedQueueIds((prev) => Array.from(new Set([...prev, ...ids])));
+    } else {
+      setSelectedQueueIds((prev) => prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]);
+    }
+    setLastSelectedQueueIndex(absoluteIndex);
+  };
+
+  const toggleCatalogSelection = (product: any, pageIndex: number, event?: React.MouseEvent | React.ChangeEvent<HTMLInputElement>) => {
+    const productId = String(product.id || '');
+    if (!productId) return;
+    const absoluteIndex = ((Math.min(catalogPage, catalogTotalPages) - 1) * PAGE_SIZE) + pageIndex;
+    const shiftKey = Boolean((event as React.MouseEvent | undefined)?.shiftKey || (event as React.ChangeEvent<HTMLInputElement> | undefined)?.nativeEvent instanceof MouseEvent && (event as React.ChangeEvent<HTMLInputElement>).nativeEvent.shiftKey);
+    if (shiftKey && lastSelectedCatalogIndex !== null) {
+      const start = Math.min(lastSelectedCatalogIndex, absoluteIndex);
+      const end = Math.max(lastSelectedCatalogIndex, absoluteIndex);
+      const ids = filteredCatalog.slice(start, end + 1).map((row) => String(row.id || '')).filter(Boolean);
+      setSelectedCatalogIds((prev) => Array.from(new Set([...prev, ...ids])));
+    } else {
+      setSelectedCatalogIds((prev) => prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]);
+    }
+    setLastSelectedCatalogIndex(absoluteIndex);
+  };
+
+  const toggleQueuePageSelection = () => {
+    setSelectedQueueIds((prev) => {
+      if (allQueuePageSelected) return prev.filter((id) => !queuePageIds.includes(id));
+      return Array.from(new Set([...prev, ...queuePageIds]));
+    });
+  };
+
+  const toggleCatalogPageSelection = () => {
+    setSelectedCatalogIds((prev) => {
+      if (allCatalogPageSelected) return prev.filter((id) => !catalogPageIds.includes(id));
+      return Array.from(new Set([...prev, ...catalogPageIds]));
+    });
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || Boolean(target?.isContentEditable);
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'a' || isTyping) return;
+      event.preventDefault();
+      if (activeTab === 'queue') {
+        setSelectedQueueIds(event.shiftKey ? [] : queuePageIds);
+      } else {
+        setSelectedCatalogIds(event.shiftKey ? [] : catalogPageIds);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeTab, catalogPageIds, queuePageIds]);
 
   const handleRefresh = async () => {
     await fetchData();
@@ -1119,7 +1206,7 @@ const ManageProducts: React.FC = () => {
     setCatalogEditError('');
     setActionKey(`${product.id}:patch`);
     try {
-      const response = await AdminCatalog.updateProduct(product.id, payload);
+      const response = await AdminPortal.updateProduct(product.id, payload);
       if (!response.ok) {
         const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to update product';
         throw new Error(msg);
@@ -1137,7 +1224,7 @@ const ManageProducts: React.FC = () => {
     if (!window.confirm(`Delete active catalog product "${product.title || product.id}"?`)) return;
     setActionKey(`${product.id}:deleteCatalog`);
     try {
-      const response = await AdminCatalog.deleteProduct(product.id);
+      const response = await AdminPortal.deleteProduct(product.id);
       if (!response.ok) {
         const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to delete product';
         throw new Error(msg);
@@ -1155,6 +1242,157 @@ const ManageProducts: React.FC = () => {
     () => products.find((p) => p.id === catalogEditId),
     [products, catalogEditId]
   );
+
+  const handleBulkQueuePromote = async () => {
+    if (selectedQueueIds.length === 0) return;
+    setActionKey('bulkQueuePromote');
+    try {
+      const response = await AdminPortal.bulkPromoteProductQueue({
+        queue_ids: selectedQueueIds,
+        allow_unenriched: bulkQueueAllowUnenriched,
+      });
+      if (!response.ok) {
+        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk promote queue items';
+        throw new Error(msg);
+      }
+      setSelectedQueueIds([]);
+      await fetchQueueData();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to bulk promote queue items');
+    } finally {
+      setActionKey('');
+    }
+  };
+
+  const handleBulkQueueEnrich = async () => {
+    if (selectedQueueIds.length === 0 || !bulkQueueProductType || !bulkQueueGender) return;
+    setActionKey('bulkQueueEnrich');
+    try {
+      const response = await AdminPortal.bulkEnrichProductQueue({
+        queue_ids: selectedQueueIds,
+        enrichment: {
+          product_type: bulkQueueProductType,
+          gender: bulkQueueGender,
+        },
+      });
+      if (!response.ok) {
+        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk enrich queue items';
+        throw new Error(msg);
+      }
+      await fetchQueueData();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to bulk enrich queue items');
+    } finally {
+      setActionKey('');
+    }
+  };
+
+  const handleBulkQueuePatch = async () => {
+    if (selectedQueueIds.length === 0) return;
+    const update: Record<string, any> = {};
+    if (bulkQueuePatch.title.trim()) update.title = bulkQueuePatch.title.trim();
+    if (bulkQueuePatch.short_description.trim()) update.short_description = bulkQueuePatch.short_description.trim();
+    const tags = bulkQueuePatch.tagsInput.split(',').map((tag) => tag.trim()).filter(Boolean);
+    if (tags.length > 0) update.tags = tags;
+    if (Object.keys(update).length === 0) return;
+
+    setActionKey('bulkQueuePatch');
+    try {
+      const response = await AdminPortal.bulkUpdateProductQueue({ queue_ids: selectedQueueIds, update });
+      if (!response.ok) {
+        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk update queue items';
+        throw new Error(msg);
+      }
+      setBulkQueuePatch({ title: '', short_description: '', tagsInput: '' });
+      await fetchQueueData();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to bulk update queue items');
+    } finally {
+      setActionKey('');
+    }
+  };
+
+  const handleBulkQueueReject = async () => {
+    if (selectedQueueIds.length === 0) return;
+    const reason = window.prompt('Reject selected queue items with reason:', 'Bulk rejected by admin ops');
+    if (!reason) return;
+    setActionKey('bulkQueueReject');
+    try {
+      const response = await AdminPortal.bulkRejectProductQueue({ queue_ids: selectedQueueIds, reason });
+      if (!response.ok) {
+        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk reject queue items';
+        throw new Error(msg);
+      }
+      setSelectedQueueIds([]);
+      await fetchQueueData();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to bulk reject queue items');
+    } finally {
+      setActionKey('');
+    }
+  };
+
+  const handleBulkQueueDelete = async () => {
+    if (selectedQueueIds.length === 0) return;
+    if (!window.confirm(`Delete ${selectedQueueIds.length} selected queue item(s)?`)) return;
+    setActionKey('bulkQueueDelete');
+    try {
+      const response = await AdminPortal.bulkDeleteProductQueue({ queue_ids: selectedQueueIds });
+      if (!response.ok) {
+        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk delete queue items';
+        throw new Error(msg);
+      }
+      setSelectedQueueIds([]);
+      await fetchQueueData();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to bulk delete queue items');
+    } finally {
+      setActionKey('');
+    }
+  };
+
+  const handleBulkCatalogPatch = async () => {
+    if (selectedCatalogIds.length === 0) return;
+    const update: Record<string, any> = {};
+    if (bulkCatalogPatch.status) update.status = bulkCatalogPatch.status;
+    if (bulkCatalogPatch.is_featured) update.is_featured = bulkCatalogPatch.is_featured === 'true';
+    const tags = bulkCatalogPatch.tagsInput.split(',').map((tag) => tag.trim()).filter(Boolean);
+    if (tags.length > 0) update.tags = tags;
+    if (Object.keys(update).length === 0) return;
+
+    setActionKey('bulkCatalogPatch');
+    try {
+      const response = await AdminPortal.bulkUpdateProducts({ product_ids: selectedCatalogIds, update });
+      if (!response.ok) {
+        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk update catalog products';
+        throw new Error(msg);
+      }
+      await fetchCatalogData();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to bulk update catalog products');
+    } finally {
+      setActionKey('');
+    }
+  };
+
+  const handleBulkCatalogDelete = async () => {
+    if (selectedCatalogIds.length === 0) return;
+    if (!window.confirm(`Delete ${selectedCatalogIds.length} selected catalog product(s)?`)) return;
+    setActionKey('bulkCatalogDelete');
+    try {
+      const response = await AdminPortal.bulkDeleteProducts({ product_ids: selectedCatalogIds });
+      if (!response.ok) {
+        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk delete catalog products';
+        throw new Error(msg);
+      }
+      setSelectedCatalogIds([]);
+      await fetchCatalogData();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to bulk delete catalog products');
+    } finally {
+      setActionKey('');
+    }
+  };
 
   const renderPager = (page: number, totalPages: number, setPage: (n: number) => void) => (
     <div className="mt-3 flex items-center justify-between text-xs text-neutral-400">
@@ -1344,6 +1582,185 @@ const ManageProducts: React.FC = () => {
         </section>
       ) : null}
 
+      {activeTab === 'queue' ? (
+        <section className="rounded-lg border border-white/10 bg-[#121212] p-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={toggleQueuePageSelection}
+                className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
+              >
+                {allQueuePageSelected ? 'Deselect Page' : 'Select Page'}
+              </button>
+              <button
+                onClick={() => setSelectedQueueIds(filteredQueue.map((item) => item.id))}
+                className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
+              >
+                Select Filtered
+              </button>
+              <button
+                onClick={() => setSelectedQueueIds([])}
+                className="rounded border border-white/15 bg-[#0b0b0b] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-400"
+              >
+                Clear Selection
+              </button>
+              <span className="text-[10px] uppercase tracking-[0.1em] text-neutral-500">
+                {selectedQueueIds.length} selected · Shift-click ranges · Cmd/Ctrl+A page select
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={bulkQueueProductType}
+                onChange={(e) => setBulkQueueProductType(e.target.value)}
+                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
+              >
+                <option className="bg-[#0a0a0a]" value="">Type</option>
+                {PRODUCT_TYPES.map((type) => <option key={type} className="bg-[#0a0a0a]" value={type}>{type}</option>)}
+              </select>
+              <select
+                value={bulkQueueGender}
+                onChange={(e) => setBulkQueueGender(e.target.value)}
+                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
+              >
+                <option className="bg-[#0a0a0a]" value="">Gender</option>
+                {GENDERS.map((gender) => <option key={gender} className="bg-[#0a0a0a]" value={gender}>{gender}</option>)}
+              </select>
+              <button
+                onClick={handleBulkQueueEnrich}
+                disabled={selectedQueueIds.length === 0 || !bulkQueueProductType || !bulkQueueGender || !!actionKey}
+                className="rounded border border-white/15 px-2 py-1 text-[10px] text-neutral-100 disabled:opacity-40"
+              >
+                Bulk Enrich
+              </button>
+              <label className="inline-flex items-center gap-1 text-[10px] text-neutral-300">
+                <input type="checkbox" checked={bulkQueueAllowUnenriched} onChange={(e) => setBulkQueueAllowUnenriched(e.target.checked)} />
+                Allow unenriched
+              </label>
+              <button
+                onClick={handleBulkQueuePromote}
+                disabled={selectedQueueIds.length === 0 || !!actionKey}
+                className="rounded border border-green-400/35 bg-green-500/10 px-2 py-1 text-[10px] text-green-300 disabled:opacity-40"
+              >
+                Promote
+              </button>
+              <button
+                onClick={handleBulkQueueReject}
+                disabled={selectedQueueIds.length === 0 || !!actionKey}
+                className="rounded border border-yellow-400/35 bg-yellow-500/10 px-2 py-1 text-[10px] text-yellow-300 disabled:opacity-40"
+              >
+                Reject
+              </button>
+              <button
+                onClick={handleBulkQueueDelete}
+                disabled={selectedQueueIds.length === 0 || !!actionKey}
+                className="rounded border border-red-400/35 bg-red-500/10 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
+            <input
+              value={bulkQueuePatch.title}
+              onChange={(e) => setBulkQueuePatch((prev) => ({ ...prev, title: e.target.value }))}
+              placeholder="Shared title"
+              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-500"
+            />
+            <input
+              value={bulkQueuePatch.short_description}
+              onChange={(e) => setBulkQueuePatch((prev) => ({ ...prev, short_description: e.target.value }))}
+              placeholder="Shared short description"
+              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-500"
+            />
+            <input
+              value={bulkQueuePatch.tagsInput}
+              onChange={(e) => setBulkQueuePatch((prev) => ({ ...prev, tagsInput: e.target.value }))}
+              placeholder="Shared tags, comma separated"
+              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-500"
+            />
+            <button
+              onClick={handleBulkQueuePatch}
+              disabled={selectedQueueIds.length === 0 || !!actionKey}
+              className="rounded border border-white/15 bg-[#1a1a1a] px-3 py-1.5 text-xs text-neutral-100 disabled:opacity-40"
+            >
+              Apply Shared Update
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="rounded-lg border border-white/10 bg-[#121212] p-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={toggleCatalogPageSelection}
+                className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
+              >
+                {allCatalogPageSelected ? 'Deselect Page' : 'Select Page'}
+              </button>
+              <button
+                onClick={() => setSelectedCatalogIds(filteredCatalog.map((product) => String(product.id || '')).filter(Boolean))}
+                className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
+              >
+                Select Filtered
+              </button>
+              <button
+                onClick={() => setSelectedCatalogIds([])}
+                className="rounded border border-white/15 bg-[#0b0b0b] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-400"
+              >
+                Clear Selection
+              </button>
+              <span className="text-[10px] uppercase tracking-[0.1em] text-neutral-500">
+                {selectedCatalogIds.length} selected · Shift-click ranges · Cmd/Ctrl+A page select
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={bulkCatalogPatch.status}
+                onChange={(e) => setBulkCatalogPatch((prev) => ({ ...prev, status: e.target.value }))}
+                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
+              >
+                <option className="bg-[#0a0a0a]" value="">Status</option>
+                <option className="bg-[#0a0a0a]" value="active">active</option>
+                <option className="bg-[#0a0a0a]" value="draft">draft</option>
+                <option className="bg-[#0a0a0a]" value="archived">archived</option>
+              </select>
+              <select
+                value={bulkCatalogPatch.is_featured}
+                onChange={(e) => setBulkCatalogPatch((prev) => ({ ...prev, is_featured: e.target.value }))}
+                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
+              >
+                <option className="bg-[#0a0a0a]" value="">Featured</option>
+                <option className="bg-[#0a0a0a]" value="true">featured</option>
+                <option className="bg-[#0a0a0a]" value="false">not featured</option>
+              </select>
+              <input
+                value={bulkCatalogPatch.tagsInput}
+                onChange={(e) => setBulkCatalogPatch((prev) => ({ ...prev, tagsInput: e.target.value }))}
+                placeholder="Replace tags"
+                className="w-44 rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 placeholder:text-neutral-500"
+              />
+              <button
+                onClick={handleBulkCatalogPatch}
+                disabled={selectedCatalogIds.length === 0 || !!actionKey}
+                className="rounded border border-white/15 px-2 py-1 text-[10px] text-neutral-100 disabled:opacity-40"
+              >
+                Apply Update
+              </button>
+              <button
+                onClick={handleBulkCatalogDelete}
+                disabled={selectedCatalogIds.length === 0 || !!actionKey}
+                className="rounded border border-red-400/35 bg-red-500/10 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="rounded-lg border border-white/10 bg-[#121212] p-0">
         {isLoading ? (
           <div className="p-6 text-sm text-neutral-400">Loading...</div>
@@ -1352,6 +1769,9 @@ const ManageProducts: React.FC = () => {
             <table className="min-w-full text-left text-xs">
               <thead className="bg-[#0f0f0f] text-neutral-400">
                 <tr>
+                  <th className="w-9 px-3 py-2 font-medium">
+                    <input type="checkbox" checked={allQueuePageSelected} onChange={toggleQueuePageSelection} className="accent-[#f43f5e]" />
+                  </th>
                   <th className="px-3 py-2 font-medium">Product</th>
                   <th className="px-3 py-2 font-medium">Seller</th>
                   <th className="px-3 py-2 font-medium">Source</th>
@@ -1363,14 +1783,24 @@ const ManageProducts: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {queuePageItems.map((item) => {
+                {queuePageItems.map((item, pageIndex) => {
                   const isEditing = queueEditId === item.id;
                   const price = item.product?.pricing?.price ?? item.product?.pricing?.brand_price;
                   const stock = item.product?.inventory?.available_quantity ?? item.product?.inventory?.quantity ?? 0;
                   const bodyHtmlTable = extractFirstTableHtml(item.product?.body_html);
+                  const isSelected = selectedQueueIds.includes(item.id);
                   return (
                     <React.Fragment key={item.id}>
-                      <tr className="border-t border-white/10">
+                      <tr className={`border-t border-white/10 ${isSelected ? 'bg-white/[0.04]' : ''}`}>
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => toggleQueueSelection(item, pageIndex, e)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="accent-[#f43f5e]"
+                          />
+                        </td>
                         <td className="px-3 py-2">
                           <div className="flex items-start gap-2">
                             <img
@@ -1421,7 +1851,7 @@ const ManageProducts: React.FC = () => {
                       </tr>
                       {isEditing ? (
                         <tr className="border-t border-white/10 bg-[#0d0d0d]">
-                          <td colSpan={8} className="px-3 py-3">
+                          <td colSpan={9} className="px-3 py-3">
                             <div className="grid gap-3 xl:grid-cols-2">
                               <div className="space-y-2 rounded border border-white/10 bg-[#0a0a0a] p-2">
                                 <div className="flex flex-wrap items-center gap-1">
@@ -1652,6 +2082,9 @@ const ManageProducts: React.FC = () => {
             <table className="min-w-full text-left text-xs">
               <thead className="bg-[#0f0f0f] text-neutral-400">
                 <tr>
+                  <th className="w-9 px-3 py-2 font-medium">
+                    <input type="checkbox" checked={allCatalogPageSelected} onChange={toggleCatalogPageSelection} className="accent-[#f43f5e]" />
+                  </th>
                   <th className="px-3 py-2 font-medium">Product</th>
                   <th className="px-3 py-2 font-medium">Seller</th>
                   <th className="px-3 py-2 font-medium">Type</th>
@@ -1663,12 +2096,22 @@ const ManageProducts: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {catalogPageItems.map((product) => {
+                {catalogPageItems.map((product, pageIndex) => {
                   const isEditing = catalogEditId === product.id;
                   const variantInfo = getVariantAvailability(product);
+                  const isSelected = selectedCatalogIds.includes(String(product.id || ''));
                   return (
                     <React.Fragment key={product.id}>
-                      <tr className="border-t border-white/10">
+                      <tr className={`border-t border-white/10 ${isSelected ? 'bg-white/[0.04]' : ''}`}>
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => toggleCatalogSelection(product, pageIndex, e)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="accent-[#f43f5e]"
+                          />
+                        </td>
                         <td className="px-3 py-2">
                           {isEditing ? (
                             <input
@@ -1770,7 +2213,7 @@ const ManageProducts: React.FC = () => {
                       </tr>
                       {isEditing ? (
                         <tr className="border-t border-white/10">
-                          <td colSpan={8} className="bg-[#0d0d0d] px-3 py-3">
+                          <td colSpan={9} className="bg-[#0d0d0d] px-3 py-3">
                             <div className="grid gap-3 xl:grid-cols-2">
                               <div className="space-y-2 rounded border border-white/10 bg-[#0a0a0a] p-2">
                                 <div className="flex flex-wrap items-center gap-1">

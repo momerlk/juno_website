@@ -47,6 +47,8 @@ Auth:
 
 ### Product Queue Management
 - `GET /api/v2/admin/products-queue`
+- `PATCH /api/v2/admin/products-queue/bulk`
+- `POST /api/v2/admin/products-queue/bulk/enrich`
 - `POST /api/v2/admin/products-queue/bulk/promote`
 - `POST /api/v2/admin/products-queue/bulk/reject`
 - `POST /api/v2/admin/products-queue/bulk/delete`
@@ -86,7 +88,6 @@ Auth:
 ### Financials + Misc
 - `GET /api/v2/admin/financials/summary`
 - `GET /api/v2/admin/financials/orders`
-- `GET /api/v2/admin/waitlist`
 
 ---
 
@@ -376,6 +377,8 @@ Admin listing for live catalog operations.
 
 Body: full `catalog.Product` payload.
 
+This is the manual admin product-creation path. It bypasses the seller queue and writes directly to the active catalog.
+
 Admin product creation is direct-to-catalog:
 - seller identity is validated
 - seller name/logo/city are refreshed from seller profile
@@ -475,6 +478,23 @@ Body: full `catalog.Product` payload
 
 Use this when ops or merchandising needs to fix copy, variants, images, tags, or pricing before promotion. Seller linkage and queue enrichment are preserved.
 
+### Bulk Update Queue Items
+`PATCH /api/v2/admin/products-queue/bulk`
+
+Body:
+```json
+{
+  "queue_ids": ["queue-1", "queue-2"],
+  "update": {
+    "title": "Revised merchandising title",
+    "short_description": "Cleaned up by admin ops",
+    "tags": ["festive", "summer-edit"]
+  }
+}
+```
+
+Applies one shared partial update payload across multiple queued products.
+
 ### Enrich Queue Item
 `PUT /api/v2/admin/products-queue/{id}/enrich`
 
@@ -489,6 +509,26 @@ Body:
   }
 }
 ```
+
+### Bulk Enrich Queue Items
+`POST /api/v2/admin/products-queue/bulk/enrich`
+
+Body:
+```json
+{
+  "queue_ids": ["queue-10", "queue-11"],
+  "enrichment": {
+    "product_type": "Eastern",
+    "gender": "Female",
+    "sizing_guide": {
+      "S": { "chest": 86, "waist": 68 },
+      "M": { "chest": 91, "waist": 73 }
+    }
+  }
+}
+```
+
+Use this when ops needs to standardize metadata for multiple queued products at once.
 
 ### Promote Queue Item
 `POST /api/v2/admin/products-queue/{id}/promote`
@@ -513,11 +553,15 @@ Sets the queue item to `failed`, appends the rejection reason to queue errors, a
 Body:
 ```json
 {
-  "queue_ids": ["queue-1", "queue-2"]
+  "queue_ids": ["queue-1", "queue-2"],
+  "allow_unenriched": false
 }
 ```
 
-Promotes multiple `ready` queue items in one request.
+Promotes multiple queue items in one request.
+
+- Default behavior: only `ready` queue items are promoted.
+- When `allow_unenriched` is `true`, admin can promote directly from queue into the active catalog even if enrichment has not been completed yet.
 
 ### Bulk Reject Queue Items
 `POST /api/v2/admin/products-queue/bulk/reject`
@@ -868,15 +912,6 @@ Returns:
 `GET /api/v2/admin/financials/orders?from=2026-07-01&to=2026-07-31&carrier=smartlane&page=1&limit=50`
 
 Returns order-level financial rows for reconciliation and export checks.
-
----
-
-## Waitlist
-
-### Get Waitlist
-`GET /api/v2/admin/waitlist`
-
-Returns all waitlist entries.
 
 ---
 

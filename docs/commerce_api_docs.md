@@ -622,6 +622,12 @@ Or:
 
 Provide at least one of `phone_number` or `email`.
 
+`phone_number` accepts all of these equivalent Pakistan mobile formats and normalizes internally:
+- `3000856955`
+- `03000856955`
+- `923000856955`
+- `+923000856955`
+
 **Response `200`**: array of `ParentOrder`
 
 **Common errors**
@@ -641,6 +647,8 @@ Provide exactly one contact proof query param:
 - `phone_number`
 - `email`
 
+`phone_number` supports the same normalization formats as lookup.
+
 **Response `200`**: `OrderTracking`
 
 **Common errors**
@@ -659,6 +667,8 @@ Returns the branded receipt payload for a specific guest parent order when conta
 Provide exactly one contact proof query param:
 - `phone_number`
 - `email`
+
+`phone_number` supports the same normalization formats as lookup.
 
 **Response `200`**
 ```json
@@ -862,6 +872,8 @@ Returns the same branded receipt payload used for transactional order confirmati
 - `support_url`
 - `html` receipt content
 
+`{id}` can be either a parent order ID or a child order ID.
+
 **Response `200`**: `OrderReceiptResponse`
 
 **Common errors**
@@ -877,6 +889,8 @@ Returns the same branded receipt payload used for transactional order confirmati
 Auth: user/seller/admin token required (must have access to order)
 
 Re-sends the order confirmation receipt email to the customer email on the parent order.
+
+`{id}` can be either a parent order ID or a child order ID.
 
 **Response `200`**
 ```json

@@ -412,15 +412,60 @@ export namespace AdminPortal {
         return request(withQuery(`${BASE_PATH}/products`, params), 'GET', undefined, getToken());
     }
 
+    export async function getProduct(productId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products/${encodeURIComponent(productId)}`, 'GET', undefined, getToken());
+    }
+
+    export async function updateProduct(productId: string, update: Record<string, any>): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products/${encodeURIComponent(productId)}`, 'PATCH', update, getToken());
+    }
+
+    export async function deleteProduct(productId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products/${encodeURIComponent(productId)}`, 'DELETE', undefined, getToken());
+    }
+
+    export async function bulkUpdateProducts(payload: {
+        product_ids: string[];
+        update: Record<string, any>;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products/bulk`, 'PATCH', payload, getToken());
+    }
+
+    export async function bulkDeleteProducts(payload: { product_ids: string[] }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products/bulk-delete`, 'POST', payload, getToken());
+    }
+
     export async function listProductQueue(): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/products-queue`, 'GET', undefined, getToken());
+    }
+
+    export async function updateProductQueueItem(queueId: string, update: Record<string, any>): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products-queue/${encodeURIComponent(queueId)}`, 'PUT', update, getToken());
+    }
+
+    export async function bulkUpdateProductQueue(payload: {
+        queue_ids: string[];
+        update: Record<string, any>;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products-queue/bulk`, 'PATCH', payload, getToken());
     }
 
     export async function rejectProductQueueItem(queueId: string, reason: string): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/products-queue/${encodeURIComponent(queueId)}/reject`, 'POST', { reason }, getToken());
     }
 
-    export async function bulkPromoteProductQueue(payload: { queue_ids: string[] }): Promise<APIResponse<any>> {
+    export async function bulkEnrichProductQueue(payload: {
+        queue_ids: string[];
+        enrichment: {
+            product_type: string;
+            gender: string;
+            sizing_guide?: Record<string, any>;
+        };
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products-queue/bulk/enrich`, 'POST', payload, getToken());
+    }
+
+    export async function bulkPromoteProductQueue(payload: { queue_ids: string[]; allow_unenriched?: boolean }): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/products-queue/bulk/promote`, 'POST', payload, getToken());
     }
 

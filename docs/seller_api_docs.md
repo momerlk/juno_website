@@ -541,6 +541,8 @@ To include enrichment data (sizing guide, product type, gender) at creation time
 
 **Response `201`**: `ProductsQueue`
 
+If a variant `sku` is omitted, the API generates one automatically using a deterministic `SKU-...` format to keep seller SKUs consistent.
+
 **Common errors**
 - `400 INVALID_BODY` — malformed JSON
 - `400` — validation failure
@@ -588,6 +590,8 @@ Replaces an existing seller-owned product.
   "is_featured": false
 }
 ```
+
+If any variant `sku` is omitted during update, the API auto-generates deterministic SKU values before validation.
 
 **Common errors**
 - `400 INVALID_BODY` — malformed JSON
