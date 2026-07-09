@@ -198,7 +198,7 @@ const CatalogProductPage: React.FC = () => {
     }, [product, selectedOptions]);
 
     const imageGallery = useMemo(() => asArray(product?.images), [product?.images]);
-    const currentImage = imageGallery[selectedImageIdx] || '/juno_app_icon.png';
+    const currentImage = imageGallery[selectedImageIdx] || '/images/misc/juno_app_icon.png';
     const currentImageAspectRatio = imageAspectRatios[currentImage];
     const useContainedMainImage = typeof currentImageAspectRatio === 'number' && currentImageAspectRatio > 0.95;
     const variants = asArray(product?.variants);
@@ -260,7 +260,7 @@ const CatalogProductPage: React.FC = () => {
             product_title: product.title,
             variant_title: selectedVariant.title,
             variant_options: selectedVariant.options,
-            image_url: imageGallery[0] || '/juno_app_icon.png',
+            image_url: imageGallery[0] || '/images/misc/juno_app_icon.png',
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
             source: 'catalog',
@@ -294,7 +294,7 @@ const CatalogProductPage: React.FC = () => {
             product_title: product.title,
             variant_title: selectedVariant.title,
             variant_options: selectedVariant.options,
-            image_url: imageGallery[0] || '/juno_app_icon.png',
+            image_url: imageGallery[0] || '/images/misc/juno_app_icon.png',
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
             source: 'catalog',

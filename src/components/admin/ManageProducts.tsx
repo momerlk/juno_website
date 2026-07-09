@@ -95,11 +95,11 @@ const getSellerName = (seller: SellerProfile): string =>
 
 const getImageUrl = (images?: any[]): string => {
   const first = images?.[0];
-  if (!first) return '/juno_app_icon.png';
+  if (!first) return '/images/misc/juno_app_icon.png';
   if (typeof first === 'string') return first;
   if (typeof first?.url === 'string') return first.url;
   if (typeof first?.src === 'string') return first.src;
-  return '/juno_app_icon.png';
+  return '/images/misc/juno_app_icon.png';
 };
 
 const normalizeGender = (value?: string): string => {

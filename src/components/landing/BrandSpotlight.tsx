@@ -37,7 +37,7 @@ const BrandSpotlight: React.FC = () => {
             className="relative group aspect-[9/16] w-full max-w-[450px] mx-auto lg:mx-0 rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl shadow-primary/10"
           >
             <video
-              src="/aqs_attire.mp4"
+              src="/images/misc/aqs_attire.mp4"
               className="w-full h-full object-cover"
               autoPlay
               muted
@@ -49,7 +49,7 @@ const BrandSpotlight: React.FC = () => {
             <div className="absolute bottom-8 left-8 right-8 pointer-events-none">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-lg">
-                  <img src="/aqs_attire_logo.jpg" alt="Aqs Attire Logo" className="w-full h-full object-cover" />
+                  <img src="/images/misc/aqs_attire_logo.jpg" alt="Aqs Attire Logo" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <p className="text-white font-black text-lg tracking-tight uppercase">Harib Ahsan</p>

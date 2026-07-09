@@ -178,12 +178,6 @@ export { Commerce, GuestCommerce } from "./commerceApi";
 // Logistics module
 export { Logistics } from "./logisticsApi";
 
-// Events module
-export { Events } from "./eventsApi";
-
-// Shopify module
-export { Shopify } from "./shopifyApi";
-
 // Extended seller API
 export { SellerAPI } from "./sellerApi.types";
 

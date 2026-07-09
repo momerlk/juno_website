@@ -2,16 +2,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const banners = [
-  { src: '/brand_banners/kara2.webp', alt: 'Kara Studio' },
-  { src: '/brand_banners/qariney_new.png', alt: 'Qariney Collection' },
-  { src: '/brand_banners/noire5.jpg', alt: 'NOIRE Collection' },
-  { src: '/brand_banners/ukiyo5.jpg', alt: 'Ukiyo Campaign' },
-  { src: '/brand_banners/noire6.jpg', alt: 'NOIRE Campaign' },
-  { src: '/brand_banners/ukiyo6.jpg', alt: 'Ukiyo Series' },
-  { src: '/brand_banners/ukiyo2.webp', alt: 'Ukiyo Lifestyle' },
-  { src: '/brand_banners/noire8.jpg', alt: 'NOIRE Lifestyle' },
-  { src: '/brand_banners/rakh2.jpg', alt: 'Rakh Campaign' },
-  { src: '/brand_banners/ukiyo4.webp', alt: 'Ukiyo Collection' },
+  { src: '/images/brand-banners/kara2.webp', alt: 'Kara Studio' },
+  { src: '/images/brand-banners/qariney_new.png', alt: 'Qariney Collection' },
+  { src: '/images/brand-banners/noire5.jpg', alt: 'NOIRE Collection' },
+  { src: '/images/brand-banners/ukiyo5.jpg', alt: 'Ukiyo Campaign' },
+  { src: '/images/brand-banners/noire6.jpg', alt: 'NOIRE Campaign' },
+  { src: '/images/brand-banners/ukiyo6.jpg', alt: 'Ukiyo Series' },
+  { src: '/images/brand-banners/ukiyo2.webp', alt: 'Ukiyo Lifestyle' },
+  { src: '/images/brand-banners/noire8.jpg', alt: 'NOIRE Lifestyle' },
+  { src: '/images/brand-banners/rakh2.jpg', alt: 'Rakh Campaign' },
+  { src: '/images/brand-banners/ukiyo4.webp', alt: 'Ukiyo Collection' },
 ];
 
 const BrandShowcase: React.FC = () => {

@@ -8,7 +8,7 @@ const steps = [
     label: 'Discover',
     heading: 'Find labels you\nactually care about.',
     body: 'Juno surfaces indie brands you\'ve never heard of — not because an algorithm promoted them, but because they\'re genuinely good. Browse by vibe, follow your curiosity, let discovery feel like stumbling into something real.',
-    image: '/juno_mockups/allbrands_page.png',
+    image: '/images/juno-mockups/allbrands_page.png',
     accent: 'from-primary to-secondary',
   },
   {
@@ -16,7 +16,7 @@ const steps = [
     label: 'Follow the Story',
     heading: 'Know the brand\nbehind the piece.',
     body: 'Every label on Juno has a story. Who started it, why they started it, what they\'re making next. When you follow a brand, you\'re not following a catalog — you\'re following a creator.',
-    image: '/juno_mockups/beands_page.png',
+    image: '/images/juno-mockups/beands_page.png',
     accent: 'from-secondary to-primary',
   },
   {
@@ -24,7 +24,7 @@ const steps = [
     label: 'Catch the Drop',
     heading: 'Be there when\nthe next drop lands.',
     body: 'Indie labels drop in small runs. Juno notifies you the moment a brand you follow releases something new. No algorithm delay, no promoted feed — just the drop, when it happens.',
-    image: '/juno_mockups/feed.png',
+    image: '/images/juno-mockups/feed.png',
     accent: 'from-primary to-secondary',
   },
   {
@@ -32,7 +32,7 @@ const steps = [
     label: 'Support What\'s Real',
     heading: 'Your purchase funds\nan indie founder.',
     body: 'When you buy on Juno, the money goes directly to the label. No middlemen inflating the price, no mass retailer taking the margin. You\'re not just shopping — you\'re keeping original work alive.',
-    image: '/juno_mockups/checkout.png',
+    image: '/images/juno-mockups/checkout.png',
     accent: 'from-secondary to-primary',
   },
 ];

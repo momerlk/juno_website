@@ -889,7 +889,7 @@ const SellerOnboarding: React.FC = () => {
       {/* ── Left storytelling panel ─────────────────────────────────────── */}
       <aside className="hidden lg:flex flex-col fixed top-0 left-0 w-[400px] h-screen bg-[#0b0b0b] border-r border-white/[0.05] px-10 py-10 overflow-hidden">
 
-        <img src="/juno_logos/icon+text_white.png" alt="Juno" className="h-7 w-auto object-contain object-left mb-14 opacity-90" />
+        <img src="/images/juno-logos/icon+text_white.png" alt="Juno" className="h-7 w-auto object-contain object-left mb-14 opacity-90" />
 
         {/* Animated narrative */}
         <div className="flex-1 relative">
@@ -963,7 +963,7 @@ const SellerOnboarding: React.FC = () => {
 
         {/* Mobile top bar */}
         <div className="lg:hidden flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
-          <img src="/juno_logos/icon+text_white.png" className="h-6 opacity-90" alt="Juno" />
+          <img src="/images/juno-logos/icon+text_white.png" className="h-6 opacity-90" alt="Juno" />
           <span className="text-xs text-white/25 font-medium">{currentStep + 1} / {steps.length}</span>
         </div>
         {/* Mobile progress bar */}

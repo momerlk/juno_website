@@ -323,7 +323,7 @@ const OrderConfirmationPage: React.FC = () => {
                             {receiptItems.map((item, idx) => (
                                 <div key={`${item.product_id}-${item.variant_id}-${idx}`} className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3 print-card">
                                     <img
-                                        src={item.image_url || '/juno_app_icon.png'}
+                                        src={item.image_url || '/images/misc/juno_app_icon.png'}
                                         alt={item.product_title || item.product_id}
                                         className="h-16 w-14 rounded-md border border-white/10 object-cover"
                                     />

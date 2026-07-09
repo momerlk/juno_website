@@ -25,7 +25,6 @@ const Navbar: React.FC = () => {
     { name: 'Discover', href: '/#screenshots' },
     { name: 'Ecosystem', href: '/#juno-app' },
     { name: 'Studio', href: '/#juno-studio' },
-    { name: 'Blog', href: '/blog' },
     { name: 'Shop', href: '/catalog' },
   ];
 
@@ -47,7 +46,7 @@ const Navbar: React.FC = () => {
             <div className="flex justify-between items-center">
               <a href="/#home" className="flex items-center space-x-2 z-50" onClick={closeMenu}>
                 <img
-                  src="/juno_logos/icon+text_white.png"
+                  src="/images/juno-logos/icon+text_white.png"
                   alt="Juno Logo"
                   className="h-8 md:h-10 w-auto object-contain"
                 />

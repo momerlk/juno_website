@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Apple, Smartphone } from 'lucide-react';
-import { trackDownloadVisit } from '../api/chapterApi';
+import { createEvent } from '../api';
 
 const DownloadRedirect: React.FC = () => {
   const [os, setOs] = useState<'android' | 'ios' | 'other'>('other');
@@ -26,7 +26,7 @@ const DownloadRedirect: React.FC = () => {
           if (/android/i.test(userAgent)) currentOs = 'android';
           else if (/iPad|iPhone|iPod/.test(userAgent)) currentOs = 'ios';
 
-          await trackDownloadVisit(ipData.ip, currentOs);
+          await createEvent('download_page_visit', { url: window.location.href, ip: ipData.ip, os: currentOs });
           localStorage.setItem('hasVisitedDownloadPage', 'true');
         } catch (e) {
           console.error('Tracking error:', e);
@@ -85,7 +85,7 @@ const DownloadRedirect: React.FC = () => {
               className="rounded-[28px] border border-white/10 bg-white/[0.05] p-8 text-center shadow-2xl backdrop-blur-xl"
             >
               <img
-                src="/juno_logos/icon+text_white.png"
+                src="/images/juno-logos/icon+text_white.png"
                 alt="Juno"
                 className="mx-auto mb-8 h-9 w-auto"
               />
@@ -129,7 +129,7 @@ const DownloadRedirect: React.FC = () => {
               className="rounded-[28px] border border-white/10 bg-white/[0.05] p-8 shadow-2xl backdrop-blur-xl"
             >
               <img
-                src="/juno_logos/icon+text_white.png"
+                src="/images/juno-logos/icon+text_white.png"
                 alt="Juno"
                 className="mb-8 h-9 w-auto"
               />
@@ -150,7 +150,7 @@ const DownloadRedirect: React.FC = () => {
                   className="flex items-center justify-center gap-3 rounded-2xl bg-white px-5 py-4 font-bold text-black transition-colors hover:bg-neutral-100"
                 >
                   <img
-                    src="/apple_logo.png"
+                    src="/images/misc/apple_logo.png"
                     alt="Apple"
                     className="h-5 w-5 object-contain"
                   />
@@ -161,7 +161,7 @@ const DownloadRedirect: React.FC = () => {
                   className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 font-bold text-white transition-colors hover:bg-white/10"
                 >
                   <img
-                    src="/play_store.png"
+                    src="/images/misc/play_store.png"
                     alt="Google Play"
                     className="h-5 w-5 object-contain"
                   />

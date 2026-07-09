@@ -10,7 +10,7 @@ const logoFiles = [
 ];
 
 const logos = logoFiles.map(file => ({
-  src: `/brand_logos/${file}`,
+  src: `/images/brand-logos/${file}`,
   alt: file.split('.')[0].replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
 }));
 

@@ -3,16 +3,16 @@ import { Smartphone, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const brandAvatars = [
-  { src: '/brand_logos/Kara.png',       alt: 'Kara'       },
-  { src: '/brand_logos/NOIRE.png',      alt: 'NOIRE'      },
-  { src: '/brand_logos/Ukiyo.png',      alt: 'Ukiyo'      },
-  { src: '/brand_logos/Aphrodite.png',  alt: 'Aphrodite'  },
-  { src: '/brand_logos/Rakh.png',       alt: 'Rakh'       },
+  { src: '/images/brand-logos/Kara.png',       alt: 'Kara'       },
+  { src: '/images/brand-logos/NOIRE.png',      alt: 'NOIRE'      },
+  { src: '/images/brand-logos/Ukiyo.png',      alt: 'Ukiyo'      },
+  { src: '/images/brand-logos/Aphrodite.png',  alt: 'Aphrodite'  },
+  { src: '/images/brand-logos/Rakh.png',       alt: 'Rakh'       },
 ];
 
 const mosaic = [
   {
-    src: '/brand_banners/noire6.jpg',
+    src: '/images/brand-banners/noire6.jpg',
     alt: 'NOIRE',
     label: 'NOIRE',
     style: { aspectRatio: '2/3' } as React.CSSProperties,
@@ -20,7 +20,7 @@ const mosaic = [
     col: 'left',
   },
   {
-    src: '/brand_banners/kara2.webp',
+    src: '/images/brand-banners/kara2.webp',
     alt: 'Kara',
     label: 'KARA',
     style: { aspectRatio: '16/9' } as React.CSSProperties,
@@ -28,7 +28,7 @@ const mosaic = [
     col: 'left',
   },
   {
-    src: '/brand_banners/ukiyo5.jpg',
+    src: '/images/brand-banners/ukiyo5.jpg',
     alt: 'Ukiyo',
     label: 'UKIYO',
     style: { aspectRatio: '3/4' } as React.CSSProperties,
@@ -36,7 +36,7 @@ const mosaic = [
     col: 'right',
   },
   {
-    src: '/brand_banners/rakh4.jpg',
+    src: '/images/brand-banners/rakh4.jpg',
     alt: 'Rakh',
     label: 'RAKH',
     style: { aspectRatio: '3/2' } as React.CSSProperties,

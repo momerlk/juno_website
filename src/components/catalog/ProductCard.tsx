@@ -23,7 +23,7 @@ const getBaseProductPrice = (product: CatalogProduct): number =>
 
 const getProductImage = (product: Partial<CatalogProduct>) => {
     const images = Array.isArray(product.images) ? product.images : [];
-    return images[0] || '/juno_app_icon.png';
+    return images[0] || '/images/misc/juno_app_icon.png';
 };
 const getVariantAvailableQuantity = (variant: any, product: CatalogProduct): number | undefined => {
     const variantQty = variant?.inventory?.available_quantity ?? variant?.inventory?.quantity;

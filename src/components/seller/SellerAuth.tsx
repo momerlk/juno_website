@@ -48,7 +48,7 @@ const SellerAuth: React.FC = () => {
           className="text-center"
         >
           <img
-            src="/juno_logos/icon+text_white.png"
+            src="/images/juno-logos/icon+text_white.png"
             alt="Juno"
             className="h-10 mx-auto mb-8 opacity-90"
           />

@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/landing/Hero';
 import Footer from './components/Footer';
@@ -48,7 +48,6 @@ const ProductPerformance = React.lazy(() => import('./components/admin/ProductPe
 const ManageNotifications = React.lazy(() => import('./components/admin/ManageNotifications'));
 const PlatformStats = React.lazy(() => import('./components/admin/PlatformStats'));
 const ApiStatus = React.lazy(() => import('./components/admin/ApiStatus'));
-const ChapterForms = React.lazy(() => import('./components/admin/ChapterForms'));
 const ManageProducts = React.lazy(() => import('./components/admin/ManageProducts'));
 const OrderDetailPage = React.lazy(() => import('./components/admin/OrderDetailPage'));
 const SystemTools = React.lazy(() => import('./components/admin/SystemTools'));
@@ -66,42 +65,20 @@ const CreateCampaignPage = React.lazy(() => import('./components/admin/CreateCam
 const ProbeRealTime = React.lazy(() => import('./components/admin/ProbeRealTime'));
 const ProbeCommerce = React.lazy(() => import('./components/admin/ProbeCommerce'));
 const ProbeUsers = React.lazy(() => import('./components/admin/ProbeUsers'));
-
-const AmbassadorAuth = React.lazy(() => import("./components/ambassador/AmbassadorAuth"));
-const AmbassadorDashboard = React.lazy(() => import("./components/ambassador/AmbassadorDashboard"));
-const AmbassadorProtectedRoute = React.lazy(() => import("./components/ambassador/ProtectedRoute"));
-
-import { AmbassadorAuthProvider } from './contexts/AmbassadorAuthContext';
-const BrandPage = React.lazy(() => import('./components/BrandPage'));
 const BrandsSection = React.lazy(() => import('./components/landing/BrandsSection'));
 const BrandShowcase = React.lazy(() => import('./components/landing/BrandShowcase'));
 const CatchyProducts = React.lazy(() => import('./components/landing/CatchyProducts'));
 const TestimonialsSection = React.lazy(() => import('./components/landing/TestimonialsSection'));
-const BlogIndexPage = React.lazy(() => import('./components/blog/BlogIndexPage'));
-const BlogPostPage = React.lazy(() => import('./components/blog/BlogPostPage'));
-const WritePage = React.lazy(() => import('./components/blog/WritePage'));
-const ProductPage = React.lazy(() => import('./components/ProductPage'));
 const CatalogProductPage = React.lazy(() => import('./components/catalog/CatalogProductPage'));
 const CatalogLandingPage = React.lazy(() => import('./components/catalog/CatalogLandingPage'));
 const CatalogGenderPage = React.lazy(() => import('./components/catalog/CatalogGenderPage'));
 const CatalogBrowsePage = React.lazy(() => import('./components/catalog/CatalogBrowsePage'));
 const DownloadRedirect = React.lazy(() => import('./components/DownloadRedirect'));
-const ChapterFormPage = React.lazy(() => import('./components/chapter/ChapterFormPage'));
-const BrandReelGraphic = React.lazy(() => import('./components/BrandReelGraphic'));
 const CheckoutPage = React.lazy(() => import('./components/checkout/CheckoutPage'));
 const OrderConfirmationPage = React.lazy(() => import('./components/checkout/OrderConfirmationPage'));
 const OrderTrackingPage = React.lazy(() => import('./components/checkout/OrderTrackingPage'));
 const InteractiveTrackingPage = React.lazy(() => import('./components/checkout/InteractiveTrackingPage'));
 const WishlistPage = React.lazy(() => import('./components/catalog/WishlistPage'));
-
-// Campaign Pages
-const CampaignLandingPage = React.lazy(() => import('./components/campaign/CampaignLandingPage'));
-const CampaignProductPage = React.lazy(() => import('./components/campaign/CampaignProductPage'));
-
-const WorkAuth = React.lazy(() => import("./components/work/WorkAuth"));
-const WorkDashboard = React.lazy(() => import("./components/work/WorkDashboard"));
-const WorkProtectedRoute = React.lazy(() => import("./components/work/ProtectedRoute"));
-import { WorkAuthProvider } from './contexts/WorkAuthContext';
 
 // Probe Analytics
 import { useProbeAnalytics } from './hooks/useProbe';
@@ -125,6 +102,11 @@ const AppShellFallback = () => (
   </div>
 );
 
+const LegacyProductRedirect = () => {
+  const { productId } = useParams<{ productId: string }>();
+  return <Navigate to={productId ? `/catalog/${productId}` : '/catalog'} replace />;
+};
+
 const ScrollToTop: React.FC = () => {
   const location = useLocation();
 
@@ -141,20 +123,13 @@ function RoutedApp() {
   const location = useLocation();
   const clarityIdentityRef = useRef<ReturnType<typeof resolveClarityIdentityFromStorage>>(null);
   
-  const isCampaignPath = location.pathname.split('/').some((s) => s.endsWith('-campaign'));
   const isExcludedPath = location.pathname.startsWith('/seller') || 
                          location.pathname.startsWith('/studio') || 
                          location.pathname.startsWith('/admin') || 
-                         location.pathname.startsWith('/ambassador') || 
-                         location.pathname.startsWith('/work') || 
-                         location.pathname.startsWith('/brand-reel') || 
                          location.pathname.startsWith('/catalog') || 
                          location.pathname.startsWith('/checkout') || 
                          location.pathname.startsWith('/track') || 
-                         location.pathname.startsWith('/wishlist') || 
-                         location.pathname.startsWith('/collections') || 
-                         location.pathname.startsWith('/drops') ||
-                         isCampaignPath;
+                         location.pathname.startsWith('/wishlist');
 
   useEffect(() => {
     document.title = 'Juno - Home of Indie Brands';
@@ -173,7 +148,6 @@ function RoutedApp() {
   useEffect(() => {
     const path = location.pathname;
     const pathParts = path.split('/').filter(Boolean);
-    const campaignSegment = pathParts.find((segment) => segment.endsWith('-campaign')) || '';
     const clarityIdentity = clarityIdentityRef.current;
     const pageType = path.startsWith('/admin')
       ? 'admin'
@@ -181,9 +155,7 @@ function RoutedApp() {
         ? 'seller'
         : path.startsWith('/checkout')
           ? 'checkout'
-          : campaignSegment
-            ? 'campaign'
-            : 'website';
+          : 'website';
 
     identifyClarityFromIdentity(clarityIdentity, path);
 
@@ -191,7 +163,7 @@ function RoutedApp() {
       route_path: path,
       route_query: location.search || 'none',
       page_type: pageType,
-      campaign_slug: campaignSegment ? campaignSegment.replace(/-campaign$/, '') : 'none',
+      campaign_slug: 'none',
       actor_role: getClarityRoleFromIdentity(clarityIdentity),
       actor_id: getClarityCustomIdFromIdentity(clarityIdentity),
       actor_name: getClarityFriendlyNameFromIdentity(clarityIdentity),
@@ -203,10 +175,8 @@ function RoutedApp() {
   return (
     <AdminAuthProvider>
       <SellerAuthProvider>
-        <WorkAuthProvider>
-          <AmbassadorAuthProvider>
-            <JunoStudioProvider>
-              <GuestCartProvider>
+        <JunoStudioProvider>
+          <GuestCartProvider>
               <div className="min-h-screen bg-background text-white">
               <ScrollToTop />
               {!isExcludedPath && <Navbar />}
@@ -225,10 +195,6 @@ function RoutedApp() {
                       <DownloadSection />
                     </main>
                   } />
-
-                  <Route path="/blog" element={<BlogIndexPage />} />
-                  <Route path="/blog/:slug" element={<BlogPostPage />} />
-                  <Route path="/write" element={<WritePage />} />
 
                 <Route path="/download" element={<DownloadRedirect />} />
                 
@@ -252,9 +218,6 @@ function RoutedApp() {
                   <Route path="/refund-policy" element={<RefundPolicy />} />
                   <Route path="/service-policy" element={<ShippingServicePolicy />} />
                   <Route path="/terms-and-conditions" element={<TermsConditions />} />
-
-                  <Route path="/chapters" element={<ChapterFormPage />} />
-                  <Route path="/chapters/:university" element={<ChapterFormPage />} />
 
                   {/* Juno Studio (Seller) Routes */}
                   <Route path="/studio" element={<JunoStudioLanding />} />
@@ -324,54 +287,16 @@ function RoutedApp() {
                   </Route>
                   <Route path="/admin/login" element={<AdminAuth />} />
 
-                  <Route path="/ambassador" element={
-                    <AmbassadorProtectedRoute>
-                      <Navigate to="/ambassador/dashboard" replace />
-                    </AmbassadorProtectedRoute>
-                  } />
-                  <Route path="/ambassador/login" element={<AmbassadorAuth />} />
-                  <Route
-                    path="/ambassador/dashboard"
-                    element={
-                      <AmbassadorProtectedRoute>
-                        <AmbassadorDashboard />
-                      </AmbassadorProtectedRoute>
-                    }
-                  />
-
-                  <Route path="/work" element={
-                    <WorkProtectedRoute>
-                      <Navigate to="/work/dashboard" replace />
-                    </WorkProtectedRoute>
-                  } />
-                  <Route path="/work/auth" element={<WorkAuth />} />
-                  <Route
-                    path="/work/dashboard"
-                    element={
-                      <WorkProtectedRoute>
-                        <WorkDashboard />
-                      </WorkProtectedRoute>
-                    }
-                  />
-                  
-                  <Route path="/product/:productId" element={<ProductPage />} />
-                  <Route path="/brand-reel" element={<BrandReelGraphic />} />
-
-                  {/* Campaign Routes */}
-                  <Route path="/:campaignSlug" element={<CampaignLandingPage />} />
-                  <Route path="/:campaignSlug/:productId" element={<CampaignProductPage />} />
-
-                  <Route path="/:brandName" element={<BrandPage />} />
+                  <Route path="/product/:productId" element={<LegacyProductRedirect />} />
+                  <Route path="/brand-reel" element={<Navigate to="/catalog" replace />} />
               </Routes>
               </Suspense>
               <CartDrawer />
               <CartStockLimitToast />
               {!isExcludedPath && <Footer />}
               </div>
-              </GuestCartProvider>
-            </JunoStudioProvider>
-          </AmbassadorAuthProvider>
-        </WorkAuthProvider>
+          </GuestCartProvider>
+        </JunoStudioProvider>
       </SellerAuthProvider>
     </AdminAuthProvider>
   );

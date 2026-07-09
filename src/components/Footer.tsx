@@ -16,7 +16,7 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-4 space-y-8">
             <a href="/#home" className="flex items-center">
               <img
-                src="/juno_logos/icon+text_white.png"
+                src="/images/juno-logos/icon+text_white.png"
                 alt="Juno Logo"
                 className="h-10 md:h-12 w-auto object-contain"
               />
@@ -47,7 +47,6 @@ const Footer: React.FC = () => {
               <ul className="space-y-4">
                 <li><a href="/#juno-app" className="text-neutral-500 hover:text-white transition-colors">Ecosystem</a></li>
                 <li><a href="/download" className="text-neutral-500 hover:text-white transition-colors">Download App</a></li>
-                <li><a href="/blog" className="text-neutral-500 hover:text-white transition-colors">Blog</a></li>
               </ul>
             </div>
 
@@ -63,7 +62,6 @@ const Footer: React.FC = () => {
             <div>
               <h4 className="text-base font-black text-white mb-8 uppercase tracking-[0.2em]">Community</h4>
               <ul className="space-y-4">
-                <li><a href="/chapters" className="text-neutral-500 hover:text-white transition-colors">Chapters</a></li>
                 <li><a href="/#juno-app" className="text-neutral-500 hover:text-white transition-colors">Partners</a></li>
               </ul>
             </div>

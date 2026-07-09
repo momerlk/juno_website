@@ -382,7 +382,7 @@ const JunoStudioLanding: React.FC = () => {
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-2xl border-b border-white/5">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-            <img src="/juno_logos/icon+text_white.png" alt="Juno Logo" className="h-8 md:h-10" />
+            <img src="/images/juno-logos/icon+text_white.png" alt="Juno Logo" className="h-8 md:h-10" />
           </div>
           <button 
             onClick={() => navigate(window.location.pathname.startsWith('/studio') ? '/studio/onboarding' : '/seller/onboarding')}
@@ -405,7 +405,7 @@ const JunoStudioLanding: React.FC = () => {
 
               {/* Institutional Badge */}
               <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md mb-8">
-                <img src="/dark_logos/nic.png" alt="NIC Lahore" className="h-6 brightness-0 invert opacity-80" />
+                <img src="/images/dark-logos/nic.png" alt="NIC Lahore" className="h-6 brightness-0 invert opacity-80" />
                 <div className="w-px h-5 bg-white/15" />
                 <span className="text-xs font-mono text-neutral-300 tracking-[0.2em] uppercase">Backed by NIC Lahore &amp; Ministry of IT</span>
               </div>
@@ -475,7 +475,7 @@ const JunoStudioLanding: React.FC = () => {
               'Aphrodite.png', 'Gumaan.png', 'Kara.png', 'NOIRE.png',
               'Tabaadil.png', 'Seek Attire.png', 'Ukiyo.png', 'NoRgrt.png',
               'Nakashi.png', 'Qariney.png', 'ROPE.png', 'Core Store.png',
-            ].map(f => ({ src: `/brand_logos/${f}`, alt: f.split('.')[0] }));
+            ].map(f => ({ src: `/images/brand-logos/${f}`, alt: f.split('.')[0] }));
             const row1 = communityLogos.slice(0, Math.ceil(communityLogos.length / 2));
             const row2 = communityLogos.slice(Math.ceil(communityLogos.length / 2));
             return (
@@ -559,8 +559,8 @@ const JunoStudioLanding: React.FC = () => {
                 },
                 {
                   number: '03',
-                  title: 'Campus Chapters',
-                  desc: 'Active chapters across Pakistan\'s top universities bring Juno directly to the 18 to 26 age group that drives your sales.',
+                  title: 'Community',
+                  desc: 'Invite-only creator circles and student-led advocates help Juno reach the right audience with less noise.',
                 },
               ] as { number: string; title: string; desc: string }[]).map((item, i) => (
                 <div
@@ -612,7 +612,7 @@ const JunoStudioLanding: React.FC = () => {
                   transition={{ duration: 1 }}
                   className="relative rounded-[4rem] overflow-hidden shadow-2xl border border-white/10 aspect-[4/5] lg:aspect-[3/4]"
                 >
-                  <img src="/brand_banners/rakh3.jpg" alt="Process" className="w-full h-full object-cover" />
+                  <img src="/images/brand-banners/rakh3.jpg" alt="Process" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-tr from-primary/40 to-transparent mix-blend-overlay" />
                 </motion.div>
                 
@@ -670,7 +670,7 @@ const JunoStudioLanding: React.FC = () => {
             title="Indie"
             description="Join an invite-only circle of Pakistan's most ambitious founders. Collaborate on drops, share manufacturing hacks, and scale the ecosystem together."
             side="left"
-            image="/brand_banners/kara2.webp"
+            image="/images/brand-banners/kara2.webp"
           />
         </section>
 
@@ -873,7 +873,7 @@ const JunoStudioLanding: React.FC = () => {
 
       <footer className="py-20 border-t border-white/5 relative z-10">
         <div className="container mx-auto px-6 text-center">
-          <img src="/juno_logos/icon_white.png" alt="Juno" className="h-12 mx-auto mb-8 opacity-20" />
+          <img src="/images/juno-logos/icon_white.png" alt="Juno" className="h-12 mx-auto mb-8 opacity-20" />
           <div className="text-neutral-500 text-sm font-bold uppercase tracking-[0.3em] mb-4">
             Juno Studio &copy; {new Date().getFullYear()}
           </div>

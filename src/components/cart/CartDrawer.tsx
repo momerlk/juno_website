@@ -242,7 +242,7 @@ const CartDrawer: React.FC = () => {
                                                         >
                                                             <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d0e] transition-all group-hover:border-white/20">
                                                                 <img
-                                                                    src={product.images?.[0] || '/juno_app_icon.png'}
+                                                                    src={product.images?.[0] || '/images/misc/juno_app_icon.png'}
                                                                     alt={product.title}
                                                                     className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-105"
                                                                     loading="lazy"

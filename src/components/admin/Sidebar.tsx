@@ -74,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isCollapsed, onTog
       <div className="border-b border-white/10 px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/juno_logos/icon+text_white.png" alt="Juno Admin" className="h-7" />
+            <img src="/images/juno-logos/icon+text_white.png" alt="Juno Admin" className="h-7" />
             {!collapsed ? (
               <div className="rounded-md border border-white/15 bg-white/[0.03] px-2 py-0.5">
                 <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-300">Admin</span>

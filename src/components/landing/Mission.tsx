@@ -99,7 +99,7 @@ const Mission: React.FC = () => {
             <div className="flex flex-col items-center">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-primary to-secondary mb-6 shadow-2xl shadow-primary/20">
                 <img
-                  src="/team/omer.png"
+                  src="/images/team/omer.png"
                   alt="Omer Malik, Founder"
                   className="w-full h-full rounded-full object-cover border-4 border-black"
                 />

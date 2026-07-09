@@ -68,7 +68,7 @@ const Team: React.FC = () => {
     {
       name: "Omer Ali Malik",
       role: "Chief Executive Officer",
-      image: "/team/omer.png",
+      image: "/images/team/omer.png",
       bio: "Product, Operations & Engineering",
       social: {
         linkedin: "https://linkedin.com/in/omer-malik-395a2a2a5",
@@ -77,7 +77,7 @@ const Team: React.FC = () => {
     {
       name: "Ali Mukarram",
       role: "Chief Operating Officer",
-      image: "/team/ali.png",
+      image: "/images/team/ali.png",
       bio: "Operations, Finance & Legal",
       social: {
         linkedin: "https://www.linkedin.com/in/ali-mukarram-257979209",
@@ -86,7 +86,7 @@ const Team: React.FC = () => {
     {
       name: "Hooria Wasif",
       role: "Chief Growth Officer",
-      image: "/team/hooria.jpg",
+      image: "/images/team/hooria.jpg",
       bio: "Growth, Marketing & Brand Integrations",
       social: {
         linkedin: "https://www.linkedin.com/in/hooria-wasif-136637315",

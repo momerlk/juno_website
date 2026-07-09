@@ -41,7 +41,7 @@ const asProducts = (value: unknown): CatalogProduct[] => {
 
 const getImage = (product: CatalogProduct): string => {
   if (Array.isArray(product.images) && product.images.length > 0) return product.images[0];
-  return '/juno_app_icon.png';
+  return '/images/misc/juno_app_icon.png';
 };
 
 const CreateCampaignPage: React.FC = () => {

@@ -4,11 +4,11 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
 const partners = [
-  { name: 'HBL', logo: '/dark_logos/hbl.png' },
-  { name: 'ImpactX', logo: '/dark_logos/impactx.png' },
-  { name: 'NetSol', logo: '/dark_logos/netsol.png' },
-  { name: 'NIC', logo: '/dark_logos/nic.png' },
-  { name: 'PMYP', logo: '/dark_logos/pmyp.png' },
+  { name: 'HBL', logo: '/images/dark-logos/hbl.png' },
+  { name: 'ImpactX', logo: '/images/dark-logos/impactx.png' },
+  { name: 'NetSol', logo: '/images/dark-logos/netsol.png' },
+  { name: 'NIC', logo: '/images/dark-logos/nic.png' },
+  { name: 'PMYP', logo: '/images/dark-logos/pmyp.png' },
 ];
 
 const ImpactCard: React.FC<{ icon: React.ReactNode; title: string; description: string; delay: number }> = ({ icon, title, description, delay }) => {

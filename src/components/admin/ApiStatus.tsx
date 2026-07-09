@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Activity,
   AlertTriangle,
   ArrowRight,
   BarChart3,
@@ -16,7 +15,6 @@ import {
   ShieldCheck,
   ShoppingBag,
   Sparkles,
-  Store,
   Users,
   Wifi,
   XCircle,
@@ -28,10 +26,8 @@ import {
   Campaigns,
   Catalog,
   Commerce,
-  Events,
   GuestCommerce,
   SellerAPI,
-  Shopify,
 } from '../../api/api';
 
 type DiagnosticResult = {
@@ -174,64 +170,6 @@ const moduleDefinitions: ModuleDefinition[] = [
           ok: resp.ok,
           status: resp.status,
           detail: resp.ok ? 'Guest commerce reachable' : formatBody(resp.body),
-        };
-      },
-    },
-  },
-  {
-    id: 'events',
-    title: 'Events',
-    tagline: 'Tournaments, registration, and leaderboard mechanics',
-    description: 'Competition endpoints for public discovery, leaderboard rendering, authenticated registration, and admin event creation.',
-    namespace: 'Events',
-    file: 'src/api/eventsApi.ts',
-    auth: 'Mixed',
-    endpointCount: 5,
-    icon: Activity,
-    tone: 'from-secondary/20 via-white/5 to-transparent',
-    sampleCalls: [
-      'await Events.listTournaments()',
-      'await Events.getLeaderboard(tournamentId)',
-      'await Events.register(tournamentId)',
-    ],
-    capabilities: ['public listing', 'leaderboards', 'user registration', 'admin creation'],
-    diagnostic: {
-      label: 'Tournament index',
-      run: async () => {
-        const resp = await Events.listTournaments();
-        return {
-          ok: resp.ok,
-          status: resp.status,
-          detail: resp.ok ? 'Events module reachable' : formatBody(resp.body),
-        };
-      },
-    },
-  },
-  {
-    id: 'shopify',
-    title: 'Shopify',
-    tagline: 'Seller sync layer for off-platform inventory',
-    description: 'OAuth connection, product and collection sync, and admin-assisted syncing for seller onboarding and recovery.',
-    namespace: 'Shopify',
-    file: 'src/api/shopifyApi.ts',
-    auth: 'Mixed',
-    endpointCount: 7,
-    icon: Store,
-    tone: 'from-primary/15 via-white/5 to-transparent',
-    sampleCalls: [
-      'const url = Shopify.getAuthUrl(token, "store.myshopify.com")',
-      'await Shopify.getStatus()',
-      'await Shopify.adminSyncProducts(sellerId)',
-    ],
-    capabilities: ['oauth url', 'seller sync', 'collection sync', 'admin re-sync'],
-    diagnostic: {
-      label: 'Connection status',
-      run: async () => {
-        const resp = await Shopify.getStatus();
-        return {
-          ok: resp.ok,
-          status: resp.status,
-          detail: resp.ok ? 'Shopify status endpoint reachable' : formatBody(resp.body),
         };
       },
     },

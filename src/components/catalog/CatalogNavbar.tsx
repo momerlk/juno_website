@@ -145,7 +145,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                     handleSearchSubmit(searchQuery);
                 }}
             >
-                <img src="/icons/search.png" alt="" className="h-4 w-4 shrink-0 opacity-65" />
+                <img src="/images/icons/search.png" alt="" className="h-4 w-4 shrink-0 opacity-65" />
                 <input
                     type="search"
                     value={searchQuery}
@@ -187,7 +187,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                             }}
                         >
                             <img
-                                src="/juno_logos/icon+text_white.png"
+                                src="/images/juno-logos/icon+text_white.png"
                                 alt="Juno"
                                 className="h-8 w-auto object-contain md:h-9"
                             />
@@ -213,7 +213,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                                 className={iconButtonClass}
                                 aria-label="Search"
                             >
-                                <img src="/icons/search.png" alt="" className="h-5 w-5 opacity-90" />
+                                <img src="/images/icons/search.png" alt="" className="h-5 w-5 opacity-90" />
                             </button>
 
                             <button
@@ -222,7 +222,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                                 className={iconButtonClass}
                                 aria-label="Cart"
                             >
-                                <img src="/icons/shopping_bag.png" alt="" className="h-5 w-5 opacity-90" />
+                                <img src="/images/icons/shopping_bag.png" alt="" className="h-5 w-5 opacity-90" />
                                 {itemCount > 0 ? (
                                     <motion.span
                                         initial={{ scale: 0 }}
@@ -262,7 +262,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                         >
                             <div className="mx-auto max-w-2xl">
                                 <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 focus-within:border-white/25">
-                                    <img src="/icons/search.png" alt="" className="h-4 w-4 shrink-0 opacity-65" />
+                                    <img src="/images/icons/search.png" alt="" className="h-4 w-4 shrink-0 opacity-65" />
                                     <input
                                         ref={searchInputRef}
                                         type="search"
@@ -302,7 +302,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                                                 onClick={() => handleSearchSubmit(suggestion.keyword)}
                                                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
                                             >
-                                                <img src="/icons/search.png" alt="" className="h-3.5 w-3.5 opacity-40" />
+                                                <img src="/images/icons/search.png" alt="" className="h-3.5 w-3.5 opacity-40" />
                                                 {suggestion.keyword}
                                             </button>
                                         ))}
@@ -317,7 +317,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                                                 onClick={() => handleSearchSubmit(recent)}
                                                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/5 hover:text-white"
                                             >
-                                                <img src="/icons/search.png" alt="" className="h-3.5 w-3.5 opacity-40" />
+                                                <img src="/images/icons/search.png" alt="" className="h-3.5 w-3.5 opacity-40" />
                                                 {recent}
                                             </button>
                                         ))}

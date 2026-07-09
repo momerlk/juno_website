@@ -87,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       <div className="border-b border-white/10 px-5 py-5">
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/juno_logos/icon+text_white.png" alt="Juno Studio" className="h-8" />
+            <img src="/images/juno-logos/icon+text_white.png" alt="Juno Studio" className="h-8" />
           </div>
           <button onClick={() => setIsOpen(false)} className="rounded-2xl border border-white/10 bg-white/[0.03] p-2 text-white/60 transition-colors hover:text-white md:hidden">
             <X size={16} />

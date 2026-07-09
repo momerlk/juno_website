@@ -29,7 +29,7 @@ const CatalogLandingPage: React.FC = () => {
                 <Link to="/catalog/women" className="block h-full w-full">
                     {/* Background Image */}
                     <motion.img
-                        src="/brand_banners/kara2.webp"
+                        src="/images/brand-banners/kara2.webp"
                         alt="Women's Collection"
                         className="absolute inset-0 h-full w-full object-cover object-center"
                         animate={{ scale: hoveredSide === 'women' ? 1.06 : 1 }}
@@ -126,7 +126,7 @@ const CatalogLandingPage: React.FC = () => {
                 <Link to="/catalog/men" className="block h-full w-full">
                     {/* Background Image */}
                     <motion.img
-                        src="/brand_banners/Rakh.png"
+                        src="/images/brand-banners/Rakh.png"
                         alt="Men's Collection"
                         className="absolute inset-0 h-full w-full object-cover object-top"
                         animate={{ scale: hoveredSide === 'men' ? 1.06 : 1 }}

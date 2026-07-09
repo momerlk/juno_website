@@ -750,15 +750,10 @@ function getScreenNameFromLocation(location: Location): string {
     const path = location.pathname;
     
     if (path === '/') return 'home';
-    if (path.startsWith('/product/')) return 'product_detail';
-    if (path.startsWith('/brand/')) return 'brand_page';
+    if (path.startsWith('/catalog/')) return 'product_detail';
     if (path.startsWith('/c/')) return 'campaign_landing';
-    if (path.startsWith('/blog/')) return 'blog_post';
-    if (path === '/blog') return 'blog_index';
     if (path.startsWith('/seller') || path.startsWith('/studio')) return 'seller_portal';
     if (path.startsWith('/admin')) return 'admin_dashboard';
-    if (path.startsWith('/ambassador')) return 'ambassador_dashboard';
-    if (path.startsWith('/work')) return 'work_dashboard';
     if (path.startsWith('/search')) return 'search_results';
     if (path.startsWith('/cart')) return 'cart';
     if (path.startsWith('/checkout')) return 'checkout';
