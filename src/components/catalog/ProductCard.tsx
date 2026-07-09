@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Heart, ShoppingBag, Sparkles, Star } from 'lucide-react';
 import type { CatalogProduct } from '../../api/api';
 import { useGuestCart } from '../../contexts/GuestCartContext';
+import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 
 interface ProductCardProps {
     product: CatalogProduct;
@@ -72,6 +73,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
     const isSoldOut = !product.inventory?.in_stock;
     const productImage = getProductImage(product);
     const hoverImage = product.images?.[1];
+    const productImageSet = getResponsiveShopifyImageSet(productImage, [240, 360, 540, 720]);
+    const hoverImageSet = getResponsiveShopifyImageSet(hoverImage || '', [240, 360, 540, 720]);
     const activePrice = getBaseProductPrice(product);
     const categoryLabel = product.categories?.[0]?.name;
     const accentTags = [
@@ -155,16 +158,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
                 <div className="relative aspect-[0.77] overflow-hidden">
                     <img
-                        src={productImage}
+                        src={productImageSet.src}
+                        srcSet={productImageSet.srcSet}
+                        sizes="(max-width: 640px) 92vw, (max-width: 1280px) 46vw, 30vw"
                         alt={product.title}
+                        loading="lazy"
+                        decoding="async"
                         className={`h-full w-full object-cover transition-all duration-700 ${
                             isHovered && hoverImage ? 'scale-110 opacity-0' : 'scale-100 opacity-100'
                         }`}
                     />
                     {hoverImage ? (
                         <img
-                            src={hoverImage}
+                            src={hoverImageSet.src}
+                            srcSet={hoverImageSet.srcSet}
+                            sizes="(max-width: 640px) 92vw, (max-width: 1280px) 46vw, 30vw"
                             alt={product.title}
+                            loading="lazy"
+                            decoding="async"
                             className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 ${
                                 isHovered ? 'scale-100 opacity-100' : 'scale-110 opacity-0'
                             }`}

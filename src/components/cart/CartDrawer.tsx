@@ -4,6 +4,7 @@ import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight, Zap, Loader2 } from 'l
 import { Link, useNavigate } from 'react-router-dom';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Catalog, type CatalogProduct } from '../../api/api';
+import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
@@ -16,6 +17,8 @@ const addDays = (date: Date, days: number) => {
 const fmtDay = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 const FREE_SHIPPING_THRESHOLD = 5900;
+const getCardImage = (url?: string) =>
+    getResponsiveShopifyImageSet(url || '/images/misc/juno_app_icon.png', [120, 160, 240]);
 
 const CartDrawer: React.FC = () => {
     const navigate = useNavigate();
@@ -146,6 +149,9 @@ const CartDrawer: React.FC = () => {
                                         {/* Items */}
                                         <div className="space-y-3">
                                             {optimisticCart.map((item, index) => (
+                                                (() => {
+                                                    const itemImage = getCardImage(item.image_url);
+                                                    return (
                                                 <motion.div
                                                     key={`${item.product_id || 'p'}-${item.variant_id || 'v'}-${index}`}
                                                     initial={{ opacity: 0, y: 8 }}
@@ -157,10 +163,13 @@ const CartDrawer: React.FC = () => {
                                                     <div className="h-24 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-[#0d0d0e]">
                                                         {item.image_url ? (
                                                             <img
-                                                                src={item.image_url}
+                                                                src={itemImage.src}
+                                                                srcSet={itemImage.srcSet}
+                                                                sizes="80px"
                                                                 alt={item.product_title || 'Product'}
                                                                 className="h-full w-full object-cover"
                                                                 loading="lazy"
+                                                                decoding="async"
                                                             />
                                                         ) : (
                                                             <div className="flex h-full w-full items-center justify-center">
@@ -223,6 +232,8 @@ const CartDrawer: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 </motion.div>
+                                                    );
+                                                })()
                                             ))}
                                         </div>
 
@@ -234,6 +245,9 @@ const CartDrawer: React.FC = () => {
                                                 </p>
                                                 <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
                                                     {relatedProducts.map((product, idx) => (
+                                                        (() => {
+                                                            const relatedImage = getCardImage(product.images?.[0]);
+                                                            return (
                                                         <Link
                                                             key={product.id || `related-${idx}`}
                                                             to={`/catalog/${product.id}`}
@@ -242,10 +256,13 @@ const CartDrawer: React.FC = () => {
                                                         >
                                                             <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d0e] transition-all group-hover:border-white/20">
                                                                 <img
-                                                                    src={product.images?.[0] || '/images/misc/juno_app_icon.png'}
+                                                                    src={relatedImage.src}
+                                                                    srcSet={relatedImage.srcSet}
+                                                                    sizes="112px"
                                                                     alt={product.title}
                                                                     className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-105"
                                                                     loading="lazy"
+                                                                    decoding="async"
                                                                 />
                                                             </div>
                                                             <p className="mt-1.5 line-clamp-1 text-[11px] font-bold text-white/80">{product.title}</p>
@@ -253,6 +270,8 @@ const CartDrawer: React.FC = () => {
                                                                 {formatCurrency(product.pricing.discounted_price || product.pricing.price)}
                                                             </p>
                                                         </Link>
+                                                            );
+                                                        })()
                                                     ))}
                                                 </div>
                                             </div>

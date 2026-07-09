@@ -80,6 +80,23 @@ const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
     return diversified;
 };
 
+const moveSoldOutToEnd = (products: CatalogProduct[]): CatalogProduct[] => {
+    if (products.length <= 1) return products;
+
+    const inStockProducts: CatalogProduct[] = [];
+    const soldOutProducts: CatalogProduct[] = [];
+
+    products.forEach((product) => {
+        if (product.inventory?.in_stock) {
+            inStockProducts.push(product);
+        } else {
+            soldOutProducts.push(product);
+        }
+    });
+
+    return [...inStockProducts, ...soldOutProducts];
+};
+
 const humanizeCatalogValue = (value: string) =>
     value
         .split(/[_-]+/)
@@ -330,7 +347,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                     if (fallback.ok) nextProducts = asArray(fallback.body);
                 }
 
-                const diversified = diversifyProducts(nextProducts);
+                const diversified = moveSoldOutToEnd(diversifyProducts(nextProducts));
                 setProducts((prev) => {
                     if (!append) return diversified;
                     const seen = new Set(prev.map((product) => product.id));

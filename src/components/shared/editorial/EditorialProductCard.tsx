@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, ShoppingBag } from 'lucide-react';
+import { getResponsiveShopifyImageSet } from '../../../utils/shopifyImage';
 
 type EditorialProductCardProps = {
     title: string;
@@ -43,6 +44,7 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
     index = 0,
 }) => {
     const image = images?.[0] ?? '';
+    const imageSet = getResponsiveShopifyImageSet(image, [240, 360, 540, 720]);
     const price = pricing.discounted ? pricing.discounted_price ?? pricing.price : pricing.price;
     const comparePrice = pricing.compare_at_price;
     const discountPct =
@@ -67,7 +69,9 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
                 <div className="relative overflow-hidden bg-[#0d0d0e]">
                     {image ? (
                         <img
-                            src={image}
+                            src={imageSet.src}
+                            srcSet={imageSet.srcSet}
+                            sizes="(max-width: 640px) 92vw, (max-width: 1280px) 46vw, 30vw"
                             alt={title}
                             loading="lazy"
                             decoding="async"

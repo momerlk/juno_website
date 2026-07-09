@@ -23,6 +23,7 @@ import { useTrackProductView } from '../../hooks/useProbe';
 import CatalogNavbar from './CatalogNavbar';
 import SizeGuideModal from './SizeGuideModal';
 import { toTikTokProductContent, trackTikTokViewContent } from '../../utils/tiktokPixel';
+import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
@@ -472,6 +473,7 @@ const CatalogProductPage: React.FC = () => {
                             <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-2 pt-1 scrollbar-none">
                                 {imageGallery.map((image, index) => {
                                     const active = selectedImageIdx === index;
+                                    const thumbnailImage = getResponsiveShopifyImageSet(image, [120, 180, 240, 320]);
                                     return (
                                         <button
                                             key={`thumb-${index}`}
@@ -479,15 +481,17 @@ const CatalogProductPage: React.FC = () => {
                                             className={`relative w-[82px] shrink-0 overflow-hidden rounded-xl transition-all md:w-[96px] ${
                                                 active ? 'ring-2 ring-inset ring-white' : 'opacity-55 hover:opacity-95'
                                             }`}
-                                        >
-                                            <img
-                                                src={image}
+                                            >
+                                                <img
+                                                src={thumbnailImage.src}
+                                                srcSet={thumbnailImage.srcSet}
+                                                sizes="(max-width: 768px) 82px, 96px"
                                                 alt={`View ${index + 1}`}
                                                 loading="lazy"
                                                 decoding="async"
                                                 className="aspect-[3/4] w-full object-cover"
-                                            />
-                                        </button>
+                                                />
+                                            </button>
                                     );
                                 })}
                             </div>
