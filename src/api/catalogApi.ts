@@ -10,6 +10,8 @@ import { request, APIResponse } from "./core";
 import type {
     CatalogProduct,
     FilterOptions,
+    CatalogFacets,
+    CatalogHierarchy,
     ProductFilterRequest,
     Collection,
     Drop,
@@ -86,8 +88,34 @@ export namespace Catalog {
      * Returns all available filter values for populating search sidebar:
      * sizes, price ranges, categories, colors, brands, materials, occasions, product types.
      */
-    export async function getFilters(): Promise<APIResponse<FilterOptions>> {
-        return request(`${BASE_PATH}/products/filters`, 'GET', undefined, undefined, true);
+    export async function getFilters(params?: CatalogQueryParams): Promise<APIResponse<FilterOptions>> {
+        const query = toSearchParams(params);
+        const qp = query ? `?${query}` : '';
+        return request(`${BASE_PATH}/products/filters${qp}`, 'GET', undefined, undefined, true);
+    }
+
+    /**
+     * Get count-based catalog facets
+     *
+     * Returns scoped counts for brands, taxonomy, and metadata buckets using
+     * the same filter query contract as list products.
+     */
+    export async function getFacets(params?: CatalogQueryParams): Promise<APIResponse<CatalogFacets>> {
+        const query = toSearchParams(params);
+        const qp = query ? `?${query}` : '';
+        return request(`${BASE_PATH}/products/facets${qp}`, 'GET', undefined, undefined, true);
+    }
+
+    /**
+     * Get catalog taxonomy hierarchy
+     *
+     * Returns department -> product_group -> product_type counts scoped to
+     * the active catalog filter set.
+     */
+    export async function getHierarchy(params?: CatalogQueryParams): Promise<APIResponse<CatalogHierarchy>> {
+        const query = toSearchParams(params);
+        const qp = query ? `?${query}` : '';
+        return request(`${BASE_PATH}/hierarchy${qp}`, 'GET', undefined, undefined, true);
     }
 
     /**

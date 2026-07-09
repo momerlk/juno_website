@@ -1,14 +1,19 @@
 import React from 'react';
-import type { GenderOverviewProduct } from '../../../api/api.types';
-import EditorialProductCard from '../../shared/editorial/EditorialProductCard';
+import type { CatalogProduct, GenderOverviewProduct } from '../../api/api.types';
+import EditorialProductCard from '../shared/editorial/EditorialProductCard';
+
+type GridProduct = Pick<CatalogProduct, 'id' | 'title' | 'seller_name' | 'images' | 'pricing'> | GenderOverviewProduct;
 
 type Props = {
-    products: GenderOverviewProduct[];
+    products: GridProduct[];
     isLoading?: boolean;
     basePath?: string;
 };
 
-const ProductGrid: React.FC<Props> = ({ products, isLoading = false, basePath = 'catalog' }) => {
+// Used by: `CatalogGenderPage`
+// Purpose: reusable product grid for the curated gender edits. The full browse
+// page (`/catalog/all`) has its own heavier layout and does not use this grid.
+const CatalogProductGrid: React.FC<Props> = ({ products, isLoading = false, basePath = 'catalog' }) => {
     if (isLoading) {
         return (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 xl:grid-cols-3">
@@ -54,4 +59,4 @@ const ProductGrid: React.FC<Props> = ({ products, isLoading = false, basePath = 
     );
 };
 
-export default ProductGrid;
+export default CatalogProductGrid;

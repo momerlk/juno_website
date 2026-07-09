@@ -267,9 +267,9 @@ within one field and AND across different fields.
 ### Get Filter Options
 `GET /api/v2/catalog/products/filters`
 
-Returns filter values derived from active products belonging to active sellers.
-Brands include their current active product count. Materials and occasions are
-derived from normalized `material:*` and `occasion:*` product tags.
+Returns filter values derived from active `products_v2` rows belonging to active
+sellers. The same query parameters supported by product listing can be supplied
+here to scope the returned filter options to the current result set.
 
 **Response `200`**
 ```json
@@ -281,7 +281,64 @@ derived from normalized `material:*` and `occasion:*` product tags.
   "brands": [{ "id": "...", "name": "Khaadi", "product_count": 142 }],
   "materials": ["Cotton", "Chiffon"],
   "occasions": ["Casual", "Formal"],
-  "product_types": ["Eastern", "Western"]
+  "product_types": ["kurta", "maxi_dress"],
+  "departments": ["apparel"],
+  "product_groups": ["sets", "dresses_and_one_pieces"],
+  "genders": ["women", "unisex"]
+}
+```
+
+---
+
+### Get Catalog Facets
+`GET /api/v2/catalog/products/facets`
+
+Returns count-based facet buckets built from `products_v2` metadata after
+applying any query parameters. This is the richer discovery endpoint for
+building layered catalog filters in the frontend.
+
+**Response `200`**
+```json
+{
+  "price_range": { "min": 1890, "max": 14990 },
+  "brands": [{ "id": "seller-1", "name": "Khaadi", "count": 142 }],
+  "departments": [{ "value": "apparel", "count": 721 }],
+  "product_groups": [{ "value": "sets", "count": 244 }],
+  "product_types": [{ "value": "kurta_trouser_dupatta_set", "count": 63 }],
+  "genders": [{ "value": "women", "count": 580 }],
+  "style_categories": [{ "value": "pret", "count": 311 }],
+  "pakistani_wear": [{ "value": "lawn", "count": 88 }]
+}
+```
+
+---
+
+### Get Catalog Hierarchy
+`GET /api/v2/catalog/hierarchy`
+
+Returns a live taxonomy tree from `department -> product_group -> product_type`
+using `products_v2.metadata`, with counts at each level. Optional query filters
+can be supplied to scope the hierarchy to a gender, brand, price band, or any
+other metadata selection.
+
+**Response `200`**
+```json
+{
+  "departments": [
+    {
+      "department": "apparel",
+      "product_count": 721,
+      "groups": [
+        {
+          "product_group": "sets",
+          "product_count": 244,
+          "types": [
+            { "product_type": "kurta_trouser_dupatta_set", "product_count": 63 }
+          ]
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -387,7 +444,7 @@ Returns a ranked list of popular products for guest storefronts and landing page
 
 Returns a paginated product list and brand list for a gender category. No authentication required.
 
-Men includes products tagged `male` or `unisex`. Women includes products tagged `female` or `unisex`.
+Men includes products with canonical metadata gender `men` or `unisex`. Women includes products with canonical metadata gender `women` or `unisex`.
 
 The brands array only includes brands that have at least one product in the returned (filtered) product set. The `total` field reflects the full count of matching products across all pages, not just the current page length.
 
@@ -421,7 +478,7 @@ The brands array only includes brands that have at least one product in the retu
       "seller_logo": "https://...",
       "pricing": { "price": 2500, "currency": "PKR" },
       "images": ["https://..."],
-      "tags": ["male"],
+      "metadata": { "gender": "men", "department": "apparel", "product_type": "kurta" },
       "status": "active"
     }
   ],
@@ -440,12 +497,12 @@ The brands array only includes brands that have at least one product in the retu
 }
 ```
 
-**Tag Mapping**
+**Metadata Mapping**
 
-| URL path param | Tags sent to MongoDB `$in` filter |
+| URL path param | Metadata genders sent to MongoDB `$in` filter |
 |---|---|
-| `men` | `["male", "unisex"]` |
-| `women` | `["female", "unisex"]` |
+| `men` | `["men", "unisex"]` |
+| `women` | `["women", "unisex"]` |
 | anything else | returns 400 Bad Request |
 
 **Edge Cases**

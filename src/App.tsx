@@ -82,9 +82,9 @@ const BlogPostPage = React.lazy(() => import('./components/blog/BlogPostPage'));
 const WritePage = React.lazy(() => import('./components/blog/WritePage'));
 const ProductPage = React.lazy(() => import('./components/ProductPage'));
 const CatalogProductPage = React.lazy(() => import('./components/catalog/CatalogProductPage'));
-const GenderLandingPage = React.lazy(() => import('./components/catalog/gender/GenderLandingPage'));
-const GenderCatalogPage = React.lazy(() => import('./components/catalog/gender/GenderCatalogPage'));
-const CatalogPage = React.lazy(() => import('./components/catalog/CatalogPage'));
+const CatalogLandingPage = React.lazy(() => import('./components/catalog/CatalogLandingPage'));
+const CatalogGenderPage = React.lazy(() => import('./components/catalog/CatalogGenderPage'));
+const CatalogBrowsePage = React.lazy(() => import('./components/catalog/CatalogBrowsePage'));
 const DownloadRedirect = React.lazy(() => import('./components/DownloadRedirect'));
 const ChapterFormPage = React.lazy(() => import('./components/chapter/ChapterFormPage'));
 const BrandReelGraphic = React.lazy(() => import('./components/BrandReelGraphic'));
@@ -232,11 +232,14 @@ function RoutedApp() {
 
                 <Route path="/download" element={<DownloadRedirect />} />
                 
-                {/* Catalog navigation */}
-                <Route path="/catalog" element={<GenderLandingPage />} />
-                <Route path="/catalog/all" element={<CatalogPage />} />
-                <Route path="/catalog/women" element={<GenderCatalogPage gender="women" />} />
-                <Route path="/catalog/men" element={<GenderCatalogPage gender="men" />} />
+                {/* Catalog routes:
+                    `/catalog` is the landing screen.
+                    `/catalog/all` is the full searchable browse view.
+                    `/catalog/women` and `/catalog/men` are curated gender edits. */}
+                <Route path="/catalog" element={<CatalogLandingPage />} />
+                <Route path="/catalog/all" element={<CatalogBrowsePage />} />
+                <Route path="/catalog/women" element={<CatalogGenderPage gender="women" />} />
+                <Route path="/catalog/men" element={<CatalogGenderPage gender="men" />} />
                 <Route path="/catalog/:productId" element={<CatalogProductPage />} />
                 
                 <Route path="/wishlist" element={<WishlistPage />} />

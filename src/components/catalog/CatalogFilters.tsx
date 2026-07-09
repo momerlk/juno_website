@@ -3,7 +3,19 @@ import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import type { FilterOptions } from '../../api/api';
 
-type FilterKey = 'brand_ids' | 'sizes' | 'colors' | 'product_types' | 'materials' | 'occasions';
+// Used by: `CatalogBrowsePage` and `CatalogGenderPage`
+// Purpose: central query-string driven filter bar for catalog browsing routes.
+type FilterKey =
+    | 'brand_ids'
+    | 'colors'
+    | 'product_types'
+    | 'materials'
+    | 'occasions'
+    | 'departments'
+    | 'product_groups'
+    | 'genders'
+    | 'style_categories'
+    | 'pakistani_wear';
 
 type Props = {
     options: FilterOptions | null;
@@ -19,11 +31,15 @@ const DEFAULT_KEYS: NonNullable<Props['supportedKeys']> = [
     'min_price',
     'max_price',
     'in_stock',
-    'sizes',
     'colors',
     'product_types',
     'materials',
     'occasions',
+    'departments',
+    'product_groups',
+    'genders',
+    'style_categories',
+    'pakistani_wear',
     'sort',
 ];
 
@@ -32,11 +48,24 @@ const MULTI_FILTERS: Array<{
     label: string;
     source: keyof Pick<
         FilterOptions,
-        'brands' | 'sizes' | 'colors' | 'product_types' | 'materials' | 'occasions'
+        | 'brands'
+        | 'colors'
+        | 'product_types'
+        | 'materials'
+        | 'occasions'
+        | 'departments'
+        | 'product_groups'
+        | 'genders'
+        | 'style_categories'
+        | 'pakistani_wear'
     >;
 }> = [
     { key: 'brand_ids', label: 'Labels', source: 'brands' },
-    { key: 'sizes', label: 'Sizes', source: 'sizes' },
+    { key: 'genders', label: 'Gender', source: 'genders' },
+    { key: 'departments', label: 'Departments', source: 'departments' },
+    { key: 'product_groups', label: 'Product groups', source: 'product_groups' },
+    { key: 'style_categories', label: 'Styles', source: 'style_categories' },
+    { key: 'pakistani_wear', label: 'Pakistani wear', source: 'pakistani_wear' },
     { key: 'colors', label: 'Colors', source: 'colors' },
     { key: 'product_types', label: 'Product types', source: 'product_types' },
     { key: 'materials', label: 'Materials', source: 'materials' },

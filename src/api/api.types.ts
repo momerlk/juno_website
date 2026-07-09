@@ -245,6 +245,32 @@ export interface ProductCategory {
     slug: string;
 }
 
+export interface CatalogMetadata {
+    department?: string;
+    product_group?: string;
+    product_type?: string;
+    gender?: string;
+    age_segments?: string[];
+    style_categories?: string[];
+    aesthetics?: string[];
+    occasions?: string[];
+    seasonality?: string[];
+    fit?: string;
+    silhouette?: string;
+    sleeve_length?: string;
+    neckline?: string;
+    materials?: string[];
+    pattern?: string[];
+    color_families?: string[];
+    primary_color?: string;
+    search_keywords?: string[];
+    normalized_tags?: string[];
+    validation_status?: string;
+    confidence_score?: number;
+    source?: string;
+    [key: string]: unknown;
+}
+
 export interface CatalogProduct {
     id: string;
     raw_id: string;
@@ -259,6 +285,7 @@ export interface CatalogProduct {
     categories: ProductCategory[];
     product_type: string;
     gender?: string;
+    metadata?: CatalogMetadata | null;
     enrichment?: {
         product_type?: string;
         gender?: string;
@@ -295,6 +322,7 @@ export interface GenderOverviewProduct {
         discounted_price: number;
     };
     images: string[];
+    metadata?: CatalogMetadata | null;
     tags: string[];
     status: string;
 }
@@ -316,12 +344,86 @@ export interface GenderOverview {
 export interface FilterOptions {
     sizes: string[];
     price_ranges: { min: number; max: number }[];
-    categories: ProductCategory[];
+    categories: ProductCategory[] | null;
     colors: string[];
     brands: { id: string; name: string; product_count?: number }[];
     materials: string[];
     occasions: string[];
     product_types: string[];
+    departments?: string[];
+    product_groups?: string[];
+    genders?: string[];
+    product_sub_types?: string[];
+    age_segments?: string[];
+    style_categories?: string[];
+    aesthetics?: string[];
+    color_families?: string[];
+    fits?: string[];
+    seasonality?: string[];
+    sleeve_lengths?: string[];
+    necklines?: string[];
+    patterns?: string[];
+    work_details?: string[];
+    pakistani_wear?: string[];
+    validation_status?: string[];
+}
+
+export interface CatalogFacetBucket {
+    value: string;
+    count: number;
+}
+
+export interface CatalogBrandFacet {
+    id: string;
+    name: string;
+    count: number;
+}
+
+export interface CatalogFacets {
+    price_range?: { min: number; max: number };
+    brands?: CatalogBrandFacet[];
+    sizes?: CatalogFacetBucket[];
+    colors?: CatalogFacetBucket[];
+    materials?: CatalogFacetBucket[];
+    occasions?: CatalogFacetBucket[];
+    product_types?: CatalogFacetBucket[];
+    departments?: CatalogFacetBucket[];
+    product_groups?: CatalogFacetBucket[];
+    genders?: CatalogFacetBucket[];
+    product_sub_types?: CatalogFacetBucket[];
+    age_segments?: CatalogFacetBucket[];
+    style_categories?: CatalogFacetBucket[];
+    aesthetics?: CatalogFacetBucket[];
+    color_families?: CatalogFacetBucket[];
+    fits?: CatalogFacetBucket[];
+    seasonality?: CatalogFacetBucket[];
+    sleeve_lengths?: CatalogFacetBucket[];
+    necklines?: CatalogFacetBucket[];
+    patterns?: CatalogFacetBucket[];
+    work_details?: CatalogFacetBucket[];
+    pakistani_wear?: CatalogFacetBucket[];
+    validation_status?: CatalogFacetBucket[];
+}
+
+export interface CatalogHierarchyTypeNode {
+    product_type: string;
+    product_count: number;
+}
+
+export interface CatalogHierarchyGroupNode {
+    product_group: string;
+    product_count: number;
+    types: CatalogHierarchyTypeNode[];
+}
+
+export interface CatalogHierarchyDepartmentNode {
+    department: string;
+    product_count: number;
+    groups: CatalogHierarchyGroupNode[];
+}
+
+export interface CatalogHierarchy {
+    departments: CatalogHierarchyDepartmentNode[];
 }
 
 export interface ProductFilterRequest {
@@ -344,6 +446,20 @@ export interface ProductFilterRequest {
     product_types?: string[];
     occasions?: string[];
     tags?: string[];
+    departments?: string[];
+    product_groups?: string[];
+    genders?: string[];
+    style_categories?: string[];
+    pakistani_wear?: string[];
+    aesthetics?: string[];
+    color_families?: string[];
+    fits?: string[];
+    seasonality?: string[];
+    sleeve_lengths?: string[];
+    necklines?: string[];
+    patterns?: string[];
+    work_details?: string[];
+    age_segments?: string[];
 }
 
 export type CatalogSort =
@@ -377,6 +493,20 @@ export interface CatalogQueryParams {
     materials?: string[];
     occasions?: string[];
     tags?: string[];
+    departments?: string[];
+    product_groups?: string[];
+    genders?: string[];
+    style_categories?: string[];
+    pakistani_wear?: string[];
+    aesthetics?: string[];
+    color_families?: string[];
+    fits?: string[];
+    seasonality?: string[];
+    sleeve_lengths?: string[];
+    necklines?: string[];
+    patterns?: string[];
+    work_details?: string[];
+    age_segments?: string[];
     sort?: CatalogSort;
     order?: 'asc' | 'desc';
     limit?: number;

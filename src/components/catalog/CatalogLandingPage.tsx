@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-const GenderLandingPage: React.FC = () => {
+// Route: `/catalog`
+// Purpose: this is the catalog entry screen. It lets users choose a curated
+// gender edit or jump into the full searchable marketplace at `/catalog/all`.
+const CatalogLandingPage: React.FC = () => {
     const [hoveredSide, setHoveredSide] = useState<'men' | 'women' | null>(null);
 
     return (
@@ -215,4 +218,4 @@ const GenderLandingPage: React.FC = () => {
     );
 };
 
-export default GenderLandingPage;
+export default CatalogLandingPage;
