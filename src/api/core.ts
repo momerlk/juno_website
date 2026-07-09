@@ -81,6 +81,138 @@ export function getAuthToken() {
     return null;
 }
 
+type AuthScope = 'admin' | 'seller' | 'generic';
+
+const ADMIN_ACCESS_TOKEN_KEY = 'admin_token';
+const ADMIN_REFRESH_TOKEN_KEY = 'admin_refresh_token';
+const SELLER_SESSION_KEY = 'seller';
+const SELLER_ACCESS_TOKEN_KEY = 'seller_token';
+const SELLER_REFRESH_TOKEN_KEY = 'seller_refresh_token';
+const LEGACY_SELLER_ACCESS_TOKEN_KEY = 'token';
+
+function getStoredSellerSession(): any | null {
+    const sellerRaw = localStorage.getItem(SELLER_SESSION_KEY);
+    if (!sellerRaw) return null;
+    try {
+        return JSON.parse(sellerRaw);
+    } catch {
+        return null;
+    }
+}
+
+function getStoredAccessToken(scope: AuthScope): string | null {
+    switch (scope) {
+        case 'admin':
+            return localStorage.getItem(ADMIN_ACCESS_TOKEN_KEY);
+        case 'seller': {
+            const session = getStoredSellerSession();
+            return localStorage.getItem(SELLER_ACCESS_TOKEN_KEY)
+                ?? localStorage.getItem(LEGACY_SELLER_ACCESS_TOKEN_KEY)
+                ?? session?.token
+                ?? null;
+        }
+        default:
+            return getAuthToken();
+    }
+}
+
+function getStoredRefreshToken(scope: AuthScope): string | null {
+    switch (scope) {
+        case 'admin':
+            return localStorage.getItem(ADMIN_REFRESH_TOKEN_KEY);
+        case 'seller': {
+            const session = getStoredSellerSession();
+            return localStorage.getItem(SELLER_REFRESH_TOKEN_KEY)
+                ?? session?.refreshToken
+                ?? session?.refresh_token
+                ?? null;
+        }
+        default:
+            return localStorage.getItem('refresh_token');
+    }
+}
+
+function resolveAuthScope(endpoint: string, token?: string): AuthScope {
+    const accessToken = token ?? null;
+    const sellerSession = getStoredSellerSession();
+    const sellerTokens = [
+        localStorage.getItem(SELLER_ACCESS_TOKEN_KEY),
+        localStorage.getItem(LEGACY_SELLER_ACCESS_TOKEN_KEY),
+        sellerSession?.token ?? null,
+    ].filter(Boolean);
+
+    if (accessToken && accessToken === localStorage.getItem(ADMIN_ACCESS_TOKEN_KEY)) return 'admin';
+    if (accessToken && sellerTokens.includes(accessToken)) return 'seller';
+
+    if (endpoint.startsWith('/admin/')) return 'admin';
+    if (endpoint.startsWith('/seller/') || endpoint.startsWith('/commerce/seller/') || endpoint.startsWith('/shopify/') || endpoint.startsWith('/notifications-seller/')) {
+        return 'seller';
+    }
+
+    return 'generic';
+}
+
+function persistRefreshedTokens(scope: AuthScope, body: any, fallbackRefreshToken: string) {
+    const accessToken = body?.access_token ?? body?.token;
+    const refreshToken = body?.refresh_token ?? fallbackRefreshToken;
+
+    if (scope === 'admin') {
+        if (accessToken) {
+            localStorage.setItem(ADMIN_ACCESS_TOKEN_KEY, accessToken);
+        }
+        if (refreshToken) {
+            localStorage.setItem(ADMIN_REFRESH_TOKEN_KEY, refreshToken);
+        }
+        return;
+    }
+
+    if (scope === 'seller') {
+        const currentSession = getStoredSellerSession() ?? {};
+        const nextSession = {
+            ...currentSession,
+            token: accessToken ?? currentSession.token,
+            refreshToken: refreshToken ?? currentSession.refreshToken,
+            user: body?.seller ?? currentSession.user ?? null,
+        };
+
+        if (accessToken) {
+            localStorage.setItem(SELLER_ACCESS_TOKEN_KEY, accessToken);
+            localStorage.setItem(LEGACY_SELLER_ACCESS_TOKEN_KEY, accessToken);
+        }
+        if (refreshToken) {
+            localStorage.setItem(SELLER_REFRESH_TOKEN_KEY, refreshToken);
+        }
+        localStorage.setItem(SELLER_SESSION_KEY, JSON.stringify(nextSession));
+        return;
+    }
+
+    if (accessToken) {
+        localStorage.setItem('token', accessToken);
+    }
+    if (refreshToken) {
+        localStorage.setItem('refresh_token', refreshToken);
+    }
+}
+
+function clearAuthScope(scope: AuthScope) {
+    if (scope === 'admin') {
+        localStorage.removeItem(ADMIN_ACCESS_TOKEN_KEY);
+        localStorage.removeItem(ADMIN_REFRESH_TOKEN_KEY);
+        return;
+    }
+
+    if (scope === 'seller') {
+        localStorage.removeItem(SELLER_SESSION_KEY);
+        localStorage.removeItem(SELLER_ACCESS_TOKEN_KEY);
+        localStorage.removeItem(SELLER_REFRESH_TOKEN_KEY);
+        localStorage.removeItem(LEGACY_SELLER_ACCESS_TOKEN_KEY);
+        return;
+    }
+
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+}
+
 /**
  * Parse response body with error handling
  * 
@@ -181,17 +313,28 @@ export function isAPIError(body: any): body is APIError {
 }
 
 // Token refresh deduplication - prevents multiple concurrent refresh requests
-let refreshPromise: Promise<string> | null = null;
+const refreshPromises: Partial<Record<AuthScope, Promise<string>>> = {};
 
 /**
  * Get or queue a token refresh
  * 
  * Deduplicates concurrent refresh requests to prevent race conditions.
  */
-function getOrQueueTokenRefresh(refreshToken: string): Promise<string> {
-    if (!refreshPromise) {
-        refreshPromise = new Promise<string>((resolve, reject) => {
-            fetch(`${API_BASE_URL}/auth/refresh`, {
+function getRefreshEndpoint(scope: AuthScope) {
+    switch (scope) {
+        case 'admin':
+            return '/admin/auth/refresh';
+        case 'seller':
+            return '/seller/auth/refresh';
+        default:
+            return '/auth/refresh';
+    }
+}
+
+function getOrQueueTokenRefresh(scope: AuthScope, refreshToken: string): Promise<string> {
+    if (!refreshPromises[scope]) {
+        refreshPromises[scope] = new Promise<string>((resolve, reject) => {
+            fetch(`${API_BASE_URL}${getRefreshEndpoint(scope)}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ "refresh_token": refreshToken })
@@ -201,9 +344,9 @@ function getOrQueueTokenRefresh(refreshToken: string): Promise<string> {
                     throw new Error("Login Token Expired");
                 }
                 const body = unwrapSuccessBody(await parseBody(resp));
-                const newToken = body?.token;
+                const newToken = body?.access_token ?? body?.token;
                 if (newToken) {
-                    setAuthToken(newToken);
+                    persistRefreshedTokens(scope, body, refreshToken);
                     resolve(newToken);
                 } else {
                     reject(new Error("No token in refresh response"));
@@ -211,11 +354,11 @@ function getOrQueueTokenRefresh(refreshToken: string): Promise<string> {
             })
             .catch(reject)
             .finally(() => {
-                refreshPromise = null;
+                refreshPromises[scope] = undefined;
             });
         });
     }
-    return refreshPromise;
+    return refreshPromises[scope]!;
 }
 
 /**
@@ -277,11 +420,17 @@ export async function request<T>(
     // This works for both explicit token parameter and localStorage tokens
     if (resp.status === 401 && !isPublic && authToken) {
         try {
+            const authScope = resolveAuthScope(endpoint, token);
+            const refreshToken = getStoredRefreshToken(authScope);
+            if (!refreshToken) {
+                throw new Error("No refresh token available");
+            }
+
             // Use deduplicated refresh to prevent race conditions
-            await getOrQueueTokenRefresh(authToken);
+            await getOrQueueTokenRefresh(authScope, refreshToken);
             
             // Retry the original request with the new token from localStorage
-            const newAuthToken = getAuthToken();
+            const newAuthToken = getStoredAccessToken(authScope);
             if (newAuthToken) {
                 const retryHeaders = new Headers(headers);
                 retryHeaders.set("Authorization", `Bearer ${newAuthToken}`);
@@ -292,9 +441,7 @@ export async function request<T>(
             }
         } catch (e) {
             // Refresh failed - clear auth state
-            localStorage.removeItem('token');
-            localStorage.removeItem('admin_token');
-            localStorage.removeItem('seller_token');
+            clearAuthScope(resolveAuthScope(endpoint, token));
             
             return {
                 status: 401,

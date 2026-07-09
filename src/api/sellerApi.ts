@@ -10,9 +10,66 @@ export type { CompressionOptions };
 
 export { API_BASE_URL as api_url };
 
+const SELLER_SESSION_KEY = 'seller';
+const SELLER_ACCESS_TOKEN_KEY = 'seller_token';
+const SELLER_REFRESH_TOKEN_KEY = 'seller_refresh_token';
+const LEGACY_SELLER_ACCESS_TOKEN_KEY = 'token';
+
+type AuthTokens = {
+  token?: string;
+  access_token?: string;
+  refresh_token?: string;
+};
+
+function getAccessToken(payload: AuthTokens | null | undefined) {
+  return payload?.access_token ?? payload?.token ?? undefined;
+}
+
+function persistSellerAuth(payload: AuthTokens | null | undefined, seller?: any) {
+  const accessToken = getAccessToken(payload);
+  const refreshToken = payload?.refresh_token;
+
+  if (accessToken) {
+    localStorage.setItem(SELLER_ACCESS_TOKEN_KEY, accessToken);
+    localStorage.setItem(LEGACY_SELLER_ACCESS_TOKEN_KEY, accessToken);
+  }
+
+  if (refreshToken) {
+    localStorage.setItem(SELLER_REFRESH_TOKEN_KEY, refreshToken);
+  }
+
+  if (accessToken || refreshToken || seller) {
+    const currentSession = localStorage.getItem(SELLER_SESSION_KEY);
+    let existing: Record<string, any> = {};
+    if (currentSession) {
+      try {
+        existing = JSON.parse(currentSession);
+      } catch {
+        existing = {};
+      }
+    }
+
+    const nextSession = {
+      ...existing,
+      token: accessToken ?? existing.token,
+      refreshToken: refreshToken ?? existing.refreshToken,
+      user: seller ?? existing.user ?? null,
+    };
+
+    localStorage.setItem(SELLER_SESSION_KEY, JSON.stringify(nextSession));
+  }
+}
+
+function clearSellerAuth() {
+  localStorage.removeItem(SELLER_SESSION_KEY);
+  localStorage.removeItem(SELLER_ACCESS_TOKEN_KEY);
+  localStorage.removeItem(SELLER_REFRESH_TOKEN_KEY);
+  localStorage.removeItem(LEGACY_SELLER_ACCESS_TOKEN_KEY);
+}
+
 export function setState(data: any) {
-  if (data && data.token) {
-    localStorage.setItem('token', data.token);
+  if (data) {
+    persistSellerAuth(data, data.seller);
   }
 }
 
@@ -107,6 +164,14 @@ function normalizeSellerOrder(raw: any): Order {
 }
 
 export namespace Auth {
+    export interface LoginResponse {
+        token?: string;
+        access_token?: string;
+        refresh_token?: string;
+        seller: TSeller;
+    }
+
+    export interface RefreshResponse extends LoginResponse {}
 
     export interface RegisterRequest {
         name: string;
@@ -166,8 +231,12 @@ export namespace Auth {
         };
     }
 
-    export async function Login(email: string, password: string): Promise<APIResponse<any>> {
-        return await request("/seller/auth/login", "POST", { email, password }, undefined, true);
+    export async function Login(email: string, password: string): Promise<APIResponse<LoginResponse>> {
+        const response = await request<LoginResponse>("/seller/auth/login", "POST", { email, password }, undefined, true);
+        if (response.ok && response.body && typeof response.body === 'object') {
+            persistSellerAuth(response.body as LoginResponse, (response.body as LoginResponse).seller);
+        }
+        return response;
     }
 
     export async function Register(data: RegisterRequest): Promise<APIResponse<any>> {
@@ -191,8 +260,12 @@ export namespace Auth {
         return await request("/auth/change-password", "POST", { old_password, new_password }, token);
     }
 
-    export async function Refresh(refresh_token: string): Promise<APIResponse<any>> {
-        return await request("/auth/refresh", "POST", { refresh_token }, undefined, true);
+    export async function Refresh(refresh_token: string): Promise<APIResponse<RefreshResponse>> {
+        const response = await request<RefreshResponse>("/seller/auth/refresh", "POST", { refresh_token }, undefined, true);
+        if (response.ok && response.body && typeof response.body === 'object') {
+            persistSellerAuth(response.body as RefreshResponse, (response.body as RefreshResponse).seller);
+        }
+        return response;
     }
 }
 

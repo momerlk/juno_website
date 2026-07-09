@@ -26,16 +26,55 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     const storedToken = localStorage.getItem('admin_token');
+    const storedRefreshToken = localStorage.getItem('admin_refresh_token');
     const storedAdmin = localStorage.getItem('admin_user');
-    if (storedToken) {
-      setToken(storedToken);
-      if (storedAdmin) {
-        setAdmin(JSON.parse(storedAdmin));
-      } else {
-        setAdmin({ id: '', email: '', name: 'Admin', role: 'admin' });
+
+    const restore = async () => {
+      if (storedToken) {
+        setToken(storedToken);
+        if (storedAdmin) {
+          try {
+            setAdmin(JSON.parse(storedAdmin));
+          } catch {
+            setAdmin({ id: '', email: '', name: 'Admin', role: 'admin' });
+          }
+        } else {
+          setAdmin({ id: '', email: '', name: 'Admin', role: 'admin' });
+        }
+        setIsLoading(false);
+        return;
       }
-    }
-    setIsLoading(false);
+
+      if (storedRefreshToken) {
+        try {
+          const refreshed = await Auth.Refresh(storedRefreshToken);
+          if (!refreshed.ok) throw new Error('Refresh failed');
+
+          const payload = refreshed.body as Auth.LoginResponse;
+          const accessToken = payload.access_token ?? payload.token;
+          if (!accessToken) throw new Error('Access token not found in refresh response');
+
+          localStorage.setItem('admin_token', accessToken);
+          if (payload.refresh_token) {
+            localStorage.setItem('admin_refresh_token', payload.refresh_token);
+          }
+          if (payload.admin) {
+            localStorage.setItem('admin_user', JSON.stringify(payload.admin));
+            setAdmin(payload.admin);
+          }
+          setToken(accessToken);
+          setIsLoading(false);
+          return;
+        } catch {
+          Auth.Logout();
+          localStorage.removeItem('admin_user');
+        }
+      }
+
+      setIsLoading(false);
+    };
+
+    void restore();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -45,11 +84,15 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (!resp.ok) throw new Error('Login failed');
       
       const data = resp.body as Auth.LoginResponse;
-      if (!data.token) throw new Error('Token not found in response');
+      const accessToken = data.access_token ?? data.token;
+      if (!accessToken) throw new Error('Token not found in response');
       
-      localStorage.setItem('admin_token', data.token);
+      localStorage.setItem('admin_token', accessToken);
+      if (data.refresh_token) {
+        localStorage.setItem('admin_refresh_token', data.refresh_token);
+      }
       localStorage.setItem('admin_user', JSON.stringify(data.admin));
-      setToken(data.token);
+      setToken(accessToken);
       setAdmin(data.admin);
     } catch (error) {
       console.error('Admin login failed:', error);

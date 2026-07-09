@@ -277,8 +277,6 @@ const ManageSellers: React.FC = () => {
     }
     const response = await SellerAuth.Login(email, 'JunoPakistan12#');
     if (response.ok) {
-      localStorage.setItem('seller', JSON.stringify(response.body));
-      if ((response.body as any).token) localStorage.setItem('token', (response.body as any).token);
       window.open('/seller/dashboard', '_blank');
       return;
     }

@@ -1,7 +1,7 @@
 # Project Overview
 
 ## Context & Understanding
-- **Always** use the `graphify` skill (or query the graph if already built) to understand the codebase and project structure before reading any raw files. This ensures efficient, context-aware navigation.
+- Review the repository docs before reading any raw files so context stays accurate and focused.
 - Only read raw files when explicitly instructed to do so for code modification or specific, detailed file investigation.
 
 Juno is a curated marketplace for Pakistan's independent fashion labels. The platform is designed to prioritize **indie brands** and their stories as the primary discovery mechanism, with AI-driven features and a "swipe-to-shop" interface serving as secondary tools for conversion.

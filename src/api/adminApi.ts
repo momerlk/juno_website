@@ -3,9 +3,26 @@ import type { ParentOrder as CommerceParentOrder, Order as CommerceChildOrder } 
 
 export const api_url = API_BASE_URL;
 
+const ADMIN_ACCESS_TOKEN_KEY = 'admin_token';
+const ADMIN_REFRESH_TOKEN_KEY = 'admin_refresh_token';
+
+function getAdminAccessToken(payload: { token?: string; access_token?: string } | null | undefined) {
+    return payload?.access_token ?? payload?.token ?? undefined;
+}
+
+function persistAdminAuth(payload: { token?: string; access_token?: string; refresh_token?: string } | null | undefined) {
+    const accessToken = getAdminAccessToken(payload);
+    if (accessToken) {
+        localStorage.setItem(ADMIN_ACCESS_TOKEN_KEY, accessToken);
+    }
+    if (payload?.refresh_token) {
+        localStorage.setItem(ADMIN_REFRESH_TOKEN_KEY, payload.refresh_token);
+    }
+}
+
 export function setState(data: any) {
-    if (data && data.token) {
-        localStorage.setItem('admin_token', data.token);
+    if (data) {
+        persistAdminAuth(data);
     }
 }
 
@@ -20,7 +37,9 @@ function isError(body: any): body is APIError {
 // --- Auth ---
 export namespace Auth {
     export interface LoginResponse {
-        token: string;
+        token?: string;
+        access_token?: string;
+        refresh_token?: string;
         admin: {
             id: string;
             email: string;
@@ -33,8 +52,8 @@ export namespace Auth {
 
     export async function Login(email: string, password: string): Promise<APIResponse<LoginResponse>> {
         const resp = await request<LoginResponse>("/admin/auth/login", "POST", { email, password }, undefined, true);
-        if (resp.ok && !isError(resp.body) && (resp.body as LoginResponse).token) {
-            localStorage.setItem('admin_token', (resp.body as LoginResponse).token);
+        if (resp.ok && !isError(resp.body)) {
+            persistAdminAuth(resp.body as LoginResponse);
         }
         return resp;
     }
@@ -49,20 +68,21 @@ export namespace Auth {
 
     export async function Refresh(refresh_token: string): Promise<APIResponse<LoginResponse>> {
         const resp = await request<LoginResponse>("/admin/auth/refresh", "POST", { refresh_token }, undefined, true);
-        if (resp.ok && !isError(resp.body) && (resp.body as LoginResponse).token) {
-            localStorage.setItem('admin_token', (resp.body as LoginResponse).token);
+        if (resp.ok && !isError(resp.body)) {
+            persistAdminAuth(resp.body as LoginResponse);
         }
         return resp;
     }
 
     export function Logout() {
-        localStorage.removeItem('admin_token');
+        localStorage.removeItem(ADMIN_ACCESS_TOKEN_KEY);
+        localStorage.removeItem(ADMIN_REFRESH_TOKEN_KEY);
     }
 }
 
 export type { APIResponse };
 
-const getToken = () => localStorage.getItem('admin_token') ?? undefined;
+const getToken = () => localStorage.getItem(ADMIN_ACCESS_TOKEN_KEY) ?? undefined;
 
 export interface AdminParentOrderDetailResponse {
     parent: CommerceParentOrder;
