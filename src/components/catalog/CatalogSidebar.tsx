@@ -293,7 +293,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                 <div className="mb-6">
                     <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Sort By</h3>
                     <select
-                        value={`${searchParams.get('sort') ?? 'created_at'}:${searchParams.get('order') ?? 'desc'}`}
+                        value={`${searchParams.get('sort') ?? 'popularity'}:${searchParams.get('order') ?? 'desc'}`}
                         onChange={(event) => {
                             const [sort, order] = event.target.value.split(':');
                             updateSearchParams((next) => {
@@ -303,8 +303,8 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                         }}
                         className="w-full rounded-xl border border-white/10 bg-[#121214] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white/75 outline-none focus:border-primary/50"
                     >
-                        <option value="created_at:desc">Newest first</option>
                         <option value="popularity:desc">Most popular</option>
+                        <option value="created_at:desc">Newest first</option>
                         <option value="rating:desc">Top rated</option>
                         <option value="updated_at:desc">Recently updated</option>
                         <option value="price:asc">Price low to high</option>

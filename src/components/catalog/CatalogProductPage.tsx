@@ -27,10 +27,6 @@ import { toTikTokProductContent, trackTikTokViewContent } from '../../utils/tikt
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
 
-const BEST_SELLER_PRODUCT_IDS = new Set([
-    '56b4e2bb-b401-41dc-92cf-51bdff4475bd',
-    '8e41a417-81c7-4ffa-928e-45dbd483ad43',
-]);
 const DEFAULT_DELIVERY_DAYS = 8;
 
 const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
@@ -64,6 +60,11 @@ const addDays = (date: Date, days: number) => {
 };
 
 const fmtDay = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+const getCatalogBadges = (product: CatalogProduct | null) => ({
+    thrifted: Boolean(product?.badges?.thrifted),
+    bestSeller: Boolean(product?.badges?.best_seller),
+});
 
 const ProductSkeleton: React.FC = () => (
     <div className="relative min-h-screen bg-[#050505] text-white">
@@ -213,7 +214,7 @@ const CatalogProductPage: React.FC = () => {
     const inStock = canPurchase;
     const stockCount = product?.inventory?.available_quantity ?? product?.inventory?.quantity ?? null;
     const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
-    const isBestSeller = !!product && BEST_SELLER_PRODUCT_IDS.has(product.id);
+    const catalogBadges = getCatalogBadges(product);
 
     useEffect(() => {
         if (typeof maxAvailableQuantity === 'number' && maxAvailableQuantity > 0 && quantity > maxAvailableQuantity) {
@@ -377,17 +378,27 @@ const CatalogProductPage: React.FC = () => {
                 <div className="grid gap-10 xl:grid-cols-[1.1fr_0.9fr] xl:items-start xl:gap-16">
                     <div className="min-w-0 space-y-3 xl:sticky xl:top-24">
                         <div className="group relative w-full overflow-hidden rounded-2xl bg-[#0d0d0e]">
-                            {(discountPercentage > 0 || lowStock || isBestSeller) ? (
+                            {(discountPercentage > 0 || lowStock || catalogBadges.bestSeller || catalogBadges.thrifted) ? (
                                 <div className="pointer-events-none absolute left-3 top-3 z-20 flex flex-col items-start gap-1.5">
                                     {discountPercentage > 0 ? (
                                         <span className="rounded-md bg-primary px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-[0_4px_12px_rgba(220,10,40,0.35)]">
                                             -{discountPercentage}%
                                         </span>
                                     ) : null}
-                                    {isBestSeller ? (
+                                    {catalogBadges.bestSeller ? (
                                         <span className="rounded-md border border-amber-100/60 bg-gradient-to-r from-amber-300 via-amber-200 to-amber-300 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black shadow-[0_8px_20px_rgba(255,184,0,0.4)]">
                                             Best Seller
                                         </span>
+                                    ) : null}
+                                    {catalogBadges.thrifted ? (
+                                        <>
+                                            <span className="rounded-md bg-emerald-300 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black shadow-[0_8px_20px_rgba(40,190,120,0.28)]">
+                                                Pre-Loved
+                                            </span>
+                                            <span className="rounded-md border border-white/15 bg-black/55 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-sm">
+                                                One of One
+                                            </span>
+                                        </>
                                     ) : null}
                                     {lowStock ? (
                                         <span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black">
@@ -494,6 +505,21 @@ const CatalogProductPage: React.FC = () => {
                                         <Sparkles size={9} />
                                         Featured
                                     </span>
+                                ) : null}
+                                {catalogBadges.bestSeller ? (
+                                    <span className="inline-flex items-center rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-amber-200">
+                                        Best Seller
+                                    </span>
+                                ) : null}
+                                {catalogBadges.thrifted ? (
+                                    <>
+                                        <span className="inline-flex items-center rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-200">
+                                            Pre-Loved
+                                        </span>
+                                        <span className="inline-flex items-center rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white/75">
+                                            One of One
+                                        </span>
+                                    </>
                                 ) : null}
                             </div>
 

@@ -30,7 +30,7 @@ pagination state in `meta.pagination`.
 | `materials` | string | Comma-separated material tags |
 | `occasions` | string | Comma-separated occasion tags |
 | `tags` | string | Comma-separated product tags |
-| `sort` | string | `created_at` (default), `updated_at`, `price`, `rating`, `popularity`, or `title` |
+| `sort` | string | `priority` (default badge precedence), `created_at`, `updated_at`, `price`, `rating`, `popularity`, or `title` |
 | `order` | string | Sort direction: `asc` or `desc` |
 | `limit` | int | Items per page. Default `20`, maximum `100` |
 | `cursor` | string | Opaque `next_cursor` from the previous response |
@@ -91,6 +91,13 @@ Page-number pagination remains available for older clients, but cursor paginatio
 avoids increasingly expensive database skips on deep pages and gives deterministic
 ordering using the product ID as a tie-breaker.
 
+Default catalog listing gives badge precedence to:
+1. products with `badges.marketing_campaign=true`
+2. then products with `badges.best_seller=true`
+3. then all other products
+
+If a product has both marketing-campaign and best-seller badges, it appears ahead of products that only have one.
+
 ---
 
 ### Get Product
@@ -140,7 +147,12 @@ Returns full details for a single product.
   "rating": 4.5,
   "review_count": 23,
   "is_trending": false,
-  "is_featured": true
+  "is_featured": true,
+  "badges": {
+    "marketing_campaign": true,
+    "best_seller": false,
+    "thrifted": false
+  }
 }
 ```
 
@@ -195,6 +207,10 @@ Returns full details for a single product.
 | `review_count` | int | Total reviews |
 | `is_trending` | boolean | Trending flag |
 | `is_featured` | boolean | Featured flag |
+| `badges` | object | Optional admin-managed badges |
+| `badges.marketing_campaign` | boolean | Marketing campaign priority badge |
+| `badges.best_seller` | boolean | Best seller badge |
+| `badges.thrifted` | boolean | Thrifted display badge; does not affect ranking |
 | `seller_city` | string | City where this brand ships from (used for within-city vs outside-city shipping classification) |
 
 ---

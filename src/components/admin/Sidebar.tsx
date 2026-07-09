@@ -12,7 +12,8 @@ export const navigation = [
     items: [
       { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, subtitle: 'Platform-wide fulfillment desk' },
       { name: 'Sellers', href: '/admin/sellers', icon: ShieldCheck, subtitle: 'Approvals, remediation, and wallet ops' },
-      { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Queue moderation and live catalog control' },
+      { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Database-wide catalog control' },
+      { name: 'Create Product', href: '/admin/products/create', icon: Package, subtitle: 'Manual creation and Shopify import' },
       { name: 'Notifications', href: '/admin/notifications', icon: Bell, subtitle: 'Platform broadcasts' },
     ],
   },

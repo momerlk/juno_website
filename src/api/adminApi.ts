@@ -169,6 +169,44 @@ export namespace AdminPortal {
         return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/wallet`, 'GET', undefined, getToken());
     }
 
+    export async function getSellerAccessProfile(sellerId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/access/profile`, 'GET', undefined, getToken());
+    }
+
+    export async function updateSellerAccessProfile(sellerId: string, payload: Record<string, any>): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/access/profile`, 'PATCH', payload, getToken());
+    }
+
+    export async function listSellerAccessProducts(sellerId: string, params?: { status?: string }): Promise<APIResponse<any>> {
+        return request(withQuery(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/access/products`, params), 'GET', undefined, getToken());
+    }
+
+    export async function createSellerAccessProduct(sellerId: string, payload: Record<string, any>): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/access/products`, 'POST', payload, getToken());
+    }
+
+    export async function updateSellerAccessProduct(sellerId: string, productId: string, payload: Record<string, any>): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/access/products/${encodeURIComponent(productId)}`, 'PUT', payload, getToken());
+    }
+
+    export async function deleteSellerAccessProduct(sellerId: string, productId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/access/products/${encodeURIComponent(productId)}`, 'DELETE', undefined, getToken());
+    }
+
+    export async function updateSellerAccessProductPricing(sellerId: string, productId: string, payload: {
+        shipping_included?: boolean;
+        cost_price?: number;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/access/products/${encodeURIComponent(productId)}/pricing`, 'PUT', payload, getToken());
+    }
+
+    export async function getSellerAccessProductProfit(sellerId: string, productId: string, params?: {
+        cost_price?: number;
+        subscription_fee?: number;
+    }): Promise<APIResponse<any>> {
+        return request(withQuery(`${BASE_PATH}/sellers/${encodeURIComponent(sellerId)}/access/products/${encodeURIComponent(productId)}/profit`, params), 'GET', undefined, getToken());
+    }
+
     export async function adjustSellerWallet(sellerId: string, payload: {
         amount: number;
         direction: 'debit' | 'credit';
@@ -190,11 +228,59 @@ export namespace AdminPortal {
 
     export async function listProducts(params?: {
         seller_id?: string;
+        seller_ids?: string;
+        brands?: string;
+        category?: string;
+        min_price?: number;
+        max_price?: number;
+        in_stock?: boolean;
         status?: string;
+        sort?: string;
+        order?: 'asc' | 'desc';
+        departments?: string;
+        product_groups?: string;
+        genders?: string;
+        style_categories?: string;
+        aesthetics?: string;
+        occasions?: string;
+        materials?: string;
+        color_families?: string;
+        fits?: string;
+        patterns?: string;
+        collection_ids?: string;
+        validation_status?: string;
+        cursor?: string;
         page?: number;
         limit?: number;
     }): Promise<APIResponse<any>> {
         return request(withQuery(`${BASE_PATH}/products`, params), 'GET', undefined, getToken());
+    }
+
+    export async function searchProducts(params: {
+        keyword: string;
+        status?: string;
+        seller_id?: string;
+        seller_ids?: string;
+        brands?: string;
+        category?: string;
+        min_price?: number;
+        max_price?: number;
+        in_stock?: boolean;
+        sort?: string;
+        order?: 'asc' | 'desc';
+        limit?: number;
+        page?: number;
+        cursor?: string;
+    }): Promise<APIResponse<any>> {
+        return request(withQuery(`${BASE_PATH}/products/search`, params), 'GET', undefined, getToken());
+    }
+
+    export async function filterProducts(payload: Record<string, any>): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products/filter`, 'POST', payload, getToken());
+    }
+
+    export async function createProduct(payload: Record<string, any>): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products`, 'POST', payload, getToken());
     }
 
     export async function updateProduct(productId: string, update: Record<string, any>): Promise<APIResponse<any>> {

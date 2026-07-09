@@ -2,7 +2,7 @@ import React from 'react';
 import type { CatalogProduct, GenderOverviewProduct } from '../../api/api.types';
 import EditorialProductCard from '../shared/editorial/EditorialProductCard';
 
-type GridProduct = Pick<CatalogProduct, 'id' | 'title' | 'seller_name' | 'images' | 'pricing'> | GenderOverviewProduct;
+type GridProduct = Pick<CatalogProduct, 'id' | 'title' | 'seller_name' | 'images' | 'pricing' | 'badges'> | GenderOverviewProduct;
 
 type Props = {
     products: GridProduct[];
@@ -50,6 +50,7 @@ const CatalogProductGrid: React.FC<Props> = ({ products, isLoading = false, base
                     title={product.title}
                     sellerName={product.seller_name}
                     images={product.images}
+                    badges={'badges' in product ? product.badges : undefined}
                     pricing={product.pricing}
                     to={`/${basePath}/${product.id}`}
                     index={index}

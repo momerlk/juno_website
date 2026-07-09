@@ -299,7 +299,7 @@ export interface CatalogProduct {
     tags: string[];
     inventory: { in_stock: boolean; available_quantity: number };
     shipping_details?: { free_shipping?: boolean; estimated_delivery_days?: number };
-    status: 'active' | 'draft' | 'archived';
+    status: 'active' | 'embedding_pending' | 'needs_review' | 'queue' | 'draft' | 'archived' | 'rejected';
     created_at: string;
     updated_at: string;
     published_at?: string;
@@ -307,6 +307,11 @@ export interface CatalogProduct {
     review_count?: number;
     is_trending?: boolean;
     is_featured?: boolean;
+    badges?: {
+        marketing_campaign?: boolean;
+        best_seller?: boolean;
+        thrifted?: boolean;
+    };
     seller_city?: string;
 }
 

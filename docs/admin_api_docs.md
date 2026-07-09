@@ -13,6 +13,7 @@ Auth:
 
 ### Auth + System
 - `POST /api/v2/admin/auth/login`
+- `POST /api/v2/admin/auth/refresh`
 - `GET /api/v2/admin/health`
 
 ### User Management
@@ -27,6 +28,24 @@ Auth:
 - `GET /api/v2/admin/sellers`
 - `GET /api/v2/admin/sellers/{id}`
 - `PATCH /api/v2/admin/sellers/{id}/profile`
+- `GET /api/v2/admin/sellers/{id}/access/profile`
+- `PATCH /api/v2/admin/sellers/{id}/access/profile`
+- `GET /api/v2/admin/sellers/{id}/access/products`
+- `POST /api/v2/admin/sellers/{id}/access/products`
+- `PUT /api/v2/admin/sellers/{id}/access/products/{productID}`
+- `DELETE /api/v2/admin/sellers/{id}/access/products/{productID}`
+- `PUT /api/v2/admin/sellers/{id}/access/products/{productID}/pricing`
+- `GET /api/v2/admin/sellers/{id}/access/products/{productID}/profit`
+- `POST /api/v2/admin/sellers/{id}/access/inventory/bulk-update`
+- `GET /api/v2/admin/sellers/{id}/access/inventory/low-stock`
+- `GET /api/v2/admin/sellers/{id}/access/inventory/categories`
+- `GET /api/v2/admin/sellers/{id}/access/orders`
+- `POST /api/v2/admin/sellers/{id}/access/orders/{orderID}/fulfill`
+- `PUT /api/v2/admin/sellers/{id}/access/orders/{orderID}/status`
+- `GET /api/v2/admin/sellers/{id}/access/analytics/sales`
+- `GET /api/v2/admin/sellers/{id}/access/analytics/orders`
+- `GET /api/v2/admin/sellers/{id}/access/analytics/inventory`
+- `GET /api/v2/admin/sellers/{id}/access/analytics/product/{productID}`
 - `PUT /api/v2/admin/sellers/{id}/approve`
 - `PATCH /api/v2/admin/sellers/{id}/status`
 - `PATCH /api/v2/admin/sellers/status`
@@ -39,6 +58,8 @@ Auth:
 
 ### Product Management
 - `GET /api/v2/admin/products`
+- `GET /api/v2/admin/products/search`
+- `POST /api/v2/admin/products/filter`
 - `POST /api/v2/admin/products`
 - `PATCH /api/v2/admin/products/bulk`
 - `POST /api/v2/admin/products/bulk-delete`
@@ -148,6 +169,18 @@ Body:
 
 Response `200`: `AdminAuthResponse`
 
+### Refresh Admin Token
+`POST /api/v2/admin/auth/refresh`
+
+Body:
+```json
+{
+  "refresh_token": "opaque_refresh_token_here"
+}
+```
+
+Response `200`: `AdminAuthResponse`
+
 ### System Health
 `GET /api/v2/admin/health`
 
@@ -251,6 +284,46 @@ Body:
 
 Use this for end-to-end admin intervention during approval, remediation, or account cleanup.
 
+### Seller Access Profile
+`GET /api/v2/admin/sellers/{id}/access/profile`
+
+Returns the seller profile through the seller module. This is the admin "act as seller" read path.
+
+### Update Seller Access Profile
+`PATCH /api/v2/admin/sellers/{id}/access/profile`
+
+Body: `seller.UpdateSellerProfileRequest`
+
+Example:
+```json
+{
+  "name": "Luna Atelier Team",
+  "business_name": "Luna Atelier",
+  "legal_name": "Luna Atelier Pvt Ltd",
+  "description": "Modern formalwear made in Karachi.",
+  "short_description": "Pakistani contemporary occasionwear",
+  "website": "https://lunaatelier.pk",
+  "logo_url": "https://cdn.juno/logo.png",
+  "banner_url": "https://cdn.juno/banner.png",
+  "banner_mobile_url": "https://cdn.juno/banner-mobile.png",
+  "contact": {
+    "phone_number": "+923001112233",
+    "contact_person_name": "Ayesha Khan",
+    "support_email": "support@lunaatelier.pk"
+  },
+  "location": {
+    "address": "12C Sunset Lane",
+    "city": "Karachi",
+    "state": "Sindh",
+    "postal_code": "75500",
+    "country": "Pakistan",
+    "pickup_available": true
+  }
+}
+```
+
+This uses the same profile update logic as `/api/v2/seller/profile`, so admins get seller-grade validation and field handling instead of a separate admin-only mutation path.
+
 ### Approve or Suspend Seller
 `PUT /api/v2/admin/sellers/{id}/approve`
 
@@ -342,6 +415,177 @@ Body:
 
 Returns per-row success, missing, or failed results.
 
+### List Seller Access Products
+`GET /api/v2/admin/sellers/{id}/access/products?status=draft`
+
+Lists the seller's products through seller-facing logic.
+
+Supported `status` values:
+- `draft`
+- `active`
+- `rejected`
+- `archived`
+- empty string for the seller module's default listing behavior
+
+### Create Seller Access Product
+`POST /api/v2/admin/sellers/{id}/access/products`
+
+Body: full `catalog.Product` payload.
+
+Behavior:
+- creates the product through `seller.Service`
+- auto-generates product IDs when missing
+- auto-generates variant SKUs when missing
+- recalculates pricing using `pkg/pricing`
+- refreshes seller city from seller profile
+- forces `seller_id` from the route
+- defaults product status to `draft`
+
+Use this when admin needs to create a product exactly as if the seller created it.
+
+### Update Seller Access Product
+`PUT /api/v2/admin/sellers/{id}/access/products/{productID}`
+
+Body: full `catalog.Product` payload.
+
+Behavior:
+- enforces seller ownership
+- preserves seller pricing semantics
+- recomputes display price, payout, and discounts
+- refreshes seller city from the latest profile
+- validates unique variant SKUs
+
+Use this when admin needs to repair or manage a seller-owned product without bypassing seller rules.
+
+### Delete Seller Access Product
+`DELETE /api/v2/admin/sellers/{id}/access/products/{productID}`
+
+Deletes the seller-owned product through seller access rules.
+
+### Update Seller Access Product Pricing
+`PUT /api/v2/admin/sellers/{id}/access/products/{productID}/pricing`
+
+Body:
+```json
+{
+  "shipping_included": false,
+  "cost_price": 2450
+}
+```
+
+Uses the seller pricing workflow to update `shipping_included`, preserve brand-price semantics, and recompute display price and seller payout.
+
+### Get Seller Access Product Profit
+`GET /api/v2/admin/sellers/{id}/access/products/{productID}/profit?cost_price=2450&subscription_fee=5000`
+
+Returns:
+- `brand_price`
+- `effective_brand_price`
+- `commission`
+- `seller_payout`
+- `cost_price`
+- `monthly_subscription_fee`
+- `profit`
+- `margin_percent`
+
+### Bulk Update Seller Access Inventory
+`POST /api/v2/admin/sellers/{id}/access/inventory/bulk-update`
+
+Body:
+```json
+[
+  {
+    "product_id": "prod-1",
+    "variant_id": "var-s",
+    "quantity_change": 5,
+    "reason": "restock"
+  },
+  {
+    "product_id": "prod-1",
+    "variant_id": "var-m",
+    "quantity_change": -1,
+    "reason": "damage"
+  }
+]
+```
+
+Uses the seller bulk inventory adjustment logic instead of direct quantity replacement.
+
+### Get Seller Access Low Stock
+`GET /api/v2/admin/sellers/{id}/access/inventory/low-stock?threshold=10`
+
+Returns seller low-stock alerts:
+- `product_id`
+- `product_name`
+- `current_quantity`
+- `threshold`
+
+### Get Seller Access Inventory Categories
+`GET /api/v2/admin/sellers/{id}/access/inventory/categories`
+
+Returns category counts for the seller's inventory.
+
+### Get Seller Access Orders
+`GET /api/v2/admin/sellers/{id}/access/orders`
+
+Returns seller-scoped orders exactly as exposed to the seller dashboard.
+
+### Fulfill Seller Access Order
+`POST /api/v2/admin/sellers/{id}/access/orders/{orderID}/fulfill`
+
+Marks a seller order fulfilled through the seller order workflow.
+
+### Update Seller Access Order Status
+`PUT /api/v2/admin/sellers/{id}/access/orders/{orderID}/status`
+
+Body:
+```json
+{
+  "status": "shipped"
+}
+```
+
+Supported seller-facing statuses depend on seller module rules. Common values:
+- `shipped`
+- `delivered`
+- `cancelled`
+
+### Get Seller Access Sales Analytics
+`GET /api/v2/admin/sellers/{id}/access/analytics/sales`
+
+Returns:
+- `total_revenue`
+- `total_orders`
+- `average_order_value`
+
+### Get Seller Access Order Analytics
+`GET /api/v2/admin/sellers/{id}/access/analytics/orders`
+
+Returns:
+- `pending`
+- `shipped`
+- `delivered`
+- `cancelled`
+- `total`
+
+### Get Seller Access Inventory Analytics
+`GET /api/v2/admin/sellers/{id}/access/analytics/inventory`
+
+Returns:
+- `total_products`
+- `in_stock`
+- `out_of_stock`
+- `low_stock`
+
+### Get Seller Access Product Analytics
+`GET /api/v2/admin/sellers/{id}/access/analytics/product/{productID}`
+
+Returns:
+- `product_id`
+- `product_name`
+- `total_sold`
+- `revenue`
+
 ### Seller Wallet
 `GET /api/v2/admin/sellers/{sellerID}/wallet`
 
@@ -371,9 +615,34 @@ Shows onboarding drafts that have not yet become full seller accounts.
 ## Product Management
 
 ### List Catalog Products
-`GET /api/v2/admin/products?seller_id=seller-1&status=active&page=1&limit=50`
+`GET /api/v2/admin/products?seller_id=seller-1&status=all&sort=created_at&order=desc&limit=50`
 
-Admin listing for live catalog operations.
+Admin listing for catalog operations using the same filter and pagination model as storefront catalog endpoints.
+
+Behavior:
+- defaults to `status=all` for admin, so draft, archived, rejected, and active products are visible
+- includes products belonging to inactive sellers
+- returns cursor pagination metadata in `meta.pagination`
+- preserves badge priority ahead of secondary sorts like `created_at` and `popularity`
+
+Useful query params:
+- `status` — single status or comma-separated list, or `all`
+- `seller_id`, `seller_ids`, `brands`
+- `category`, `min_price`, `max_price`, `in_stock`
+- `sort`, `order`, `cursor`, `page`, `limit`
+- metadata filters like `departments`, `product_groups`, `genders`, `style_categories`, `aesthetics`, `occasions`, `materials`, `color_families`, `fits`, `patterns`, `collection_ids`, `validation_status`
+
+### Search Catalog Products
+`GET /api/v2/admin/products/search?keyword=lawn&status=all&limit=20`
+
+Uses the same Atlas AI search behavior as storefront catalog search, but with admin visibility defaults.
+
+### Filter Catalog Products
+`POST /api/v2/admin/products/filter`
+
+Body: `catalog.ProductFilter`
+
+This uses the same catalog filtering business logic as storefront filtering. When `keyword` is present in the body, Atlas AI search is used before applying the rest of the filters.
 
 ### Create Catalog Product
 `POST /api/v2/admin/products`
@@ -388,6 +657,10 @@ Admin product creation is direct-to-catalog:
 - empty product IDs are auto-generated
 - empty status defaults to `active`
 - `published_at` is auto-set when creating an active product
+- optional `badges` can be attached by admin:
+  - `marketing_campaign`
+  - `best_seller`
+  - `thrifted`
 
 ### Get Catalog Product
 `GET /api/v2/admin/products/{id}`
@@ -415,7 +688,12 @@ Example:
     "shipping_included": false
   },
   "status": "active",
-  "is_featured": true
+  "is_featured": true,
+  "badges": {
+    "marketing_campaign": true,
+    "best_seller": true,
+    "thrifted": false
+  }
 }
 ```
 

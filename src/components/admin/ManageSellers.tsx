@@ -15,7 +15,7 @@ import { AdminPortal, approveSeller } from '../../api/adminApi';
 import { Auth as SellerAuth } from '../../api/sellerApi';
 
 type SellerStatus = 'all' | 'pending' | 'active' | 'suspended' | 'rejected';
-type DrawerTab = 'profile' | 'inventory' | 'wallet' | 'draft';
+type DrawerTab = 'profile' | 'inventory' | 'wallet' | 'products' | 'draft';
 
 const STATUS_OPTIONS: SellerStatus[] = ['all', 'pending', 'active', 'suspended', 'rejected'];
 
@@ -34,6 +34,17 @@ const getSellerEmail = (seller: any) => seller?.email || seller?.contact?.email 
 const getSellerPhone = (seller: any) => seller?.phone_number || seller?.contact?.phone_number || seller?.phone || '';
 const getSellerCity = (seller: any) => seller?.city || seller?.location?.city || '';
 const getSellerStatus = (seller: any) => String(seller?.status || 'pending').toLowerCase();
+const getProductStatus = (product: any) => String(product?.status || 'draft').toLowerCase();
+const getProductStock = (product: any) =>
+  typeof product?.inventory?.available_quantity === 'number'
+    ? product.inventory.available_quantity
+    : typeof product?.inventory?.quantity === 'number'
+      ? product.inventory.quantity
+      : 0;
+const getProductPrice = (product: any) =>
+  typeof product?.pricing?.brand_price === 'number'
+    ? product.pricing.brand_price
+    : product?.pricing?.price ?? 0;
 
 const dateText = (value?: string) => {
   if (!value) return '-';
@@ -61,6 +72,8 @@ const ManageSellers: React.FC = () => {
   const [profileDraft, setProfileDraft] = useState<Record<string, string>>({});
   const [inventory, setInventory] = useState<any[]>([]);
   const [walletData, setWalletData] = useState<any | null>(null);
+  const [sellerProducts, setSellerProducts] = useState<any[]>([]);
+  const [sellerProductsStatus, setSellerProductsStatus] = useState<'all' | 'draft' | 'active' | 'rejected' | 'archived'>('all');
   const [walletDraft, setWalletDraft] = useState({ amount: '', direction: 'debit' as 'debit' | 'credit', reason: 'late_dispatch_penalty', adjustment_type: 'penalty', related_order_id: '' });
   const [bulkStatus, setBulkStatus] = useState<'active' | 'suspended' | 'rejected'>('active');
   const [bulkNote, setBulkNote] = useState('Reviewed by admin');
@@ -142,11 +155,36 @@ const ManageSellers: React.FC = () => {
     });
     setInventory([]);
     setWalletData(null);
+    setSellerProducts([]);
 
     const detailRes = await AdminPortal.listSellers({ q: id, limit: 1 });
     if (detailRes.ok) {
       const detail = asArray(detailRes.body)[0] || seller;
       setSelectedSeller(detail);
+      setProfileDraft({
+        business_name: getSellerName(detail),
+        contact_person: detail.contact_person || detail.contact?.contact_person_name || '',
+        phone_number: getSellerPhone(detail),
+        email: getSellerEmail(detail) || detail.contact?.support_email || '',
+        legal_name: detail.legal_name || '',
+        commission_rate: String(detail.commission_rate ?? detail.commission_settings?.commission_rate ?? ''),
+        city: getSellerCity(detail),
+      });
+    }
+
+    const accessProfileRes = await AdminPortal.getSellerAccessProfile(id);
+    if (accessProfileRes.ok && accessProfileRes.body) {
+      const accessProfile = accessProfileRes.body;
+      setSelectedSeller((prev: any) => ({ ...prev, ...accessProfile }));
+      setProfileDraft({
+        business_name: getSellerName(accessProfile),
+        contact_person: accessProfile.contact_person || accessProfile.contact?.contact_person_name || '',
+        phone_number: getSellerPhone(accessProfile),
+        email: getSellerEmail(accessProfile) || accessProfile.contact?.support_email || '',
+        legal_name: accessProfile.legal_name || '',
+        commission_rate: String(accessProfile.commission_rate ?? accessProfile.commission_settings?.commission_rate ?? ''),
+        city: getSellerCity(accessProfile),
+      });
     }
   };
 
@@ -164,12 +202,23 @@ const ManageSellers: React.FC = () => {
     else setError((res.body as any)?.message || 'Failed to load wallet');
   };
 
+  const loadSellerProducts = async () => {
+    if (!selectedSeller) return;
+    const res = await AdminPortal.listSellerAccessProducts(
+      getSellerId(selectedSeller),
+      sellerProductsStatus === 'all' ? undefined : { status: sellerProductsStatus }
+    );
+    if (res.ok) setSellerProducts(asArray(res.body));
+    else setError((res.body as any)?.message || 'Failed to load seller products');
+  };
+
   useEffect(() => {
     if (!selectedSeller) return;
     if (drawerTab === 'inventory') void loadInventory();
     if (drawerTab === 'wallet') void loadWallet();
+    if (drawerTab === 'products') void loadSellerProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawerTab, selectedSeller?.id]);
+  }, [drawerTab, selectedSeller?.id, sellerProductsStatus]);
 
   const saveProfile = async () => {
     if (!selectedSeller) return;
@@ -177,18 +226,23 @@ const ManageSellers: React.FC = () => {
     setError(null);
     try {
       const commission = Number(profileDraft.commission_rate);
-      const res = await AdminPortal.updateSellerProfile(getSellerId(selectedSeller), {
+      const res = await AdminPortal.updateSellerAccessProfile(getSellerId(selectedSeller), {
+        name: profileDraft.business_name,
         business_name: profileDraft.business_name,
-        contact_person: profileDraft.contact_person,
-        phone_number: profileDraft.phone_number,
-        email: profileDraft.email,
         legal_name: profileDraft.legal_name,
+        contact: {
+          phone_number: profileDraft.phone_number,
+          contact_person_name: profileDraft.contact_person,
+          support_email: profileDraft.email,
+        },
+        location: {
+          city: profileDraft.city,
+        },
         commission_rate: Number.isFinite(commission) ? commission : undefined,
-        city: profileDraft.city,
       });
       if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to update seller profile');
       await load();
-      setSelectedSeller((prev: any) => ({ ...prev, ...profileDraft }));
+      await openSeller(selectedSeller, 'profile');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update seller profile');
     } finally {
@@ -281,6 +335,22 @@ const ManageSellers: React.FC = () => {
       return;
     }
     setError((response.body as any)?.message || 'Seller login failed');
+  };
+
+  const deleteSellerProduct = async (product: any) => {
+    if (!selectedSeller) return;
+    if (!window.confirm(`Delete "${product.title || product.id}" for ${getSellerName(selectedSeller)}?`)) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await AdminPortal.deleteSellerAccessProduct(getSellerId(selectedSeller), String(product.id || ''));
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Failed to delete seller product');
+      await loadSellerProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete seller product');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const visibleIds = filteredSellers.map(getSellerId).filter(Boolean);
@@ -440,7 +510,7 @@ const ManageSellers: React.FC = () => {
                 <button onClick={() => setSelectedSeller(null)} className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10"><X size={16} /></button>
               </div>
               <div className="mt-4 flex flex-wrap gap-1">
-                {(['profile', 'inventory', 'wallet'] as DrawerTab[]).map((tab) => (
+                {(['profile', 'inventory', 'wallet', 'products'] as DrawerTab[]).map((tab) => (
                   <button key={tab} onClick={() => setDrawerTab(tab)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${drawerTab === tab ? 'bg-white text-black' : 'text-neutral-300 hover:bg-white/10'}`}>
                     {tab[0].toUpperCase() + tab.slice(1)}
                   </button>
@@ -535,6 +605,79 @@ const ManageSellers: React.FC = () => {
                             <td className="p-2 text-right text-white">{money(row.amount)}</td>
                           </tr>
                         ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {drawerTab === 'products' && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm text-neutral-400">Seller-access product listing from the updated admin module.</p>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={sellerProductsStatus}
+                        onChange={(e) => setSellerProductsStatus(e.target.value as typeof sellerProductsStatus)}
+                        className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-xs text-white"
+                      >
+                        <option value="all">all</option>
+                        <option value="draft">draft</option>
+                        <option value="active">active</option>
+                        <option value="rejected">rejected</option>
+                        <option value="archived">archived</option>
+                      </select>
+                      <button onClick={() => void loadSellerProducts()} className="rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10">
+                        Refresh products
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[720px] text-left text-sm">
+                      <thead className="border-b border-white/10 text-xs uppercase text-neutral-500">
+                        <tr>
+                          <th className="p-2">Product</th>
+                          <th className="p-2">Status</th>
+                          <th className="p-2">Price</th>
+                          <th className="p-2">Stock</th>
+                          <th className="p-2">Badges</th>
+                          <th className="p-2 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sellerProducts.length === 0 ? (
+                          <tr><td colSpan={6} className="p-8 text-center text-neutral-500">No seller products loaded.</td></tr>
+                        ) : sellerProducts.map((product) => {
+                          const badges = product.badges || {};
+                          const badgeLabels = [
+                            badges.marketing_campaign ? 'Marketing campaign' : null,
+                            badges.best_seller ? 'Best seller' : null,
+                            badges.thrifted ? 'Thrifted' : null,
+                          ].filter(Boolean);
+
+                          return (
+                            <tr key={product.id} className="border-b border-white/5">
+                              <td className="p-2">
+                                <p className="font-medium text-white">{product.title || product.id}</p>
+                                <p className="mt-0.5 font-mono text-[11px] text-neutral-500">{product.id}</p>
+                              </td>
+                              <td className="p-2 text-neutral-300">{getProductStatus(product)}</td>
+                              <td className="p-2 text-neutral-300">{money(getProductPrice(product))}</td>
+                              <td className="p-2 text-neutral-300">{getProductStock(product)}</td>
+                              <td className="p-2 text-neutral-300">{badgeLabels.length > 0 ? badgeLabels.join(', ') : '-'}</td>
+                              <td className="p-2 text-right">
+                                <button
+                                  disabled={saving}
+                                  onClick={() => void deleteSellerProduct(product)}
+                                  className="rounded-md border border-red-500/30 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-40"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

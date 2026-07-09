@@ -32,10 +32,10 @@ const getVariantAvailableQuantity = (variant: any, product: CatalogProduct): num
     if (typeof productQty === 'number' && Number.isFinite(productQty)) return Math.max(0, productQty);
     return undefined;
 };
-const BEST_SELLER_PRODUCT_IDS = new Set([
-    '56b4e2bb-b401-41dc-92cf-51bdff4475bd',
-    '8e41a417-81c7-4ffa-928e-45dbd483ad43',
-]);
+const getCatalogBadges = (product: CatalogProduct) => ({
+    thrifted: Boolean(product.badges?.thrifted),
+    bestSeller: Boolean(product.badges?.best_seller),
+});
 
 const ProductCard: React.FC<ProductCardProps> = ({
     product,
@@ -68,7 +68,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         : 0;
 
     const hasDiscount = product.pricing.discounted && discountPercentage > 0;
-    const isBestSeller = BEST_SELLER_PRODUCT_IDS.has(product.id);
+    const catalogBadges = getCatalogBadges(product);
     const isSoldOut = !product.inventory?.in_stock;
     const productImage = getProductImage(product);
     const hoverImage = product.images?.[1];
@@ -180,10 +180,20 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                 -{discountPercentage}%
                             </span>
                         ) : null}
-                        {isBestSeller ? (
+                        {catalogBadges.bestSeller ? (
                             <span className="rounded-full border border-amber-200/35 bg-amber-300/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-black shadow-[0_12px_32px_rgba(255,184,0,0.24)]">
                                 Best Seller
                             </span>
+                        ) : null}
+                        {catalogBadges.thrifted ? (
+                            <>
+                                <span className="rounded-full border border-emerald-200/30 bg-emerald-300/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-black shadow-[0_12px_32px_rgba(40,190,120,0.24)]">
+                                    Pre-Loved
+                                </span>
+                                <span className="rounded-full border border-white/20 bg-black/55 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-white backdrop-blur-md">
+                                    One of One
+                                </span>
+                            </>
                         ) : null}
                         {isNew ? (
                             <span className="rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-white/85 backdrop-blur-md">

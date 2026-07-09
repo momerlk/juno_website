@@ -7,6 +7,11 @@ type EditorialProductCardProps = {
     title: string;
     sellerName?: string;
     images?: string[];
+    badges?: {
+        marketing_campaign?: boolean;
+        best_seller?: boolean;
+        thrifted?: boolean;
+    };
     pricing: {
         price: number;
         discounted?: boolean;
@@ -30,6 +35,7 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
     title,
     sellerName,
     images,
+    badges,
     pricing,
     inventory,
     to,
@@ -78,6 +84,21 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
                             <span className="rounded-md bg-primary px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-[0_4px_12px_rgba(220,10,40,0.35)]">
                                 -{discountPct}%
                             </span>
+                        ) : null}
+                        {badges?.best_seller ? (
+                            <span className="rounded-md bg-amber-300 px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black">
+                                Best Seller
+                            </span>
+                        ) : null}
+                        {badges?.thrifted ? (
+                            <>
+                                <span className="rounded-md bg-emerald-300 px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black">
+                                    Pre-Loved
+                                </span>
+                                <span className="rounded-md border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+                                    One of One
+                                </span>
+                            </>
                         ) : null}
                         {lowStock && inStock ? (
                             <span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black">

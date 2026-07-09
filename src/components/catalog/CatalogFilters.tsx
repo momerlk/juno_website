@@ -142,7 +142,7 @@ const CatalogFilters: React.FC<Props> = ({ options, compact = false, supportedKe
 
                 {supported.has('sort') ? (
                     <select
-                        value={`${searchParams.get('sort') ?? 'created_at'}:${searchParams.get('order') ?? 'desc'}`}
+                        value={`${searchParams.get('sort') ?? 'popularity'}:${searchParams.get('order') ?? 'desc'}`}
                         onChange={(event) => {
                             const [sort, order] = event.target.value.split(':');
                             const next = new URLSearchParams(searchParams);
@@ -155,8 +155,8 @@ const CatalogFilters: React.FC<Props> = ({ options, compact = false, supportedKe
                         }}
                         className="ml-auto rounded-full border border-white/10 bg-[#121214] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white/75 outline-none focus:border-primary/50"
                     >
-                        <option value="created_at:desc">Newest first</option>
-                        {!compact ? <option value="popularity:desc">Most popular</option> : null}
+                        <option value="popularity:desc">Most popular</option>
+                        {!compact ? <option value="created_at:desc">Newest first</option> : null}
                         {!compact ? <option value="rating:desc">Top rated</option> : null}
                         {!compact ? <option value="updated_at:desc">Recently updated</option> : null}
                         <option value="price:asc">Price low to high</option>

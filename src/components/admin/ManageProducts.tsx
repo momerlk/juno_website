@@ -1,601 +1,249 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Globe, Package, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Edit3, Package, RefreshCw, Search, Sparkles, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AdminPortal } from '../../api/adminApi';
 import {
-  AdminPortal,
-  scrapeSellerProducts,
-} from '../../api/adminApi';
-
-type TabKey = 'catalog' | 'queue';
-
-interface SellerProfile {
-  id?: string;
-  _id?: string;
-  name?: string;
-  business_name?: string;
-  brand_name?: string;
-  legal_name?: string;
-}
-
-interface QueueItem {
-  id: string;
-  seller_id: string;
-  product?: {
-    id?: string;
-    title?: string;
-    description?: string;
-    body_html?: string;
-    short_description?: string;
-    seller_name?: string;
-    product_type?: string;
-    sizing_guide?: Record<string, any>;
-    tags?: string[];
-    images?: any[];
-    pricing?: { price?: number; brand_price?: number; currency?: string };
-    inventory?: { quantity?: number; available_quantity?: number };
-  };
-  enrichment?: {
-    product_type?: string;
-    gender?: string;
-    sizing_guide?: Record<string, any>;
-  };
-  source?: string;
-  status?: string;
-  errors?: string[];
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface QueueEditDraft {
-  title: string;
-  short_description: string;
-  tagsInput: string;
-  product_type: string;
-  gender: string;
-}
-
-type ReferenceTab = 'images' | 'description' | 'body_html';
-
-interface SizingGridDraft {
-  rows: string[];
-  cols: string[];
-  cells: Record<string, Record<string, string>>;
-  hasSizeChartWrapper: boolean;
-  measurementUnit: string;
-  sizeFit: string;
-}
+  BADGE_LABELS,
+  EMPTY_BADGES,
+  asArray,
+  badgeTone,
+  formatCurrency,
+  getImageUrl,
+  getSellerId,
+  getSellerName,
+  normalizeBadges,
+  parseTags,
+  statusClass,
+  type BadgeKey,
+  type CatalogStatus,
+  type ProductBadges,
+  type SellerProfile,
+} from './productManagement';
 
 interface CatalogEditDraft {
   title: string;
   description: string;
-  status: 'active' | 'draft' | 'archived';
+  status: string;
   is_featured: boolean;
   tagsInput: string;
+  badges: ProductBadges;
 }
 
-type QueueSortKey = 'updated_desc' | 'updated_asc' | 'price_desc' | 'price_asc' | 'stock_desc' | 'stock_asc';
+interface ProductFilters {
+  status: string;
+  seller_id: string;
+  seller_ids: string;
+  brands: string;
+  category: string;
+  min_price: string;
+  max_price: string;
+  in_stock: string;
+  sort: string;
+  order: 'asc' | 'desc';
+  departments: string;
+  product_groups: string;
+  genders: string;
+  style_categories: string;
+  aesthetics: string;
+  occasions: string;
+  materials: string;
+  color_families: string;
+  fits: string;
+  patterns: string;
+  collection_ids: string;
+  validation_status: string;
+}
 
-const PRODUCT_TYPES = ['Eastern', 'Western', 'Fusion', 'Modest', 'Footwear', 'Accessories'];
-const GENDERS = ['female', 'male', 'unisex'];
-const PAGE_SIZE = 25;
-const SIZE_ROW_PRESET = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+const PAGE_SIZE = 50;
 
-const asArray = (value: unknown): any[] => {
-  if (Array.isArray(value)) return value;
-  if (value && typeof value === 'object' && 'data' in value && Array.isArray((value as any).data)) return (value as any).data;
-  if (value && typeof value === 'object' && 'products' in value && Array.isArray((value as any).products)) return (value as any).products;
-  return [];
+const EMPTY_FILTERS: ProductFilters = {
+  status: 'all',
+  seller_id: '',
+  seller_ids: '',
+  brands: '',
+  category: '',
+  min_price: '',
+  max_price: '',
+  in_stock: '',
+  sort: 'created_at',
+  order: 'desc',
+  departments: '',
+  product_groups: '',
+  genders: '',
+  style_categories: '',
+  aesthetics: '',
+  occasions: '',
+  materials: '',
+  color_families: '',
+  fits: '',
+  patterns: '',
+  collection_ids: '',
+  validation_status: '',
 };
 
-const getSellerId = (seller: SellerProfile): string => seller.id || seller._id || '';
+const csvToArray = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
 
-const getSellerName = (seller: SellerProfile): string =>
-  seller.business_name || seller.brand_name || seller.name || seller.legal_name || 'Unnamed Seller';
-
-const getImageUrl = (images?: any[]): string => {
-  const first = images?.[0];
-  if (!first) return '/images/misc/juno_app_icon.png';
-  if (typeof first === 'string') return first;
-  if (typeof first?.url === 'string') return first.url;
-  if (typeof first?.src === 'string') return first.src;
-  return '/images/misc/juno_app_icon.png';
-};
-
-const normalizeGender = (value?: string): string => {
-  const lower = (value || '').toLowerCase();
-  if (lower.includes('female') || lower.includes('women') || lower.includes('woman')) return 'female';
-  if (lower.includes('male') || lower.includes('men') || lower.includes('man')) return 'male';
-  if (lower.includes('unisex')) return 'unisex';
-  return '';
-};
-
-const inferGender = (item: QueueItem): string => {
-  const fromEnrichment = normalizeGender(item.enrichment?.gender);
-  if (fromEnrichment) return fromEnrichment;
-  const tag = item.product?.tags?.find((t) => normalizeGender(t));
-  return normalizeGender(tag);
-};
-
-const formatCurrency = (value?: number, currency = 'PKR') => {
-  if (typeof value !== 'number') return '-';
-  return `${currency} ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
-};
-
-const statusPillClass = (status?: string) => {
-  switch ((status || '').toLowerCase()) {
-    case 'ready':
-    case 'active':
-      return 'border-green-500/35 bg-green-500/10 text-green-300';
-    case 'promoted':
-      return 'border-blue-500/35 bg-blue-500/10 text-blue-300';
-    case 'failed':
-    case 'rejected':
-    case 'archived':
-      return 'border-red-500/35 bg-red-500/10 text-red-300';
-    case 'queued':
-    case 'draft':
-      return 'border-yellow-500/35 bg-yellow-500/10 text-yellow-300';
-    default:
-      return 'border-white/20 bg-white/5 text-neutral-300';
-  }
-};
-
-const getPageSlice = <T,>(items: T[], page: number, pageSize: number): T[] => {
-  const start = (page - 1) * pageSize;
-  return items.slice(start, start + pageSize);
-};
-
-const getQueueItemPrice = (item: QueueItem): number => {
-  const value = item.product?.pricing?.price ?? item.product?.pricing?.brand_price;
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-};
-
-const getQueueItemStock = (item: QueueItem): number => {
-  const value = item.product?.inventory?.available_quantity ?? item.product?.inventory?.quantity;
-  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0;
-};
-
-const getQueueItemUpdatedTs = (item: QueueItem): number => {
-  const ts = Date.parse(item.updated_at || item.created_at || '');
-  return Number.isFinite(ts) ? ts : 0;
-};
-
-const hasSizingGuideData = (item: QueueItem): boolean => {
-  const guide = item.enrichment?.sizing_guide || item.product?.sizing_guide;
-  if (!guide || typeof guide !== 'object') return false;
-  const chart = (guide as any).size_chart && typeof (guide as any).size_chart === 'object'
-    ? (guide as any).size_chart
-    : guide;
-  return typeof chart === 'object' && Object.keys(chart).length > 0;
-};
-
-const hasQueueBodyHtmlTable = (item: QueueItem): boolean => !!extractFirstTableHtml(item.product?.body_html);
-
-const getVariantAvailability = (product: any): { available: string[]; unavailable: string[] } => {
-  const variants = asArray(product?.variants);
-  const available: string[] = [];
-  const unavailable: string[] = [];
-  variants.forEach((variant: any, index: number) => {
-    const title = String(variant?.title || variant?.id || `Variant ${index + 1}`);
-    const qty = variant?.inventory?.available_quantity ?? variant?.inventory?.quantity;
-    const hasQty = typeof qty === 'number' && Number.isFinite(qty);
-    const isAvailable = variant?.available !== false && (!hasQty || qty > 0);
-    if (isAvailable) available.push(title);
-    else unavailable.push(title);
-  });
-  return { available, unavailable };
-};
-
-const sanitizeHtml = (html?: string): string => {
-  if (!html) return '';
-  return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, '');
-};
-
-const extractFirstTableHtml = (html?: string): string => {
-  const safe = sanitizeHtml(html);
-  if (!safe) return '';
-  const match = safe.match(/<table[\s\S]*?<\/table>/i);
-  return match?.[0] || '';
-};
-
-const stripHtml = (html?: string): string => {
-  if (!html) return '';
-  return sanitizeHtml(html).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-};
-
-const normalizeCellValue = (value: unknown): string => {
-  if (value === null || value === undefined) return '';
-  return String(value);
-};
-
-const parseSizingGuideDraft = (sizingGuide?: Record<string, any>): SizingGridDraft => {
-  const rawGuide = sizingGuide && typeof sizingGuide === 'object' ? sizingGuide : {};
-  const chartCandidate = rawGuide.size_chart && typeof rawGuide.size_chart === 'object' ? rawGuide.size_chart : rawGuide;
-  const chart = chartCandidate && typeof chartCandidate === 'object' ? chartCandidate : {};
-
-  const rows = Object.keys(chart);
-  const colSet = new Set<string>();
-  rows.forEach((row) => {
-    const rowObj = chart[row];
-    if (rowObj && typeof rowObj === 'object') {
-      Object.keys(rowObj).forEach((col) => colSet.add(col));
-    }
-  });
-
-  const resolvedRows = rows.length > 0 ? rows : ['S', 'M', 'L'];
-  const resolvedCols = colSet.size > 0 ? Array.from(colSet) : ['shoulder', 'chest', 'length'];
-  const cells: Record<string, Record<string, string>> = {};
-
-  resolvedRows.forEach((row) => {
-    cells[row] = {};
-    resolvedCols.forEach((col) => {
-      const value = chart?.[row]?.[col];
-      cells[row][col] = normalizeCellValue(value);
-    });
-  });
-
-  return {
-    rows: resolvedRows,
-    cols: resolvedCols,
-    cells,
-    hasSizeChartWrapper: !!(rawGuide.size_chart && typeof rawGuide.size_chart === 'object'),
-    measurementUnit: String(rawGuide.measurement_unit || 'inch'),
-    sizeFit: String(rawGuide.size_fit || ''),
+const buildListParams = (filters: ProductFilters, page: number) => {
+  const params: Record<string, string | number | boolean | undefined> = {
+    status: filters.status || 'all',
+    seller_id: filters.seller_id || undefined,
+    seller_ids: filters.seller_ids || undefined,
+    brands: filters.brands || undefined,
+    category: filters.category || undefined,
+    min_price: filters.min_price ? Number(filters.min_price) : undefined,
+    max_price: filters.max_price ? Number(filters.max_price) : undefined,
+    in_stock: filters.in_stock === '' ? undefined : filters.in_stock === 'true',
+    sort: filters.sort || 'created_at',
+    order: filters.order,
+    departments: filters.departments || undefined,
+    product_groups: filters.product_groups || undefined,
+    genders: filters.genders || undefined,
+    style_categories: filters.style_categories || undefined,
+    aesthetics: filters.aesthetics || undefined,
+    occasions: filters.occasions || undefined,
+    materials: filters.materials || undefined,
+    color_families: filters.color_families || undefined,
+    fits: filters.fits || undefined,
+    patterns: filters.patterns || undefined,
+    collection_ids: filters.collection_ids || undefined,
+    validation_status: filters.validation_status || undefined,
+    page,
+    limit: PAGE_SIZE,
   };
-};
-
-const maybeNumeric = (value: string): number | string => {
-  const trimmed = value.trim();
-  if (!trimmed) return '';
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : trimmed;
-};
-
-const buildSizingGuidePayload = (draft: SizingGridDraft): Record<string, any> => {
-  const chart: Record<string, Record<string, number | string>> = {};
-  draft.rows.forEach((row) => {
-    const rowName = row.trim();
-    if (!rowName) return;
-    const rowValues: Record<string, number | string> = {};
-    draft.cols.forEach((col) => {
-      const colName = col.trim();
-      if (!colName) return;
-      const raw = draft.cells[row]?.[col] ?? '';
-      const cast = maybeNumeric(raw);
-      if (cast !== '') rowValues[colName] = cast;
-    });
-    if (Object.keys(rowValues).length > 0) chart[rowName] = rowValues;
-  });
-
-  if (draft.hasSizeChartWrapper) {
-    return {
-      size_chart: chart,
-      measurement_unit: draft.measurementUnit || 'inch',
-      size_fit: draft.sizeFit || '',
-    };
-  }
-
-  return chart;
+  return params;
 };
 
 const ManageProducts: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('queue');
   const [products, setProducts] = useState<any[]>([]);
-  const [queue, setQueue] = useState<QueueItem[]>([]);
   const [sellers, setSellers] = useState<SellerProfile[]>([]);
-  const [selectedSellerId, setSelectedSellerId] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [actionKey, setActionKey] = useState('');
-
-  const [scrapeShopUrl, setScrapeShopUrl] = useState('');
-  const [scrapeFeedback, setScrapeFeedback] = useState('');
-  const [scrapeError, setScrapeError] = useState('');
-  const [queueBrandFilter, setQueueBrandFilter] = useState('all');
-  const [queueSort, setQueueSort] = useState<QueueSortKey>('updated_desc');
-  const [queueFlagFilters, setQueueFlagFilters] = useState({
-    noSizingGuide: false,
-    hasBodyTable: false,
-    outOfStock: false,
-    hasErrors: false,
-    hasImages: false,
-  });
-
-  const [queueEditId, setQueueEditId] = useState('');
-  const [queueEditDraft, setQueueEditDraft] = useState<QueueEditDraft>({
-    title: '',
-    short_description: '',
-    tagsInput: '',
-    product_type: '',
-    gender: '',
-  });
-  const [queueEditError, setQueueEditError] = useState('');
-  const [referenceTab, setReferenceTab] = useState<ReferenceTab>('images');
-  const [referenceImageIndex, setReferenceImageIndex] = useState(0);
-  const [sizingDraft, setSizingDraft] = useState<SizingGridDraft>(parseSizingGuideDraft({}));
-  const [incrementBaseSize, setIncrementBaseSize] = useState('');
-  const [incrementStep, setIncrementStep] = useState('0.5');
-  const [incrementStepsByCol, setIncrementStepsByCol] = useState<Record<string, string>>({});
-
-  const [catalogEditId, setCatalogEditId] = useState('');
-  const [catalogEditDraft, setCatalogEditDraft] = useState<CatalogEditDraft>({
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  const [bulkStatus, setBulkStatus] = useState<string>('');
+  const [bulkFeatured, setBulkFeatured] = useState<string>('');
+  const [bulkTags, setBulkTags] = useState('');
+  const [editId, setEditId] = useState('');
+  const [editDraft, setEditDraft] = useState<CatalogEditDraft>({
     title: '',
     description: '',
     status: 'active',
     is_featured: false,
     tagsInput: '',
+    badges: { ...EMPTY_BADGES },
   });
-  const [catalogEditError, setCatalogEditError] = useState('');
-  const [catalogReferenceTab, setCatalogReferenceTab] = useState<ReferenceTab>('images');
-  const [catalogReferenceImageIndex, setCatalogReferenceImageIndex] = useState(0);
-  const [catalogSizingDraft, setCatalogSizingDraft] = useState<SizingGridDraft>(parseSizingGuideDraft({}));
-  const [catalogIncrementBaseSize, setCatalogIncrementBaseSize] = useState('');
-  const [catalogIncrementStep, setCatalogIncrementStep] = useState('0.5');
-  const [catalogIncrementStepsByCol, setCatalogIncrementStepsByCol] = useState<Record<string, string>>({});
+  const [editError, setEditError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [aiQuery, setAiQuery] = useState('');
+  const [filters, setFilters] = useState<ProductFilters>(EMPTY_FILTERS);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [resultMeta, setResultMeta] = useState<{ total?: number; mode: 'list' | 'ai' }>({ mode: 'list' });
 
-  const [queuePage, setQueuePage] = useState(1);
-  const [catalogPage, setCatalogPage] = useState(1);
-  const [selectedQueueIds, setSelectedQueueIds] = useState<string[]>([]);
-  const [selectedCatalogIds, setSelectedCatalogIds] = useState<string[]>([]);
-  const [lastSelectedQueueIndex, setLastSelectedQueueIndex] = useState<number | null>(null);
-  const [lastSelectedCatalogIndex, setLastSelectedCatalogIndex] = useState<number | null>(null);
-  const [bulkQueueProductType, setBulkQueueProductType] = useState('');
-  const [bulkQueueGender, setBulkQueueGender] = useState('');
-  const [bulkQueueAllowUnenriched, setBulkQueueAllowUnenriched] = useState(false);
-  const [bulkQueuePatch, setBulkQueuePatch] = useState({
-    title: '',
-    short_description: '',
-    tagsInput: '',
-  });
-  const [bulkCatalogPatch, setBulkCatalogPatch] = useState({
-    status: '',
-    is_featured: '',
-    tagsInput: '',
-  });
+  const pageIds = useMemo(() => products.map((product) => String(product.id || '')).filter(Boolean), [products]);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+  const selectedCount = selectedIds.length;
 
-  const fetchQueueData = async () => {
-    const [queueResp, sellersResp] = await Promise.all([AdminPortal.listProductQueue(), AdminPortal.listSellers()]);
-    setQueue(asArray(queueResp.body) as QueueItem[]);
-    const sellerList = asArray(sellersResp.body) as SellerProfile[];
-    setSellers(sellerList);
-    if (!selectedSellerId && sellerList.length > 0) setSelectedSellerId(getSellerId(sellerList[0]));
+  const loadSellers = async () => {
+    const sellersRes = await AdminPortal.listSellers({ limit: 500 });
+    if (sellersRes.ok) setSellers(asArray(sellersRes.body));
   };
 
-  const fetchCatalogData = async () => {
-    const catalogResp = await AdminPortal.listProducts({ limit: 500 });
-    setProducts(asArray(catalogResp.body));
-  };
-
-  const fetchData = async () => {
+  const fetchProducts = async (nextPage = page) => {
     setIsLoading(true);
+    setError('');
     try {
-      if (activeTab === 'queue') await fetchQueueData();
-      else await fetchCatalogData();
-    } catch (error) {
-      console.error('Failed to fetch products data:', error);
+      const usingAI = aiQuery.trim().length > 0;
+      const response = usingAI
+        ? await AdminPortal.searchProducts({
+            ...buildListParams(filters, nextPage),
+            keyword: aiQuery.trim(),
+          })
+        : await AdminPortal.listProducts(buildListParams(filters, nextPage));
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Failed to load products');
+      const body = response.body as any;
+      const rows = asArray(body);
+      const meta = body?.meta?.pagination || body?.pagination || {};
+      setProducts(rows);
+      setTotalPages(Math.max(1, Number(meta.total_pages || meta.pages || (rows.length === PAGE_SIZE ? nextPage + 1 : nextPage)) || 1));
+      setResultMeta({
+        total: typeof meta.total === 'number' ? meta.total : undefined,
+        mode: usingAI ? 'ai' : 'list',
+      });
+      setSelectedIds([]);
+      setLastSelectedIndex(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load products');
+      setProducts([]);
+      setTotalPages(1);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+    void Promise.all([loadSellers(), fetchProducts(1)]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    setQueuePage(1);
-    setCatalogPage(1);
-    setSelectedQueueIds([]);
-    setSelectedCatalogIds([]);
-    setLastSelectedQueueIndex(null);
-    setLastSelectedCatalogIndex(null);
-  }, [searchTerm, statusFilter, activeTab, queueSort, queueFlagFilters, queueBrandFilter]);
+    setPage(1);
+  }, [filters, aiQuery]);
 
   useEffect(() => {
-    setIncrementStepsByCol((prev) => {
-      const next: Record<string, string> = {};
-      sizingDraft.cols.forEach((col) => {
-        next[col] = prev[col] ?? '0.5';
-      });
-      return next;
-    });
-  }, [sizingDraft.cols]);
+    void fetchProducts(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
-  useEffect(() => {
-    setCatalogIncrementStepsByCol((prev) => {
-      const next: Record<string, string> = {};
-      catalogSizingDraft.cols.forEach((col) => {
-        next[col] = prev[col] ?? '0.5';
-      });
-      return next;
-    });
-  }, [catalogSizingDraft.cols]);
-
-  const filteredCatalog = useMemo(() => {
+  const filteredProducts = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     if (!q) return products;
-    return products.filter((p) => {
-      const title = String(p.title || '').toLowerCase();
-      const seller = String(p.seller_name || p.seller_id || '').toLowerCase();
-      const status = String(p.status || '').toLowerCase();
-      const productId = String(p.id || '').toLowerCase();
-      return title.includes(q) || seller.includes(q) || status.includes(q) || productId.includes(q);
+    return products.filter((product) => {
+      const haystack = [
+        product.id,
+        product.title,
+        product.seller_name,
+        product.seller_id,
+        product.status,
+        Array.isArray(product.tags) ? product.tags.join(' ') : '',
+      ].join(' ').toLowerCase();
+      return haystack.includes(q);
     });
   }, [products, searchTerm]);
 
-  const queueBrandOptions = useMemo(() => {
-    const seen = new Set<string>();
-    const options: string[] = [];
-    queue.forEach((item) => {
-      const name = String(item.product?.seller_name || item.seller_id || '').trim();
-      if (!name || seen.has(name)) return;
-      seen.add(name);
-      options.push(name);
-    });
-    return options.sort((a, b) => a.localeCompare(b));
-  }, [queue]);
-
-  const filteredQueue = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
-    const termTokens: string[] = [];
-    const fieldFilters: Record<string, string[]> = {};
-    const priceOps: Array<{ op: '>' | '<' | '>=' | '<='; value: number }> = [];
-
-    tokens.forEach((token) => {
-      const priceMatch = token.match(/^price(<=|>=|<|>)(\d+(?:\.\d+)?)$/);
-      if (priceMatch) {
-        priceOps.push({ op: priceMatch[1] as '>' | '<' | '>=' | '<=', value: Number(priceMatch[2]) });
-        return;
-      }
-      const splitIdx = token.indexOf(':');
-      if (splitIdx > 0) {
-        const key = token.slice(0, splitIdx);
-        const value = token.slice(splitIdx + 1);
-        if (value) fieldFilters[key] = [...(fieldFilters[key] || []), value];
-      } else {
-        termTokens.push(token);
-      }
-    });
-
-    const filtered = queue.filter((item) => {
-      const title = String(item.product?.title || '').toLowerCase();
-      const seller = String(item.product?.seller_name || item.seller_id || '').toLowerCase();
-      const sellerExact = String(item.product?.seller_name || item.seller_id || '').trim();
-      const status = String(item.status || '').toLowerCase();
-      const source = String(item.source || '').toLowerCase();
-      const queueId = String(item.id || '').toLowerCase();
-      const productType = String(item.enrichment?.product_type || item.product?.product_type || '').toLowerCase();
-      const gender = String(item.enrichment?.gender || inferGender(item) || '').toLowerCase();
-      const hasTable = hasQueueBodyHtmlTable(item);
-      const hasImages = asArray(item.product?.images).length > 0;
-      const hasSizing = hasSizingGuideData(item);
-      const hasErrors = asArray(item.errors).length > 0;
-      const stock = getQueueItemStock(item);
-      const price = getQueueItemPrice(item);
-
-      const matchesTerms = termTokens.every((term) =>
-        title.includes(term) ||
-        seller.includes(term) ||
-        status.includes(term) ||
-        source.includes(term) ||
-        queueId.includes(term) ||
-        productType.includes(term)
-      );
-      const matchesSearch = tokens.length === 0 || matchesTerms;
-      const matchesStatus = statusFilter === 'all' || status === statusFilter;
-      const matchesBrand = queueBrandFilter === 'all' || sellerExact === queueBrandFilter;
-      const matchesSmartFields = Object.entries(fieldFilters).every(([key, values]) => {
-        if (values.length === 0) return true;
-        if (key === 'status') return values.some((v) => status.includes(v));
-        if (key === 'seller') return values.some((v) => seller.includes(v));
-        if (key === 'source') return values.some((v) => source.includes(v));
-        if (key === 'id') return values.some((v) => queueId.includes(v));
-        if (key === 'title') return values.some((v) => title.includes(v));
-        if (key === 'type') return values.some((v) => productType.includes(v));
-        if (key === 'gender') return values.some((v) => gender.includes(v));
-        if (key === 'has') {
-          return values.every((v) => {
-            if (v === 'table') return hasTable;
-            if (v === 'image' || v === 'images') return hasImages;
-            if (v === 'sizing' || v === 'sizeguide') return hasSizing;
-            if (v === 'error' || v === 'errors') return hasErrors;
-            return true;
-          });
-        }
-        if (key === 'stock') {
-          return values.every((v) => {
-            if (v === 'out') return stock <= 0;
-            if (v === 'low') return stock > 0 && stock <= 5;
-            if (v === 'in') return stock > 0;
-            return true;
-          });
-        }
-        return true;
-      });
-      const matchesPrice = priceOps.every(({ op, value }) => {
-        if (op === '>') return price > value;
-        if (op === '<') return price < value;
-        if (op === '>=') return price >= value;
-        return price <= value;
-      });
-      const matchesFlags =
-        (!queueFlagFilters.noSizingGuide || !hasSizing) &&
-        (!queueFlagFilters.hasBodyTable || hasTable) &&
-        (!queueFlagFilters.outOfStock || stock <= 0) &&
-        (!queueFlagFilters.hasErrors || hasErrors) &&
-        (!queueFlagFilters.hasImages || hasImages);
-      return matchesSearch && matchesStatus && matchesBrand && matchesSmartFields && matchesPrice && matchesFlags;
-    });
-
-    return filtered.sort((a, b) => {
-      if (queueSort === 'updated_asc') return getQueueItemUpdatedTs(a) - getQueueItemUpdatedTs(b);
-      if (queueSort === 'updated_desc') return getQueueItemUpdatedTs(b) - getQueueItemUpdatedTs(a);
-      if (queueSort === 'price_asc') return getQueueItemPrice(a) - getQueueItemPrice(b);
-      if (queueSort === 'price_desc') return getQueueItemPrice(b) - getQueueItemPrice(a);
-      if (queueSort === 'stock_asc') return getQueueItemStock(a) - getQueueItemStock(b);
-      return getQueueItemStock(b) - getQueueItemStock(a);
-    });
-  }, [queue, searchTerm, statusFilter, queueSort, queueFlagFilters, queueBrandFilter]);
-
-  const queueTotalPages = Math.max(1, Math.ceil(filteredQueue.length / PAGE_SIZE));
-  const catalogTotalPages = Math.max(1, Math.ceil(filteredCatalog.length / PAGE_SIZE));
-
-  const queuePageItems = useMemo(
-    () => getPageSlice(filteredQueue, Math.min(queuePage, queueTotalPages), PAGE_SIZE),
-    [filteredQueue, queuePage, queueTotalPages]
-  );
-  const catalogPageItems = useMemo(
-    () => getPageSlice(filteredCatalog, Math.min(catalogPage, catalogTotalPages), PAGE_SIZE),
-    [filteredCatalog, catalogPage, catalogTotalPages]
-  );
-
-  const queuePageIds = useMemo(() => queuePageItems.map((item) => item.id), [queuePageItems]);
-  const catalogPageIds = useMemo(() => catalogPageItems.map((product) => String(product.id)).filter(Boolean), [catalogPageItems]);
-  const allQueuePageSelected = queuePageIds.length > 0 && queuePageIds.every((id) => selectedQueueIds.includes(id));
-  const allCatalogPageSelected = catalogPageIds.length > 0 && catalogPageIds.every((id) => selectedCatalogIds.includes(id));
-
-  const toggleQueueSelection = (item: QueueItem, pageIndex: number, event?: React.MouseEvent | React.ChangeEvent<HTMLInputElement>) => {
-    const absoluteIndex = ((Math.min(queuePage, queueTotalPages) - 1) * PAGE_SIZE) + pageIndex;
-    const shiftKey = Boolean((event as React.MouseEvent | undefined)?.shiftKey || (event as React.ChangeEvent<HTMLInputElement> | undefined)?.nativeEvent instanceof MouseEvent && (event as React.ChangeEvent<HTMLInputElement>).nativeEvent.shiftKey);
-    if (shiftKey && lastSelectedQueueIndex !== null) {
-      const start = Math.min(lastSelectedQueueIndex, absoluteIndex);
-      const end = Math.max(lastSelectedQueueIndex, absoluteIndex);
-      const ids = filteredQueue.slice(start, end + 1).map((row) => row.id);
-      setSelectedQueueIds((prev) => Array.from(new Set([...prev, ...ids])));
-    } else {
-      setSelectedQueueIds((prev) => prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]);
-    }
-    setLastSelectedQueueIndex(absoluteIndex);
+  const resetFilters = () => {
+    setFilters(EMPTY_FILTERS);
+    setAiQuery('');
+    setPage(1);
+    void fetchProducts(1);
   };
 
-  const toggleCatalogSelection = (product: any, pageIndex: number, event?: React.MouseEvent | React.ChangeEvent<HTMLInputElement>) => {
+  const applySearch = () => {
+    setPage(1);
+    void fetchProducts(1);
+  };
+
+  const toggleSelection = (product: any, pageIndex: number, event?: React.MouseEvent | React.ChangeEvent<HTMLInputElement>) => {
     const productId = String(product.id || '');
     if (!productId) return;
-    const absoluteIndex = ((Math.min(catalogPage, catalogTotalPages) - 1) * PAGE_SIZE) + pageIndex;
-    const shiftKey = Boolean((event as React.MouseEvent | undefined)?.shiftKey || (event as React.ChangeEvent<HTMLInputElement> | undefined)?.nativeEvent instanceof MouseEvent && (event as React.ChangeEvent<HTMLInputElement>).nativeEvent.shiftKey);
-    if (shiftKey && lastSelectedCatalogIndex !== null) {
-      const start = Math.min(lastSelectedCatalogIndex, absoluteIndex);
-      const end = Math.max(lastSelectedCatalogIndex, absoluteIndex);
-      const ids = filteredCatalog.slice(start, end + 1).map((row) => String(row.id || '')).filter(Boolean);
-      setSelectedCatalogIds((prev) => Array.from(new Set([...prev, ...ids])));
+    const shiftKey = Boolean((event as React.MouseEvent | undefined)?.shiftKey || ((event as React.ChangeEvent<HTMLInputElement> | undefined)?.nativeEvent instanceof MouseEvent && (event as React.ChangeEvent<HTMLInputElement>).nativeEvent.shiftKey));
+    if (shiftKey && lastSelectedIndex !== null) {
+      const start = Math.min(lastSelectedIndex, pageIndex);
+      const end = Math.max(lastSelectedIndex, pageIndex);
+      const ids = filteredProducts.slice(start, end + 1).map((row) => String(row.id || '')).filter(Boolean);
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...ids])));
     } else {
-      setSelectedCatalogIds((prev) => prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]);
+      setSelectedIds((prev) => (prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]));
     }
-    setLastSelectedCatalogIndex(absoluteIndex);
+    setLastSelectedIndex(pageIndex);
   };
 
-  const toggleQueuePageSelection = () => {
-    setSelectedQueueIds((prev) => {
-      if (allQueuePageSelected) return prev.filter((id) => !queuePageIds.includes(id));
-      return Array.from(new Set([...prev, ...queuePageIds]));
-    });
-  };
-
-  const toggleCatalogPageSelection = () => {
-    setSelectedCatalogIds((prev) => {
-      if (allCatalogPageSelected) return prev.filter((id) => !catalogPageIds.includes(id));
-      return Array.from(new Set([...prev, ...catalogPageIds]));
+  const togglePageSelection = () => {
+    setSelectedIds((prev) => {
+      if (allPageSelected) return prev.filter((id) => !pageIds.includes(id));
+      return Array.from(new Set([...prev, ...pageIds]));
     });
   };
 
@@ -606,1862 +254,446 @@ const ManageProducts: React.FC = () => {
       const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || Boolean(target?.isContentEditable);
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'a' || isTyping) return;
       event.preventDefault();
-      if (activeTab === 'queue') {
-        setSelectedQueueIds(event.shiftKey ? [] : queuePageIds);
-      } else {
-        setSelectedCatalogIds(event.shiftKey ? [] : catalogPageIds);
-      }
+      setSelectedIds(event.shiftKey ? [] : pageIds);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeTab, catalogPageIds, queuePageIds]);
+  }, [pageIds]);
 
-  const handleRefresh = async () => {
-    await fetchData();
-  };
-
-  const handleScrapeForSeller = async () => {
-    if (!selectedSellerId) return;
-    setActionKey('scrape');
-    setScrapeError('');
-    setScrapeFeedback('');
-    try {
-      const website = scrapeShopUrl.trim();
-      const resp = await scrapeSellerProducts(selectedSellerId, website || undefined);
-      if (!resp.ok) {
-        const msg = typeof resp.body === 'object' && resp.body && 'message' in resp.body ? String((resp.body as any).message) : 'Failed to start scrape';
-        throw new Error(msg);
-      }
-      await fetchQueueData();
-      const seller = sellers.find((s) => getSellerId(s) === selectedSellerId);
-      setScrapeFeedback(`Scrape started for ${getSellerName(seller || {})}${website ? ` using ${website}` : ''}.`);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to start scrape';
-      setScrapeError(msg);
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const openQueueEdit = (item: QueueItem) => {
-    setQueueEditId(item.id);
-    setQueueEditError('');
-    const guideSeed = item.enrichment?.sizing_guide || item.product?.sizing_guide || {};
-    setQueueEditDraft({
-      title: item.product?.title || '',
-      short_description: item.product?.short_description || item.product?.description || '',
-      tagsInput: Array.isArray(item.product?.tags) ? item.product?.tags.join(', ') : '',
-      product_type: item.enrichment?.product_type || item.product?.product_type || '',
-      gender: inferGender(item),
-    });
-    const parsed = parseSizingGuideDraft(guideSeed);
-    setSizingDraft(parsed);
-    const hasBodyTable = !!extractFirstTableHtml(item.product?.body_html);
-    setReferenceTab(hasBodyTable ? 'body_html' : item.product?.images?.length ? 'images' : item.product?.body_html ? 'body_html' : 'description');
-    setReferenceImageIndex(0);
-    setIncrementBaseSize(parsed.rows[0] || '');
-    setIncrementStep('0.5');
-    setIncrementStepsByCol(
-      parsed.cols.reduce((acc, col) => {
-        acc[col] = '0.5';
-        return acc;
-      }, {} as Record<string, string>)
-    );
-  };
-
-  const cancelQueueEdit = () => {
-    setQueueEditId('');
-    setQueueEditError('');
-  };
-
-  const updateGuideCell = (row: string, col: string, value: string) => {
-    setSizingDraft((prev) => ({
-      ...prev,
-      cells: {
-        ...prev.cells,
-        [row]: {
-          ...(prev.cells[row] || {}),
-          [col]: value,
-        },
-      },
-    }));
-  };
-
-  const updateGuideRowName = (oldName: string, newName: string) => {
-    const trimmed = newName.trim();
-    if (!trimmed || trimmed === oldName) return;
-    setSizingDraft((prev) => {
-      if (prev.rows.includes(trimmed)) return prev;
-      const nextRows = prev.rows.map((row) => (row === oldName ? trimmed : row));
-      const nextCells = { ...prev.cells, [trimmed]: { ...(prev.cells[oldName] || {}) } };
-      delete nextCells[oldName];
-      return { ...prev, rows: nextRows, cells: nextCells };
-    });
-    setIncrementBaseSize((prev) => (prev === oldName ? trimmed : prev));
-  };
-
-  const updateGuideColName = (oldName: string, newName: string) => {
-    const trimmed = newName.trim();
-    if (!trimmed || trimmed === oldName) return;
-    setSizingDraft((prev) => {
-      if (prev.cols.includes(trimmed)) return prev;
-      const nextCols = prev.cols.map((col) => (col === oldName ? trimmed : col));
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row) => {
-        const rowCells = { ...(prev.cells[row] || {}) };
-        rowCells[trimmed] = rowCells[oldName] || '';
-        delete rowCells[oldName];
-        nextCells[row] = rowCells;
-      });
-      return { ...prev, cols: nextCols, cells: nextCells };
-    });
-    setIncrementStepsByCol((prev) => {
-      const next = { ...prev, [trimmed]: prev[oldName] || prev[trimmed] || '0.5' };
-      delete next[oldName];
-      return next;
-    });
-  };
-
-  const addGuideRow = () => {
-    setSizingDraft((prev) => {
-      const suggested = SIZE_ROW_PRESET.find((name) => !prev.rows.includes(name)) || `Size ${prev.rows.length + 1}`;
-      const nextRows = [...prev.rows, suggested];
-      const nextCells = { ...prev.cells, [suggested]: {} as Record<string, string> };
-      prev.cols.forEach((col) => {
-        nextCells[suggested][col] = '';
-      });
-      return { ...prev, rows: nextRows, cells: nextCells };
-    });
-  };
-
-  const addGuideCol = () => {
-    setSizingDraft((prev) => {
-      const suggested = `measurement_${prev.cols.length + 1}`;
-      const nextCols = [...prev.cols, suggested];
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row) => {
-        nextCells[row] = { ...(prev.cells[row] || {}), [suggested]: '' };
-      });
-      return { ...prev, cols: nextCols, cells: nextCells };
-    });
-  };
-
-  const removeGuideRow = (rowName: string) => {
-    setSizingDraft((prev) => {
-      if (prev.rows.length <= 1) return prev;
-      const nextRows = prev.rows.filter((row) => row !== rowName);
-      const nextCells = { ...prev.cells };
-      delete nextCells[rowName];
-      return { ...prev, rows: nextRows, cells: nextCells };
-    });
-    setIncrementBaseSize((prev) => (prev === rowName ? '' : prev));
-  };
-
-  const removeGuideCol = (colName: string) => {
-    setSizingDraft((prev) => {
-      if (prev.cols.length <= 1) return prev;
-      const nextCols = prev.cols.filter((col) => col !== colName);
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row) => {
-        const rowCells = { ...(prev.cells[row] || {}) };
-        delete rowCells[colName];
-        nextCells[row] = rowCells;
-      });
-      return { ...prev, cols: nextCols, cells: nextCells };
-    });
-    setIncrementStepsByCol((prev) => {
-      const next = { ...prev };
-      delete next[colName];
-      return next;
-    });
-  };
-
-  const transposeGuide = () => {
-    setSizingDraft((prev) => {
-      const nextRows = [...prev.cols];
-      const nextCols = [...prev.rows];
-      const nextCells: Record<string, Record<string, string>> = {};
-      nextRows.forEach((row) => {
-        nextCells[row] = {};
-        nextCols.forEach((col) => {
-          nextCells[row][col] = prev.cells[col]?.[row] || '';
-        });
-      });
-      return { ...prev, rows: nextRows, cols: nextCols, cells: nextCells };
-    });
-    setIncrementBaseSize('');
-    setIncrementStepsByCol({});
-  };
-
-  const applyStepIncrement = () => {
-    const stepValue = Number(incrementStep);
-    if (!incrementBaseSize || !Number.isFinite(stepValue)) {
-      setQueueEditError('Choose a base size and valid increment step.');
-      return;
-    }
-    setQueueEditError('');
-    setSizingDraft((prev) => {
-      const baseIndex = prev.rows.indexOf(incrementBaseSize);
-      if (baseIndex === -1) return prev;
-      const baseCells = prev.cells[incrementBaseSize] || {};
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row, rowIndex) => {
-        const offset = rowIndex - baseIndex;
-        nextCells[row] = { ...(prev.cells[row] || {}) };
-        prev.cols.forEach((col) => {
-          const baseRaw = baseCells[col];
-          const baseNumber = Number(baseRaw);
-          if (!Number.isFinite(baseNumber)) return;
-          const nextValue = baseNumber + (offset * stepValue);
-          nextCells[row][col] = String(Number(nextValue.toFixed(3)));
-        });
-      });
-      return { ...prev, cells: nextCells };
-    });
-  };
-
-  const applyColumnStepIncrement = () => {
-    if (!incrementBaseSize) {
-      setQueueEditError('Choose a base size first.');
-      return;
-    }
-    setQueueEditError('');
-    setSizingDraft((prev) => {
-      const baseIndex = prev.rows.indexOf(incrementBaseSize);
-      if (baseIndex === -1) return prev;
-      const baseCells = prev.cells[incrementBaseSize] || {};
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row, rowIndex) => {
-        const offset = rowIndex - baseIndex;
-        nextCells[row] = { ...(prev.cells[row] || {}) };
-        prev.cols.forEach((col) => {
-          const step = Number(incrementStepsByCol[col] || incrementStep);
-          const baseNumber = Number(baseCells[col]);
-          if (!Number.isFinite(step) || !Number.isFinite(baseNumber)) return;
-          const nextValue = baseNumber + (offset * step);
-          nextCells[row][col] = String(Number(nextValue.toFixed(3)));
-        });
-      });
-      return { ...prev, cells: nextCells };
-    });
-  };
-
-  const focusGuideCell = (queueId: string, rowIndex: number, colIndex: number, rowCount: number, colCount: number) => {
-    const boundedRow = Math.max(0, Math.min(rowCount - 1, rowIndex));
-    const boundedCol = Math.max(0, Math.min(colCount - 1, colIndex));
-    const id = `sg-cell-${queueId}-${boundedRow}-${boundedCol}`;
-    const el = document.getElementById(id) as HTMLInputElement | null;
-    if (el) {
-      el.focus();
-      el.select();
-    }
-  };
-
-  const onGuideCellKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>,
-    queueId: string,
-    rowIndex: number,
-    colIndex: number,
-    rowCount: number,
-    colCount: number
-  ) => {
-    switch (event.key) {
-      case 'ArrowUp':
-        event.preventDefault();
-        focusGuideCell(queueId, rowIndex - 1, colIndex, rowCount, colCount);
-        break;
-      case 'ArrowDown':
-        event.preventDefault();
-        focusGuideCell(queueId, rowIndex + 1, colIndex, rowCount, colCount);
-        break;
-      case 'ArrowLeft':
-        event.preventDefault();
-        focusGuideCell(queueId, rowIndex, colIndex - 1, rowCount, colCount);
-        break;
-      case 'ArrowRight':
-        event.preventDefault();
-        focusGuideCell(queueId, rowIndex, colIndex + 1, rowCount, colCount);
-        break;
-      case 'Enter':
-        event.preventDefault();
-        focusGuideCell(queueId, event.shiftKey ? rowIndex - 1 : rowIndex + 1, colIndex, rowCount, colCount);
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleSaveQueueItem = async (item: QueueItem) => {
-    if (!queueEditDraft.title.trim()) {
-      setQueueEditError('Title is required.');
-      return;
-    }
-
-    const sizingGuidePayload = buildSizingGuidePayload(sizingDraft);
-    const tags = queueEditDraft.tagsInput.split(',').map((tag) => tag.trim()).filter(Boolean);
-    setQueueEditError('');
-    setActionKey(`${item.id}:saveQueue`);
-    try {
-      const updateResponse = await AdminPortal.updateProductQueueItem(item.id, {
-        ...(item.product || {}),
-        title: queueEditDraft.title.trim(),
-        short_description: queueEditDraft.short_description.trim(),
-        tags,
-      });
-      if (!updateResponse.ok) {
-        const msg = typeof updateResponse.body === 'object' && updateResponse.body && 'message' in updateResponse.body ? String((updateResponse.body as any).message) : 'Failed to update queue item';
-        throw new Error(msg);
-      }
-
-      if (queueEditDraft.product_type && queueEditDraft.gender) {
-        const enrichResponse = await AdminPortal.enrichProductQueueItem(item.id, {
-          product_type: queueEditDraft.product_type,
-          gender: queueEditDraft.gender,
-          sizing_guide: sizingGuidePayload,
-        });
-        if (!enrichResponse.ok) {
-          const msg = typeof enrichResponse.body === 'object' && enrichResponse.body && 'message' in enrichResponse.body ? String((enrichResponse.body as any).message) : 'Failed to enrich queue item';
-          throw new Error(msg);
-        }
-      } else if (Object.keys(sizingGuidePayload).length > 0) {
-        throw new Error('Product type and gender are required to save sizing guide enrichment.');
-      }
-
-      await fetchQueueData();
-      cancelQueueEdit();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to save queue item';
-      setQueueEditError(msg);
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const handleReject = async (item: QueueItem) => {
-    const reason = window.prompt(`Reject queue item ${item.id} with reason:`, 'Rejected by admin ops');
-    if (!reason) return;
-    setActionKey(`${item.id}:reject`);
-    try {
-      const response = await AdminPortal.rejectProductQueueItem(item.id, reason);
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to reject queue item';
-        throw new Error(msg);
-      }
-      await fetchQueueData();
-      if (queueEditId === item.id) cancelQueueEdit();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to reject queue item');
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const handlePromote = async (item: QueueItem) => {
-    setActionKey(`${item.id}:promote`);
-    try {
-      const response = await AdminPortal.promoteProductQueueItem(item.id);
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to promote queue item';
-        throw new Error(msg);
-      }
-      await fetchQueueData();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to promote queue item');
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const handleDeleteQueueItem = async (item: QueueItem) => {
-    if (!window.confirm(`Delete queue item ${item.id}?`)) return;
-    setActionKey(`${item.id}:delete`);
-    try {
-      const response = await AdminPortal.deleteProductQueueItem(item.id);
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to delete queue item';
-        throw new Error(msg);
-      }
-      await fetchQueueData();
-      if (queueEditId === item.id) cancelQueueEdit();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to delete queue item');
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const handleBulkDeleteFilteredQueue = async () => {
-    const targetItems = filteredQueue;
-    if (targetItems.length === 0) return;
-    const confirmed = window.confirm(`Delete ${targetItems.length} queue item(s) matching current filters? This cannot be undone.`);
-    if (!confirmed) return;
-
-    setActionKey('bulkDelete');
-    try {
-      const ids = targetItems.map((item) => item.id);
-      const response = await AdminPortal.bulkDeleteProductQueue({ queue_ids: ids });
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Bulk delete failed';
-        throw new Error(msg);
-      }
-
-      await fetchQueueData();
-      if (queueEditId && ids.includes(queueEditId)) cancelQueueEdit();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Bulk delete failed');
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const openCatalogEdit = (product: any) => {
-    setCatalogEditId(product.id);
-    setCatalogEditError('');
-    setCatalogEditDraft({
+  const openEdit = (product: any) => {
+    setEditId(String(product.id || ''));
+    setEditError('');
+    setEditDraft({
       title: String(product.title || ''),
       description: String(product.description || ''),
-      status: (['active', 'draft', 'archived'].includes(product.status) ? product.status : 'active') as 'active' | 'draft' | 'archived',
-      is_featured: !!product.is_featured,
+      status: String(product.status || 'active'),
+      is_featured: Boolean(product.is_featured),
       tagsInput: Array.isArray(product.tags) ? product.tags.join(', ') : '',
-    });
-    const parsed = parseSizingGuideDraft(product?.sizing_guide || {});
-    setCatalogSizingDraft(parsed);
-    const hasBodyTable = !!extractFirstTableHtml(product?.body_html);
-    setCatalogReferenceTab(hasBodyTable ? 'body_html' : asArray(product?.images).length ? 'images' : product?.body_html ? 'body_html' : 'description');
-    setCatalogReferenceImageIndex(0);
-    setCatalogIncrementBaseSize(parsed.rows[0] || '');
-    setCatalogIncrementStep('0.5');
-    setCatalogIncrementStepsByCol(
-      parsed.cols.reduce((acc, col) => {
-        acc[col] = '0.5';
-        return acc;
-      }, {} as Record<string, string>)
-    );
-  };
-
-  const cancelCatalogEdit = () => {
-    setCatalogEditId('');
-    setCatalogEditError('');
-  };
-
-  const updateCatalogGuideCell = (row: string, col: string, value: string) => {
-    setCatalogSizingDraft((prev) => ({
-      ...prev,
-      cells: {
-        ...prev.cells,
-        [row]: {
-          ...(prev.cells[row] || {}),
-          [col]: value,
-        },
-      },
-    }));
-  };
-
-  const updateCatalogGuideRowName = (oldName: string, newName: string) => {
-    const trimmed = newName.trim();
-    if (!trimmed || trimmed === oldName) return;
-    setCatalogSizingDraft((prev) => {
-      if (prev.rows.includes(trimmed)) return prev;
-      const nextRows = prev.rows.map((row) => (row === oldName ? trimmed : row));
-      const nextCells = { ...prev.cells, [trimmed]: { ...(prev.cells[oldName] || {}) } };
-      delete nextCells[oldName];
-      return { ...prev, rows: nextRows, cells: nextCells };
-    });
-    setCatalogIncrementBaseSize((prev) => (prev === oldName ? trimmed : prev));
-  };
-
-  const updateCatalogGuideColName = (oldName: string, newName: string) => {
-    const trimmed = newName.trim();
-    if (!trimmed || trimmed === oldName) return;
-    setCatalogSizingDraft((prev) => {
-      if (prev.cols.includes(trimmed)) return prev;
-      const nextCols = prev.cols.map((col) => (col === oldName ? trimmed : col));
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row) => {
-        const rowCells = { ...(prev.cells[row] || {}) };
-        rowCells[trimmed] = rowCells[oldName] || '';
-        delete rowCells[oldName];
-        nextCells[row] = rowCells;
-      });
-      return { ...prev, cols: nextCols, cells: nextCells };
-    });
-    setCatalogIncrementStepsByCol((prev) => {
-      const next = { ...prev, [trimmed]: prev[oldName] || prev[trimmed] || '0.5' };
-      delete next[oldName];
-      return next;
+      badges: normalizeBadges(product.badges),
     });
   };
 
-  const addCatalogGuideRow = () => {
-    setCatalogSizingDraft((prev) => {
-      const suggested = SIZE_ROW_PRESET.find((name) => !prev.rows.includes(name)) || `Size ${prev.rows.length + 1}`;
-      const nextRows = [...prev.rows, suggested];
-      const nextCells = { ...prev.cells, [suggested]: {} as Record<string, string> };
-      prev.cols.forEach((col) => {
-        nextCells[suggested][col] = '';
-      });
-      return { ...prev, rows: nextRows, cells: nextCells };
-    });
+  const closeEdit = () => {
+    setEditId('');
+    setEditError('');
   };
 
-  const addCatalogGuideCol = () => {
-    setCatalogSizingDraft((prev) => {
-      const suggested = `measurement_${prev.cols.length + 1}`;
-      const nextCols = [...prev.cols, suggested];
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row) => {
-        nextCells[row] = { ...(prev.cells[row] || {}), [suggested]: '' };
-      });
-      return { ...prev, cols: nextCols, cells: nextCells };
-    });
-  };
-
-  const removeCatalogGuideRow = (rowName: string) => {
-    setCatalogSizingDraft((prev) => {
-      if (prev.rows.length <= 1) return prev;
-      const nextRows = prev.rows.filter((row) => row !== rowName);
-      const nextCells = { ...prev.cells };
-      delete nextCells[rowName];
-      return { ...prev, rows: nextRows, cells: nextCells };
-    });
-    setCatalogIncrementBaseSize((prev) => (prev === rowName ? '' : prev));
-  };
-
-  const removeCatalogGuideCol = (colName: string) => {
-    setCatalogSizingDraft((prev) => {
-      if (prev.cols.length <= 1) return prev;
-      const nextCols = prev.cols.filter((col) => col !== colName);
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row) => {
-        const rowCells = { ...(prev.cells[row] || {}) };
-        delete rowCells[colName];
-        nextCells[row] = rowCells;
-      });
-      return { ...prev, cols: nextCols, cells: nextCells };
-    });
-    setCatalogIncrementStepsByCol((prev) => {
-      const next = { ...prev };
-      delete next[colName];
-      return next;
-    });
-  };
-
-  const transposeCatalogGuide = () => {
-    setCatalogSizingDraft((prev) => {
-      const nextRows = [...prev.cols];
-      const nextCols = [...prev.rows];
-      const nextCells: Record<string, Record<string, string>> = {};
-      nextRows.forEach((row) => {
-        nextCells[row] = {};
-        nextCols.forEach((col) => {
-          nextCells[row][col] = prev.cells[col]?.[row] || '';
-        });
-      });
-      return { ...prev, rows: nextRows, cols: nextCols, cells: nextCells };
-    });
-    setCatalogIncrementBaseSize('');
-    setCatalogIncrementStepsByCol({});
-  };
-
-  const applyCatalogStepIncrement = () => {
-    const stepValue = Number(catalogIncrementStep);
-    if (!catalogIncrementBaseSize || !Number.isFinite(stepValue)) {
-      setCatalogEditError('Choose a base size and valid increment step.');
+  const saveEdit = async () => {
+    if (!editId || !editDraft.title.trim()) {
+      setEditError('Title is required.');
       return;
     }
-    setCatalogEditError('');
-    setCatalogSizingDraft((prev) => {
-      const baseIndex = prev.rows.indexOf(catalogIncrementBaseSize);
-      if (baseIndex === -1) return prev;
-      const baseCells = prev.cells[catalogIncrementBaseSize] || {};
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row, rowIndex) => {
-        const offset = rowIndex - baseIndex;
-        nextCells[row] = { ...(prev.cells[row] || {}) };
-        prev.cols.forEach((col) => {
-          const baseNumber = Number(baseCells[col]);
-          if (!Number.isFinite(baseNumber)) return;
-          const nextValue = baseNumber + (offset * stepValue);
-          nextCells[row][col] = String(Number(nextValue.toFixed(3)));
-        });
-      });
-      return { ...prev, cells: nextCells };
-    });
-  };
-
-  const applyCatalogColumnStepIncrement = () => {
-    if (!catalogIncrementBaseSize) {
-      setCatalogEditError('Choose a base size first.');
-      return;
-    }
-    setCatalogEditError('');
-    setCatalogSizingDraft((prev) => {
-      const baseIndex = prev.rows.indexOf(catalogIncrementBaseSize);
-      if (baseIndex === -1) return prev;
-      const baseCells = prev.cells[catalogIncrementBaseSize] || {};
-      const nextCells: Record<string, Record<string, string>> = {};
-      prev.rows.forEach((row, rowIndex) => {
-        const offset = rowIndex - baseIndex;
-        nextCells[row] = { ...(prev.cells[row] || {}) };
-        prev.cols.forEach((col) => {
-          const step = Number(catalogIncrementStepsByCol[col] || catalogIncrementStep);
-          const baseNumber = Number(baseCells[col]);
-          if (!Number.isFinite(step) || !Number.isFinite(baseNumber)) return;
-          const nextValue = baseNumber + (offset * step);
-          nextCells[row][col] = String(Number(nextValue.toFixed(3)));
-        });
-      });
-      return { ...prev, cells: nextCells };
-    });
-  };
-
-  const handleCatalogPatch = async (product: any) => {
-    if (!catalogEditDraft.title.trim()) {
-      setCatalogEditError('Title is required.');
-      return;
-    }
-
-    const payload = {
-      title: catalogEditDraft.title.trim(),
-      description: catalogEditDraft.description.trim(),
-      status: catalogEditDraft.status,
-      is_featured: catalogEditDraft.is_featured,
-      tags: catalogEditDraft.tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
-      sizing_guide: buildSizingGuidePayload(catalogSizingDraft),
-    };
-
-    setCatalogEditError('');
-    setActionKey(`${product.id}:patch`);
+    setActionKey(`${editId}:save`);
+    setEditError('');
     try {
-      const response = await AdminPortal.updateProduct(product.id, payload);
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to update product';
-        throw new Error(msg);
-      }
-      await fetchCatalogData();
-      cancelCatalogEdit();
-    } catch (error) {
-      setCatalogEditError(error instanceof Error ? error.message : 'Failed to update product');
+      const response = await AdminPortal.updateProduct(editId, {
+        title: editDraft.title.trim(),
+        description: editDraft.description.trim(),
+        status: editDraft.status,
+        is_featured: editDraft.is_featured,
+        tags: parseTags(editDraft.tagsInput),
+        badges: editDraft.badges,
+      });
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Failed to update product');
+      await fetchProducts(page);
+      closeEdit();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update product');
     } finally {
       setActionKey('');
     }
   };
 
-  const handleCatalogDelete = async (product: any) => {
-    if (!window.confirm(`Delete active catalog product "${product.title || product.id}"?`)) return;
-    setActionKey(`${product.id}:deleteCatalog`);
+  const deleteProduct = async (product: any) => {
+    if (!window.confirm(`Delete "${product.title || product.id}"?`)) return;
+    setActionKey(`${product.id}:delete`);
     try {
-      const response = await AdminPortal.deleteProduct(product.id);
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to delete product';
-        throw new Error(msg);
-      }
-      await fetchCatalogData();
-      if (catalogEditId === product.id) cancelCatalogEdit();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to delete product');
+      const response = await AdminPortal.deleteProduct(String(product.id || ''));
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Failed to delete product');
+      await fetchProducts(page);
+      if (editId === String(product.id || '')) closeEdit();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Failed to delete product');
     } finally {
       setActionKey('');
     }
   };
 
-  const selectedCatalogProduct = useMemo(
-    () => products.find((p) => p.id === catalogEditId),
-    [products, catalogEditId]
-  );
-
-  const handleBulkQueuePromote = async () => {
-    if (selectedQueueIds.length === 0) return;
-    setActionKey('bulkQueuePromote');
-    try {
-      const response = await AdminPortal.bulkPromoteProductQueue({
-        queue_ids: selectedQueueIds,
-        allow_unenriched: bulkQueueAllowUnenriched,
-      });
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk promote queue items';
-        throw new Error(msg);
-      }
-      setSelectedQueueIds([]);
-      await fetchQueueData();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to bulk promote queue items');
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const handleBulkQueueEnrich = async () => {
-    if (selectedQueueIds.length === 0 || !bulkQueueProductType || !bulkQueueGender) return;
-    setActionKey('bulkQueueEnrich');
-    try {
-      const response = await AdminPortal.bulkEnrichProductQueue({
-        queue_ids: selectedQueueIds,
-        enrichment: {
-          product_type: bulkQueueProductType,
-          gender: bulkQueueGender,
-        },
-      });
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk enrich queue items';
-        throw new Error(msg);
-      }
-      await fetchQueueData();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to bulk enrich queue items');
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const handleBulkQueuePatch = async () => {
-    if (selectedQueueIds.length === 0) return;
+  const bulkPatch = async () => {
+    if (selectedIds.length === 0) return;
     const update: Record<string, any> = {};
-    if (bulkQueuePatch.title.trim()) update.title = bulkQueuePatch.title.trim();
-    if (bulkQueuePatch.short_description.trim()) update.short_description = bulkQueuePatch.short_description.trim();
-    const tags = bulkQueuePatch.tagsInput.split(',').map((tag) => tag.trim()).filter(Boolean);
+    if (bulkStatus) update.status = bulkStatus;
+    if (bulkFeatured !== '') update.is_featured = bulkFeatured === 'true';
+    const tags = parseTags(bulkTags);
     if (tags.length > 0) update.tags = tags;
     if (Object.keys(update).length === 0) return;
-
-    setActionKey('bulkQueuePatch');
+    setActionKey('bulk-update');
     try {
-      const response = await AdminPortal.bulkUpdateProductQueue({ queue_ids: selectedQueueIds, update });
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk update queue items';
-        throw new Error(msg);
-      }
-      setBulkQueuePatch({ title: '', short_description: '', tagsInput: '' });
-      await fetchQueueData();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to bulk update queue items');
+      const response = await AdminPortal.bulkUpdateProducts({ product_ids: selectedIds, update });
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Failed to update selected products');
+      setBulkStatus('');
+      setBulkFeatured('');
+      setBulkTags('');
+      setSelectedIds([]);
+      await fetchProducts(page);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Failed to update selected products');
     } finally {
       setActionKey('');
     }
   };
 
-  const handleBulkQueueReject = async () => {
-    if (selectedQueueIds.length === 0) return;
-    const reason = window.prompt('Reject selected queue items with reason:', 'Bulk rejected by admin ops');
-    if (!reason) return;
-    setActionKey('bulkQueueReject');
+  const bulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.length} selected product(s)?`)) return;
+    setActionKey('bulk-delete');
     try {
-      const response = await AdminPortal.bulkRejectProductQueue({ queue_ids: selectedQueueIds, reason });
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk reject queue items';
-        throw new Error(msg);
-      }
-      setSelectedQueueIds([]);
-      await fetchQueueData();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to bulk reject queue items');
+      const response = await AdminPortal.bulkDeleteProducts({ product_ids: selectedIds });
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Failed to delete selected products');
+      setSelectedIds([]);
+      await fetchProducts(page);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Failed to delete selected products');
     } finally {
       setActionKey('');
     }
   };
 
-  const handleBulkQueueDelete = async () => {
-    if (selectedQueueIds.length === 0) return;
-    if (!window.confirm(`Delete ${selectedQueueIds.length} selected queue item(s)?`)) return;
-    setActionKey('bulkQueueDelete');
-    try {
-      const response = await AdminPortal.bulkDeleteProductQueue({ queue_ids: selectedQueueIds });
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk delete queue items';
-        throw new Error(msg);
-      }
-      setSelectedQueueIds([]);
-      await fetchQueueData();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to bulk delete queue items');
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const handleBulkCatalogPatch = async () => {
-    if (selectedCatalogIds.length === 0) return;
-    const update: Record<string, any> = {};
-    if (bulkCatalogPatch.status) update.status = bulkCatalogPatch.status;
-    if (bulkCatalogPatch.is_featured) update.is_featured = bulkCatalogPatch.is_featured === 'true';
-    const tags = bulkCatalogPatch.tagsInput.split(',').map((tag) => tag.trim()).filter(Boolean);
-    if (tags.length > 0) update.tags = tags;
-    if (Object.keys(update).length === 0) return;
-
-    setActionKey('bulkCatalogPatch');
-    try {
-      const response = await AdminPortal.bulkUpdateProducts({ product_ids: selectedCatalogIds, update });
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk update catalog products';
-        throw new Error(msg);
-      }
-      await fetchCatalogData();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to bulk update catalog products');
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const handleBulkCatalogDelete = async () => {
-    if (selectedCatalogIds.length === 0) return;
-    if (!window.confirm(`Delete ${selectedCatalogIds.length} selected catalog product(s)?`)) return;
-    setActionKey('bulkCatalogDelete');
-    try {
-      const response = await AdminPortal.bulkDeleteProducts({ product_ids: selectedCatalogIds });
-      if (!response.ok) {
-        const msg = typeof response.body === 'object' && response.body && 'message' in response.body ? String((response.body as any).message) : 'Failed to bulk delete catalog products';
-        throw new Error(msg);
-      }
-      setSelectedCatalogIds([]);
-      await fetchCatalogData();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to bulk delete catalog products');
-    } finally {
-      setActionKey('');
-    }
-  };
-
-  const renderPager = (page: number, totalPages: number, setPage: (n: number) => void) => (
-    <div className="mt-3 flex items-center justify-between text-xs text-neutral-400">
-      <span>Page {Math.min(page, totalPages)} of {totalPages}</span>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => setPage(Math.max(1, page - 1))}
-          disabled={page <= 1}
-          className="rounded border border-white/15 px-2 py-1 text-neutral-200 disabled:opacity-40"
-        >
-          Prev
-        </button>
-        <button
-          onClick={() => setPage(Math.min(totalPages, page + 1))}
-          disabled={page >= totalPages}
-          className="rounded border border-white/15 px-2 py-1 text-neutral-200 disabled:opacity-40"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  );
+  const metadataInputs: Array<{ key: keyof ProductFilters; label: string; placeholder: string }> = [
+    { key: 'seller_ids', label: 'Seller IDs', placeholder: 'seller-1, seller-2' },
+    { key: 'brands', label: 'Brands', placeholder: 'Luna Atelier, Manto' },
+    { key: 'category', label: 'Category', placeholder: 'Category id' },
+    { key: 'departments', label: 'Departments', placeholder: 'women, men' },
+    { key: 'product_groups', label: 'Product groups', placeholder: 'ready-to-wear, thrift' },
+    { key: 'genders', label: 'Genders', placeholder: 'female, unisex' },
+    { key: 'style_categories', label: 'Style categories', placeholder: 'minimal, festive' },
+    { key: 'aesthetics', label: 'Aesthetics', placeholder: 'clean girl, vintage' },
+    { key: 'occasions', label: 'Occasions', placeholder: 'eid, workwear' },
+    { key: 'materials', label: 'Materials', placeholder: 'lawn, cotton' },
+    { key: 'color_families', label: 'Color families', placeholder: 'black, beige' },
+    { key: 'fits', label: 'Fits', placeholder: 'relaxed, tailored' },
+    { key: 'patterns', label: 'Patterns', placeholder: 'solid, floral' },
+    { key: 'collection_ids', label: 'Collection IDs', placeholder: 'collection-1, collection-2' },
+    { key: 'validation_status', label: 'Validation status', placeholder: 'approved, pending' },
+  ];
 
   return (
     <div className="mt-4 space-y-4 text-neutral-100">
       <section className="rounded-lg border border-white/10 bg-[#121212] p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Package size={16} className="text-primary" />
-            <h2 className="text-base font-semibold">Product Operations</h2>
+            <div>
+              <h2 className="text-base font-semibold">Product Management</h2>
+              <p className="text-xs text-neutral-500">Database-wide catalog visibility with admin filters and Atlas AI search.</p>
+            </div>
           </div>
-          <button
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-1.5 text-xs"
-          >
-            <RefreshCw size={13} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/admin/products/create"
+              className="rounded border border-white/15 bg-[#1a1a1a] px-3 py-1.5 text-xs text-neutral-100"
+            >
+              Create / Import
+            </Link>
+            <button
+              onClick={() => void fetchProducts(page)}
+              className="inline-flex items-center gap-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-1.5 text-xs"
+            >
+              <RefreshCw size={13} />
+              Refresh
+            </button>
+          </div>
         </div>
 
-        <div className="mt-3 grid gap-2 md:grid-cols-[auto_1fr]">
-          <div className="inline-flex rounded border border-white/15 bg-[#0f0f0f] p-1">
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
+          <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+            Search within loaded results
+            <div className="relative mt-1">
+              <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-500" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="title, seller, tags, id"
+                className="w-full rounded border border-white/20 bg-[#080808] py-2 pl-7 pr-3 text-xs text-neutral-100"
+              />
+            </div>
+          </label>
+          <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+            AI Search
+            <div className="relative mt-1">
+              <Sparkles size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-primary" />
+              <input
+                type="text"
+                value={aiQuery}
+                onChange={(e) => setAiQuery(e.target.value)}
+                placeholder="lawn co-ords for Karachi summer weddings"
+                className="w-full rounded border border-primary/20 bg-[#080808] py-2 pl-7 pr-3 text-xs text-neutral-100"
+              />
+            </div>
+          </label>
+          <div className="flex items-end gap-2">
             <button
-              onClick={() => setActiveTab('queue')}
-              className={`rounded px-3 py-1 text-xs ${activeTab === 'queue' ? 'bg-white text-black' : 'text-neutral-300'}`}
+              onClick={applySearch}
+              className="rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100"
             >
-              Queue
+              Run
             </button>
             <button
-              onClick={() => setActiveTab('catalog')}
-              className={`rounded px-3 py-1 text-xs ${activeTab === 'catalog' ? 'bg-white text-black' : 'text-neutral-300'}`}
+              onClick={() => setShowAdvancedFilters((prev) => !prev)}
+              className="rounded border border-white/15 px-3 py-2 text-xs text-neutral-300"
             >
-              Active Catalog
+              {showAdvancedFilters ? 'Hide filters' : 'Advanced filters'}
             </button>
           </div>
-          <div className="relative">
-            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-500" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={activeTab === 'queue' ? 'Smart search queue (e.g. status:ready seller:rakh has:table)' : 'Search catalog...'}
-              className="w-full rounded border border-white/20 bg-[#080808] py-1.5 pl-7 pr-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-primary/60 focus:outline-none"
-            />
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+          <span>{resultMeta.mode === 'ai' ? 'Atlas AI search active' : 'Database listing active'}</span>
+          {typeof resultMeta.total === 'number' ? <span>{resultMeta.total} total matches</span> : null}
+          <span>Page {page} of {totalPages}</span>
+        </div>
+
+        {showAdvancedFilters ? (
+          <div className="mt-4 space-y-3 rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                Status
+                <select value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 [color-scheme:dark]">
+                  <option value="all">all</option>
+                  <option value="active">active</option>
+                  <option value="embedding_pending">embedding_pending</option>
+                  <option value="needs_review">needs_review</option>
+                  <option value="queue">queue</option>
+                  <option value="draft">draft</option>
+                  <option value="rejected">rejected</option>
+                  <option value="archived">archived</option>
+                </select>
+              </label>
+              <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                Seller
+                <select value={filters.seller_id} onChange={(e) => setFilters((prev) => ({ ...prev, seller_id: e.target.value }))} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 [color-scheme:dark]">
+                  <option value="">All sellers</option>
+                  {sellers.map((seller) => (
+                    <option key={getSellerId(seller)} value={getSellerId(seller)}>{getSellerName(seller)}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                In stock
+                <select value={filters.in_stock} onChange={(e) => setFilters((prev) => ({ ...prev, in_stock: e.target.value }))} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 [color-scheme:dark]">
+                  <option value="">all</option>
+                  <option value="true">in stock</option>
+                  <option value="false">out of stock</option>
+                </select>
+              </label>
+              <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                Sort
+                <div className="mt-1 grid grid-cols-2 gap-2">
+                  <select value={filters.sort} onChange={(e) => setFilters((prev) => ({ ...prev, sort: e.target.value }))} className="rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 [color-scheme:dark]">
+                    <option value="created_at">created_at</option>
+                    <option value="updated_at">updated_at</option>
+                    <option value="price">price</option>
+                    <option value="popularity">popularity</option>
+                    <option value="title">title</option>
+                  </select>
+                  <select value={filters.order} onChange={(e) => setFilters((prev) => ({ ...prev, order: e.target.value as 'asc' | 'desc' }))} className="rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 [color-scheme:dark]">
+                    <option value="desc">desc</option>
+                    <option value="asc">asc</option>
+                  </select>
+                </div>
+              </label>
+              <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                Min price
+                <input value={filters.min_price} onChange={(e) => setFilters((prev) => ({ ...prev, min_price: e.target.value }))} type="number" className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
+              </label>
+              <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                Max price
+                <input value={filters.max_price} onChange={(e) => setFilters((prev) => ({ ...prev, max_price: e.target.value }))} type="number" className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
+              </label>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {metadataInputs.map((field) => (
+                <label key={field.key} className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                  {field.label}
+                  <input
+                    value={filters[field.key]}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                    placeholder={field.placeholder}
+                    className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 placeholder:text-neutral-500"
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button onClick={applySearch} className="rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100">Apply filters</button>
+              <button onClick={resetFilters} className="rounded border border-white/15 px-3 py-2 text-xs text-neutral-300">Reset</button>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="rounded-lg border border-white/10 bg-[#121212] p-3">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={togglePageSelection} className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100">
+              {allPageSelected ? 'Deselect Page' : 'Select Page'}
+            </button>
+            <button onClick={() => setSelectedIds(filteredProducts.map((product) => String(product.id || '')).filter(Boolean))} className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100">
+              Select Visible
+            </button>
+            <button onClick={() => setSelectedIds([])} className="rounded border border-white/15 bg-[#0b0b0b] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-400">
+              Clear
+            </button>
+            <span className="text-[10px] uppercase tracking-[0.1em] text-neutral-500">{selectedCount} selected</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]">
+              <option value="">Set status</option>
+              <option value="active">active</option>
+              <option value="embedding_pending">embedding_pending</option>
+              <option value="needs_review">needs_review</option>
+              <option value="queue">queue</option>
+              <option value="draft">draft</option>
+              <option value="rejected">rejected</option>
+              <option value="archived">archived</option>
+            </select>
+            <select value={bulkFeatured} onChange={(e) => setBulkFeatured(e.target.value)} className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]">
+              <option value="">Featured</option>
+              <option value="true">featured</option>
+              <option value="false">not featured</option>
+            </select>
+            <input value={bulkTags} onChange={(e) => setBulkTags(e.target.value)} placeholder="Replace tags" className="w-44 rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 placeholder:text-neutral-500" />
+            <button onClick={bulkPatch} disabled={selectedCount === 0 || !!actionKey} className="rounded border border-white/15 px-2 py-1 text-[10px] text-neutral-100 disabled:opacity-40">Apply</button>
+            <button onClick={bulkDelete} disabled={selectedCount === 0 || !!actionKey} className="rounded border border-red-400/35 bg-red-500/10 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40">Delete</button>
           </div>
         </div>
       </section>
 
-      {activeTab === 'queue' ? (
-        <section className="rounded-lg border border-white/10 bg-[#121212] p-4">
-          <div className="grid gap-2 lg:grid-cols-[180px_180px_1fr_1fr_auto]">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 [color-scheme:dark] focus:border-primary/60 focus:outline-none"
-            >
-              <option className="bg-[#0f0f0f] text-neutral-100" value="all">All statuses</option>
-              <option className="bg-[#0f0f0f] text-neutral-100" value="queued">Queued</option>
-              <option className="bg-[#0f0f0f] text-neutral-100" value="enrichment_pending">Enrichment Pending</option>
-              <option className="bg-[#0f0f0f] text-neutral-100" value="ready">Ready</option>
-              <option className="bg-[#0f0f0f] text-neutral-100" value="promoted">Promoted</option>
-              <option className="bg-[#0f0f0f] text-neutral-100" value="failed">Failed</option>
-            </select>
-            <select
-              value={queueBrandFilter}
-              onChange={(e) => setQueueBrandFilter(e.target.value)}
-              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 [color-scheme:dark] focus:border-primary/60 focus:outline-none"
-            >
-              <option className="bg-[#0f0f0f] text-neutral-100" value="all">All brands</option>
-              {queueBrandOptions.map((brand) => (
-                <option key={brand} className="bg-[#0f0f0f] text-neutral-100" value={brand}>
-                  {brand}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedSellerId}
-              onChange={(e) => setSelectedSellerId(e.target.value)}
-              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 [color-scheme:dark] focus:border-primary/60 focus:outline-none"
-            >
-              {sellers.map((seller) => (
-                <option key={getSellerId(seller)} value={getSellerId(seller)} className="bg-[#0f0f0f] text-neutral-100">
-                  {getSellerName(seller)}
-                </option>
-              ))}
-            </select>
-            <div className="relative">
-              <Globe size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-500" />
-              <input
-                type="text"
-                value={scrapeShopUrl}
-                onChange={(e) => setScrapeShopUrl(e.target.value)}
-                placeholder="Optional website URL"
-                className="w-full rounded border border-white/20 bg-[#080808] py-1.5 pl-7 pr-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-primary/60 focus:outline-none"
-              />
-            </div>
-            <button
-              onClick={handleScrapeForSeller}
-              disabled={actionKey === 'scrape' || !selectedSellerId}
-              className="rounded border border-white/20 bg-[#1a1a1a] px-3 py-1.5 text-xs text-neutral-100 hover:bg-[#222] disabled:opacity-40"
-            >
-              {actionKey === 'scrape' ? 'Running...' : 'Scrape'}
-            </button>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {[
-              { key: 'noSizingGuide', label: 'No Sizing Guide' },
-              { key: 'hasBodyTable', label: 'Has Body Table' },
-              { key: 'outOfStock', label: 'Out of Stock' },
-              { key: 'hasErrors', label: 'Has Errors' },
-              { key: 'hasImages', label: 'Has Images' },
-            ].map((filter) => {
-              const active = queueFlagFilters[filter.key as keyof typeof queueFlagFilters];
-              return (
-                <button
-                  key={filter.key}
-                  onClick={() =>
-                    setQueueFlagFilters((prev) => ({
-                      ...prev,
-                      [filter.key]: !prev[filter.key as keyof typeof queueFlagFilters],
-                    }))
-                  }
-                  className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.08em] ${
-                    active
-                      ? 'border-white/50 bg-white/15 text-neutral-100'
-                      : 'border-white/15 bg-[#0b0b0b] text-neutral-400'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setQueueFlagFilters({ noSizingGuide: false, hasBodyTable: false, outOfStock: false, hasErrors: false, hasImages: false })}
-              className="rounded border border-white/15 bg-[#0b0b0b] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-400"
-            >
-              Clear
-            </button>
-            <button
-              onClick={handleBulkDeleteFilteredQueue}
-              disabled={filteredQueue.length === 0 || actionKey === 'bulkDelete'}
-              className="rounded border border-red-400/35 bg-red-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-red-300 disabled:opacity-40"
-            >
-              {actionKey === 'bulkDelete' ? 'Deleting...' : `Delete Filtered (${filteredQueue.length})`}
-            </button>
-            <div className="ml-auto flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-[0.1em] text-neutral-500">{filteredQueue.length} items</span>
-              <select
-                value={queueSort}
-                onChange={(e) => setQueueSort(e.target.value as QueueSortKey)}
-                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark] focus:border-primary/60 focus:outline-none"
-              >
-                <option className="bg-[#0f0f0f] text-neutral-100" value="updated_desc">Newest first</option>
-                <option className="bg-[#0f0f0f] text-neutral-100" value="updated_asc">Oldest first</option>
-                <option className="bg-[#0f0f0f] text-neutral-100" value="price_desc">Price high-low</option>
-                <option className="bg-[#0f0f0f] text-neutral-100" value="price_asc">Price low-high</option>
-                <option className="bg-[#0f0f0f] text-neutral-100" value="stock_desc">Stock high-low</option>
-                <option className="bg-[#0f0f0f] text-neutral-100" value="stock_asc">Stock low-high</option>
-              </select>
-            </div>
-          </div>
-          <p className="mt-2 text-[10px] text-neutral-500">
-            Smart search: <span className="font-mono">status:ready seller:rakh has:table stock:low price&gt;3000 type:eastern</span>
-          </p>
-          {scrapeFeedback ? <p className="mt-2 text-xs text-green-300">{scrapeFeedback}</p> : null}
-          {scrapeError ? <p className="mt-2 text-xs text-red-300">{scrapeError}</p> : null}
-        </section>
-      ) : null}
+      {error ? <section className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</section> : null}
 
-      {activeTab === 'queue' ? (
-        <section className="rounded-lg border border-white/10 bg-[#121212] p-3">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={toggleQueuePageSelection}
-                className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
-              >
-                {allQueuePageSelected ? 'Deselect Page' : 'Select Page'}
-              </button>
-              <button
-                onClick={() => setSelectedQueueIds(filteredQueue.map((item) => item.id))}
-                className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
-              >
-                Select Filtered
-              </button>
-              <button
-                onClick={() => setSelectedQueueIds([])}
-                className="rounded border border-white/15 bg-[#0b0b0b] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-400"
-              >
-                Clear Selection
-              </button>
-              <span className="text-[10px] uppercase tracking-[0.1em] text-neutral-500">
-                {selectedQueueIds.length} selected · Shift-click ranges · Cmd/Ctrl+A page select
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={bulkQueueProductType}
-                onChange={(e) => setBulkQueueProductType(e.target.value)}
-                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
-              >
-                <option className="bg-[#0a0a0a]" value="">Type</option>
-                {PRODUCT_TYPES.map((type) => <option key={type} className="bg-[#0a0a0a]" value={type}>{type}</option>)}
-              </select>
-              <select
-                value={bulkQueueGender}
-                onChange={(e) => setBulkQueueGender(e.target.value)}
-                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
-              >
-                <option className="bg-[#0a0a0a]" value="">Gender</option>
-                {GENDERS.map((gender) => <option key={gender} className="bg-[#0a0a0a]" value={gender}>{gender}</option>)}
-              </select>
-              <button
-                onClick={handleBulkQueueEnrich}
-                disabled={selectedQueueIds.length === 0 || !bulkQueueProductType || !bulkQueueGender || !!actionKey}
-                className="rounded border border-white/15 px-2 py-1 text-[10px] text-neutral-100 disabled:opacity-40"
-              >
-                Bulk Enrich
-              </button>
-              <label className="inline-flex items-center gap-1 text-[10px] text-neutral-300">
-                <input type="checkbox" checked={bulkQueueAllowUnenriched} onChange={(e) => setBulkQueueAllowUnenriched(e.target.checked)} />
-                Allow unenriched
-              </label>
-              <button
-                onClick={handleBulkQueuePromote}
-                disabled={selectedQueueIds.length === 0 || !!actionKey}
-                className="rounded border border-green-400/35 bg-green-500/10 px-2 py-1 text-[10px] text-green-300 disabled:opacity-40"
-              >
-                Promote
-              </button>
-              <button
-                onClick={handleBulkQueueReject}
-                disabled={selectedQueueIds.length === 0 || !!actionKey}
-                className="rounded border border-yellow-400/35 bg-yellow-500/10 px-2 py-1 text-[10px] text-yellow-300 disabled:opacity-40"
-              >
-                Reject
-              </button>
-              <button
-                onClick={handleBulkQueueDelete}
-                disabled={selectedQueueIds.length === 0 || !!actionKey}
-                className="rounded border border-red-400/35 bg-red-500/10 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-3 grid gap-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
-            <input
-              value={bulkQueuePatch.title}
-              onChange={(e) => setBulkQueuePatch((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="Shared title"
-              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-500"
-            />
-            <input
-              value={bulkQueuePatch.short_description}
-              onChange={(e) => setBulkQueuePatch((prev) => ({ ...prev, short_description: e.target.value }))}
-              placeholder="Shared short description"
-              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-500"
-            />
-            <input
-              value={bulkQueuePatch.tagsInput}
-              onChange={(e) => setBulkQueuePatch((prev) => ({ ...prev, tagsInput: e.target.value }))}
-              placeholder="Shared tags, comma separated"
-              className="rounded border border-white/20 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-500"
-            />
-            <button
-              onClick={handleBulkQueuePatch}
-              disabled={selectedQueueIds.length === 0 || !!actionKey}
-              className="rounded border border-white/15 bg-[#1a1a1a] px-3 py-1.5 text-xs text-neutral-100 disabled:opacity-40"
-            >
-              Apply Shared Update
-            </button>
-          </div>
-        </section>
-      ) : (
-        <section className="rounded-lg border border-white/10 bg-[#121212] p-3">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={toggleCatalogPageSelection}
-                className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
-              >
-                {allCatalogPageSelected ? 'Deselect Page' : 'Select Page'}
-              </button>
-              <button
-                onClick={() => setSelectedCatalogIds(filteredCatalog.map((product) => String(product.id || '')).filter(Boolean))}
-                className="rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
-              >
-                Select Filtered
-              </button>
-              <button
-                onClick={() => setSelectedCatalogIds([])}
-                className="rounded border border-white/15 bg-[#0b0b0b] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-400"
-              >
-                Clear Selection
-              </button>
-              <span className="text-[10px] uppercase tracking-[0.1em] text-neutral-500">
-                {selectedCatalogIds.length} selected · Shift-click ranges · Cmd/Ctrl+A page select
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={bulkCatalogPatch.status}
-                onChange={(e) => setBulkCatalogPatch((prev) => ({ ...prev, status: e.target.value }))}
-                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
-              >
-                <option className="bg-[#0a0a0a]" value="">Status</option>
-                <option className="bg-[#0a0a0a]" value="active">active</option>
-                <option className="bg-[#0a0a0a]" value="draft">draft</option>
-                <option className="bg-[#0a0a0a]" value="archived">archived</option>
-              </select>
-              <select
-                value={bulkCatalogPatch.is_featured}
-                onChange={(e) => setBulkCatalogPatch((prev) => ({ ...prev, is_featured: e.target.value }))}
-                className="rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
-              >
-                <option className="bg-[#0a0a0a]" value="">Featured</option>
-                <option className="bg-[#0a0a0a]" value="true">featured</option>
-                <option className="bg-[#0a0a0a]" value="false">not featured</option>
-              </select>
-              <input
-                value={bulkCatalogPatch.tagsInput}
-                onChange={(e) => setBulkCatalogPatch((prev) => ({ ...prev, tagsInput: e.target.value }))}
-                placeholder="Replace tags"
-                className="w-44 rounded border border-white/20 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 placeholder:text-neutral-500"
-              />
-              <button
-                onClick={handleBulkCatalogPatch}
-                disabled={selectedCatalogIds.length === 0 || !!actionKey}
-                className="rounded border border-white/15 px-2 py-1 text-[10px] text-neutral-100 disabled:opacity-40"
-              >
-                Apply Update
-              </button>
-              <button
-                onClick={handleBulkCatalogDelete}
-                disabled={selectedCatalogIds.length === 0 || !!actionKey}
-                className="rounded border border-red-400/35 bg-red-500/10 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section className="rounded-lg border border-white/10 bg-[#121212] p-0">
+      <section className="rounded-lg border border-white/10 bg-[#121212] p-2">
         {isLoading ? (
-          <div className="p-6 text-sm text-neutral-400">Loading...</div>
-        ) : activeTab === 'queue' ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-[#0f0f0f] text-neutral-400">
-                <tr>
-                  <th className="w-9 px-3 py-2 font-medium">
-                    <input type="checkbox" checked={allQueuePageSelected} onChange={toggleQueuePageSelection} className="accent-[#f43f5e]" />
-                  </th>
-                  <th className="px-3 py-2 font-medium">Product</th>
-                  <th className="px-3 py-2 font-medium">Seller</th>
-                  <th className="px-3 py-2 font-medium">Source</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Price</th>
-                  <th className="px-3 py-2 font-medium">Stock</th>
-                  <th className="px-3 py-2 font-medium">Updated</th>
-                  <th className="px-3 py-2 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {queuePageItems.map((item, pageIndex) => {
-                  const isEditing = queueEditId === item.id;
-                  const price = item.product?.pricing?.price ?? item.product?.pricing?.brand_price;
-                  const stock = item.product?.inventory?.available_quantity ?? item.product?.inventory?.quantity ?? 0;
-                  const bodyHtmlTable = extractFirstTableHtml(item.product?.body_html);
-                  const isSelected = selectedQueueIds.includes(item.id);
-                  return (
-                    <React.Fragment key={item.id}>
-                      <tr className={`border-t border-white/10 ${isSelected ? 'bg-white/[0.04]' : ''}`}>
-                        <td className="px-3 py-2">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => toggleQueueSelection(item, pageIndex, e)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="accent-[#f43f5e]"
-                          />
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex items-start gap-2">
-                            <img
-                              src={getImageUrl(item.product?.images)}
-                              alt={item.product?.title || item.id}
-                              className="h-10 w-8 rounded border border-white/15 bg-[#111] object-cover"
-                              loading="lazy"
-                            />
-                            <div className="min-w-0">
-                              <div className="max-w-[300px] truncate text-neutral-100">{item.product?.title || 'Untitled'}</div>
-                              <div className="font-mono text-[10px] text-neutral-500">{item.id}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-neutral-300">{item.product?.seller_name || item.seller_id}</td>
-                        <td className="px-3 py-2 text-neutral-300">{item.source || 'manual'}</td>
-                        <td className="px-3 py-2">
-                          <span className={`rounded border px-2 py-0.5 text-[10px] uppercase ${statusPillClass(item.status)}`}>{item.status || 'queued'}</span>
-                        </td>
-                        <td className="px-3 py-2 text-neutral-100">{formatCurrency(price, item.product?.pricing?.currency || 'PKR')}</td>
-                        <td className="px-3 py-2 text-neutral-300">{stock}</td>
-                        <td className="px-3 py-2 text-neutral-400">{item.updated_at ? new Date(item.updated_at).toLocaleDateString() : '-'}</td>
-                        <td className="px-3 py-2">
-                          <div className="flex flex-wrap gap-1">
-                            <button
-                              onClick={() => (isEditing ? cancelQueueEdit() : openQueueEdit(item))}
-                              className="rounded border border-white/15 px-2 py-1 text-[10px]"
-                            >
-                              {isEditing ? 'Cancel' : 'Enrich'}
-                            </button>
-                            <button
-                              onClick={() => handlePromote(item)}
-                              disabled={!!actionKey}
-                              className="rounded border border-white/15 px-2 py-1 text-[10px] disabled:opacity-40"
-                            >
-                              Promote
-                            </button>
-                            <button
-                              onClick={() => handleReject(item)}
-                              disabled={!!actionKey}
-                              className="rounded border border-amber-400/30 px-2 py-1 text-[10px] text-amber-300 disabled:opacity-40"
-                            >
-                              Reject
-                            </button>
-                            <button
-                              onClick={() => handleDeleteQueueItem(item)}
-                              disabled={!!actionKey}
-                              className="inline-flex items-center gap-1 rounded border border-red-400/30 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40"
-                            >
-                              <Trash2 size={10} />
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                      {isEditing ? (
-                        <tr className="border-t border-white/10 bg-[#0d0d0d]">
-                          <td colSpan={9} className="px-3 py-3">
-                            <div className="grid gap-3 xl:grid-cols-2">
-                              <div className="space-y-2 rounded border border-white/10 bg-[#0a0a0a] p-2">
-                                <div className="flex flex-wrap items-center gap-1">
-                                  <button
-                                    onClick={() => setReferenceTab('images')}
-                                    className={`rounded px-2 py-1 text-[10px] ${referenceTab === 'images' ? 'bg-white text-black' : 'border border-white/15 text-neutral-300'}`}
-                                  >
-                                    Images
-                                  </button>
-                                  <button
-                                    onClick={() => setReferenceTab('description')}
-                                    className={`rounded px-2 py-1 text-[10px] ${referenceTab === 'description' ? 'bg-white text-black' : 'border border-white/15 text-neutral-300'}`}
-                                  >
-                                    Description
-                                  </button>
-                                  <button
-                                    onClick={() => setReferenceTab('body_html')}
-                                    className={`rounded px-2 py-1 text-[10px] ${referenceTab === 'body_html' ? 'bg-white text-black' : 'border border-white/15 text-neutral-300'}`}
-                                  >
-                                    Body HTML
-                                  </button>
-                                </div>
-
-                                {referenceTab === 'images' ? (
-                                  <div className="space-y-2">
-                                    <div className="h-[280px] overflow-hidden rounded border border-white/15 bg-[#050505]">
-                                      {asArray(item.product?.images).length > 0 ? (
-                                        <img
-                                          src={getImageUrl([asArray(item.product?.images)[referenceImageIndex] || asArray(item.product?.images)[0]])}
-                                          alt={item.product?.title || item.id}
-                                          className="h-full w-full object-contain"
-                                          loading="lazy"
-                                        />
-                                      ) : (
-                                        <div className="flex h-full items-center justify-center text-xs text-neutral-500">No images available</div>
-                                      )}
-                                    </div>
-                                    <div className="flex gap-1 overflow-x-auto pb-1">
-                                      {asArray(item.product?.images).map((img, idx) => (
-                                        <button
-                                          key={`${item.id}-img-${idx}`}
-                                          onClick={() => setReferenceImageIndex(idx)}
-                                          className={`h-12 w-10 shrink-0 overflow-hidden rounded border ${referenceImageIndex === idx ? 'border-white' : 'border-white/15'}`}
-                                        >
-                                          <img src={getImageUrl([img])} alt={`Ref ${idx + 1}`} className="h-full w-full object-cover" loading="lazy" />
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ) : null}
-
-                                {referenceTab === 'description' ? (
-                                  <div className="h-[320px] overflow-auto rounded border border-white/15 bg-[#050505] p-2 text-xs text-neutral-200">
-                                    {item.product?.description || item.product?.short_description || 'No description available.'}
-                                  </div>
-                                ) : null}
-
-                                {referenceTab === 'body_html' ? (
-                                  bodyHtmlTable ? (
-                                    <div
-                                      className="h-[320px] overflow-auto rounded border border-white/15 bg-[#050505] p-2 text-xs text-neutral-200"
-                                      dangerouslySetInnerHTML={{ __html: bodyHtmlTable }}
-                                    />
-                                  ) : (
-                                    <div className="h-[320px] overflow-auto rounded border border-white/15 bg-[#050505] p-2 text-xs text-neutral-200">
-                                      {stripHtml(item.product?.body_html) || 'No body_html available.'}
-                                    </div>
-                                  )
-                                ) : null}
-                              </div>
-
-                              <div className="space-y-2 rounded border border-white/10 bg-[#0a0a0a] p-2">
-                                <div className="grid gap-2 xl:grid-cols-2">
-                                  <input
-                                    value={queueEditDraft.title}
-                                    onChange={(e) => setQueueEditDraft((p) => ({ ...p, title: e.target.value }))}
-                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100"
-                                    placeholder="Queue title"
-                                  />
-                                  <input
-                                    value={queueEditDraft.tagsInput}
-                                    onChange={(e) => setQueueEditDraft((p) => ({ ...p, tagsInput: e.target.value }))}
-                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100"
-                                    placeholder="Tags: festive, summer"
-                                  />
-                                </div>
-                                <textarea
-                                  value={queueEditDraft.short_description}
-                                  onChange={(e) => setQueueEditDraft((p) => ({ ...p, short_description: e.target.value }))}
-                                  rows={4}
-                                  className="w-full rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100"
-                                  placeholder="Short description"
-                                />
-                                <div className="grid gap-2 xl:grid-cols-4">
-                                  <select
-                                    value={queueEditDraft.product_type}
-                                    onChange={(e) => setQueueEditDraft((p) => ({ ...p, product_type: e.target.value }))}
-                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 [color-scheme:dark]"
-                                  >
-                                    <option className="bg-[#0a0a0a] text-neutral-100" value="">Product type</option>
-                                    {PRODUCT_TYPES.map((type) => (
-                                      <option key={type} className="bg-[#0a0a0a] text-neutral-100" value={type}>{type}</option>
-                                    ))}
-                                  </select>
-                                  <select
-                                    value={queueEditDraft.gender}
-                                    onChange={(e) => setQueueEditDraft((p) => ({ ...p, gender: e.target.value }))}
-                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100 [color-scheme:dark]"
-                                  >
-                                    <option className="bg-[#0a0a0a] text-neutral-100" value="">Gender</option>
-                                    {GENDERS.map((gender) => (
-                                      <option key={gender} className="bg-[#0a0a0a] text-neutral-100" value={gender}>{gender}</option>
-                                    ))}
-                                  </select>
-                                  <input
-                                    value={sizingDraft.measurementUnit}
-                                    onChange={(e) => setSizingDraft((prev) => ({ ...prev, measurementUnit: e.target.value }))}
-                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100"
-                                    placeholder="Unit (inch/cm)"
-                                  />
-                                  <input
-                                    value={sizingDraft.sizeFit}
-                                    onChange={(e) => setSizingDraft((prev) => ({ ...prev, sizeFit: e.target.value }))}
-                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1.5 text-xs text-neutral-100"
-                                    placeholder="Size fit notes"
-                                  />
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-1">
-                                  <button onClick={addGuideRow} className="rounded border border-white/15 px-2 py-1 text-[10px]">+ Size Row</button>
-                                  <button onClick={addGuideCol} className="rounded border border-white/15 px-2 py-1 text-[10px]">+ Measurement</button>
-                                  <button onClick={transposeGuide} className="rounded border border-white/15 px-2 py-1 text-[10px]">Transpose</button>
-                                  <label className="ml-2 text-[10px] text-neutral-400">Base</label>
-                                  <select
-                                    value={incrementBaseSize}
-                                    onChange={(e) => setIncrementBaseSize(e.target.value)}
-                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
-                                  >
-                                    <option className="bg-[#0a0a0a] text-neutral-100" value="">Select</option>
-                                    {sizingDraft.rows.map((row) => (
-                                      <option key={`${item.id}-base-${row}`} className="bg-[#0a0a0a] text-neutral-100" value={row}>{row}</option>
-                                    ))}
-                                  </select>
-                                  <label className="text-[10px] text-neutral-400">Step</label>
-                                  <input
-                                    value={incrementStep}
-                                    onChange={(e) => setIncrementStep(e.target.value)}
-                                    className="w-16 rounded border border-white/15 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100"
-                                  />
-                                  <button onClick={applyStepIncrement} className="rounded border border-white/15 px-2 py-1 text-[10px]">Apply Step</button>
-                                  <button onClick={applyColumnStepIncrement} className="rounded border border-white/15 px-2 py-1 text-[10px]">Apply Per-Column</button>
-                                  <button
-                                    onClick={() => handleSaveQueueItem(item)}
-                                    disabled={actionKey === `${item.id}:saveQueue`}
-                                    className="ml-auto rounded border border-white/15 bg-[#1a1a1a] px-3 py-1.5 text-xs disabled:opacity-40"
-                                  >
-                                    {actionKey === `${item.id}:saveQueue` ? 'Saving...' : 'Save Queue Item'}
-                                  </button>
-                                </div>
-
-                                <div className="rounded border border-white/15 bg-[#050505] p-2">
-                                  <div className="mb-2 text-[10px] text-neutral-400">Per-measurement step (from base size)</div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {sizingDraft.cols.map((col) => (
-                                      <label key={`${item.id}-step-${col}`} className="inline-flex items-center gap-1 rounded border border-white/15 bg-[#080808] px-2 py-1 text-[10px] text-neutral-300">
-                                        <span className="max-w-[90px] truncate">{col}</span>
-                                        <input
-                                          value={incrementStepsByCol[col] ?? '0.5'}
-                                          onChange={(e) => setIncrementStepsByCol((prev) => ({ ...prev, [col]: e.target.value }))}
-                                          className="w-12 rounded border border-white/15 bg-[#040404] px-1 py-0.5 text-[10px] text-neutral-100"
-                                        />
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                <div className="max-h-[340px] overflow-auto rounded border border-white/15 bg-[#070707]">
-                                  <table className="min-w-full border-collapse text-[10px]">
-                                    <thead className="bg-[#050505]">
-                                      <tr>
-                                        <th className="sticky left-0 z-20 border border-white/10 bg-[#050505] px-2 py-1 text-left text-neutral-400">Size</th>
-                                        {sizingDraft.cols.map((col) => (
-                                          <th key={`${item.id}-col-${col}`} className="border border-white/10 px-1 py-1">
-                                            <div className="flex items-center gap-1">
-                                              <input
-                                                defaultValue={col}
-                                                onBlur={(e) => updateGuideColName(col, e.target.value)}
-                                                className="w-24 rounded border border-white/15 bg-[#080808] px-1 py-1 font-mono text-[10px] text-neutral-100"
-                                              />
-                                              <button onClick={() => removeGuideCol(col)} className="rounded border border-white/15 px-1 text-[10px] text-neutral-400">x</button>
-                                            </div>
-                                          </th>
-                                        ))}
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {sizingDraft.rows.map((row, rowIndex) => (
-                                        <tr key={`${item.id}-row-${row}`} className="border-t border-white/10">
-                                          <td className="sticky left-0 z-10 border border-white/10 bg-[#0a0a0a] px-2 py-1">
-                                            <div className="flex items-center gap-1">
-                                              <input
-                                                defaultValue={row}
-                                                onBlur={(e) => updateGuideRowName(row, e.target.value)}
-                                                className="w-16 rounded border border-white/15 bg-[#080808] px-1 py-1 font-mono text-[10px] text-neutral-100"
-                                              />
-                                              <button onClick={() => removeGuideRow(row)} className="rounded border border-white/15 px-1 text-[10px] text-neutral-400">x</button>
-                                            </div>
-                                          </td>
-                                          {sizingDraft.cols.map((col, colIndex) => (
-                                            <td key={`${item.id}-cell-${row}-${col}`} className="border border-white/10 px-1 py-1">
-                                              <input
-                                                id={`sg-cell-${item.id}-${rowIndex}-${colIndex}`}
-                                                value={sizingDraft.cells[row]?.[col] || ''}
-                                                onChange={(e) => updateGuideCell(row, col, e.target.value)}
-                                                onKeyDown={(e) => onGuideCellKeyDown(
-                                                  e,
-                                                  item.id,
-                                                  rowIndex,
-                                                  colIndex,
-                                                  sizingDraft.rows.length,
-                                                  sizingDraft.cols.length
-                                                )}
-                                                onFocus={(e) => e.currentTarget.select()}
-                                                className="w-20 rounded border border-white/15 bg-[#080808] px-1 py-1 font-mono text-[10px] text-neutral-100 focus:border-primary/60 focus:outline-none"
-                                              />
-                                            </td>
-                                          ))}
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            </div>
-                            {queueEditError ? <p className="mt-2 text-xs text-red-300">{queueEditError}</p> : null}
-                          </td>
-                        </tr>
-                      ) : null}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-            {filteredQueue.length === 0 ? <div className="p-4 text-xs text-neutral-500">No queue items found.</div> : null}
-            <div className="px-3 pb-3">{renderPager(queuePage, queueTotalPages, setQueuePage)}</div>
-          </div>
+          <div className="p-6 text-sm text-neutral-400">Loading products...</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-xs">
               <thead className="bg-[#0f0f0f] text-neutral-400">
                 <tr>
-                  <th className="w-9 px-3 py-2 font-medium">
-                    <input type="checkbox" checked={allCatalogPageSelected} onChange={toggleCatalogPageSelection} className="accent-[#f43f5e]" />
-                  </th>
+                  <th className="w-9 px-3 py-2 font-medium"><input type="checkbox" checked={allPageSelected} onChange={togglePageSelection} className="accent-[#f43f5e]" /></th>
                   <th className="px-3 py-2 font-medium">Product</th>
                   <th className="px-3 py-2 font-medium">Seller</th>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Variants</th>
                   <th className="px-3 py-2 font-medium">Price</th>
                   <th className="px-3 py-2 font-medium">Stock</th>
                   <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium">Badges</th>
                   <th className="px-3 py-2 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {catalogPageItems.map((product, pageIndex) => {
-                  const isEditing = catalogEditId === product.id;
-                  const variantInfo = getVariantAvailability(product);
-                  const isSelected = selectedCatalogIds.includes(String(product.id || ''));
+                {filteredProducts.map((product, pageIndex) => {
+                  const productId = String(product.id || '');
+                  const isSelected = selectedIds.includes(productId);
+                  const isEditing = editId === productId;
+                  const stock = typeof product.inventory?.available_quantity === 'number'
+                    ? product.inventory.available_quantity
+                    : typeof product.inventory?.quantity === 'number'
+                      ? product.inventory.quantity
+                      : 0;
+                  const price = typeof product.pricing?.brand_price === 'number' ? product.pricing.brand_price : product.pricing?.price;
+                  const badges = normalizeBadges(product.badges);
+                  const enabledBadges = (Object.keys(BADGE_LABELS) as BadgeKey[]).filter((badge) => badges[badge]);
+
                   return (
-                    <React.Fragment key={product.id}>
+                    <React.Fragment key={productId}>
                       <tr className={`border-t border-white/10 ${isSelected ? 'bg-white/[0.04]' : ''}`}>
                         <td className="px-3 py-2">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => toggleCatalogSelection(product, pageIndex, e)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="accent-[#f43f5e]"
-                          />
+                          <input type="checkbox" checked={isSelected} onChange={(e) => toggleSelection(product, pageIndex, e)} onClick={(e) => e.stopPropagation()} className="accent-[#f43f5e]" />
                         </td>
                         <td className="px-3 py-2">
-                          {isEditing ? (
-                            <input
-                              value={catalogEditDraft.title}
-                              onChange={(e) => setCatalogEditDraft((p) => ({ ...p, title: e.target.value }))}
-                              className="w-full rounded border border-white/15 bg-[#0a0a0a] px-2 py-1 text-xs"
-                            />
-                          ) : (
-                            <div className="flex items-start gap-2">
-                              <img
-                                src={getImageUrl(product.images)}
-                                alt={product.title || product.id}
-                                className="h-10 w-8 rounded border border-white/15 bg-[#111] object-cover"
-                                loading="lazy"
-                              />
-                              <div className="min-w-0">
-                                <div className="max-w-[300px] truncate text-neutral-100">{product.title || 'Untitled'}</div>
-                                <div className="font-mono text-[10px] text-neutral-500">{product.id}</div>
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-neutral-300">{product.seller_name || product.seller_id || '-'}</td>
-                        <td className="px-3 py-2 text-neutral-300">{product.product_type || '-'}</td>
-                        <td className="px-3 py-2">
-                          <div className="space-y-1">
-                            <div className="text-[10px] text-green-300">
-                              Available: {variantInfo.available.length}
-                            </div>
-                            <div className="text-[10px] text-red-300">
-                              Unavailable: {variantInfo.unavailable.length}
-                            </div>
-                            <div className="max-w-[250px] space-y-0.5">
-                              {variantInfo.available.slice(0, 4).map((name) => (
-                                <div key={`${product.id}-av-${name}`} className="truncate text-[10px] text-neutral-200">{name}</div>
-                              ))}
-                              {variantInfo.unavailable.slice(0, 4).map((name) => (
-                                <div key={`${product.id}-un-${name}`} className="truncate text-[10px] text-neutral-500 line-through">{name}</div>
-                              ))}
-                              {variantInfo.available.length + variantInfo.unavailable.length > 8 ? (
-                                <div className="text-[10px] text-neutral-500">+{variantInfo.available.length + variantInfo.unavailable.length - 8} more</div>
-                              ) : null}
+                          <div className="flex items-start gap-2">
+                            <img src={getImageUrl(product.images)} alt={product.title || 'Product'} className="h-10 w-10 rounded border border-white/10 object-cover" loading="lazy" />
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-neutral-100">{product.title || 'Untitled product'}</p>
+                              <p className="truncate text-[10px] text-neutral-500">{productId}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-neutral-100">{formatCurrency(product.pricing?.price, product.pricing?.currency || 'PKR')}</td>
-                        <td className="px-3 py-2 text-neutral-300">{product.inventory?.available_quantity ?? product.inventory?.quantity ?? 0}</td>
+                        <td className="px-3 py-2 text-neutral-300">{product.seller_name || product.seller_id || '-'}</td>
+                        <td className="px-3 py-2 text-neutral-300">{formatCurrency(price, product.pricing?.currency)}</td>
+                        <td className="px-3 py-2 text-neutral-300">{typeof stock === 'number' ? stock : '-'}</td>
                         <td className="px-3 py-2">
-                          {isEditing ? (
-                            <select
-                              value={catalogEditDraft.status}
-                              onChange={(e) => setCatalogEditDraft((p) => ({ ...p, status: e.target.value as 'active' | 'draft' | 'archived' }))}
-                              className="rounded border border-white/15 bg-[#0a0a0a] px-2 py-1 text-xs"
-                            >
-                              <option className="bg-[#0a0a0a]" value="active">active</option>
-                              <option className="bg-[#0a0a0a]" value="draft">draft</option>
-                              <option className="bg-[#0a0a0a]" value="archived">archived</option>
-                            </select>
-                          ) : (
-                            <span className={`rounded border px-2 py-0.5 text-[10px] uppercase ${statusPillClass(product.status)}`}>{product.status || 'draft'}</span>
-                          )}
+                          <span className={`rounded border px-2 py-0.5 text-[10px] uppercase ${statusClass(product.status)}`}>{product.status || 'unknown'}</span>
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex flex-wrap gap-1">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  onClick={() => handleCatalogPatch(product)}
-                                  disabled={actionKey === `${product.id}:patch`}
-                                  className="rounded border border-white/15 px-2 py-1 text-[10px] disabled:opacity-40"
-                                >
-                                  {actionKey === `${product.id}:patch` ? 'Saving...' : 'Save'}
-                                </button>
-                                <button
-                                  onClick={cancelCatalogEdit}
-                                  className="rounded border border-white/15 px-2 py-1 text-[10px]"
-                                >
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => openCatalogEdit(product)}
-                                className="rounded border border-white/15 px-2 py-1 text-[10px]"
-                              >
-                                Edit
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleCatalogDelete(product)}
-                              disabled={!!actionKey}
-                              className="inline-flex items-center gap-1 rounded border border-red-400/30 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40"
-                            >
-                              <Trash2 size={10} />
-                              Delete
+                            {enabledBadges.length > 0 ? enabledBadges.map((badge) => (
+                              <span key={badge} className={`rounded border px-2 py-0.5 text-[10px] ${badgeTone(badge)}`}>{BADGE_LABELS[badge]}</span>
+                            )) : <span className="text-neutral-500">-</span>}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => (isEditing ? closeEdit() : openEdit(product))} className="rounded border border-white/15 p-2 text-neutral-200 hover:bg-white/10" title={isEditing ? 'Close editor' : 'Edit product'}>
+                              <Edit3 size={14} />
+                            </button>
+                            <button onClick={() => void deleteProduct(product)} disabled={actionKey === `${productId}:delete`} className="rounded border border-red-400/20 p-2 text-red-300 hover:bg-red-500/10 disabled:opacity-40" title="Delete product">
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         </td>
                       </tr>
+
                       {isEditing ? (
-                        <tr className="border-t border-white/10">
-                          <td colSpan={9} className="bg-[#0d0d0d] px-3 py-3">
-                            <div className="grid gap-3 xl:grid-cols-2">
-                              <div className="space-y-2 rounded border border-white/10 bg-[#0a0a0a] p-2">
-                                <div className="flex flex-wrap items-center gap-1">
-                                  <button
-                                    onClick={() => setCatalogReferenceTab('images')}
-                                    className={`rounded px-2 py-1 text-[10px] ${catalogReferenceTab === 'images' ? 'bg-white text-black' : 'border border-white/15 text-neutral-300'}`}
-                                  >
-                                    Images
-                                  </button>
-                                  <button
-                                    onClick={() => setCatalogReferenceTab('description')}
-                                    className={`rounded px-2 py-1 text-[10px] ${catalogReferenceTab === 'description' ? 'bg-white text-black' : 'border border-white/15 text-neutral-300'}`}
-                                  >
-                                    Description
-                                  </button>
-                                  <button
-                                    onClick={() => setCatalogReferenceTab('body_html')}
-                                    className={`rounded px-2 py-1 text-[10px] ${catalogReferenceTab === 'body_html' ? 'bg-white text-black' : 'border border-white/15 text-neutral-300'}`}
-                                  >
-                                    Body HTML
-                                  </button>
+                        <tr className="border-t border-white/10 bg-[#0c0c0c]">
+                          <td colSpan={8} className="px-3 py-4">
+                            <div className="grid gap-3 lg:grid-cols-2">
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Title</label>
+                                  <input value={editDraft.title} onChange={(e) => setEditDraft((prev) => ({ ...prev, title: e.target.value }))} className="w-full rounded border border-white/15 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                                 </div>
-
-                                {catalogReferenceTab === 'images' ? (
-                                  <div className="space-y-2">
-                                    <div className="h-[280px] overflow-hidden rounded border border-white/15 bg-[#050505]">
-                                      {asArray(product?.images).length > 0 ? (
-                                        <img
-                                          src={getImageUrl([asArray(product?.images)[catalogReferenceImageIndex] || asArray(product?.images)[0]])}
-                                          alt={product?.title || product.id}
-                                          className="h-full w-full object-contain"
-                                          loading="lazy"
-                                        />
-                                      ) : (
-                                        <div className="flex h-full items-center justify-center text-xs text-neutral-500">No images available</div>
-                                      )}
-                                    </div>
-                                    <div className="flex gap-1 overflow-x-auto pb-1">
-                                      {asArray(product?.images).map((img, idx) => (
-                                        <button
-                                          key={`${product.id}-img-${idx}`}
-                                          onClick={() => setCatalogReferenceImageIndex(idx)}
-                                          className={`h-12 w-10 shrink-0 overflow-hidden rounded border ${catalogReferenceImageIndex === idx ? 'border-white' : 'border-white/15'}`}
-                                        >
-                                          <img src={getImageUrl([img])} alt={`Ref ${idx + 1}`} className="h-full w-full object-cover" loading="lazy" />
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ) : null}
-
-                                {catalogReferenceTab === 'description' ? (
-                                  <textarea
-                                    value={catalogEditDraft.description}
-                                    onChange={(e) => setCatalogEditDraft((p) => ({ ...p, description: e.target.value }))}
-                                    rows={12}
-                                    className="h-[320px] w-full resize-none rounded border border-white/15 bg-[#050505] px-2 py-1.5 text-xs text-neutral-200"
-                                    placeholder="Description"
-                                  />
-                                ) : null}
-
-                                {catalogReferenceTab === 'body_html' ? (
-                                  extractFirstTableHtml(product?.body_html) ? (
-                                    <div
-                                      className="h-[320px] overflow-auto rounded border border-white/15 bg-[#050505] p-2 text-xs text-neutral-200"
-                                      dangerouslySetInnerHTML={{ __html: extractFirstTableHtml(product?.body_html) }}
-                                    />
-                                  ) : (
-                                    <div className="h-[320px] overflow-auto rounded border border-white/15 bg-[#050505] p-2 text-xs text-neutral-200">
-                                      {stripHtml(product?.body_html) || 'No body_html available.'}
-                                    </div>
-                                  )
-                                ) : null}
+                                <div>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Description</label>
+                                  <textarea value={editDraft.description} onChange={(e) => setEditDraft((prev) => ({ ...prev, description: e.target.value }))} rows={5} className="w-full rounded border border-white/15 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
+                                </div>
                               </div>
-
-                              <div className="space-y-2 rounded border border-white/10 bg-[#0a0a0a] p-2">
-                                <div className="grid gap-2 xl:grid-cols-2">
-                                  <input
-                                    value={catalogEditDraft.tagsInput}
-                                    onChange={(e) => setCatalogEditDraft((p) => ({ ...p, tagsInput: e.target.value }))}
-                                    className="w-full rounded border border-white/15 bg-[#0a0a0a] px-2 py-1.5 text-xs"
-                                    placeholder="Tags: summer, new"
-                                  />
-                                  <label className="inline-flex items-center gap-2 text-xs text-neutral-300">
-                                    <input
-                                      type="checkbox"
-                                      checked={catalogEditDraft.is_featured}
-                                      onChange={(e) => setCatalogEditDraft((p) => ({ ...p, is_featured: e.target.checked }))}
-                                    />
+                              <div className="space-y-3">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div>
+                                    <label className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Status</label>
+                                    <input value={editDraft.status} onChange={(e) => setEditDraft((prev) => ({ ...prev, status: e.target.value }))} className="w-full rounded border border-white/15 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
+                                  </div>
+                                  <label className="flex items-end gap-2 rounded border border-white/15 bg-[#080808] px-3 py-2 text-xs text-neutral-100">
+                                    <input type="checkbox" checked={editDraft.is_featured} onChange={(e) => setEditDraft((prev) => ({ ...prev, is_featured: e.target.checked }))} className="accent-[#f43f5e]" />
                                     Featured product
                                   </label>
                                 </div>
-
-                                <div className="flex flex-wrap items-center gap-1">
-                                  <button onClick={addCatalogGuideRow} className="rounded border border-white/15 px-2 py-1 text-[10px]">+ Size Row</button>
-                                  <button onClick={addCatalogGuideCol} className="rounded border border-white/15 px-2 py-1 text-[10px]">+ Measurement</button>
-                                  <button onClick={transposeCatalogGuide} className="rounded border border-white/15 px-2 py-1 text-[10px]">Transpose</button>
-                                  <label className="ml-2 text-[10px] text-neutral-400">Base</label>
-                                  <select
-                                    value={catalogIncrementBaseSize}
-                                    onChange={(e) => setCatalogIncrementBaseSize(e.target.value)}
-                                    className="rounded border border-white/15 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100 [color-scheme:dark]"
-                                  >
-                                    <option className="bg-[#0a0a0a] text-neutral-100" value="">Select</option>
-                                    {catalogSizingDraft.rows.map((row) => (
-                                      <option key={`${catalogEditId}-base-${row}`} className="bg-[#0a0a0a] text-neutral-100" value={row}>{row}</option>
-                                    ))}
-                                  </select>
-                                  <label className="text-[10px] text-neutral-400">Step</label>
-                                  <input
-                                    value={catalogIncrementStep}
-                                    onChange={(e) => setCatalogIncrementStep(e.target.value)}
-                                    className="w-16 rounded border border-white/15 bg-[#080808] px-2 py-1 text-[10px] text-neutral-100"
-                                  />
-                                  <button onClick={applyCatalogStepIncrement} className="rounded border border-white/15 px-2 py-1 text-[10px]">Apply Step</button>
-                                  <button onClick={applyCatalogColumnStepIncrement} className="rounded border border-white/15 px-2 py-1 text-[10px]">Apply Per-Column</button>
+                                <div>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Tags</label>
+                                  <input value={editDraft.tagsInput} onChange={(e) => setEditDraft((prev) => ({ ...prev, tagsInput: e.target.value }))} className="w-full rounded border border-white/15 bg-[#080808] px-3 py-2 text-xs text-neutral-100" placeholder="festive, summer" />
                                 </div>
-
-                                <div className="rounded border border-white/15 bg-[#050505] p-2">
-                                  <div className="mb-2 text-[10px] text-neutral-400">Per-measurement step (from base size)</div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {catalogSizingDraft.cols.map((col) => (
-                                      <label key={`${catalogEditId}-step-${col}`} className="inline-flex items-center gap-1 rounded border border-white/15 bg-[#080808] px-2 py-1 text-[10px] text-neutral-300">
-                                        <span className="max-w-[90px] truncate">{col}</span>
-                                        <input
-                                          value={catalogIncrementStepsByCol[col] ?? '0.5'}
-                                          onChange={(e) => setCatalogIncrementStepsByCol((prev) => ({ ...prev, [col]: e.target.value }))}
-                                          className="w-12 rounded border border-white/15 bg-[#040404] px-1 py-0.5 text-[10px] text-neutral-100"
-                                        />
+                                <div>
+                                  <label className="mb-2 block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Badges</label>
+                                  <div className="grid gap-2 sm:grid-cols-3">
+                                    {(Object.keys(BADGE_LABELS) as BadgeKey[]).map((badge) => (
+                                      <label key={badge} className="flex items-center gap-2 rounded border border-white/15 bg-[#080808] px-3 py-2 text-xs text-neutral-100">
+                                        <input type="checkbox" checked={editDraft.badges[badge]} onChange={(e) => setEditDraft((prev) => ({ ...prev, badges: { ...prev.badges, [badge]: e.target.checked } }))} className="accent-[#f43f5e]" />
+                                        {BADGE_LABELS[badge]}
                                       </label>
                                     ))}
                                   </div>
                                 </div>
-
-                                <div className="max-h-[340px] overflow-auto rounded border border-white/15 bg-[#070707]">
-                                  <table className="min-w-full border-collapse text-[10px]">
-                                    <thead className="bg-[#050505]">
-                                      <tr>
-                                        <th className="sticky left-0 z-20 border border-white/10 bg-[#050505] px-2 py-1 text-left text-neutral-400">Size</th>
-                                        {catalogSizingDraft.cols.map((col) => (
-                                          <th key={`${catalogEditId}-col-${col}`} className="border border-white/10 px-1 py-1">
-                                            <div className="flex items-center gap-1">
-                                              <input
-                                                defaultValue={col}
-                                                onBlur={(e) => updateCatalogGuideColName(col, e.target.value)}
-                                                className="w-24 rounded border border-white/15 bg-[#080808] px-1 py-1 font-mono text-[10px] text-neutral-100"
-                                              />
-                                              <button onClick={() => removeCatalogGuideCol(col)} className="rounded border border-white/15 px-1 text-[10px] text-neutral-400">x</button>
-                                            </div>
-                                          </th>
-                                        ))}
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {catalogSizingDraft.rows.map((row, rowIndex) => (
-                                        <tr key={`${catalogEditId}-row-${row}`} className="border-t border-white/10">
-                                          <td className="sticky left-0 z-10 border border-white/10 bg-[#0a0a0a] px-2 py-1">
-                                            <div className="flex items-center gap-1">
-                                              <input
-                                                defaultValue={row}
-                                                onBlur={(e) => updateCatalogGuideRowName(row, e.target.value)}
-                                                className="w-16 rounded border border-white/15 bg-[#080808] px-1 py-1 font-mono text-[10px] text-neutral-100"
-                                              />
-                                              <button onClick={() => removeCatalogGuideRow(row)} className="rounded border border-white/15 px-1 text-[10px] text-neutral-400">x</button>
-                                            </div>
-                                          </td>
-                                          {catalogSizingDraft.cols.map((col, colIndex) => (
-                                            <td key={`${catalogEditId}-cell-${row}-${col}`} className="border border-white/10 px-1 py-1">
-                                              <input
-                                                id={`sg-cell-catalog-${catalogEditId}-${rowIndex}-${colIndex}`}
-                                                value={catalogSizingDraft.cells[row]?.[col] || ''}
-                                                onChange={(e) => updateCatalogGuideCell(row, col, e.target.value)}
-                                                onKeyDown={(e) => onGuideCellKeyDown(
-                                                  e,
-                                                  `catalog-${catalogEditId}`,
-                                                  rowIndex,
-                                                  colIndex,
-                                                  catalogSizingDraft.rows.length,
-                                                  catalogSizingDraft.cols.length
-                                                )}
-                                                onFocus={(e) => e.currentTarget.select()}
-                                                className="w-20 rounded border border-white/15 bg-[#080808] px-1 py-1 font-mono text-[10px] text-neutral-100 focus:border-primary/60 focus:outline-none"
-                                              />
-                                            </td>
-                                          ))}
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                <div className="flex items-center gap-2 pt-2">
+                                  <button onClick={saveEdit} disabled={actionKey === `${productId}:save`} className="rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100 disabled:opacity-40">{actionKey === `${productId}:save` ? 'Saving...' : 'Save'}</button>
+                                  <button onClick={closeEdit} className="rounded border border-white/15 px-3 py-2 text-xs text-neutral-300">Cancel</button>
                                 </div>
+                                {editError ? <p className="text-xs text-red-300">{editError}</p> : null}
                               </div>
                             </div>
-                            {catalogEditError ? <p className="mt-2 text-xs text-red-300">{catalogEditError}</p> : null}
                           </td>
                         </tr>
                       ) : null}
@@ -2470,9 +702,14 @@ const ManageProducts: React.FC = () => {
                 })}
               </tbody>
             </table>
-
-            {filteredCatalog.length === 0 ? <div className="p-4 text-xs text-neutral-500">No catalog products found.</div> : null}
-            <div className="px-3 pb-3">{renderPager(catalogPage, catalogTotalPages, setCatalogPage)}</div>
+            {filteredProducts.length === 0 ? <div className="p-4 text-xs text-neutral-500">No products found.</div> : null}
+            <div className="mt-3 flex items-center justify-between px-3 pb-3 text-xs text-neutral-400">
+              <span>Page {page} of {totalPages}</span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="rounded border border-white/15 px-2 py-1 text-neutral-200 disabled:opacity-40">Prev</button>
+                <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="rounded border border-white/15 px-2 py-1 text-neutral-200 disabled:opacity-40">Next</button>
+              </div>
+            </div>
           </div>
         )}
       </section>
