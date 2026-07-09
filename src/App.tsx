@@ -54,6 +54,7 @@ const OrderConfirmationPage = React.lazy(() => import('./components/checkout/Ord
 const OrderTrackingPage = React.lazy(() => import('./components/checkout/OrderTrackingPage'));
 const InteractiveTrackingPage = React.lazy(() => import('./components/checkout/InteractiveTrackingPage'));
 const WishlistPage = React.lazy(() => import('./components/catalog/WishlistPage'));
+const ResponsiveDownloadBanner = React.lazy(() => import('./components/shared/ResponsiveDownloadBanner'));
 
 // Probe Analytics
 import { useProbeAnalytics } from './hooks/useProbe';
@@ -160,6 +161,11 @@ function RoutedApp() {
                   <Route path="/" element={
                     <main>
                       <Hero />
+                      <section className="bg-black px-4 py-6 md:px-6 md:py-8">
+                        <div className="mx-auto max-w-7xl">
+                          <ResponsiveDownloadBanner />
+                        </div>
+                      </section>
                       <CatchyProducts />
                       <BrandShowcase />
                       <BrandsSection />

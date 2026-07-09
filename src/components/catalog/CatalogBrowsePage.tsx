@@ -19,6 +19,7 @@ import {
 import CatalogNavbar from './CatalogNavbar';
 import CatalogSidebar from './CatalogSidebar';
 import EditorialProductCard from '../shared/editorial/EditorialProductCard';
+import ResponsiveDownloadBanner from '../shared/ResponsiveDownloadBanner';
 
 // Routes: `/catalog/all`, wrapped by `/catalog/women` and `/catalog/men`
 // Purpose: shared listing engine for public catalog browse routes. Route-level
@@ -520,15 +521,8 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
 
             <div className="relative z-10 lg:pl-[24rem]">
                 {showShowcase ? (
-                    <div className="w-full">
-                        <picture>
-                            <source media="(max-width: 767px)" srcSet="/portrait_banner.png" />
-                            <img
-                                src="/landscape_banner.png"
-                                alt="Marketplace"
-                                className="h-auto max-h-[300px] w-full object-cover md:max-h-[400px]"
-                            />
-                        </picture>
+                    <div className="w-full px-4 pt-4 md:px-6 lg:px-8">
+                        <ResponsiveDownloadBanner className="shadow-[0_22px_60px_rgba(0,0,0,0.35)]" rounded={false} />
                     </div>
                 ) : null}
 
