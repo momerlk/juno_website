@@ -2,11 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
-  Globe,
   Loader,
   Package,
   Plus,
-  Sparkles,
   Trash2,
   Upload,
   Video,
@@ -14,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { uploadFileAndGetUrl } from '../../api/shared';
-import { AdminPortal, scrapeSellerProducts } from '../../api/adminApi';
+import { AdminPortal } from '../../api/adminApi';
 import type { Option, Variant } from '../../constants/types';
 import { apparelTypes, productTypes } from '../../constants/sizing';
 import SizingGuideEditor from '../seller/SizingGuideEditor';
@@ -45,12 +43,6 @@ const cloneDraft = (): CreateProductDraft => ({
   sizing_guide: { size_chart: {}, size_fit: '', measurement_unit: 'inch' },
 });
 
-const normalizeShopUrl = (input: string): string => {
-  let url = input.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
-  url = url.split('/')[0];
-  return url;
-};
-
 const getShopifyThumbnail = (url: string, size = '240x240') => {
   if (!url || !url.includes('shopify.com')) return url;
   const [path, query] = url.split('?');
@@ -68,9 +60,6 @@ const CreateProductPage: React.FC = () => {
   const [createMessage, setCreateMessage] = useState('');
   const [actionKey, setActionKey] = useState('');
   const [uploadingMedia, setUploadingMedia] = useState<'image' | 'video' | null>(null);
-  const [shopifySellerId, setShopifySellerId] = useState('');
-  const [shopUrl, setShopUrl] = useState('');
-  const [scrapeMessage, setScrapeMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   useEffect(() => {
     const loadSellers = async () => {
@@ -313,37 +302,6 @@ const CreateProductPage: React.FC = () => {
     }
   };
 
-  const handleScrape = async () => {
-    const normalizedUrl = normalizeShopUrl(shopUrl);
-    if (!shopifySellerId) {
-      setScrapeMessage({ type: 'error', text: 'Select a seller first.' });
-      return;
-    }
-    if (!normalizedUrl) {
-      setScrapeMessage({ type: 'error', text: 'Enter a valid Shopify store URL.' });
-      return;
-    }
-
-    setActionKey('shopify-scrape');
-    setScrapeMessage(null);
-    try {
-      const response = await scrapeSellerProducts(shopifySellerId, normalizedUrl);
-      if (response.status === 202) {
-        setScrapeMessage({ type: 'info', text: 'Shopify scrape started. Products will sync into the seller queue in the background.' });
-      } else if (!response.ok) {
-        throw new Error((response.body as any)?.message || 'Shopify scrape failed');
-      } else {
-        const count = Number((response.body as any)?.scrape_count ?? (response.body as any)?.count ?? 0);
-        setScrapeMessage({ type: 'success', text: `Imported ${count} product${count === 1 ? '' : 's'} into the seller queue.` });
-        setShopUrl('');
-      }
-    } catch (err) {
-      setScrapeMessage({ type: 'error', text: err instanceof Error ? err.message : 'Shopify scrape failed' });
-    } finally {
-      setActionKey('');
-    }
-  };
-
   return (
     <div className="mt-4 space-y-4 text-neutral-100">
       <section className="rounded-xl border border-white/10 bg-[#121212] p-4">
@@ -352,7 +310,7 @@ const CreateProductPage: React.FC = () => {
             <Package size={18} className="text-primary" />
             <div>
               <h2 className="text-base font-semibold">Create Product</h2>
-              <p className="text-xs text-neutral-500">Admin direct-to-catalog creation with seller assignment, variants, media, badges, and Shopify import.</p>
+              <p className="text-xs text-neutral-500">Admin direct-to-catalog creation with seller assignment, variants, media, badges, and merchandising controls.</p>
             </div>
           </div>
           <Link to="/admin/products" className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100">
@@ -765,59 +723,6 @@ const CreateProductPage: React.FC = () => {
             )}
           </section>
 
-          <section className={cardClassName}>
-            <div className="mb-4 flex items-center gap-2">
-              <Globe size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold">Shopify scraping</h3>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-[1fr_1.3fr_auto]">
-              <label className="text-xs text-neutral-400">
-                Seller
-                <select value={shopifySellerId} onChange={(e) => setShopifySellerId(e.target.value)} className={`${fieldClassName} [color-scheme:dark]`}>
-                  <option value="">Select seller</option>
-                  {sellers.map((seller) => (
-                    <option key={getSellerId(seller)} value={getSellerId(seller)}>
-                      {getSellerName(seller)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs text-neutral-400">
-                Shopify store URL
-                <input
-                  value={shopUrl}
-                  onChange={(e) => setShopUrl(e.target.value)}
-                  placeholder="your-store.myshopify.com or yourbrand.com"
-                  className={fieldClassName}
-                />
-              </label>
-              <div className="flex items-end">
-                <button
-                  onClick={handleScrape}
-                  disabled={actionKey === 'shopify-scrape'}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100 disabled:opacity-40"
-                >
-                  {actionKey === 'shopify-scrape' ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  {actionKey === 'shopify-scrape' ? 'Importing...' : 'Import products'}
-                </button>
-              </div>
-            </div>
-
-            {scrapeMessage ? (
-              <div
-                className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
-                  scrapeMessage.type === 'success'
-                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-                    : scrapeMessage.type === 'info'
-                      ? 'border-blue-500/20 bg-blue-500/10 text-blue-300'
-                      : 'border-red-500/20 bg-red-500/10 text-red-300'
-                }`}
-              >
-                {scrapeMessage.text}
-              </div>
-            ) : null}
-          </section>
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">

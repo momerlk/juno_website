@@ -39,6 +39,7 @@ const ManageInvites = React.lazy(() => import('./components/admin/ManageInvites'
 const ManageNotifications = React.lazy(() => import('./components/admin/ManageNotifications'));
 const ManageProducts = React.lazy(() => import('./components/admin/ManageProducts'));
 const CreateProductPage = React.lazy(() => import('./components/admin/CreateProductPage'));
+const ProductImportsPage = React.lazy(() => import('./components/admin/ProductImportsPage'));
 const OrderDetailPage = React.lazy(() => import('./components/admin/OrderDetailPage'));
 const BrandsSection = React.lazy(() => import('./components/landing/BrandsSection'));
 const BrandShowcase = React.lazy(() => import('./components/landing/BrandShowcase'));
@@ -237,6 +238,7 @@ function RoutedApp() {
                     <Route path="sellers" element={<ManageSellers />} />
                     <Route path="products" element={<ManageProducts />} />
                     <Route path="products/create" element={<CreateProductPage />} />
+                    <Route path="products/imports" element={<ProductImportsPage />} />
                     <Route path="invites" element={<ManageInvites />} />
                     <Route path="notifications" element={<ManageNotifications />} />
                   </Route>
