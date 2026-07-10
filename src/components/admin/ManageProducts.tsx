@@ -55,6 +55,7 @@ interface ProductFilters {
 }
 
 const PAGE_SIZE = 50;
+const PRODUCT_STATUS_OPTIONS = ['active', 'draft', 'queue', 'embedding_pending', 'needs_review', 'rejected', 'archived'];
 
 const EMPTY_FILTERS: ProductFilters = {
   status: 'all',
@@ -82,6 +83,10 @@ const EMPTY_FILTERS: ProductFilters = {
 };
 
 const csvToArray = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
+const selectedValues = (value: string, fallback?: string) => {
+  const values = csvToArray(value);
+  return values.length ? values : fallback ? [fallback] : [];
+};
 
 const buildListParams = (filters: ProductFilters, page: number) => {
   const params: Record<string, string | number | boolean | undefined> = {
@@ -458,26 +463,35 @@ const ManageProducts: React.FC = () => {
           <div className="mt-4 space-y-3 rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
-                Status
-                <select value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 [color-scheme:dark]">
-                  <option value="all">all</option>
-                  <option value="active">active</option>
-                  <option value="embedding_pending">embedding_pending</option>
-                  <option value="needs_review">needs_review</option>
-                  <option value="queue">queue</option>
-                  <option value="draft">draft</option>
-                  <option value="rejected">rejected</option>
-                  <option value="archived">archived</option>
+                Statuses
+                <select
+                  multiple
+                  value={selectedValues(filters.status, 'all')}
+                  onChange={(e) => {
+                    const values = Array.from(e.target.selectedOptions).map((option) => option.value);
+                    setFilters((prev) => ({ ...prev, status: values.includes('all') || values.length === 0 ? 'all' : values.join(',') }));
+                  }}
+                  className="mt-1 min-h-24 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 [color-scheme:dark]"
+                >
+                  <option value="all">All statuses</option>
+                  {PRODUCT_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}
                 </select>
+                <span className="mt-1 block normal-case tracking-normal text-neutral-600">Cmd/Ctrl-click to select multiple.</span>
               </label>
               <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
-                Seller
-                <select value={filters.seller_id} onChange={(e) => setFilters((prev) => ({ ...prev, seller_id: e.target.value }))} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 [color-scheme:dark]">
-                  <option value="">All sellers</option>
-                  {sellers.map((seller) => (
-                    <option key={getSellerId(seller)} value={getSellerId(seller)}>{getSellerName(seller)}</option>
-                  ))}
+                Sellers
+                <select
+                  multiple
+                  value={selectedValues(filters.seller_ids || filters.seller_id)}
+                  onChange={(e) => {
+                    const values = Array.from(e.target.selectedOptions).map((option) => option.value);
+                    setFilters((prev) => ({ ...prev, seller_id: '', seller_ids: values.join(',') }));
+                  }}
+                  className="mt-1 min-h-24 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 [color-scheme:dark]"
+                >
+                  {sellers.map((seller) => <option key={getSellerId(seller)} value={getSellerId(seller)}>{getSellerName(seller)}</option>)}
                 </select>
+                <span className="mt-1 block normal-case tracking-normal text-neutral-600">Leave empty to show every seller.</span>
               </label>
               <label className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
                 In stock

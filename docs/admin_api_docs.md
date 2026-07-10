@@ -111,6 +111,9 @@ Auth:
 - `GET /api/v2/admin/financials/summary`
 - `GET /api/v2/admin/financials/orders`
 
+### WordPress Imports
+- `POST /api/v2/admin/wordpress/import`
+
 ---
 
 ## Shared Schemas
@@ -1221,6 +1224,26 @@ Docs: [Probe Analytics Docs](../analytics/docs.md)
 
 ### Notifications
 - `POST /api/v2/admin/notifications/broadcast`
+
+### WordPress / WooCommerce Import
+`POST /api/v2/admin/wordpress/import`
+
+Imports a WooCommerce product-export CSV for the specified seller. This endpoint
+is implemented by the seller module but is restricted to admin users. The import
+runs asynchronously and returns `202 Accepted` when it has been queued.
+
+Send `multipart/form-data` with:
+
+- `seller_id` (required): Juno seller ID.
+- `file` (required): WooCommerce product-export CSV, up to 25 MB.
+
+Response:
+```json
+{
+  "message": "WooCommerce product import started",
+  "count": 0
+}
+```
 
 ### Ambassador
 - `POST /api/v2/admin/ambassador/tasks`

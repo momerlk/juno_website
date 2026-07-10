@@ -283,6 +283,13 @@ export namespace AdminPortal {
         return request(`${BASE_PATH}/products`, 'POST', payload, getToken());
     }
 
+    export async function importWordPressProducts(sellerId: string, file: File): Promise<APIResponse<{ message?: string; count?: number }>> {
+        const formData = new FormData();
+        formData.append('seller_id', sellerId);
+        formData.append('file', file);
+        return request(`${BASE_PATH}/wordpress/import`, 'POST', formData, getToken());
+    }
+
     export async function updateProduct(productId: string, update: Record<string, any>): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/products/${encodeURIComponent(productId)}`, 'PATCH', update, getToken());
     }
