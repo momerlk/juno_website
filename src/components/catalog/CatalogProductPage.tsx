@@ -102,6 +102,7 @@ const CatalogProductPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
     const [isBuyingNow, setIsBuyingNow] = useState(false);
+    const [showBuyNowConfirm, setShowBuyNowConfirm] = useState(false);
     const [showAddedFeedback, setShowAddedFeedback] = useState(false);
     const [showSizeGuide, setShowSizeGuide] = useState(false);
     const [sizing, setSizing] = useState<ProductSizing | null>(null);
@@ -300,7 +301,18 @@ const CatalogProductPage: React.FC = () => {
         setCartOpen,
     ]);
 
+    // Opens the confirm-selection popup after validating stock/quantity.
     const handleBuyNow = useCallback(() => {
+        if (!product || !selectedVariant) return;
+        if (!canPurchase) return;
+        if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
+            setQuantity(Math.max(1, maxAvailableQuantity));
+            return;
+        }
+        setShowBuyNowConfirm(true);
+    }, [canPurchase, maxAvailableQuantity, product, quantity, selectedVariant]);
+
+    const confirmBuyNow = useCallback(() => {
         if (!product || !selectedVariant) return;
         if (!canPurchase) return;
         if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
@@ -309,6 +321,7 @@ const CatalogProductPage: React.FC = () => {
         }
 
         setIsBuyingNow(true);
+        setShowBuyNowConfirm(false);
         // Buy Now isolates this single item: instead of mutating the shared
         // guest cart, hand the item to checkout via router state so any items
         // already in the cart are left untouched.
@@ -919,6 +932,86 @@ const CatalogProductPage: React.FC = () => {
                 selectedSize={Object.entries(selectedOptions).find(([name]) => name.toLowerCase().includes('size'))?.[1]}
                 onSelectSize={selectRecommendedSize}
             />
+
+            <AnimatePresence>
+                {showBuyNowConfirm ? (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center"
+                        onClick={() => setShowBuyNowConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 24, scale: 0.98 }}
+                            transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+                            onClick={(event) => event.stopPropagation()}
+                            className="w-full max-w-sm rounded-t-3xl border border-white/10 bg-[#0b0b0d] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-20px_60px_rgba(0,0,0,0.6)] sm:rounded-3xl sm:pb-5"
+                        >
+                            <p className="font-mono text-[9px] uppercase tracking-[0.32em] text-white/40">Confirm selection</p>
+                            <div className="mt-4 flex gap-3.5">
+                                <div className="h-24 w-20 shrink-0 overflow-hidden rounded-xl border border-white/[0.08] bg-white/5">
+                                    <img src={currentImage} alt={product.title} className="h-full w-full object-cover" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-white/40">
+                                        {product.seller_name || 'Juno Label'}
+                                    </p>
+                                    <h3
+                                        className="mt-1 line-clamp-2 uppercase text-white"
+                                        style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.03em' }}
+                                    >
+                                        {product.title}
+                                    </h3>
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                        {Object.entries(selectedOptions).map(([name, value]) => (
+                                            <span
+                                                key={name}
+                                                className="rounded-md border border-white/12 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-white/75"
+                                            >
+                                                <span className="text-white/40">{name}:</span> {value}
+                                            </span>
+                                        ))}
+                                        <span className="rounded-md border border-white/12 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-white/75">
+                                            <span className="text-white/40">Qty:</span> {quantity}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 flex items-center justify-between border-t border-white/[0.08] pt-4">
+                                <span className="text-[12px] text-white/55">Total</span>
+                                <span
+                                    className="text-white"
+                                    style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: '1.25rem', letterSpacing: '-0.04em' }}
+                                >
+                                    {formatCurrency(currentPrice * quantity)}
+                                </span>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-[1fr_1.6fr] gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBuyNowConfirm(false)}
+                                    className="rounded-xl border border-white/12 py-3.5 text-[12px] font-bold uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={confirmBuyNow}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary py-3.5 text-[12px] font-black uppercase tracking-[0.16em] text-white shadow-[0_12px_32px_rgba(220,10,40,0.4)]"
+                                >
+                                    <Zap size={15} className="fill-white" />
+                                    Confirm
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                ) : null}
+            </AnimatePresence>
 
             <style>{`
                 @keyframes shimmer {
