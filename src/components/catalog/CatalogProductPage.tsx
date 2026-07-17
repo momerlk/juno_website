@@ -455,18 +455,23 @@ const CatalogProductPage: React.FC = () => {
 
                             <div
                                 onTouchStart={(event) => {
-                                    imageTouchStartXRef.current = event.touches[0]?.clientX ?? null;
+                                    // Ignore multi-finger gestures (pinch-zoom) so they
+                                    // don't get misread as a horizontal swipe.
+                                    imageTouchStartXRef.current =
+                                        event.touches.length === 1 ? event.touches[0]?.clientX ?? null : null;
                                 }}
                                 onTouchEnd={(event) => {
                                     const startX = imageTouchStartXRef.current;
                                     imageTouchStartXRef.current = null;
-                                    if (startX === null || imageGallery.length < 2) return;
+                                    // Bail if the gesture ever became multi-touch (zoom).
+                                    if (startX === null || imageGallery.length < 2 || event.touches.length > 0) return;
                                     const endX = event.changedTouches[0]?.clientX ?? startX;
                                     const delta = endX - startX;
                                     if (delta < -50) cycleImage(1);
                                     else if (delta > 50) cycleImage(-1);
                                 }}
-                                className="relative aspect-[4/5] w-full touch-pan-y sm:aspect-[3/4]"
+                                style={{ touchAction: 'pan-y pinch-zoom' }}
+                                className="relative aspect-[4/5] w-full sm:aspect-[3/4]"
                             >
                                 <img
                                     key={currentImage}
