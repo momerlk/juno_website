@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, Loader2, Zap, Truck } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
@@ -82,10 +82,34 @@ const fetchCityFromIP = async (): Promise<string> => {
     return '';
 };
 
+type CheckoutLineItem = ReturnType<typeof useGuestCart>['optimisticCart'][number];
+
 const CheckoutPage: React.FC = () => {
     const navigate = useNavigate();
-    const { optimisticCart, cartTotal, itemCount, clearCart, isHydrated } = useGuestCart();
+    const location = useLocation();
+    const { optimisticCart, clearCart, isHydrated } = useGuestCart();
     const { trackCheckoutStart, trackCheckoutComplete } = useProbeCommerce();
+
+    // Buy Now hands a single item through router state. When present, checkout
+    // operates only on that item and leaves the persisted cart untouched. Pin it
+    // to a ref so it survives the navigate() that clears history state on submit.
+    const buyNowItemRef = useRef<CheckoutLineItem | null>(
+        (location.state as { buyNowItem?: CheckoutLineItem } | null)?.buyNowItem ?? null
+    );
+    const isBuyNow = buyNowItemRef.current !== null;
+
+    const checkoutItems = useMemo<CheckoutLineItem[]>(
+        () => (buyNowItemRef.current ? [buyNowItemRef.current] : optimisticCart),
+        [optimisticCart]
+    );
+    const checkoutItemCount = useMemo(
+        () => checkoutItems.reduce((sum, item) => sum + item.quantity, 0),
+        [checkoutItems]
+    );
+    const checkoutSubtotal = useMemo(
+        () => checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        [checkoutItems]
+    );
 
     const [formData, setFormData] = useState<GuestCheckoutDetails>({
         full_name: '',
@@ -134,16 +158,16 @@ const CheckoutPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (hasTrackedCheckoutStart.current || itemCount <= 0) return;
-        trackCheckoutStart(cartTotal, itemCount);
+        if (hasTrackedCheckoutStart.current || checkoutItemCount <= 0) return;
+        trackCheckoutStart(checkoutSubtotal, checkoutItemCount);
         hasTrackedCheckoutStart.current = true;
-    }, [cartTotal, itemCount, trackCheckoutStart]);
+    }, [checkoutSubtotal, checkoutItemCount, trackCheckoutStart]);
 
     useEffect(() => {
-        if (hasTrackedInitiateCheckout.current || optimisticCart.length === 0) return;
-        trackTikTokInitiateCheckout(optimisticCart);
+        if (hasTrackedInitiateCheckout.current || checkoutItems.length === 0) return;
+        trackTikTokInitiateCheckout(checkoutItems);
         hasTrackedInitiateCheckout.current = true;
-    }, [optimisticCart]);
+    }, [checkoutItems]);
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
@@ -186,13 +210,13 @@ const CheckoutPage: React.FC = () => {
         const buyerCity = formData.city.trim();
         let cancelled = false;
 
-        if (itemCount === 0 || !buyerCity) {
+        if (checkoutItemCount === 0 || !buyerCity) {
             setShippingEstimate(null);
             setShippingState('idle');
             return;
         }
 
-        const items = optimisticCart.map((item) => ({
+        const items = checkoutItems.map((item) => ({
             product_id: item.product_id,
             variant_id: item.variant_id,
             quantity: item.quantity,
@@ -227,7 +251,7 @@ const CheckoutPage: React.FC = () => {
             cancelled = true;
             clearTimeout(timeoutId);
         };
-    }, [formData.city, itemCount, optimisticCart]);
+    }, [formData.city, checkoutItemCount, checkoutItems]);
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
@@ -250,7 +274,7 @@ const CheckoutPage: React.FC = () => {
         setErrors({});
 
         try {
-            const items = optimisticCart.map((item) => ({
+            const items = checkoutItems.map((item) => ({
                 product_id: item.product_id,
                 variant_id: item.variant_id,
                 quantity: item.quantity,
@@ -264,7 +288,7 @@ const CheckoutPage: React.FC = () => {
                 phoneNumber: formData.phone_number,
                 externalId: formData.phone_number || formData.email,
             });
-            trackTikTokAddPaymentInfo(optimisticCart);
+            trackTikTokAddPaymentInfo(checkoutItems);
 
             const checkoutResponse = await GuestCommerce.checkoutDirect({
                 payment_method: 'cod',
@@ -274,7 +298,7 @@ const CheckoutPage: React.FC = () => {
             if (!checkoutResponse.ok) throw new Error('Failed to place order');
 
             const order = checkoutResponse.body;
-            const receiptItems = optimisticCart.map((item) => ({
+            const receiptItems = checkoutItems.map((item) => ({
                 product_id: item.product_id,
                 variant_id: item.variant_id,
                 quantity: item.quantity,
@@ -295,7 +319,7 @@ const CheckoutPage: React.FC = () => {
                     phoneNumber: formData.phone_number,
                     externalId: formData.phone_number || formData.email,
                 });
-                trackTikTokPurchase(optimisticCart, order.total_amount);
+                trackTikTokPurchase(checkoutItems, order.total_amount);
             }
 
             if (formData.phone_number) {
@@ -306,7 +330,8 @@ const CheckoutPage: React.FC = () => {
             }
 
             localStorage.removeItem(STORAGE_KEYS.CHECKOUT_DRAFT);
-            clearCart();
+            // Buy Now never added to the cart, so leave it intact.
+            if (!isBuyNow) clearCart();
 
             navigate('/checkout/confirmation', { state: { order, receiptItems } });
         } catch (error: unknown) {
@@ -332,14 +357,14 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
-    const canEstimateShipping = itemCount > 0 && Boolean(formData.city.trim()) && optimisticCart.length > 0;
+    const canEstimateShipping = checkoutItemCount > 0 && Boolean(formData.city.trim()) && checkoutItems.length > 0;
     const shouldUseFallbackEstimate = canEstimateShipping && shippingState === 'error';
     const hasResolvedEstimate = shippingState === 'ready' && shippingEstimate !== null;
 
     const freeShippingThreshold = hasResolvedEstimate
         ? shippingEstimate.free_shipping_threshold
         : DEFAULT_FREE_SHIPPING_THRESHOLD;
-    const displaySubtotal = hasResolvedEstimate ? shippingEstimate.subtotal : cartTotal;
+    const displaySubtotal = hasResolvedEstimate ? shippingEstimate.subtotal : checkoutSubtotal;
     const shippingFee = hasResolvedEstimate
         ? shippingEstimate.shipping_total
         : shouldUseFallbackEstimate
@@ -370,7 +395,7 @@ const CheckoutPage: React.FC = () => {
         );
     }
 
-    if (optimisticCart.length === 0) {
+    if (checkoutItems.length === 0) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#050505] pt-24 text-white">
                 <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center">
@@ -482,12 +507,12 @@ const CheckoutPage: React.FC = () => {
                             <div className="mb-5 flex items-center gap-2.5">
                                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                                 <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/50">
-                                    Your bag · {itemCount} {itemCount === 1 ? 'piece' : 'pieces'}
+                                    {isBuyNow ? 'Buy now' : 'Your bag'} · {checkoutItemCount} {checkoutItemCount === 1 ? 'piece' : 'pieces'}
                                 </p>
                             </div>
 
                             <div className="space-y-3.5">
-                                {optimisticCart.map((item, index) => (
+                                {checkoutItems.map((item, index) => (
                                     <motion.div
                                         key={`${item.product_id || 'product'}-${item.variant_id || 'variant'}-${index}`}
                                         initial={{ opacity: 0, x: -8 }}
@@ -800,7 +825,7 @@ const CheckoutPage: React.FC = () => {
                                 </p>
 
                                 <div className="space-y-3">
-                                    <Row label={`Subtotal (${itemCount} ${itemCount === 1 ? 'item' : 'items'})`}>
+                                    <Row label={`Subtotal (${checkoutItemCount} ${checkoutItemCount === 1 ? 'item' : 'items'})`}>
                                         {formatCurrency(displaySubtotal)}
                                     </Row>
                                     <Row label="Shipping">

@@ -309,7 +309,14 @@ const CatalogProductPage: React.FC = () => {
         }
 
         setIsBuyingNow(true);
-        addItem(product.id, selectedVariant.id, quantity, currentPrice, {
+        // Buy Now isolates this single item: instead of mutating the shared
+        // guest cart, hand the item to checkout via router state so any items
+        // already in the cart are left untouched.
+        const buyNowItem = {
+            product_id: product.id,
+            variant_id: selectedVariant.id,
+            quantity,
+            price: currentPrice,
             seller_name: product.seller_name,
             product_title: product.title,
             variant_title: selectedVariant.title,
@@ -317,11 +324,9 @@ const CatalogProductPage: React.FC = () => {
             image_url: imageGallery[0] || '/images/misc/juno_app_icon.png',
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
-            source: 'catalog',
-        });
-        window.setTimeout(() => navigate('/checkout'), 200);
+        };
+        navigate('/checkout', { state: { buyNowItem } });
     }, [
-        addItem,
         canPurchase,
         currentPrice,
         imageGallery,
