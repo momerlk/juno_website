@@ -17,7 +17,7 @@ import {
     Truck,
     Zap,
 } from 'lucide-react';
-import { Catalog, type CatalogProduct, type ProductVariant } from '../../api/api';
+import { Catalog, Sizing, type CatalogProduct, type ProductSizing, type ProductVariant } from '../../api/api';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useProbe';
 import CatalogNavbar from './CatalogNavbar';
@@ -104,6 +104,7 @@ const CatalogProductPage: React.FC = () => {
     const [isBuyingNow, setIsBuyingNow] = useState(false);
     const [showAddedFeedback, setShowAddedFeedback] = useState(false);
     const [showSizeGuide, setShowSizeGuide] = useState(false);
+    const [sizing, setSizing] = useState<ProductSizing | null>(null);
     const [imageAspectRatios, setImageAspectRatios] = useState<Record<string, number>>({});
     const imageTouchStartXRef = useRef<number | null>(null);
     const { addItem, setCartOpen } = useGuestCart();
@@ -123,6 +124,7 @@ const CatalogProductPage: React.FC = () => {
 
             setIsLoading(true);
             setError(null);
+            setSizing(null);
 
             try {
                 const productResponse = await Catalog.getProduct(actualProductId);
@@ -159,6 +161,14 @@ const CatalogProductPage: React.FC = () => {
                 setQuantity(1);
                 setShowAddedFeedback(false);
                 setIsLoading(false);
+
+                void Sizing.getProductSizing(actualProductId)
+                    .then((sizingResponse) => {
+                        if (!cancelled && sizingResponse.ok) setSizing(sizingResponse.body);
+                    })
+                    .catch(() => {
+                        // Sizing is optional. The product remains fully purchasable if it is unavailable.
+                    });
             } catch {
                 if (!cancelled) {
                     setError('Could not load this product.');
@@ -216,6 +226,14 @@ const CatalogProductPage: React.FC = () => {
     const stockCount = product?.inventory?.available_quantity ?? product?.inventory?.quantity ?? null;
     const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
     const catalogBadges = getCatalogBadges(product);
+    const hasApprovedSizing = sizing?.availability === 'normalized';
+
+    const selectRecommendedSize = useCallback((size: string) => {
+        const sizeOption = asArray(product?.options).find((option) => option.name.toLowerCase().includes('size'));
+        if (sizeOption && asArray(sizeOption.values).includes(size)) {
+            setSelectedOptions((current) => ({ ...current, [sizeOption.name]: size }));
+        }
+    }, [product?.options]);
 
     useEffect(() => {
         if (typeof maxAvailableQuantity === 'number' && maxAvailableQuantity > 0 && quantity > maxAvailableQuantity) {
@@ -658,13 +676,13 @@ const CatalogProductPage: React.FC = () => {
                                                     {selectedOptions[option.name]}
                                                 </p>
                                             </div>
-                                            {option.name.toLowerCase().includes('size') ? (
+                                            {option.name.toLowerCase().includes('size') && hasApprovedSizing ? (
                                                 <button
                                                     onClick={() => setShowSizeGuide(true)}
-                                                    className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50 transition-colors hover:text-white"
+                                                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-primary shadow-[0_6px_18px_rgba(220,10,40,0.16)] transition-all hover:border-primary hover:bg-primary hover:text-white"
                                                 >
                                                     <Ruler size={11} />
-                                                    Size guide
+                                                    Size guide & fit
                                                 </button>
                                             ) : null}
                                         </div>
@@ -714,6 +732,14 @@ const CatalogProductPage: React.FC = () => {
                                                 );
                                             })}
                                         </div>
+                                        {option.name.toLowerCase().includes('size') && hasApprovedSizing ? (
+                                            <button
+                                                onClick={() => setShowSizeGuide(true)}
+                                                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-primary/60 bg-gradient-to-r from-primary/20 to-secondary/15 px-3.5 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] text-primary shadow-[0_8px_22px_rgba(220,10,40,0.16)] transition-all hover:from-primary hover:to-secondary hover:text-white"
+                                            >
+                                                <Sparkles size={13} /> Find your fit with Juno
+                                            </button>
+                                        ) : null}
                                     </div>
                                 ))}
                             </div>
@@ -875,7 +901,14 @@ const CatalogProductPage: React.FC = () => {
                 ) : null}
             </AnimatePresence>
 
-            <SizeGuideModal isOpen={showSizeGuide} onClose={() => setShowSizeGuide(false)} />
+            <SizeGuideModal
+                isOpen={showSizeGuide}
+                onClose={() => setShowSizeGuide(false)}
+                productId={product.id}
+                sizing={sizing}
+                selectedSize={Object.entries(selectedOptions).find(([name]) => name.toLowerCase().includes('size'))?.[1]}
+                onSelectSize={selectRecommendedSize}
+            />
 
             <style>{`
                 @keyframes shimmer {

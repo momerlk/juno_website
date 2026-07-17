@@ -239,6 +239,77 @@ export interface ProductOption {
     values: string[];
 }
 
+export type SizingAvailability = 'normalized' | 'needs_manual_review' | 'not_found' | 'not_required';
+
+export interface SizeChartRow {
+    size?: string;
+    label?: string;
+    measurements?: Record<string, number | string | null>;
+    [key: string]: unknown;
+}
+
+export interface SizeChartSection {
+    id?: string;
+    name?: string;
+    title?: string;
+    unit?: string;
+    columns?: string[];
+    rows?: SizeChartRow[];
+    [key: string]: unknown;
+}
+
+export interface NormalizedSizeChart {
+    id?: string;
+    chart_id?: string;
+    name?: string;
+    title?: string;
+    unit?: string;
+    sections?: SizeChartSection[];
+    [key: string]: unknown;
+}
+
+export interface SizingQuestion {
+    id?: string;
+    key?: string;
+    name?: string;
+    label?: string;
+    question?: string;
+    type?: 'select' | 'number' | string;
+    required?: boolean;
+    options?: Array<string | { label?: string; value?: string }>;
+    [key: string]: unknown;
+}
+
+export interface SizingQuestionnaire {
+    profile?: 'tops' | 'bottoms' | 'full_body' | string;
+    questions?: SizingQuestion[];
+    [key: string]: unknown;
+}
+
+export interface ProductSizing {
+    availability: SizingAvailability;
+    chart?: NormalizedSizeChart | null;
+    size_chart?: NormalizedSizeChart | null;
+    section?: SizeChartSection | null;
+    selected_section?: SizeChartSection | null;
+    variants?: ProductVariant[];
+    questionnaire?: SizingQuestionnaire | null;
+}
+
+export interface SizeRecommendationRequest {
+    usual_size?: string;
+    fit?: 'fitted' | 'regular' | 'relaxed' | string;
+    measurements?: Record<string, number>;
+}
+
+export interface SizeRecommendation {
+    recommended_size: string;
+    variant_id?: string;
+    confidence?: number | string;
+    alternative_size?: string | null;
+    algorithm_version?: string;
+}
+
 export interface ProductCategory {
     id: string;
     name: string;

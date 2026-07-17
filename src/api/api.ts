@@ -86,6 +86,15 @@ export type {
     ProductPricing,
     ProductVariant,
     ProductOption,
+    SizingAvailability,
+    SizeChartRow,
+    SizeChartSection,
+    NormalizedSizeChart,
+    SizingQuestion,
+    SizingQuestionnaire,
+    ProductSizing,
+    SizeRecommendationRequest,
+    SizeRecommendation,
     ProductCategory,
     CatalogMetadata,
     FilterOptions,
@@ -168,6 +177,9 @@ export { Analytics, Probe } from "./analyticsApi";
 
 // Catalog module
 export { Catalog, AdminCatalog } from "./catalogApi";
+
+// Sizing module
+export { Sizing } from "./sizingApi";
 
 // Campaigns module
 export { Campaigns } from "./campaignsApi";

@@ -780,6 +780,30 @@ Removes a single product from an existing collection.
 
 ---
 
+## Sizing
+
+### Get approved sizing data
+`GET /api/v2/catalog/{id}/sizing`
+
+Returns only an approved normalized chart, the matching section, available variants,
+and the taxonomy-selected questionnaire. Source image/HTML artifacts are never exposed
+as normalized customer data. `availability` is one of `normalized`,
+`needs_manual_review`, `not_found`, or `not_required`.
+
+### Get a size recommendation
+`POST /api/v2/catalog/{id}/sizing/recommend`
+
+```json
+{
+  "usual_size": "M",
+  "fit": "regular",
+  "measurements": {"chest": 40}
+}
+```
+
+The deterministic `size-match-v1` matcher only considers available variants and never
+calls Gemini at request time.
+
 ## Admin Product Endpoints
 
 ### Update Product
