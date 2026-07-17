@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, ChevronDown, Loader2, Minus, Plus, X } from 'lucide-react';
+import { Check, ChevronDown, Loader2, Minus, Plus } from 'lucide-react';
 import type { CatalogHierarchy, FilterOptions } from '../../api/api';
 
 const humanizeCatalogValue = (value: string) =>
@@ -424,21 +424,14 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
         <>
             <div className="hidden lg:block">{content}</div>
 
+            {/* Sits below the sticky navbar (top-20, z-40 < navbar z-50) so the
+                navbar Filters button stays tappable and toggles the panel shut. */}
             {isMobileOpen ? (
-                <div className="fixed inset-0 z-50 lg:hidden">
-                    <div className="absolute inset-0 flex flex-col overflow-hidden bg-[#0b0b0d]">
-                        <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
+                <div className="fixed inset-x-0 bottom-0 top-20 z-40 flex flex-col overflow-hidden bg-[#0b0b0d] lg:hidden">
+                        <div className="border-b border-white/[0.08] px-5 py-4">
                             <span className="text-[15px] font-bold text-white">
                                 Filters{activeCount > 0 ? ` (${activeCount})` : ''}
                             </span>
-                            <button
-                                type="button"
-                                onClick={() => onMobileOpenChange?.(false)}
-                                aria-label="Close filters"
-                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] text-white"
-                            >
-                                <X size={20} />
-                            </button>
                         </div>
                         <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-contain px-5 pb-4">
                             {content}
@@ -459,7 +452,6 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                                 Show {totalProducts} items
                             </button>
                         </div>
-                    </div>
                 </div>
             ) : null}
         </>

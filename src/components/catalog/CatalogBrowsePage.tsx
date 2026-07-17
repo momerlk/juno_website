@@ -550,7 +550,8 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                 initialQuery={query}
                 showInlineSearch
                 showMobileFiltersButton
-                onOpenFilters={() => setIsMobileFiltersOpen(true)}
+                mobileFiltersOpen={isMobileFiltersOpen}
+                onOpenFilters={() => setIsMobileFiltersOpen((open) => !open)}
             />
 
             {/* Static radial gradients instead of blurred divs: identical glow,

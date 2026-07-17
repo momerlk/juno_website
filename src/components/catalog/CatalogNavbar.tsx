@@ -22,6 +22,7 @@ interface CatalogNavbarProps {
     initialQuery?: string;
     showInlineSearch?: boolean;
     showMobileFiltersButton?: boolean;
+    mobileFiltersOpen?: boolean;
     onOpenFilters?: () => void;
 }
 
@@ -36,6 +37,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
     initialQuery = '',
     showInlineSearch = false,
     showMobileFiltersButton = false,
+    mobileFiltersOpen = false,
     onOpenFilters,
 }) => {
     const navigate = useNavigate();
@@ -183,9 +185,14 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                             <button
                                 type="button"
                                 onClick={onOpenFilters}
-                                className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 text-[11px] font-bold uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/20 hover:bg-white/[0.06] lg:hidden"
+                                aria-pressed={mobileFiltersOpen}
+                                className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors lg:hidden ${
+                                    mobileFiltersOpen
+                                        ? 'border-primary/50 bg-primary/15 text-white'
+                                        : 'border-white/10 bg-white/[0.03] text-white/80 hover:border-white/20 hover:bg-white/[0.06]'
+                                }`}
                             >
-                                <SlidersHorizontal size={16} />
+                                {mobileFiltersOpen ? <X size={16} /> : <SlidersHorizontal size={16} />}
                                 Filters
                             </button>
                         ) : null}
