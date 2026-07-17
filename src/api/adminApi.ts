@@ -371,6 +371,16 @@ export namespace AdminPortal {
         return request(`${BASE_PATH}/orders`, 'GET', undefined, getToken());
     }
 
+    /**
+     * Fetches the full child-order record used by the admin orders list.
+     *
+     * The commerce admin endpoint is intentionally separate: it accepts a
+     * parent-order ID and returns that parent together with its children.
+     */
+    export async function getOrder(orderId: string): Promise<APIResponse<CommerceChildOrder>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}`, 'GET', undefined, getToken());
+    }
+
     export async function updateOrder(orderId: string, payload: Record<string, any>): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}`, 'PUT', payload, getToken());
     }

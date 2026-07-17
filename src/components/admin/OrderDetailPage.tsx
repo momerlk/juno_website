@@ -46,6 +46,32 @@ const statusColors: Record<string, string> = {
 
 const formatCurrency = (value?: number) => `Rs ${(value ?? 0).toLocaleString()}`;
 
+const parentFromChild = (child: Order): ParentOrder => ({
+  id: child.parent_order_id || child.id,
+  user_id: child.user_id,
+  customer_type: child.user_id?.startsWith('guest:') ? 'guest' : 'user',
+  customer_name: child.customer_name,
+  customer_phone: child.customer_phone,
+  customer_email: child.customer_email,
+  total_amount: child.total ?? child.financials?.total ?? 0,
+  shipping_fee: child.financials?.shipping_fee ?? 0,
+  subtotal: child.financials?.subtotal ?? 0,
+  status: child.status || 'pending',
+  rollup_status: child.status || 'pending',
+  payment_method: 'N/A',
+  shipping_address: child.shipping_address,
+  child_order_ids: [child.id],
+  child_summaries: [{
+    order_id: child.id,
+    seller_id: child.seller_id,
+    seller_name: child.seller_name || child.seller_id,
+    item_count: child.order_items?.length ?? 0,
+    total: child.total ?? child.financials?.total ?? 0,
+    status: child.status || 'pending',
+  }],
+  created_at: child.created_at,
+});
+
 const getAvailableInventory = (variant?: Variant, product?: Product): number | null => {
   const variantInv = variant?.inventory;
   const productInv = product?.inventory;
@@ -218,22 +244,36 @@ const OrderDetailPage: React.FC = () => {
     setError(null);
 
     try {
-      const [orderRes, sellersRes] = await Promise.all([
-        AdminCommerce.getParentOrder(orderId),
+      const [childRes, sellersRes] = await Promise.all([
+        AdminPortal.getOrder(orderId),
         AdminPortal.listSellers(),
       ]);
 
-      if (!orderRes.ok) {
-        throw new Error((orderRes.body as any)?.message || 'Failed to fetch order detail');
+      if (!childRes.ok) {
+        throw new Error((childRes.body as any)?.message || 'Failed to fetch order detail');
       }
 
-      const payload = orderRes.body as { parent: ParentOrder; children: Order[] };
-      setParent(payload.parent);
-      setChildren(payload.children ?? []);
+      const child = childRes.body as Order;
+      let payload: { parent: ParentOrder; children: Order[] } = {
+        parent: parentFromChild(child),
+        children: [child],
+      };
 
-      const firstChild = payload.children?.[0];
-      setSelectedChildId(firstChild?.id || '');
-      setNewStatus(firstChild?.status || payload.parent.rollup_status || payload.parent.status || 'pending');
+      // A list row represents a child order. Load its parent group when one
+      // exists, but keep the child detail usable for legacy/standalone orders.
+      if (child.parent_order_id) {
+        const parentRes = await AdminCommerce.getParentOrder(child.parent_order_id);
+        if (parentRes.ok) {
+          payload = parentRes.body as { parent: ParentOrder; children: Order[] };
+        }
+      }
+
+      setParent(payload.parent);
+      setChildren(payload.children);
+
+      const linkedChild = payload.children.find((candidate) => candidate.id === child.id) || payload.children[0];
+      setSelectedChildId(linkedChild?.id || '');
+      setNewStatus(linkedChild?.status || payload.parent.rollup_status || payload.parent.status || 'pending');
 
       if (sellersRes.ok && Array.isArray(sellersRes.body)) {
         setSellers(sellersRes.body as Seller[]);
