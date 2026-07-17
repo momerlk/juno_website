@@ -178,9 +178,21 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
             <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur-xl">
                 <div className="mx-auto max-w-7xl px-4 md:px-6">
                     <div className="flex min-h-20 items-center gap-3 py-3">
+                        {/* On filterable pages the Filters button replaces the logo on mobile. */}
+                        {showMobileFiltersButton ? (
+                            <button
+                                type="button"
+                                onClick={onOpenFilters}
+                                className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 text-[11px] font-bold uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/20 hover:bg-white/[0.06] lg:hidden"
+                            >
+                                <SlidersHorizontal size={16} />
+                                Filters
+                            </button>
+                        ) : null}
+
                         <Link
                             to={homeHref}
-                            className="shrink-0"
+                            className={`shrink-0 ${showMobileFiltersButton ? 'hidden lg:block' : ''}`}
                             onClick={() => {
                                 setSearchQuery('');
                                 if (onSearch) onSearch('');
@@ -196,17 +208,6 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                         {desktopSearch}
 
                         <div className="ml-auto flex items-center gap-2">
-                            {showMobileFiltersButton ? (
-                                <button
-                                    type="button"
-                                    onClick={onOpenFilters}
-                                    className="inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 text-[11px] font-bold uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/20 hover:bg-white/[0.06] md:hidden"
-                                >
-                                    <SlidersHorizontal size={16} />
-                                    Filters
-                                </button>
-                            ) : null}
-
                             <button
                                 type="button"
                                 onClick={() => setSearchOpen(true)}

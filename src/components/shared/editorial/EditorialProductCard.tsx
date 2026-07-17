@@ -121,8 +121,8 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
                     ) : null}
                 </div>
 
-                <div className="flex flex-1 flex-col p-4 md:p-5">
-                    <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/40">
+                <div className="flex flex-1 flex-col p-3 md:p-4">
+                    <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-white/40 md:text-[10px]">
                         {sellerName || 'Juno Label'}
                     </p>
 
@@ -131,23 +131,23 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
                         style={{
                             fontFamily: 'Montserrat, sans-serif',
                             fontWeight: 900,
-                            fontSize: 'clamp(1.05rem, 1.6vw, 1.35rem)',
-                            lineHeight: 1,
-                            letterSpacing: '-0.045em',
+                            fontSize: 'clamp(0.9rem, 1.2vw, 1.1rem)',
+                            lineHeight: 1.05,
+                            letterSpacing: '-0.035em',
                         }}
                     >
                         {title}
                     </h3>
 
-                    <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+                    <div className="mt-auto flex items-end justify-between gap-3 pt-3">
                         <div className="flex items-baseline gap-2">
                             <span
                                 className="text-white"
                                 style={{
                                     fontFamily: 'Montserrat, sans-serif',
                                     fontWeight: 900,
-                                    fontSize: '1.1rem',
-                                    letterSpacing: '-0.04em',
+                                    fontSize: '1rem',
+                                    letterSpacing: '-0.03em',
                                 }}
                             >
                                 {formatCurrency(price)}
@@ -169,4 +169,7 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
     );
 };
 
-export default EditorialProductCard;
+// Memoized: browse pages accumulate hundreds of cards via infinite scroll and
+// re-render the whole grid on every loading-state toggle. Product props keep
+// stable identities across appends, so memo comparison stays cheap.
+export default React.memo(EditorialProductCard);

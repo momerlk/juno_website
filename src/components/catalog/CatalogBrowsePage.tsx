@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom';
 import {
     AlertCircle,
-    Filter,
     Loader2,
     RefreshCw,
     X,
@@ -145,7 +144,6 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
     const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get('q') ?? '');
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
-    const observerTarget = useRef<HTMLDivElement>(null);
     const requestIdRef = useRef(0);
 
     const query = searchParams.get('q') ?? '';
@@ -427,19 +425,30 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
         pakistaniWear,
     ]);
 
-    useEffect(() => {
+    const loadMoreRef = useRef({ hasMore, isLoading, loadProducts });
+    loadMoreRef.current = { hasMore, isLoading, loadProducts };
+
+    // Callback ref: the sentinel div mounts/unmounts with the product grid, so
+    // the observer is created exactly once per sentinel instead of on every
+    // state change (the old deps caused constant disconnect/reconnect churn).
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const observerTarget = useCallback((node: HTMLDivElement | null) => {
+        observerRef.current?.disconnect();
+        observerRef.current = null;
+        if (!node) return;
+
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0]?.isIntersecting && hasMore && !isLoading) {
-                    loadProducts(true);
+                const { hasMore: more, isLoading: loading, loadProducts: load } = loadMoreRef.current;
+                if (entries[0]?.isIntersecting && more && !loading) {
+                    load(true);
                 }
             },
             { threshold: 0.1 }
         );
-
-        if (observerTarget.current) observer.observe(observerTarget.current);
-        return () => observer.disconnect();
-    }, [hasMore, isLoading, loadProducts]);
+        observer.observe(node);
+        observerRef.current = observer;
+    }, []);
 
     const hasFilters = Boolean(
         debouncedQuery ||
@@ -521,6 +530,19 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
         [updateParam]
     );
 
+    const handleSortChange = useCallback(
+        (value: string) => {
+            const [nextSort, nextOrder] = value.split(':');
+            const next = new URLSearchParams(searchParams);
+            next.set('sort', nextSort);
+            next.set('order', nextOrder);
+            next.delete('page');
+            next.delete('cursor');
+            setSearchParams(next);
+        },
+        [searchParams, setSearchParams]
+    );
+
     return (
         <div className="min-h-screen bg-[#050505] pb-16 text-white">
             <CatalogNavbar
@@ -531,77 +553,95 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                 onOpenFilters={() => setIsMobileFiltersOpen(true)}
             />
 
-            <div className="pointer-events-none fixed inset-0 z-0">
-                <div className="absolute -left-32 -top-32 h-[36rem] w-[36rem] rounded-full bg-primary/10 blur-[140px]" />
-                <div className="absolute bottom-0 right-0 h-[28rem] w-[28rem] rounded-full bg-secondary/10 blur-[160px]" />
-            </div>
+            {/* Static radial gradients instead of blurred divs: identical glow,
+                but no giant blur layers for the GPU to composite on scroll. */}
+            <div
+                className="pointer-events-none fixed inset-0 z-0"
+                style={{
+                    background:
+                        'radial-gradient(40rem 40rem at 0% 0%, rgba(255,24,24,0.08), transparent 70%), radial-gradient(32rem 32rem at 100% 100%, rgba(255,69,133,0.08), transparent 70%)',
+                }}
+            />
 
-            <div className="relative z-10 lg:pl-[24rem]">
+            <div className="relative z-10 mx-auto max-w-[1500px] px-4 md:px-6 lg:px-8">
                 {showShowcase ? (
-                    <div className="w-full px-4 pt-4 md:px-6 lg:px-8">
-                        <ResponsiveDownloadBanner className="shadow-[0_22px_60px_rgba(0,0,0,0.35)]" rounded={false} />
+                    <div className="pt-4 md:pt-6">
+                        <ResponsiveDownloadBanner className="shadow-[0_22px_60px_rgba(0,0,0,0.35)]" />
                     </div>
                 ) : null}
 
-                <div className="hidden lg:fixed lg:inset-y-20 lg:left-0 lg:z-20 lg:block lg:w-[24rem]">
-                    <CatalogSidebar
-                        options={filterOptions}
-                        hierarchy={hierarchy}
-                        isLoading={isRefreshingResults || (isMetaLoading && products.length > 0)}
-                        totalProducts={displayTotalProducts}
-                        isMobileOpen={isMobileFiltersOpen}
-                        onMobileOpenChange={setIsMobileFiltersOpen}
-                    />
-                </div>
+                {/* Mobile filter drawer. Mounted only while open so exactly one
+                    CatalogSidebar instance ever manages the body scroll lock —
+                    two concurrent instances corrupt the saved overflow value and
+                    leave the whole site unscrollable. */}
+                {isMobileFiltersOpen ? (
+                    <div className="lg:hidden">
+                        <CatalogSidebar
+                            options={filterOptions}
+                            hierarchy={hierarchy}
+                            isLoading={isRefreshingResults || (isMetaLoading && products.length > 0)}
+                            totalProducts={displayTotalProducts}
+                            isMobileOpen
+                            onMobileOpenChange={setIsMobileFiltersOpen}
+                        />
+                    </div>
+                ) : null}
 
-                <div className="px-4 pb-16 pt-8 md:px-6 md:pb-24 md:pt-12 lg:px-8">
-                    <div className="flex flex-col gap-8">
-                        <aside className="w-full lg:hidden">
-                            <CatalogSidebar
-                                options={filterOptions}
-                                hierarchy={hierarchy}
-                                isLoading={isRefreshingResults || (isMetaLoading && products.length > 0)}
-                                totalProducts={displayTotalProducts}
-                                isMobileOpen={isMobileFiltersOpen}
-                                onMobileOpenChange={setIsMobileFiltersOpen}
-                            />
-                        </aside>
+                <div className="pb-16 pt-6 md:pb-24 md:pt-8 lg:flex lg:items-start lg:gap-10">
+                    <aside className="sticky top-24 hidden max-h-[calc(100vh-7rem)] w-[16.5rem] shrink-0 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 lg:block">
+                        <CatalogSidebar
+                            options={filterOptions}
+                            hierarchy={hierarchy}
+                            isLoading={isRefreshingResults || (isMetaLoading && products.length > 0)}
+                            totalProducts={displayTotalProducts}
+                        />
+                    </aside>
 
-                        <main className="min-w-0">
-                            <div className="mb-6 flex flex-wrap items-end justify-between gap-4 md:mb-10">
-                                <div className="min-w-0 flex-1">
+                    <main className="min-w-0 lg:flex-1">
+                            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 md:mb-7">
+                                <div className="min-w-0">
                                     <h2
                                         className="text-white"
                                         style={{
                                             fontFamily: 'Montserrat, sans-serif',
                                             fontWeight: 900,
-                                            fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
-                                            lineHeight: 0.92,
-                                            letterSpacing: '-0.045em',
+                                            fontSize: 'clamp(1.5rem, 3vw, 2.15rem)',
+                                            lineHeight: 0.95,
+                                            letterSpacing: '-0.04em',
                                             textTransform: 'uppercase',
                                         }}
                                     >
                                         {debouncedQuery ? 'Search Results' : hasFilters ? 'Catalog' : 'All Products'}
                                     </h2>
+                                    <p className="mt-1.5 text-[12px] tabular-nums text-white/40">
+                                        Showing {visibleProductsCount} of {displayTotalProducts} products
+                                    </p>
                                 </div>
 
-                                <div className="flex shrink-0 items-center gap-3">
-                                    <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white/55 md:inline-flex">
-                                        <Filter size={12} />
-                                        {activeFilterCount} active
-                                    </div>
+                                <div className="flex shrink-0 items-center gap-2.5">
                                     {hasFilters ? (
                                         <button
                                             onClick={clearFilters}
-                                            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/65 transition-colors hover:border-white/20 hover:text-white"
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-2 text-[12px] font-semibold text-white/65 transition-colors hover:border-white/25 hover:text-white"
                                         >
-                                            <X size={12} />
+                                            <X size={13} />
                                             Clear
                                         </button>
                                     ) : null}
-                                    <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
-                                        Showing {visibleProductsCount} of {displayTotalProducts}
-                                    </p>
+                                    <select
+                                        value={`${sort}:${order}`}
+                                        onChange={(event) => handleSortChange(event.target.value)}
+                                        aria-label="Sort products"
+                                        className="rounded-lg border border-white/12 bg-[#121214] px-3 py-2 text-[12px] font-semibold text-white/80 outline-none focus:border-primary/60"
+                                    >
+                                        <option value="popularity:desc">Most popular</option>
+                                        <option value="created_at:desc">Newest first</option>
+                                        <option value="rating:desc">Top rated</option>
+                                        <option value="updated_at:desc">Recently updated</option>
+                                        <option value="price:asc">Price: low to high</option>
+                                        <option value="price:desc">Price: high to low</option>
+                                        <option value="title:asc">Title A-Z</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -659,7 +699,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                             ) : (
                                 <div className="relative">
                                     <div
-                                        className={`grid grid-cols-1 gap-4 transition-opacity duration-200 sm:grid-cols-2 xl:grid-cols-3 ${
+                                        className={`grid grid-cols-1 gap-4 transition-opacity duration-200 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${
                                             isRefreshingResults ? 'opacity-45' : 'opacity-100'
                                         }`}
                                     >
@@ -706,8 +746,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                                     ) : null}
                                 </div>
                             )}
-                        </main>
-                    </div>
+                    </main>
                 </div>
             </div>
         </div>
