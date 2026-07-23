@@ -58,6 +58,8 @@ const CreateProductPage: React.FC = () => {
   const [createMessage, setCreateMessage] = useState('');
   const [actionKey, setActionKey] = useState('');
   const [uploadingMedia, setUploadingMedia] = useState<'image' | 'video' | 'size-chart' | null>(null);
+  const [imageOptionName, setImageOptionName] = useState('');
+  const [imageOptionValue, setImageOptionValue] = useState('');
 
   useEffect(() => {
     const loadSellers = async () => {
@@ -78,6 +80,12 @@ const CreateProductPage: React.FC = () => {
   const hasSizing = Boolean(
     createDraft.sizing_guide?.size_fit?.trim() || Object.keys(createDraft.sizing_guide?.size_chart || {}).length > 0 || createDraft.sizing_guide?.image_url?.trim() || createDraft.sizing_guide?.html_table?.trim(),
   );
+  const imageOption = useMemo(
+    () => createDraft.options.find((option) => option.name.trim() === imageOptionName) || createDraft.options[0],
+    [createDraft.options, imageOptionName],
+  );
+  const selectedImageOptionName = imageOption?.name.trim() || '';
+  const selectedImageOptionValue = imageOption?.values.includes(imageOptionValue) ? imageOptionValue : imageOption?.values[0] || '';
 
   const generateVariantCombinations = useCallback((options: Option[]) => {
     const normalizedOptions = options
@@ -121,6 +129,7 @@ const CreateProductPage: React.FC = () => {
           sku: existingVariant?.sku || '',
           title,
           options: combo,
+          image_url: existingVariant?.image_url,
           price: existingVariant?.price ?? basePrice,
           compare_at_price: existingVariant?.compare_at_price,
           inventory: existingVariant?.inventory || { quantity: defaultQuantity, available_quantity: defaultQuantity },
@@ -179,7 +188,14 @@ const CreateProductPage: React.FC = () => {
   };
 
   const handleRemoveImage = (index: number) => {
-    setCreateDraft((prev) => ({ ...prev, images: prev.images.filter((_, imageIndex) => imageIndex !== index) }));
+    setCreateDraft((prev) => {
+      const image_url = prev.images[index];
+      return {
+        ...prev,
+        images: prev.images.filter((_, imageIndex) => imageIndex !== index),
+        variants: prev.variants.map((variant) => variant.image_url === image_url ? { ...variant, image_url: undefined } : variant),
+      };
+    });
   };
 
   const handleReorderImage = (index: number, direction: 'left' | 'right') => {
@@ -281,6 +297,14 @@ const CreateProductPage: React.FC = () => {
           available: numericValue > 0,
         };
       }),
+    }));
+  };
+
+  const assignImageToOptionValue = (image_url: string) => {
+    if (!selectedImageOptionName || !selectedImageOptionValue) return;
+    setCreateDraft((prev) => ({
+      ...prev,
+      variants: prev.variants.map((variant) => variant.options[selectedImageOptionName] === selectedImageOptionValue ? { ...variant, image_url } : variant),
     }));
   };
 
@@ -629,6 +653,32 @@ const CreateProductPage: React.FC = () => {
                   <Plus size={14} />
                   Add another option
                 </button>
+              ) : null}
+
+              {createDraft.images.length > 0 && imageOption ? (
+                <div className={subtleCardClassName}>
+                  <p className="text-sm font-medium text-white">Assign images by option</p>
+                  <p className="mt-1 text-xs text-white/45">Choose a value, then click its gallery image once to apply it to every matching variant.</p>
+                  <select value={selectedImageOptionName} onChange={(e) => { setImageOptionName(e.target.value); setImageOptionValue(''); }} className="mt-3 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none [color-scheme:dark]">
+                    {createDraft.options.filter((option) => option.name.trim() && option.values.some(Boolean)).map((option) => <option key={option.name} value={option.name.trim()}>{option.name.trim()}</option>)}
+                  </select>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {imageOption.values.filter(Boolean).map((value) => {
+                      const assignedImage = createDraft.variants.find((variant) => variant.options[selectedImageOptionName] === value)?.image_url;
+                      return <button key={value} type="button" onClick={() => setImageOptionValue(value)} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${selectedImageOptionValue === value ? 'border-primary bg-primary/10 text-white' : 'border-white/10 bg-black/20 text-white/70'}`}>
+                        {assignedImage ? <img src={assignedImage} alt="" className="h-6 w-6 rounded object-cover" /> : null}
+                        {value}
+                      </button>;
+                    })}
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                    {createDraft.images.map((image) => (
+                      <button key={image} type="button" onClick={() => assignImageToOptionValue(image)} className={`overflow-hidden rounded-lg border-2 ${createDraft.variants.find((variant) => variant.options[selectedImageOptionName] === selectedImageOptionValue)?.image_url === image ? 'border-primary' : 'border-transparent hover:border-white/40'}`} title={`Assign to ${selectedImageOptionName}: ${selectedImageOptionValue}`}>
+                        <img src={image} alt={`Assign to ${selectedImageOptionValue}`} className="aspect-square w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : null}
 
               {createDraft.variants.length > 0 ? (

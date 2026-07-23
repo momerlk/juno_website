@@ -172,6 +172,7 @@ export const buildAdminProductPayload = (draft: CreateProductDraft, seller?: Sel
         sku: variant.sku || '',
         title: variant.title || `Variant ${index + 1}`,
         options: variant.options || {},
+        image_url: variant.image_url || undefined,
         price: Number.isFinite(variantPrice) && variantPrice > 0 ? variantPrice : price,
         compare_at_price: Number.isFinite(variantCompareAt) && variantCompareAt > 0 ? variantCompareAt : undefined,
         inventory: {

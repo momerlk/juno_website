@@ -539,7 +539,13 @@ To include enrichment data (product type, gender) at creation time, include the 
   "seller_id": "uuid",
   "pricing": { "price": 3500 },
   "images": ["https://cdn.example.com/img1.jpg"],
-  "variants": [],
+  "variants": [
+    {
+      "title": "Blue / Medium",
+      "options": { "Color": "Blue", "Size": "M" },
+      "image_url": "https://cdn.example.com/floral-lawn-blue.jpg"
+    }
+  ],
   "enrichment": {
     "product_type": "Eastern",
     "gender": "Female",
@@ -557,6 +563,8 @@ To include enrichment data (product type, gender) at creation time, include the 
 ```
 
 Upload an image first through `POST /api/v2/files/upload`, then send its public URL as `sizing_guide.image_url`. `sizing_guide.html_table` must contain a `<table>` and permits only table markup (`table`, section/row/cell tags, `caption`, `colgroup`, `col`, `br`, and `span`) with `class`, `id`, `colspan`, `rowspan`, and `scope` attributes.
+
+Set `variants[].image_url` to the product-image URL that should be displayed when that variant is selected. This is normally used for colour variants; the URL should also be included in the product's top-level `images` gallery.
 
 **Response `201`**: `catalog.Product`
 
@@ -687,6 +695,7 @@ Updates the product details of a queued item. Preserves the queue status, seller
       "sku": "RF-001-S",
       "title": "Small",
       "options": { "Size": "S" },
+      "image_url": "https://cdn.example.com/img1-small.jpg",
       "price": 3800,
       "available": true
     }
@@ -701,6 +710,10 @@ Updates the product details of a queued item. Preserves the queue status, seller
 - `400 INVALID_BODY` — malformed JSON
 - `401 UNAUTHORIZED` — missing or invalid seller token
 - `404 NOT_FOUND` — queue item not found
+
+### Imported Variant Images
+
+Shopify imports link each variant to its matching image when Shopify provides `image_id` (Admin API) or `featured_image` (storefront scraping). WooCommerce/WordPress CSV imports use the first URL in each variation row's `Images` column. Images without a source-specific variant mapping remain product-gallery images only.
 
 ---
 

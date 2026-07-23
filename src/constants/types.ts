@@ -91,6 +91,7 @@ export interface Variant {
   weight?: number;
   dimensions?: Dimensions;
   images?: string[];
+  image_url?: string;
   inventory: any;
 
   position: number;

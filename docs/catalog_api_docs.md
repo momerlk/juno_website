@@ -138,7 +138,7 @@ Returns full details for a single product.
   },
   "images": ["https://cdn.example.com/img1.jpg", "https://cdn.example.com/img2.jpg"],
   "variants": [
-    { "id": "...", "sku": "KH-001-S", "title": "Small", "options": {"Size": "S"}, "price": 3500, "available": true }
+    { "id": "...", "sku": "KH-001-S", "title": "Small", "options": {"Size": "S", "Color": "Blue"}, "image_url": "https://cdn.example.com/blue.jpg", "price": 3500, "available": true }
   ],
   "options": [{ "name": "Size", "values": ["S", "M", "L"] }],
   "tags": ["summer", "lawn", "floral"],
@@ -196,6 +196,7 @@ Returns full details for a single product.
 | `pricing.cost_price` | number | Seller's purchase/production cost (for profit calculation only) |
 | `images` | string[] | Product image URLs |
 | `variants` | array | Product variants (sizes, colors) |
+| `variants[].image_url` | string | Optional product image to show when this variant is selected, typically its colour image |
 | `options` | array | Configurable options |
 | `tags` | string[] | Search/discovery keywords |
 | `inventory` | object | Stock status |

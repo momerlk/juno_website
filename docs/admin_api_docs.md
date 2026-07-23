@@ -679,6 +679,8 @@ Size charts are optional under `sizing_guide`:
 
 Upload images with `POST /api/v2/files/upload` and use the returned public URL. HTML must contain a table and is restricted to safe table markup; only `colspan`, `rowspan`, and `scope` attributes are accepted.
 
+For colour-specific media, set `variants[].image_url` to the matching product-image URL. Keep the same URL in the product's top-level `images` gallery.
+
 ### Get Catalog Product
 `GET /api/v2/admin/products/{id}`
 
@@ -705,6 +707,13 @@ Example:
     "shipping_included": false
   },
   "status": "active",
+  "variants": [
+    {
+      "id": "variant-blue-m",
+      "options": { "Color": "Blue", "Size": "M" },
+      "image_url": "https://cdn.example.com/product-blue.jpg"
+    }
+  ],
   "sizing_guide": {
     "html_table": "<table><tr><th>Size</th><th>Length</th></tr><tr><td>M</td><td>42</td></tr></table>",
     "measurement_unit": "inches"
