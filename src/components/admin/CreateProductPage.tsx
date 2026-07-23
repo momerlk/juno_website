@@ -11,11 +11,9 @@ import {
   X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { uploadFileAndGetUrl } from '../../api/shared';
+import { uploadFileAndGetUrl, uploadImagesAndGetUrls } from '../../api/shared';
 import { AdminPortal } from '../../api/adminApi';
 import type { Option, Variant } from '../../constants/types';
-import { apparelTypes, productTypes } from '../../constants/sizing';
-import SizingGuideEditor from '../seller/SizingGuideEditor';
 import {
   BADGE_LABELS,
   EMPTY_CREATE_DRAFT,
@@ -59,7 +57,7 @@ const CreateProductPage: React.FC = () => {
   const [createError, setCreateError] = useState('');
   const [createMessage, setCreateMessage] = useState('');
   const [actionKey, setActionKey] = useState('');
-  const [uploadingMedia, setUploadingMedia] = useState<'image' | 'video' | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState<'image' | 'video' | 'size-chart' | null>(null);
 
   useEffect(() => {
     const loadSellers = async () => {
@@ -73,21 +71,12 @@ const CreateProductPage: React.FC = () => {
     () => sellers.find((entry) => getSellerId(entry) === createDraft.seller_id),
     [createDraft.seller_id, sellers],
   );
-  const isApparel = useMemo(() => apparelTypes.includes(createDraft.product_type || ''), [createDraft.product_type]);
-  const currentGender = createDraft.gender;
   const totalStock = useMemo(
     () => (createDraft.variants || []).reduce((sum, variant) => sum + Math.max(0, Number(variant.inventory?.quantity || 0)), 0),
     [createDraft.variants],
   );
-  const sizeOptionValues = useMemo(
-    () =>
-      createDraft.options
-        .find((option) => option.name.toLowerCase() === 'size')
-        ?.values.filter((value) => value.trim() !== '') || [],
-    [createDraft.options],
-  );
   const hasSizing = Boolean(
-    createDraft.sizing_guide?.size_fit?.trim() || Object.keys(createDraft.sizing_guide?.size_chart || {}).length > 0,
+    createDraft.sizing_guide?.size_fit?.trim() || Object.keys(createDraft.sizing_guide?.size_chart || {}).length > 0 || createDraft.sizing_guide?.image_url?.trim() || createDraft.sizing_guide?.html_table?.trim(),
   );
 
   const generateVariantCombinations = useCallback((options: Option[]) => {
@@ -119,6 +108,7 @@ const CreateProductPage: React.FC = () => {
   useEffect(() => {
     if (!createDraft.options.length) return;
     const basePrice = Number(createDraft.price) > 0 ? Number(createDraft.price) : 0;
+    const defaultQuantity = Math.max(0, Number(createDraft.available_quantity) || 0);
     const combinations = generateVariantCombinations(createDraft.options);
     if (!combinations.length) return;
 
@@ -133,7 +123,7 @@ const CreateProductPage: React.FC = () => {
           options: combo,
           price: existingVariant?.price ?? basePrice,
           compare_at_price: existingVariant?.compare_at_price,
-          inventory: existingVariant?.inventory || { quantity: 0, available_quantity: 0 },
+          inventory: existingVariant?.inventory || { quantity: defaultQuantity, available_quantity: defaultQuantity },
           position: index,
           is_default: existingVariant?.is_default ?? index === 0,
           available: existingVariant?.available ?? Number(existingVariant?.inventory?.quantity || 0) > 0,
@@ -141,25 +131,48 @@ const CreateProductPage: React.FC = () => {
       });
       return { ...prev, variants: nextVariants };
     });
-  }, [createDraft.options, createDraft.price, generateVariantCombinations]);
+  }, [createDraft.options, createDraft.price, createDraft.available_quantity, generateVariantCombinations]);
 
   const handleDraftField = <K extends keyof CreateProductDraft>(key: K, value: CreateProductDraft[K]) => {
     setCreateDraft((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleMediaUpload = async (file: File, mediaType: 'image' | 'video') => {
+  const handleImageUpload = async (files: FileList) => {
+    if (!files.length) return;
+    setUploadingMedia('image');
+    setCreateError('');
+    try {
+      const urls = await uploadImagesAndGetUrls(files);
+      setCreateDraft((prev) => ({ ...prev, images: [...prev.images, ...urls] }));
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : 'Image upload failed.');
+    } finally {
+      setUploadingMedia(null);
+    }
+  };
+
+  const handleMediaUpload = async (file: File) => {
     if (!file) return;
-    setUploadingMedia(mediaType);
+    setUploadingMedia('video');
     setCreateError('');
     try {
       const url = await uploadFileAndGetUrl(file, 'high_quality');
-      setCreateDraft((prev) =>
-        mediaType === 'image'
-          ? { ...prev, images: [...prev.images, url] }
-          : { ...prev, video_url: url },
-      );
+      setCreateDraft((prev) => ({ ...prev, video_url: url }));
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : 'Upload failed.');
+    } finally {
+      setUploadingMedia(null);
+    }
+  };
+
+  const handleSizeChartUpload = async (file: File) => {
+    setUploadingMedia('size-chart');
+    setCreateError('');
+    try {
+      const image_url = await uploadFileAndGetUrl(file, 'high_quality');
+      handleDraftField('sizing_guide', { ...createDraft.sizing_guide, image_url });
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : 'Size chart upload failed.');
     } finally {
       setUploadingMedia(null);
     }
@@ -225,6 +238,11 @@ const CreateProductPage: React.FC = () => {
     });
   };
 
+  const addNextOptionValue = (optionIndex: number, valueIndex: number) => {
+    addOptionValueField(optionIndex);
+    requestAnimationFrame(() => document.getElementById(`option-${optionIndex}-value-${valueIndex + 1}`)?.focus());
+  };
+
   const removeOptionValueField = (optionIndex: number, valueIndex: number) => {
     setCreateDraft((prev) => {
       const options = [...prev.options];
@@ -266,18 +284,33 @@ const CreateProductPage: React.FC = () => {
     }));
   };
 
+  const handleDefaultStockChange = (value: string) => {
+    const quantity = Math.max(0, Number(value) || 0);
+    setCreateDraft((prev) => ({
+      ...prev,
+      available_quantity: value,
+      variants: prev.variants.map((variant) => ({
+        ...variant,
+        inventory: { ...variant.inventory, quantity, available_quantity: quantity },
+        available: quantity > 0,
+      })),
+    }));
+  };
+
+  const handleBasePriceChange = (value: string) => {
+    const price = Math.max(0, Number(value) || 0);
+    setCreateDraft((prev) => ({ ...prev, price: value, variants: prev.variants.map((variant) => ({ ...variant, price })) }));
+  };
+
   const validateDraft = () => {
     const issues: string[] = [];
     if (!createDraft.seller_id) issues.push('Seller is required.');
     if (!createDraft.title.trim()) issues.push('Title is required.');
     if (!createDraft.description.trim()) issues.push('Description is required.');
-    if (!createDraft.product_type.trim()) issues.push('Category is required.');
-    if (!createDraft.gender.trim()) issues.push('Gender is required.');
     if (!Number.isFinite(Number(createDraft.price)) || Number(createDraft.price) <= 0) issues.push('Enter a valid price.');
     if (!createDraft.images.length) issues.push('Add at least one image.');
     if (createDraft.variants.length > 0 && totalStock <= 0) issues.push('Variant stock cannot be zero.');
     if (createDraft.variants.length === 0 && Number(createDraft.available_quantity) < 0) issues.push('Enter a valid stock quantity.');
-    if (isApparel && sizeOptionValues.length > 0 && !hasSizing) issues.push('Complete sizing guide for apparel with size variants.');
     if (issues.length > 0) {
       setCreateError(issues.join(' '));
       return false;
@@ -360,51 +393,7 @@ const CreateProductPage: React.FC = () => {
                 />
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
-                <label className="text-xs text-neutral-400">
-                  Category
-                  <select
-                    value={createDraft.product_type}
-                    onChange={(e) => handleDraftField('product_type', e.target.value)}
-                    className={`${fieldClassName} [color-scheme:dark]`}
-                  >
-                    <option value="">Select category</option>
-                    {productTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </label>
 
-                <label className="text-xs text-neutral-400">
-                  Gender
-                  <select
-                    value={currentGender}
-                    onChange={(e) => handleDraftField('gender', e.target.value)}
-                    className={`${fieldClassName} [color-scheme:dark]`}
-                  >
-                    <option value="">Select gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="unisex">Unisex</option>
-                  </select>
-                </label>
-
-                <label className="text-xs text-neutral-400">
-                  Status
-                  <select
-                    value={createDraft.status}
-                    onChange={(e) => handleDraftField('status', e.target.value as CreateProductDraft['status'])}
-                    className={`${fieldClassName} [color-scheme:dark]`}
-                  >
-                    <option value="active">active</option>
-                    <option value="embedding_pending">embedding_pending</option>
-                    <option value="needs_review">needs_review</option>
-                    <option value="queue">queue</option>
-                  </select>
-                </label>
-              </div>
             </div>
           </section>
 
@@ -448,13 +437,14 @@ const CreateProductPage: React.FC = () => {
 
               <label className="flex h-28 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/15 bg-black/20 text-center text-xs text-white/55 transition-colors hover:border-white/25">
                 {uploadingMedia === 'image' ? <Loader size={18} className="animate-spin" /> : <Upload size={18} />}
-                <span className="mt-2">Add image</span>
+                <span className="mt-2">Add images (up to 10)</span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
                   className="hidden"
                   disabled={uploadingMedia !== null}
-                  onChange={(e) => e.target.files?.[0] && void handleMediaUpload(e.target.files[0], 'image')}
+                  multiple
+                  onChange={(e) => e.target.files && void handleImageUpload(e.target.files)}
                 />
               </label>
             </div>
@@ -479,7 +469,7 @@ const CreateProductPage: React.FC = () => {
                   accept="video/*"
                   className="hidden"
                   disabled={uploadingMedia !== null}
-                  onChange={(e) => e.target.files?.[0] && void handleMediaUpload(e.target.files[0], 'video')}
+                  onChange={(e) => e.target.files?.[0] && void handleMediaUpload(e.target.files[0])}
                 />
               </label>
             </div>
@@ -488,7 +478,7 @@ const CreateProductPage: React.FC = () => {
           <section className={cardClassName}>
             <div className="mb-4 flex items-center gap-2">
               <Package size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold">Pricing and shipping</h3>
+              <h3 className="text-sm font-semibold">Price and stock</h3>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -496,39 +486,21 @@ const CreateProductPage: React.FC = () => {
                 Price
                 <input
                   value={createDraft.price}
-                  onChange={(e) => handleDraftField('price', e.target.value)}
+                  onChange={(e) => handleBasePriceChange(e.target.value)}
                   type="number"
                   min="0"
+                  placeholder="PKR"
                   className={fieldClassName}
                 />
               </label>
               <label className="text-xs text-neutral-400">
-                Compare-at price
+                Price before discount
                 <input
                   value={createDraft.compare_at_price}
                   onChange={(e) => handleDraftField('compare_at_price', e.target.value)}
                   type="number"
                   min="0"
-                  className={fieldClassName}
-                />
-              </label>
-              <label className="text-xs text-neutral-400">
-                Unit price
-                <input
-                  value={createDraft.unit_price}
-                  onChange={(e) => handleDraftField('unit_price', e.target.value)}
-                  type="number"
-                  min="0"
-                  className={fieldClassName}
-                />
-              </label>
-              <label className="text-xs text-neutral-400">
-                Cost price
-                <input
-                  value={createDraft.cost_price}
-                  onChange={(e) => handleDraftField('cost_price', e.target.value)}
-                  type="number"
-                  min="0"
+                  placeholder="PKR"
                   className={fieldClassName}
                 />
               </label>
@@ -536,7 +508,7 @@ const CreateProductPage: React.FC = () => {
                 Default stock
                 <input
                   value={createDraft.available_quantity}
-                  onChange={(e) => handleDraftField('available_quantity', e.target.value)}
+                  onChange={(e) => handleDefaultStockChange(e.target.value)}
                   type="number"
                   min="0"
                   className={fieldClassName}
@@ -553,16 +525,6 @@ const CreateProductPage: React.FC = () => {
                 />
               </label>
             </div>
-
-            <label className="mt-4 flex items-center gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-3 text-sm text-white/80">
-              <input
-                type="checkbox"
-                checked={createDraft.shipping_included}
-                onChange={(e) => handleDraftField('shipping_included', e.target.checked)}
-                className="accent-white"
-              />
-              Shipping included in listed price
-            </label>
           </section>
 
           <section className={cardClassName}>
@@ -618,9 +580,13 @@ const CreateProductPage: React.FC = () => {
                             value={value}
                             placeholder={isLastField ? 'Add value...' : ''}
                             onChange={(e) => handleOptionValueFieldChange(optionIndex, valueIndex, e.target.value)}
-                            onBlur={(e) => {
-                              if (isLastField && e.target.value.trim() !== '') addOptionValueField(optionIndex);
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && isLastField && e.currentTarget.value.trim()) {
+                                e.preventDefault();
+                                addNextOptionValue(optionIndex, valueIndex);
+                              }
                             }}
+                            id={`option-${optionIndex}-value-${valueIndex}`}
                             className="flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/20"
                           />
                           {!isOnlyField ? (
@@ -709,18 +675,29 @@ const CreateProductPage: React.FC = () => {
               <Package size={16} className="text-primary" />
               <h3 className="text-sm font-semibold">Sizing guide</h3>
             </div>
-            {isApparel ? (
-              <SizingGuideEditor
-                value={createDraft.sizing_guide}
-                onChange={(value) => handleDraftField('sizing_guide', value)}
-                productType={createDraft.product_type}
-                availableSizes={sizeOptionValues}
-              />
-            ) : (
-              <div className="rounded-lg border border-white/10 bg-black/20 p-4 text-sm text-white/45">
-                Sizing guide appears for apparel categories. Select an apparel category if this product needs size measurements.
-              </div>
-            )}
+            <div className="space-y-4">
+                <div className={subtleCardClassName}>
+                  <p className="text-xs font-medium text-white">Customer-facing chart</p>
+                  <p className="mt-1 text-xs text-white/45">Upload the brand’s chart, paste its URL, or add safe table HTML.</p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <label className="text-xs text-neutral-400">
+                      Image URL
+                      <input value={createDraft.sizing_guide.image_url || ''} onChange={(e) => handleDraftField('sizing_guide', { ...createDraft.sizing_guide, image_url: e.target.value })} className={fieldClassName} placeholder="https://..." />
+                    </label>
+                    <label className="flex cursor-pointer items-end">
+                      <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-black/25 px-3 py-2.5 text-sm text-white">
+                        <Upload size={14} />
+                        {uploadingMedia === 'size-chart' ? 'Uploading...' : 'Upload chart image'}
+                      </span>
+                      <input type="file" accept="image/*" className="hidden" disabled={uploadingMedia === 'size-chart'} onChange={(e) => e.target.files?.[0] && void handleSizeChartUpload(e.target.files[0])} />
+                    </label>
+                  </div>
+                  <label className="mt-3 block text-xs text-neutral-400">
+                    Table HTML (optional)
+                    <textarea value={createDraft.sizing_guide.html_table || ''} onChange={(e) => handleDraftField('sizing_guide', { ...createDraft.sizing_guide, html_table: e.target.value })} rows={4} className={`${fieldClassName} resize-y`} placeholder="<table>...</table>" />
+                  </label>
+                </div>
+            </div>
           </section>
 
         </div>

@@ -62,7 +62,7 @@ export const EMPTY_CREATE_DRAFT: CreateProductDraft = {
   shipping_included: false,
   available_quantity: '1',
   weight: '',
-  status: 'active',
+  status: 'queue',
   is_featured: false,
   tagsInput: '',
   options: [],
@@ -207,7 +207,7 @@ export const buildAdminProductPayload = (draft: CreateProductDraft, seller?: Sel
     0,
   );
   const sizingGuide =
-    draft.sizing_guide && (Object.keys(draft.sizing_guide.size_chart || {}).length > 0 || draft.sizing_guide.size_fit?.trim())
+    draft.sizing_guide && (Object.keys(draft.sizing_guide.size_chart || {}).length > 0 || draft.sizing_guide.size_fit?.trim() || draft.sizing_guide.image_url?.trim() || draft.sizing_guide.html_table?.trim())
       ? draft.sizing_guide
       : undefined;
 
@@ -263,7 +263,7 @@ export const buildAdminProductPayload = (draft: CreateProductDraft, seller?: Sel
       requires_shipping: true,
       shipping_methods: [],
     },
-    status: draft.status,
+    status: 'queue',
     is_featured: draft.is_featured,
     badges: draft.badges,
     collections: [],

@@ -160,6 +160,8 @@ export interface SizingGuide {
   size_conversion?: Record<string, string>;
   size_fit: string;
   measurement_unit: string;
+  image_url?: string;
+  html_table?: string;
 }
 
 export interface CustomizationOption {

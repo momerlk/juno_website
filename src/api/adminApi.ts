@@ -305,6 +305,13 @@ export namespace AdminPortal {
         return request(`${BASE_PATH}/products/bulk`, 'PATCH', payload, getToken());
     }
 
+    export async function bulkAssignSizeChart(payload: {
+        product_ids: string[];
+        sizing_guide: Record<string, any>;
+    }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products/size-chart/bulk`, 'PATCH', payload, getToken());
+    }
+
     export async function bulkDeleteProducts(payload: { product_ids: string[] }): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/products/bulk-delete`, 'POST', payload, getToken());
     }

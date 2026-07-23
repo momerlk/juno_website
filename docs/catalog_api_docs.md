@@ -2,6 +2,10 @@
 
 Public product browsing, search, and filtering. No authentication required.
 
+## Product size charts
+
+Admin and seller product create/update payloads accept `sizing_guide.image_url` (the public URL returned by `POST /api/v2/files/upload`) and/or `sizing_guide.html_table`. `html_table` must contain table-only markup; use `table`, `thead`, `tbody`, `tfoot`, `tr`, `th`, `td`, `caption`, `colgroup`, `col`, `br`, and `span`, with only `class`, `id`, `colspan`, `rowspan`, and `scope` attributes.
+
 ---
 
 ## Endpoints

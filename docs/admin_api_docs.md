@@ -62,6 +62,7 @@ Auth:
 - `POST /api/v2/admin/products/filter`
 - `POST /api/v2/admin/products`
 - `PATCH /api/v2/admin/products/bulk`
+- `PATCH /api/v2/admin/products/size-chart/bulk`
 - `POST /api/v2/admin/products/bulk-delete`
 - `GET /api/v2/admin/products/{id}`
 - `PATCH /api/v2/admin/products/{id}`
@@ -103,7 +104,6 @@ Auth:
 - `POST /api/v2/admin/logistics/orders/{orderID}/dex-location-verification`
 - `POST /api/v2/admin/logistics/orders/{orderID}/dispatch-override`
 - `POST /api/v2/admin/logistics/orders/dispatch-override/bulk`
-- `POST /api/v2/admin/logistics/sellers/{sellerID}/pickup-strikes`
 - `GET /api/v2/admin/logistics/pickup-aging`
 - `POST /api/v2/admin/logistics/pickup-aging/process`
 
@@ -665,6 +665,20 @@ Admin product creation is direct-to-catalog:
   - `best_seller`
   - `thrifted`
 
+Size charts are optional under `sizing_guide`:
+
+```json
+{
+  "sizing_guide": {
+    "image_url": "https://storage.googleapis.com/juno/size-charts/product.png",
+    "html_table": "<table><thead><tr><th>Size</th><th>Length</th></tr></thead><tbody><tr><td>M</td><td>42</td></tr></tbody></table>",
+    "measurement_unit": "inches"
+  }
+}
+```
+
+Upload images with `POST /api/v2/files/upload` and use the returned public URL. HTML must contain a table and is restricted to safe table markup; only `colspan`, `rowspan`, and `scope` attributes are accepted.
+
 ### Get Catalog Product
 `GET /api/v2/admin/products/{id}`
 
@@ -691,6 +705,10 @@ Example:
     "shipping_included": false
   },
   "status": "active",
+  "sizing_guide": {
+    "html_table": "<table><tr><th>Size</th><th>Length</th></tr><tr><td>M</td><td>42</td></tr></table>",
+    "measurement_unit": "inches"
+  },
   "is_featured": true,
   "badges": {
     "marketing_campaign": true,
@@ -720,6 +738,24 @@ Body:
 ```
 
 Applies the same partial update payload to every listed product.
+
+### Bulk Assign Size Chart
+`PATCH /api/v2/admin/products/size-chart/bulk`
+
+Assigns one `sizing_guide` to up to 10,000 products with one database update. It does not read or replace individual product documents.
+
+```json
+{
+  "product_ids": ["prod-1", "prod-2"],
+  "sizing_guide": {
+    "image_url": "https://storage.googleapis.com/juno/size-charts/brand-guide.png",
+    "html_table": "<table><tr><th>Size</th><th>Chest</th></tr><tr><td>M</td><td>40</td></tr></table>",
+    "measurement_unit": "inches"
+  }
+}
+```
+
+Response counts unique requested IDs, matched product documents, and documents actually modified. HTML table markup permits `class`, `id`, `colspan`, `rowspan`, and `scope` attributes only.
 
 ### Bulk Delete Catalog Products
 `POST /api/v2/admin/products/bulk-delete`
@@ -996,9 +1032,6 @@ Documentation: [Commerce Module Tracking Docs](../commerce/docs.md#admin-order-m
 Returns the active runtime policy enforced by the backend:
 - DEX pickup threshold
 - seller-center dropoff SLA
-- strike expiry
-- strike suspension threshold
-- configured penalties
 - seller-center source
 - recipient phone export format
 - COD split policy
@@ -1013,8 +1046,6 @@ Returns the active runtime policy enforced by the backend:
 Body:
 ```json
 {
-  "max_strikes_before_suspension": 4,
-  "strike_expiry_days": 45,
   "dex_pickup_threshold": 7,
   "sla_hours": 36,
   "supported_carriers": ["DEX", "Smartlane", "Trax"]
@@ -1146,19 +1177,6 @@ Body:
 
 Applies dispatch overrides across multiple orders with per-order success or failure reporting.
 
-### Pickup Strikes
-`POST /api/v2/admin/logistics/sellers/{sellerID}/pickup-strikes`
-
-Body:
-```json
-{
-  "order_id": "order-1",
-  "reason": "seller_center_dropoff_missed",
-  "carrier": "dex",
-  "notes": "Seller missed seller-center dropoff due time"
-}
-```
-
 ### Pickup Aging
 `GET /api/v2/admin/logistics/pickup-aging?seller_id=seller-1&carrier=dex`
 
@@ -1167,12 +1185,6 @@ Returns rows with:
 - `days_waiting_for_pickup`
 - `pickup_urgency`
 - threshold state
-- strike eligibility
-
-### Process Pickup Aging
-`POST /api/v2/admin/logistics/pickup-aging/process?seller_id=seller-1&carrier=dex`
-
-Creates overdue strikes where policy conditions are met and no active strike already exists for the same order/reason.
 
 ---
 
@@ -1202,6 +1214,11 @@ Returns order-level financial rows for reconciliation and export checks.
 ## Cross-Module Admin Endpoints
 
 Specialized admin functionality also exists in other modules:
+
+### Metadata Taxonomies
+`GET /api/v2/admin/metadata/taxonomies`
+
+Returns the MongoDB-backed catalog and seller taxonomies used by admin metadata tools.
 
 ### Catalog Admin
 - `POST /api/v2/admin/catalog/collections`

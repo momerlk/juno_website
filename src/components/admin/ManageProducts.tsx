@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Edit3, Package, RefreshCw, Search, Sparkles, Trash2 } from 'lucide-react';
+import { Edit3, Package, RefreshCw, Ruler, Search, Sparkles, Trash2, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AdminPortal } from '../../api/adminApi';
 import {
@@ -19,6 +19,8 @@ import {
   type ProductBadges,
   type SellerProfile,
 } from './productManagement';
+import { uploadFileAndGetUrl } from '../../api/shared';
+import type { SizingGuide } from '../../constants/types';
 
 interface CatalogEditDraft {
   title: string;
@@ -56,6 +58,7 @@ interface ProductFilters {
 
 const PAGE_SIZE = 50;
 const PRODUCT_STATUS_OPTIONS = ['active', 'draft', 'queue', 'embedding_pending', 'needs_review', 'rejected', 'archived'];
+const EMPTY_SIZE_CHART: SizingGuide = { size_chart: {}, size_fit: '', measurement_unit: 'inch' };
 
 const EMPTY_FILTERS: ProductFilters = {
   status: 'all',
@@ -131,6 +134,7 @@ const ManageProducts: React.FC = () => {
   const [bulkStatus, setBulkStatus] = useState<string>('');
   const [bulkFeatured, setBulkFeatured] = useState<string>('');
   const [bulkTags, setBulkTags] = useState('');
+  const [bulkSizeChart, setBulkSizeChart] = useState<SizingGuide>(EMPTY_SIZE_CHART);
   const [editId, setEditId] = useState('');
   const [editDraft, setEditDraft] = useState<CatalogEditDraft>({
     title: '',
@@ -364,6 +368,42 @@ const ManageProducts: React.FC = () => {
     }
   };
 
+  const uploadBulkSizeChart = async (file: File) => {
+    setActionKey('bulk-size-chart-upload');
+    try {
+      const image_url = await uploadFileAndGetUrl(file, 'high_quality');
+      setBulkSizeChart((chart) => ({ ...chart, image_url }));
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Failed to upload size chart');
+    } finally {
+      setActionKey('');
+    }
+  };
+
+  const bulkAssignSizeChart = async () => {
+    if (!selectedIds.length || (!bulkSizeChart.image_url?.trim() && !bulkSizeChart.html_table?.trim())) return;
+    if (!window.confirm(`Replace the size chart on ${selectedIds.length} selected product(s)?`)) return;
+    setActionKey('bulk-size-chart');
+    try {
+      const response = await AdminPortal.bulkAssignSizeChart({
+        product_ids: selectedIds,
+        sizing_guide: {
+          ...(bulkSizeChart.image_url?.trim() ? { image_url: bulkSizeChart.image_url.trim() } : {}),
+          ...(bulkSizeChart.html_table?.trim() ? { html_table: bulkSizeChart.html_table.trim() } : {}),
+          measurement_unit: bulkSizeChart.measurement_unit,
+        },
+      });
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Failed to assign size chart');
+      setBulkSizeChart(EMPTY_SIZE_CHART);
+      setSelectedIds([]);
+      await fetchProducts(page);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Failed to assign size chart');
+    } finally {
+      setActionKey('');
+    }
+  };
+
   const metadataInputs: Array<{ key: keyof ProductFilters; label: string; placeholder: string }> = [
     { key: 'seller_ids', label: 'Seller IDs', placeholder: 'seller-1, seller-2' },
     { key: 'brands', label: 'Brands', placeholder: 'Luna Atelier, Manto' },
@@ -585,6 +625,20 @@ const ManageProducts: React.FC = () => {
             <button onClick={bulkDelete} disabled={selectedCount === 0 || !!actionKey} className="rounded border border-red-400/35 bg-red-500/10 px-2 py-1 text-[10px] text-red-300 disabled:opacity-40">Delete</button>
           </div>
         </div>
+      </section>
+
+      <section className="rounded-lg border border-white/10 bg-[#121212] p-3">
+        <div className="flex items-center gap-2 text-xs font-medium text-neutral-200"><Ruler size={14} className="text-primary" /> Bulk size chart</div>
+        <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
+          <input value={bulkSizeChart.image_url || ''} onChange={(e) => setBulkSizeChart((chart) => ({ ...chart, image_url: e.target.value }))} placeholder="Size chart image URL" className="rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 placeholder:text-neutral-500" />
+          <label className="cursor-pointer rounded border border-white/15 px-3 py-2 text-center text-xs text-neutral-100">
+            <span className="inline-flex items-center gap-1"><Upload size={13} /> {actionKey === 'bulk-size-chart-upload' ? 'Uploading...' : 'Upload image'}</span>
+            <input type="file" accept="image/*" className="hidden" disabled={!!actionKey} onChange={(e) => e.target.files?.[0] && void uploadBulkSizeChart(e.target.files[0])} />
+          </label>
+          <select value={bulkSizeChart.measurement_unit} onChange={(e) => setBulkSizeChart((chart) => ({ ...chart, measurement_unit: e.target.value }))} className="rounded border border-white/20 bg-[#080808] px-2 py-2 text-xs text-neutral-100 [color-scheme:dark]"><option value="inch">Inches</option><option value="cm">CM</option></select>
+        </div>
+        <textarea value={bulkSizeChart.html_table || ''} onChange={(e) => setBulkSizeChart((chart) => ({ ...chart, html_table: e.target.value }))} rows={3} placeholder="Optional safe table HTML: <table>...</table>" className="mt-2 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 placeholder:text-neutral-500" />
+        <button onClick={bulkAssignSizeChart} disabled={!selectedCount || (!bulkSizeChart.image_url?.trim() && !bulkSizeChart.html_table?.trim()) || !!actionKey} className="mt-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100 disabled:opacity-40">Assign chart to selected</button>
       </section>
 
       {error ? <section className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</section> : null}

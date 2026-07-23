@@ -120,3 +120,25 @@ export async function uploadFileAndGetUrl(
     if (result.success && result.file?.url) return result.file.url;
     throw new Error('Invalid response format or missing URL');
 }
+
+export async function uploadImagesAndGetUrls(files: FileList | File[]): Promise<string[]> {
+    const images = Array.from(files);
+    if (!images.length) throw new Error('No images provided');
+    if (images.length > 10) throw new Error('Upload up to 10 images at a time');
+
+    const formData = new FormData();
+    const processedImages = await Promise.all(images.map((file) => compressImage(file, 'high_quality')));
+    processedImages.forEach((file) => formData.append('images', file, file.name));
+
+    const response = await fetch(`${API_BASE_URL}/files/upload/images`, { method: 'POST', body: formData });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || err.data?.error || `HTTP error ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    const uploaded = result.data?.files || result.files || [];
+    const urls = uploaded.map((file: any) => file?.url).filter(Boolean);
+    if (urls.length !== images.length) throw new Error('Invalid response format or missing image URLs');
+    return urls;
+}

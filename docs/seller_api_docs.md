@@ -410,6 +410,15 @@ Auth: seller token required
 
 ---
 
+### Get Taxonomies
+`GET /api/v2/seller/metadata/taxonomies`
+
+Auth: seller token required
+
+Returns the MongoDB-backed catalog and seller taxonomies for product and brand metadata forms, including version hashes for client caching.
+
+---
+
 ### Update Profile
 `PATCH /api/v2/seller/profile`
 
@@ -518,11 +527,11 @@ Auth: seller token required
 
 Auth: seller token required
 
-Adds a product to the moderation queue. The authenticated seller ID is injected from the token.
+Adds a draft product to the unified catalog. The authenticated seller ID is injected from the token.
 
 **Body**: catalog product payload
 
-To include enrichment data (sizing guide, product type, gender) at creation time, include the `enrichment` field in the product:
+To include enrichment data (product type, gender) at creation time, include the `enrichment` field in the product. Use the top-level `sizing_guide` for a structured, image, or HTML-table size chart:
 
 ```json
 {
@@ -538,11 +547,18 @@ To include enrichment data (sizing guide, product type, gender) at creation time
       "S": { "chest": 86, "waist": 68 },
       "M": { "chest": 91, "waist": 73 }
     }
+  },
+  "sizing_guide": {
+    "image_url": "https://storage.googleapis.com/juno/size-charts/floral-lawn.png",
+    "html_table": "<table><thead><tr><th>Size</th><th>Chest</th></tr></thead><tbody><tr><td>M</td><td>91</td></tr></tbody></table>",
+    "measurement_unit": "cm"
   }
 }
 ```
 
-**Response `201`**: `ProductsQueue`
+Upload an image first through `POST /api/v2/files/upload`, then send its public URL as `sizing_guide.image_url`. `sizing_guide.html_table` must contain a `<table>` and permits only table markup (`table`, section/row/cell tags, `caption`, `colgroup`, `col`, `br`, and `span`) with `class`, `id`, `colspan`, `rowspan`, and `scope` attributes.
+
+**Response `201`**: `catalog.Product`
 
 If a variant `sku` is omitted, the API generates one automatically using a deterministic `SKU-...` format to keep seller SKUs consistent.
 
@@ -561,6 +577,8 @@ Auth: seller token required
 Replaces an existing seller-owned product.
 
 **Body**: catalog product payload
+
+`sizing_guide.image_url` and `sizing_guide.html_table` use the same validation as product creation. Because this is a full replacement, include the existing `sizing_guide` when retaining a size chart.
 
 **Response `200`**
 ```json

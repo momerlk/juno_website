@@ -135,6 +135,18 @@ Retrieves the public download URL for an uploaded file.
 
 ---
 
+### Upload Images in Bulk
+`POST /api/v2/files/upload/images`
+
+Uploads up to 10 JPG, JPEG, PNG, GIF, or WEBP images in one request. Each image is limited to 10 MB.
+
+**Content-Type:** `multipart/form-data`
+**Form Field:** `images` (required, repeat once per image)
+
+**Response `201`**: `BulkUploadResponse`, containing uploaded `files` in request order.
+
+---
+
 ### Generate Presigned Upload URL
 `POST /api/v2/files/presign`
 
