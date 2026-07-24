@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, ChevronDown, Loader2, Minus, Plus } from 'lucide-react';
+import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import type { CatalogHierarchy, FilterOptions } from '../../api/api';
 
 const humanizeCatalogValue = (value: string) =>
@@ -12,12 +12,32 @@ const humanizeCatalogValue = (value: string) =>
 
 const splitParam = (value: string | null) => (value ? value.split(',').filter(Boolean) : []);
 
+// Color names → swatch hex. Covers the common catalog vocabulary; anything
+// unmapped falls back to a neutral chip so the swatch grid never breaks.
+const COLOR_HEX: Record<string, string> = {
+    black: '#111111', white: '#f5f5f5', grey: '#8a8a8a', gray: '#8a8a8a', silver: '#c0c0c0',
+    red: '#d81f2a', maroon: '#7c1220', pink: '#ff4585', 'hot pink': '#ff2d7a', 'rose': '#e75480', fuchsia: '#d6216f',
+    orange: '#ff6b1a', peach: '#ffb18a', coral: '#ff6f61', rust: '#b7410e',
+    yellow: '#ffcf33', mustard: '#d4a017', gold: '#d4af37',
+    green: '#2e8b57', olive: '#708238', teal: '#188f8f', mint: '#98e2c6', lime: '#a6d608',
+    blue: '#2563d8', navy: '#1e2a52', 'navy blue': '#1e2a52', 'sky blue': '#7dc3ff', cyan: '#22c1c3', 'royal blue': '#2447c7',
+    purple: '#7c3aed', lavender: '#c4b5fd', violet: '#8b5cf6', mauve: '#9d7c8f',
+    brown: '#6b4226', tan: '#c9a76b', beige: '#e4d5b7', cream: '#f3ead3', khaki: '#b7a26a', camel: '#c19a6b',
+    ivory: '#fffff0', 'off white': '#f2efe6', multicolor: 'linear-gradient(135deg,#ff4585,#ffcf33,#2e8b57,#2563d8)',
+    multi: 'linear-gradient(135deg,#ff4585,#ffcf33,#2e8b57,#2563d8)',
+};
+
+const swatchFor = (name: string): string => {
+    const key = name.trim().toLowerCase();
+    return COLOR_HEX[key] ?? '#3a3a3d';
+};
+
 const MULTI_FILTERS = [
+    { key: 'genders', label: 'Gender', source: 'genders' },
     { key: 'brand_ids', label: 'Brands', source: 'brands' },
     { key: 'colors', label: 'Color', source: 'colors' },
     { key: 'materials', label: 'Material', source: 'materials' },
     { key: 'occasions', label: 'Occasion', source: 'occasions' },
-    { key: 'genders', label: 'Gender', source: 'genders' },
     { key: 'style_categories', label: 'Style', source: 'style_categories' },
     { key: 'pakistani_wear', label: 'Pakistani Wear', source: 'pakistani_wear' },
 ] as const;
@@ -46,20 +66,20 @@ const FilterSection: React.FC<{
             <button
                 type="button"
                 onClick={() => setExpanded(!expanded)}
-                className="flex w-full items-center justify-between py-3.5 text-left"
+                className="group flex w-full items-center justify-between py-3.5 text-left"
                 aria-expanded={expanded}
             >
-                <span className="flex items-center gap-2 text-[13px] font-semibold text-white/90">
+                <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-white/85 transition-colors group-hover:text-white">
                     {title}
                     {count > 0 ? (
-                        <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+                        <span className="flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary px-1 text-[10px] font-bold text-white">
                             {count}
                         </span>
                     ) : null}
                 </span>
                 <ChevronDown
                     size={15}
-                    className={`text-white/40 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+                    className={`text-white/40 transition-transform duration-200 group-hover:text-white/70 ${expanded ? 'rotate-180' : ''}`}
                 />
             </button>
             {expanded ? <div className="pb-4">{children}</div> : null}
@@ -97,6 +117,94 @@ const CheckRow: React.FC<{
             <span className="shrink-0 text-[11px] tabular-nums text-white/30">{count}</span>
         ) : null}
     </button>
+);
+
+const CategoryNavRow: React.FC<{
+    label: string;
+    selected: boolean;
+    count?: number;
+    level?: 0 | 1;
+    expanded?: boolean;
+    onSelect: () => void;
+    onExpand?: () => void;
+}> = ({ label, selected, count, level = 0, expanded, onSelect, onExpand }) => (
+    <div className={`flex items-center gap-1 rounded-lg border transition-colors ${
+        selected ? 'border-primary/35 bg-primary/10' : level === 0 ? 'border-white/[0.08] bg-white/[0.025]' : 'border-transparent'
+    }`}>
+        <button
+            type="button"
+            onClick={onSelect}
+            aria-pressed={selected}
+            className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2.5 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/70 ${
+                level === 0 ? 'min-h-11' : 'min-h-9'
+            }`}
+        >
+            <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected ? 'border-primary bg-primary' : 'border-white/25'}`}>
+                {selected ? <Check size={11} strokeWidth={3} /> : null}
+            </span>
+            <span className={`min-w-0 flex-1 truncate ${level === 0 ? 'text-[13px] font-semibold text-white/90' : 'text-[12px] text-white/65'}`}>
+                {label}
+            </span>
+            {typeof count === 'number' ? <span className="text-[10px] tabular-nums text-white/30">{count}</span> : null}
+        </button>
+        {onExpand ? (
+            <button
+                type="button"
+                onClick={onExpand}
+                aria-label={`${expanded ? 'Collapse' : 'Expand'} ${label}`}
+                aria-expanded={expanded}
+                className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/70"
+            >
+                <ChevronDown size={14} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+            </button>
+        ) : null}
+    </div>
+);
+
+// Color filter as tappable swatches instead of a checkbox list — far faster
+// to scan for a fashion catalog.
+const ColorSwatches: React.FC<{
+    values: string[];
+    selected: string[];
+    onToggle: (value: string) => void;
+}> = ({ values, selected, onToggle }) => (
+    <div className="flex flex-wrap gap-2.5 pt-1">
+        {values.map((name) => {
+            const isSelected = selected.includes(name);
+            const swatch = swatchFor(name);
+            const isGradient = swatch.startsWith('linear-gradient');
+            return (
+                <button
+                    key={name}
+                    type="button"
+                    onClick={() => onToggle(name)}
+                    aria-pressed={isSelected}
+                    title={humanizeCatalogValue(name)}
+                    className="group relative flex flex-col items-center gap-1"
+                >
+                    <span
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-transform duration-150 group-hover:scale-110 ${
+                            isSelected
+                                ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0b0b0d]'
+                                : 'ring-1 ring-white/15'
+                        }`}
+                        style={isGradient ? { backgroundImage: swatch } : { backgroundColor: swatch }}
+                    >
+                        {isSelected ? (
+                            <Check
+                                size={13}
+                                strokeWidth={3}
+                                className={swatch === '#f5f5f5' || swatch === '#fffff0' || swatch === '#f3ead3' ? 'text-black' : 'text-white'}
+                            />
+                        ) : null}
+                    </span>
+                    <span className={`max-w-[3.5rem] truncate text-[10px] ${isSelected ? 'text-white' : 'text-white/50'}`}>
+                        {humanizeCatalogValue(name)}
+                    </span>
+                </button>
+            );
+        })}
+    </div>
 );
 
 const FilterSkeleton: React.FC = () => (
@@ -244,8 +352,8 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
         // scrolling (container never sees overflow).
         <div>
             {isLoading && !options && !hierarchy ? <FilterSkeleton /> : <>
-            <div className="flex items-center justify-between pb-1 pt-1">
-                <span className="flex items-center gap-2 text-[15px] font-bold text-white">
+            <div className="mb-1 flex items-center justify-between border-b border-white/10 pb-3 pt-1">
+                <span className="flex items-center gap-2 text-lg font-black uppercase tracking-[-0.02em] text-white">
                     Filters
                     {isLoading ? <Loader2 size={13} className="animate-spin text-primary" /> : null}
                 </span>
@@ -253,12 +361,14 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                     <button
                         type="button"
                         onClick={clearAll}
-                        className="text-[12px] font-semibold text-primary transition-colors hover:text-white"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary transition-colors hover:bg-primary hover:text-white"
                     >
-                        Clear all ({activeCount})
+                        Clear ({activeCount})
                     </button>
                 ) : (
-                    <span className="text-[12px] tabular-nums text-white/35">{displayedProductsCount} items</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] tabular-nums text-white/35">
+                        {displayedProductsCount} items
+                    </span>
                 )}
             </div>
 
@@ -274,27 +384,19 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                                 <li key={deptId}>
                                     <div className="flex items-center">
                                         <div className="min-w-0 flex-1">
-                                            <CheckRow
+                                            <CategoryNavRow
                                                 label={humanizeCatalogValue(deptId)}
                                                 selected={activeDepartments.includes(deptId)}
                                                 count={department.product_count}
-                                                onClick={() => toggleMulti('departments', deptId)}
+                                                expanded={isDeptOpen}
+                                                onSelect={() => toggleMulti('departments', deptId)}
+                                                onExpand={hasChildren ? () => toggleOpen(deptId) : undefined}
                                             />
                                         </div>
-                                        {hasChildren ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleOpen(deptId)}
-                                                aria-label={`${isDeptOpen ? 'Collapse' : 'Expand'} ${humanizeCatalogValue(deptId)}`}
-                                                className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white/35 transition-colors hover:bg-white/[0.06] hover:text-white"
-                                            >
-                                                {isDeptOpen ? <Minus size={13} /> : <Plus size={13} />}
-                                            </button>
-                                        ) : null}
                                     </div>
 
                                     {isDeptOpen && hasChildren ? (
-                                        <ul className="space-y-px">
+                                        <ul className="ml-3 mt-1.5 space-y-1 border-l border-white/10 pl-2">
                                             {department.groups.map((group) => {
                                                 const groupId = group.product_group;
                                                 const isGroupOpen =
@@ -305,36 +407,34 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                                                     <li key={groupId}>
                                                         <div className="flex items-center">
                                                             <div className="min-w-0 flex-1">
-                                                                <CheckRow
+                                                                <CategoryNavRow
                                                                     label={humanizeCatalogValue(groupId)}
                                                                     selected={activeGroups.includes(groupId)}
                                                                     count={group.product_count}
-                                                                    indent
-                                                                    onClick={() => toggleMulti('product_groups', groupId)}
+                                                                    level={1}
+                                                                    expanded={isGroupOpen}
+                                                                    onSelect={() => toggleMulti('product_groups', groupId)}
+                                                                    onExpand={hasTypes ? () => toggleOpen(`${deptId}/${groupId}`) : undefined}
                                                                 />
                                                             </div>
-                                                            {hasTypes ? (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => toggleOpen(`${deptId}/${groupId}`)}
-                                                                    aria-label={`${isGroupOpen ? 'Collapse' : 'Expand'} ${humanizeCatalogValue(groupId)}`}
-                                                                    className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white/35 transition-colors hover:bg-white/[0.06] hover:text-white"
-                                                                >
-                                                                    {isGroupOpen ? <Minus size={13} /> : <Plus size={13} />}
-                                                                </button>
-                                                            ) : null}
                                                         </div>
 
                                                         {isGroupOpen && hasTypes ? (
-                                                            <ul className="space-y-px pl-4">
+                                                            <ul className="flex flex-wrap gap-1.5 pb-1 pl-2 pt-1">
                                                                 {group.types.map((type) => (
                                                                     <li key={type.product_type}>
-                                                                        <CheckRow
-                                                                            label={humanizeCatalogValue(type.product_type)}
-                                                                            selected={activeTypes.includes(type.product_type)}
-                                                                            indent
+                                                                        <button
+                                                                            type="button"
                                                                             onClick={() => toggleMulti('product_types', type.product_type)}
-                                                                        />
+                                                                            aria-pressed={activeTypes.includes(type.product_type)}
+                                                                            className={`rounded-full border px-2.5 py-1.5 text-[10px] transition-colors ${
+                                                                                activeTypes.includes(type.product_type)
+                                                                                    ? 'border-primary/40 bg-primary/15 text-white'
+                                                                                    : 'border-white/10 text-white/50 hover:border-white/25 hover:text-white'
+                                                                            }`}
+                                                                        >
+                                                                            {humanizeCatalogValue(type.product_type)}
+                                                                        </button>
                                                                     </li>
                                                                 ))}
                                                             </ul>
@@ -405,6 +505,18 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                 const values = options?.[source] ?? [];
                 if (!values.length) return null;
                 const activeValues = splitParam(searchParams.get(key));
+
+                if (key === 'colors') {
+                    return (
+                        <FilterSection key={key} title={label} count={activeValues.length}>
+                            <ColorSwatches
+                                values={(values as string[]).filter(Boolean)}
+                                selected={activeValues}
+                                onToggle={(value) => toggleMulti(key, value)}
+                            />
+                        </FilterSection>
+                    );
+                }
 
                 return (
                     <FilterSection key={key} title={label} count={activeValues.length}>

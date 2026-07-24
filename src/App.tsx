@@ -46,8 +46,6 @@ const BrandShowcase = React.lazy(() => import('./components/landing/BrandShowcas
 const CatchyProducts = React.lazy(() => import('./components/landing/CatchyProducts'));
 const TestimonialsSection = React.lazy(() => import('./components/landing/TestimonialsSection'));
 const CatalogProductPage = React.lazy(() => import('./components/catalog/CatalogProductPage'));
-const CatalogLandingPage = React.lazy(() => import('./components/catalog/CatalogLandingPage'));
-const CatalogGenderPage = React.lazy(() => import('./components/catalog/CatalogGenderPage'));
 const CatalogBrowsePage = React.lazy(() => import('./components/catalog/CatalogBrowsePage'));
 const DownloadRedirect = React.lazy(() => import('./components/DownloadRedirect'));
 const CheckoutPage = React.lazy(() => import('./components/checkout/CheckoutPage'));
@@ -180,14 +178,10 @@ function RoutedApp() {
 
                 <Route path="/download" element={<DownloadRedirect />} />
                 
-                {/* Catalog routes:
-                    `/catalog` is the landing screen.
-                    `/catalog/all` is the full searchable browse view.
-                    `/catalog/women` and `/catalog/men` are curated gender edits. */}
-                <Route path="/catalog" element={<CatalogLandingPage />} />
-                <Route path="/catalog/all" element={<CatalogBrowsePage />} />
-                <Route path="/catalog/women" element={<CatalogGenderPage gender="women" />} />
-                <Route path="/catalog/men" element={<CatalogGenderPage gender="men" />} />
+                <Route path="/catalog" element={<CatalogBrowsePage />} />
+                <Route path="/catalog/all" element={<Navigate to="/catalog" replace />} />
+                <Route path="/catalog/women" element={<Navigate to="/catalog?genders=women" replace />} />
+                <Route path="/catalog/men" element={<Navigate to="/catalog?genders=men" replace />} />
                 <Route path="/catalog/:productId" element={<CatalogProductPage />} />
                 
                 <Route path="/wishlist" element={<WishlistPage />} />

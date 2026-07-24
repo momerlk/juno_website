@@ -18,6 +18,7 @@ import CatalogNavbar from './CatalogNavbar';
 import CatalogSidebar from './CatalogSidebar';
 import EditorialProductCard from '../shared/editorial/EditorialProductCard';
 import ResponsiveDownloadBanner from '../shared/ResponsiveDownloadBanner';
+import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 
 // Routes: `/catalog/all`, wrapped by `/catalog/women` and `/catalog/men`
 // Purpose: shared listing engine for public catalog browse routes. Route-level
@@ -41,6 +42,101 @@ const LEGACY_PARAM_KEYS = ['sizes'] as const;
 
 type CatalogBrowsePageProps = {
     fixedQueryParams?: Partial<CatalogQueryParams>;
+};
+
+const CategoryShop: React.FC<{
+    hierarchy: CatalogHierarchy | null;
+    products: CatalogProduct[];
+    activeGroup: string;
+    activeGender: string;
+    onSelect: (group: string) => void;
+    onGenderSelect: (gender: string) => void;
+}> = ({ hierarchy, products, activeGroup, activeGender, onSelect, onGenderSelect }) => {
+    const groups = hierarchy?.departments
+        .flatMap((department) => department.groups)
+        .sort((a, b) => b.product_count - a.product_count)
+        .slice(0, 8) ?? [];
+    if (!groups.length) return null;
+
+    // One representative image per group. No global products[0] fallback — that
+    // made every image-less tile show the same photo. Missing images get a
+    // branded gradient tile instead, which reads as intentional.
+    const imageForGroup = (group: string) =>
+        products.find((product) => product.metadata?.product_group === group && product.images?.[0])?.images?.[0];
+
+    return (
+        <section className="mb-9">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-sm font-black uppercase tracking-[0.08em] text-white">Shop by category</h3>
+                <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/25 p-1" aria-label="Filter categories by gender">
+                    {[
+                        { value: '', label: 'Everyone' },
+                        { value: 'women', label: 'Women' },
+                        { value: 'men', label: 'Men' },
+                    ].map(({ value, label }) => (
+                        <button
+                            key={value || 'everyone'}
+                            type="button"
+                            onClick={() => onGenderSelect(value)}
+                            aria-pressed={activeGender === value}
+                            className={`min-h-9 rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.13em] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                                activeGender === value
+                                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-[0_6px_18px_rgba(220,10,40,0.28)]'
+                                    : 'text-white/45 hover:text-white'
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide md:mx-0 md:grid md:grid-cols-4 md:px-0 xl:grid-cols-8">
+                {groups.map((group) => {
+                    const image = imageForGroup(group.product_group);
+                    const imageSet = getResponsiveShopifyImageSet(image ?? '', [180, 240, 360]);
+                    const isActive = activeGroup === group.product_group;
+                    const label = humanizeCatalogValue(group.product_group);
+
+                    return (
+                        <button
+                            key={group.product_group}
+                            type="button"
+                            onClick={() => onSelect(isActive ? '' : group.product_group)}
+                            aria-pressed={isActive}
+                            aria-label={`${isActive ? 'Remove' : 'Shop'} ${label} filter`}
+                            className="group w-24 shrink-0 snap-start text-center focus-visible:outline-none md:w-auto"
+                        >
+                            <span className={`relative block aspect-square overflow-hidden rounded-full transition-all duration-300 group-hover:-translate-y-1 ${
+                                isActive
+                                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#050505] shadow-[0_12px_28px_rgba(255,24,24,0.2)]'
+                                    : 'ring-1 ring-white/15 group-hover:ring-white/40'
+                            }`}>
+                                {image ? (
+                                    <img
+                                        src={imageSet.src}
+                                        srcSet={imageSet.srcSet}
+                                        sizes="(max-width: 768px) 96px, 140px"
+                                        alt=""
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+                                    />
+                                ) : (
+                                    <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/25 via-[#1a0d12] to-secondary/20 font-mono text-xl font-black uppercase text-white/30">
+                                        {label.slice(0, 2)}
+                                    </span>
+                                )}
+                                <span className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-transparent" />
+                            </span>
+                            <span className={`mt-2.5 block truncate text-[11px] font-bold ${isActive ? 'text-primary' : 'text-white/75 group-hover:text-white'}`}>
+                                {label}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        </section>
+    );
 };
 
 const ProductGridSkeleton: React.FC = () => (
@@ -659,6 +755,15 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                                     ))}
                                 </div>
                             ) : null}
+
+                            <CategoryShop
+                                hierarchy={hierarchy}
+                                products={products}
+                                activeGroup={productGroups}
+                                activeGender={genders}
+                                onSelect={(group) => updateParam('product_groups', group || undefined)}
+                                onGenderSelect={(gender) => updateParam('genders', gender || undefined)}
+                            />
 
                             {isLoading && products.length === 0 ? (
                                 <ProductGridSkeleton />

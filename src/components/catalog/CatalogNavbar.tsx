@@ -121,7 +121,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
             if (onSearch) {
                 onSearch(trimmed);
             } else {
-                navigate(trimmed ? `/catalog/all?q=${encodeURIComponent(trimmed)}` : '/catalog/all');
+                navigate(trimmed ? `/catalog?q=${encodeURIComponent(trimmed)}` : '/catalog');
             }
 
             setSearchOpen(false);
