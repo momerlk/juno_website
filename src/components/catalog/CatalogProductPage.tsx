@@ -195,8 +195,8 @@ const CatalogProductPage: React.FC = () => {
         setRelatedProducts([]);
 
         if (!actualProductId) return undefined;
-        void Catalog.getRelatedProducts(actualProductId, 8).then((response) => {
-            if (!cancelled && response.ok) setRelatedProducts(asArray(response.body));
+        void Catalog.getRelatedProducts(actualProductId, 4).then((response) => {
+            if (!cancelled && response.ok) setRelatedProducts(asArray(response.body).slice(0, 4));
         });
 
         return () => {

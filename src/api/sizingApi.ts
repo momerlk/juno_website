@@ -1,22 +1,22 @@
 /** Customer-safe normalized size charts and deterministic fit recommendations. */
 import { request, type APIResponse } from './core';
-import type { ProductSizing, SizeRecommendation, SizeRecommendationRequest, SizingQuestionnaire } from './api.types';
+import type { ProductSizing, SizeRecommendation, SizeRecommendationRequest, SizingQuiz } from './api.types';
 
-export namespace Sizing {
-    const BASE_PATH = '/sizing';
+const BASE_PATH = '/sizing';
 
-    export async function getProductSizing(productId: string): Promise<APIResponse<ProductSizing>> {
+export const Sizing = {
+    async getProductSizing(productId: string): Promise<APIResponse<ProductSizing>> {
         return request(`${BASE_PATH}/products/${productId}`, 'GET', undefined, undefined, true);
-    }
+    },
 
-    export async function getQuestionnaire(productId: string): Promise<APIResponse<SizingQuestionnaire>> {
+    async getQuestionnaire(productId: string): Promise<APIResponse<SizingQuiz>> {
         return request(`${BASE_PATH}/products/${productId}/quiz`, 'GET', undefined, undefined, true);
-    }
+    },
 
-    export async function recommend(
+    async recommend(
         productId: string,
         payload: SizeRecommendationRequest
     ): Promise<APIResponse<SizeRecommendation>> {
         return request(`${BASE_PATH}/products/${productId}/recommend`, 'POST', payload, undefined, true);
-    }
-}
+    },
+};

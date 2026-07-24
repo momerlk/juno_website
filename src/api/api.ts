@@ -91,6 +91,7 @@ export type {
     SizeChartSection,
     NormalizedSizeChart,
     SizingQuestion,
+    SizingQuiz,
     SizingQuestionnaire,
     ProductSizing,
     SizeRecommendationRequest,

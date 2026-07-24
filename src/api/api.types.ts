@@ -256,10 +256,12 @@ export interface SizeChartRow {
 
 export interface SizeChartSection {
     id?: string;
+    label?: string;
     name?: string;
     title?: string;
     unit?: string;
     columns?: string[];
+    measurements?: string[];
     rows?: SizeChartRow[];
     [key: string]: unknown;
 }
@@ -270,27 +272,39 @@ export interface NormalizedSizeChart {
     name?: string;
     title?: string;
     unit?: string;
+    chart?: { unit?: string; sections?: SizeChartSection[]; [key: string]: unknown };
     sections?: SizeChartSection[];
     [key: string]: unknown;
 }
 
 export interface SizingQuestion {
-    id?: string;
+    id: string;
     key?: string;
     name?: string;
     label?: string;
     question?: string;
     type?: 'select' | 'number' | string;
     required?: boolean;
+    optional?: boolean;
+    unit?: string;
     options?: Array<string | { label?: string; value?: string }>;
+    illustrations?: Record<string, { light_url: string; dark_url: string }>;
     [key: string]: unknown;
 }
 
-export interface SizingQuestionnaire {
+export interface SizingQuiz {
     profile?: 'tops' | 'bottoms' | 'full_body' | string;
+    product_type?: string;
+    measurement_unit?: 'cm' | 'inches' | string;
     questions?: SizingQuestion[];
+    optional_measurements?: string[];
+    chart_id?: string;
+    chart_section_id?: string;
     [key: string]: unknown;
 }
+
+/** @deprecated Use SizingQuiz. */
+export type SizingQuestionnaire = SizingQuiz;
 
 export interface ProductSizing {
     availability: SizingAvailability;
@@ -300,19 +314,27 @@ export interface ProductSizing {
     selected_section?: SizeChartSection | null;
     variants?: ProductVariant[];
     questionnaire?: SizingQuestionnaire | null;
+    quiz?: SizingQuiz | null;
 }
 
 export interface SizeRecommendationRequest {
     usual_size?: string;
     fit?: 'fitted' | 'regular' | 'relaxed' | string;
+    answers?: Record<string, string>;
     measurements?: Record<string, number>;
+    measurement_unit?: 'cm' | 'inches' | string;
 }
 
 export interface SizeRecommendation {
     recommended_size: string;
     variant_id?: string;
-    confidence?: number | string;
+    confidence?: number | string | { level?: string; score?: number };
     alternative_size?: string | null;
+    alternative?: { size?: string; reason?: string } | null;
+    fit_analysis?: Record<string, 'comfortable' | 'roomy' | 'close' | 'too_small' | string>;
+    reason?: string;
+    warnings?: string[];
+    chart_id?: string;
     algorithm_version?: string;
 }
 
