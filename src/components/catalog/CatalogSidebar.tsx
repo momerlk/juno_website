@@ -214,6 +214,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
     const activeDepartments = splitParam(searchParams.get('departments'));
     const activeGroups = splitParam(searchParams.get('product_groups'));
     const activeTypes = splitParam(searchParams.get('product_types'));
+    const displayedProductsCount = totalProducts;
     const categoryCount = activeDepartments.length + activeGroups.length + activeTypes.length;
     const priceCount =
         Number(Boolean(searchParams.get('min_price'))) +
@@ -257,7 +258,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                         Clear all ({activeCount})
                     </button>
                 ) : (
-                    <span className="text-[12px] tabular-nums text-white/35">{totalProducts} items</span>
+                    <span className="text-[12px] tabular-nums text-white/35">{displayedProductsCount} items</span>
                 )}
             </div>
 
@@ -470,7 +471,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                                 onClick={() => onMobileOpenChange?.(false)}
                                 className="rounded-lg bg-primary px-4 py-3 text-[13px] font-bold text-white transition-opacity hover:opacity-90"
                             >
-                                Show {totalProducts} items
+                                Show {displayedProductsCount} items
                             </button>
                         </div>
                 </div>

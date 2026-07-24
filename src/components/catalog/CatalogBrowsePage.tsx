@@ -37,7 +37,6 @@ const MULTI_PARAM_KEYS = [
     'pakistani_wear',
 ] as const;
 
-type MultiParamKey = (typeof MULTI_PARAM_KEYS)[number];
 const LEGACY_PARAM_KEYS = ['sizes'] as const;
 
 type CatalogBrowsePageProps = {
@@ -281,8 +280,8 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             setIsMetaLoading(true);
 
             const [filtersResponse, hierarchyResponse] = await Promise.all([
-                Catalog.getFilters(fixedQueryParams),
-                Catalog.getHierarchy(fixedQueryParams),
+                Catalog.getFilters(discoveryParams),
+                Catalog.getHierarchy(discoveryParams),
             ]);
 
             if (filtersResponse.ok) {
@@ -297,7 +296,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
         };
 
         loadMeta();
-    }, [fixedQueryParams]);
+    }, [discoveryParams]);
 
     const loadProducts = useCallback(
         async (append = false) => {
@@ -535,9 +534,15 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
         return chips;
     }, [debouncedQuery, filterOptions?.brands, list, maxPrice, minPrice, searchParams]);
 
-    const activeFilterCount = activeFilterChips.length;
     const visibleProductsCount = products.length;
-    const displayTotalProducts = matchingProductsTotal ?? loadedProductsCount;
+    const hierarchyTotal = hierarchy?.departments?.length
+        ? hierarchy.departments.reduce((total, department) => total + department.product_count, 0)
+        : null;
+    const actualProductsTotal = matchingProductsTotal ?? hierarchyTotal;
+    const displayTotalProducts = actualProductsTotal ?? loadedProductsCount;
+    const productCountLabel = actualProductsTotal !== null
+        ? `Showing ${visibleProductsCount} of ${actualProductsTotal} products`
+        : `Showing ${visibleProductsCount}${hasMore ? '+' : ''} products`;
     const handleSearchSubmit = useCallback(
         (nextQuery: string) => {
             updateParam('q', nextQuery.trim() || undefined);
@@ -630,7 +635,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                                         {debouncedQuery ? 'Search Results' : hasFilters ? 'Catalog' : 'All Products'}
                                     </h2>
                                     <p className="mt-1.5 text-[12px] tabular-nums text-white/40">
-                                        Showing {visibleProductsCount} of {displayTotalProducts} products
+                                        {productCountLabel}
                                     </p>
                                 </div>
 
