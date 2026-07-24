@@ -37,10 +37,70 @@ Auth:
 - `PATCH /api/v2/commerce/admin/orders/{id}/status` — admin auth required
 - `PUT /api/v2/commerce/admin/orders/{id}/tracking/warehouse` — admin auth required
 - `PATCH /api/v2/commerce/admin/orders/{id}/tracking/eta` — admin auth required
+- `GET /api/v2/commerce/admin/orders/{id}/processing-receipt` — admin auth required, price-free seller packing receipt
+- `PATCH /api/v2/commerce/admin/orders/{id}/details` — admin auth required; updates customer, address, payment, parent, and child snapshots
+- `POST /api/v2/commerce/admin/orders/{id}/update-notice` — admin auth required; resends the current order update to customer and seller emails
+- `POST /api/v2/commerce/admin/dm-orders` — admin auth required
+- `GET /api/v2/size-quiz/{token}` — public shared DM size quiz
+- `POST /api/v2/size-quiz/{token}/complete` — public shared DM size quiz completion
 
 All protected endpoints require `Authorization: Bearer <token>`.
 
 Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` so the website can persist a fast, anonymous cart for performance marketing traffic.
+
+## DM orders with a shared size quiz
+
+`POST /api/v2/commerce/admin/dm-orders` creates a seven-day draft for one
+product and returns `quiz_path`. It validates the customer details and confirms
+that the product has an approved sizing quiz, but does not create an order.
+
+```json
+{
+  "product_id": "product_123",
+  "quantity": 1,
+  "payment_method": "cod",
+  "customer": {
+    "full_name": "Ayesha Khan",
+    "phone_number": "+923001234567",
+    "address_line1": "12 Main Street",
+    "city": "Lahore",
+    "country": "Pakistan"
+  }
+}
+```
+
+Send the returned path to the customer. `GET /api/v2/size-quiz/{token}` returns
+the standard sizing quiz. `POST /api/v2/size-quiz/{token}/complete` accepts its
+`answers` map, selects an available recommended variant, and creates the normal
+guest parent/child order. A draft is atomically claimed, so a link can create
+at most one order.
+
+## Correcting an order
+
+Admins can correct a variant through `PATCH /api/v2/admin/orders/{orderID}/items/{itemID}/variant`.
+Only an available variant may be selected; the original order price is retained,
+and customer/seller emails are sent when email addresses are available.
+
+For contact, delivery, and payment corrections, use
+`PATCH /api/v2/commerce/admin/orders/{id}/details`:
+
+```json
+{
+  "payment_method": "cod",
+  "customer": {
+    "full_name": "Ayesha Khan",
+    "phone_number": "+923001234567",
+    "email": "ayesha@example.com",
+    "address_line1": "12 Main Street",
+    "city": "Lahore",
+    "country": "Pakistan"
+  }
+}
+```
+
+It updates the parent order and every seller child-order snapshot together.
+Use `POST /api/v2/commerce/admin/orders/{id}/update-notice` after any correction
+to resend the current order details to the customer and all relevant sellers.
 
 ---
 

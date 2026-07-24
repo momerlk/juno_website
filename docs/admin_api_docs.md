@@ -90,6 +90,10 @@ Auth:
 - `POST /api/v2/admin/orders/bulk-cancel`
 - `PATCH /api/v2/admin/orders/{orderID}/customer`
 - `POST /api/v2/admin/orders/{orderID}/cancel`
+- `PATCH /api/v2/admin/orders/{orderID}/items/{itemID}/variant`
+
+Order contact, address, payment, receipts, and resendable update notices are
+documented in the [Commerce Module](../commerce/docs.md#correcting-an-order).
 - `GET /api/v2/admin/carts`
 
 ### Logistics Operations

@@ -52,6 +52,7 @@ const CheckoutPage = React.lazy(() => import('./components/checkout/CheckoutPage
 const OrderConfirmationPage = React.lazy(() => import('./components/checkout/OrderConfirmationPage'));
 const OrderTrackingPage = React.lazy(() => import('./components/checkout/OrderTrackingPage'));
 const InteractiveTrackingPage = React.lazy(() => import('./components/checkout/InteractiveTrackingPage'));
+const SharedSizeQuizPage = React.lazy(() => import('./components/checkout/SharedSizeQuizPage'));
 const WishlistPage = React.lazy(() => import('./components/catalog/WishlistPage'));
 const ResponsiveDownloadBanner = React.lazy(() => import('./components/shared/ResponsiveDownloadBanner'));
 
@@ -104,6 +105,7 @@ function RoutedApp() {
                          location.pathname.startsWith('/catalog') || 
                          location.pathname.startsWith('/checkout') || 
                          location.pathname.startsWith('/track') || 
+                         location.pathname.startsWith('/size-quiz') ||
                          location.pathname.startsWith('/wishlist');
 
   useEffect(() => {
@@ -190,6 +192,7 @@ function RoutedApp() {
                 <Route path="/checkout/track/:orderId" element={<InteractiveTrackingPage />} />
                 <Route path="/track" element={<OrderTrackingPage />} />
                 <Route path="/track/:token" element={<InteractiveTrackingPage />} />
+                <Route path="/size-quiz/:token" element={<SharedSizeQuizPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/refund-policy" element={<RefundPolicy />} />
                   <Route path="/service-policy" element={<ShippingServicePolicy />} />

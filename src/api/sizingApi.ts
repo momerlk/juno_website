@@ -20,3 +20,12 @@ export const Sizing = {
         return request(`${BASE_PATH}/products/${productId}/recommend`, 'POST', payload, undefined, true);
     },
 };
+
+export const SharedSizeQuiz = {
+    async get(token: string): Promise<APIResponse<{ product_id: string; quantity: number; quiz: SizingQuiz }>> {
+        return request(`/size-quiz/${encodeURIComponent(token)}`, 'GET', undefined, undefined, true);
+    },
+    async complete(token: string, answers: Record<string, string>): Promise<APIResponse<{ id: string; order_number?: string }>> {
+        return request(`/size-quiz/${encodeURIComponent(token)}/complete`, 'POST', { answers }, undefined, true);
+    },
+};

@@ -108,10 +108,35 @@ export namespace AdminCommerce {
         return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/tracking/eta`, 'PATCH', { eta }, getToken());
     }
 
+    export async function getCustomerReceipt(orderId: string): Promise<APIResponse<{ html: string }>> {
+        return request(`/commerce/orders/${encodeURIComponent(orderId)}/receipt`, 'GET', undefined, getToken());
+    }
+
+    export async function getSellerProcessingReceipt(orderId: string): Promise<APIResponse<{ html: string }>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/processing-receipt`, 'GET', undefined, getToken());
+    }
+
+    export async function updateOrderDetails(orderId: string, payload: { payment_method: string; customer: Record<string, any> }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/details`, 'PATCH', payload, getToken());
+    }
+
+    export async function resendOrderUpdate(orderId: string): Promise<APIResponse<{ message: string }>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/update-notice`, 'POST', undefined, getToken());
+    }
+
 }
 
 export namespace AdminPortal {
     const BASE_PATH = '/admin';
+
+    export async function createDMOrderDraft(payload: {
+        product_id: string;
+        quantity: number;
+        payment_method: string;
+        customer: { full_name: string; phone_number: string; email?: string; address_line1: string; address_line2?: string; city: string; province?: string; postal_code?: string; country?: string; };
+    }): Promise<APIResponse<{ id: string; quiz_token: string; quiz_path: string; expires_at: string }>> {
+        return request('/commerce/admin/dm-orders', 'POST', payload, getToken());
+    }
 
     const withQuery = (path: string, params?: Record<string, string | number | undefined | null>) => {
         const search = new URLSearchParams();
@@ -390,6 +415,10 @@ export namespace AdminPortal {
 
     export async function updateOrder(orderId: string, payload: Record<string, any>): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}`, 'PUT', payload, getToken());
+    }
+
+    export async function updateOrderItemVariant(orderId: string, itemId: string, variantId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/items/${encodeURIComponent(itemId)}/variant`, 'PATCH', { variant_id: variantId }, getToken());
     }
 
     export async function bulkUpdateOrders(payload: {

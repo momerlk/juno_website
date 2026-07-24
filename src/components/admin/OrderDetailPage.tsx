@@ -8,6 +8,7 @@ import {
   CreditCard,
   MapPin,
   Package,
+  Printer,
   Store,
   Truck,
   User,
@@ -229,6 +230,8 @@ const OrderDetailPage: React.FC = () => {
   const [warehouseLabel, setWarehouseLabel] = useState('');
   const [newEta, setNewEta] = useState('');
   const [updatingVariantKey, setUpdatingVariantKey] = useState<string | null>(null);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [detailsDraft, setDetailsDraft] = useState<Record<string, string>>({});
 
   const sellerMap = useMemo(() => new Map(sellers.map((s) => [s.id, s])), [sellers]);
 
@@ -270,6 +273,8 @@ const OrderDetailPage: React.FC = () => {
 
       setParent(payload.parent);
       setChildren(payload.children);
+      const address = payload.parent.shipping_address || {};
+      setDetailsDraft({ payment_method: payload.parent.payment_method || 'cod', full_name: payload.parent.customer_name || address.full_name || '', phone_number: payload.parent.customer_phone || address.phone_number || '', email: payload.parent.customer_email || address.email || '', address_line1: address.address_line1 || '', address_line2: address.address_line2 || '', city: address.city || '', province: address.province || '', postal_code: address.postal_code || '', country: address.country || 'Pakistan' });
 
       const linkedChild = payload.children.find((candidate) => candidate.id === child.id) || payload.children[0];
       setSelectedChildId(linkedChild?.id || '');
@@ -330,8 +335,10 @@ const OrderDetailPage: React.FC = () => {
       }
       await fetchData();
       alert(successMessage);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Operation failed');
+      return false;
     } finally {
       setIsUpdating(false);
     }
@@ -411,61 +418,41 @@ const OrderDetailPage: React.FC = () => {
     setUpdatingVariantKey(variantKey);
     setError(null);
 
-    const updatedItems = (child.order_items || []).map((row, idx) => {
-      if (idx !== itemIndex) return row;
-      const quantity = Math.max(1, Number(row.quantity || 1));
-      const unitPrice = Number.isFinite(nextVariant.price) ? Number(nextVariant.price) : Number(row.unit_price || 0);
-
-      return {
-        ...row,
-        variant_id: nextVariant.id,
-        variant_label: nextVariant.title || row.variant_label,
-        variant_options: nextVariant.options || row.variant_options,
-        unit_price: unitPrice,
-        line_total: unitPrice * quantity,
-        product_image: nextVariant.images?.[0] || row.product_image,
-      };
-    });
-
-    const subtotal = updatedItems.reduce((sum, row) => {
-      const qty = Math.max(1, Number(row.quantity || 1));
-      const lineTotal = Number.isFinite(Number(row.line_total)) ? Number(row.line_total) : Number(row.unit_price || 0) * qty;
-      return sum + lineTotal;
-    }, 0);
-
-    const shippingFee = Number(child.financials?.shipping_fee || 0);
-    const commissionRate = Number(child.financials?.commission_rate || 0);
-    const commission = subtotal * commissionRate;
-    const sellerPayout = subtotal - commission;
-    const total = subtotal + shippingFee;
-
     try {
-      const res = await AdminPortal.updateOrder(child.id, {
-        status: child.status,
-        order_items: updatedItems,
-        total,
-        financials: {
-          ...(child.financials || {}),
-          subtotal,
-          shipping_fee: shippingFee,
-          commission_rate: commissionRate,
-          commission,
-          seller_payout: sellerPayout,
-          total,
-          currency: child.financials?.currency || 'PKR',
-        },
-      });
+      if (!item.id) throw new Error('Order item ID is missing.');
+      const res = await AdminPortal.updateOrderItemVariant(child.id, item.id, nextVariant.id);
 
       if (!res.ok) {
         throw new Error((res.body as any)?.message || 'Failed to update order item variant');
       }
 
       await fetchData();
-      alert('Variant updated successfully.');
+      alert('Variant updated and customer/seller notified.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update order item variant');
     } finally {
       setUpdatingVariantKey(null);
+    }
+  };
+
+  const printReceipt = async (kind: 'customer' | 'seller') => {
+    const id = kind === 'customer' ? parent?.id : selectedChildId;
+    if (!id) return;
+    const res = kind === 'customer' ? await AdminCommerce.getCustomerReceipt(id) : await AdminCommerce.getSellerProcessingReceipt(id);
+    if (!res.ok) { setError((res.body as any)?.message || 'Could not generate receipt'); return; }
+    const popup = window.open('', '_blank');
+    if (!popup) { setError('Allow pop-ups to generate the receipt.'); return; }
+    popup.document.write(res.body.html); popup.document.close(); popup.focus(); popup.print();
+  };
+
+  const saveOrderDetails = async () => {
+    if (!parent) return;
+    if (!detailsDraft.full_name?.trim() || !detailsDraft.phone_number?.trim() || !detailsDraft.address_line1?.trim() || !detailsDraft.city?.trim()) {
+      setError('Name, phone, address line 1, and city are required.');
+      return;
+    }
+    if (await runUpdate(() => AdminCommerce.updateOrderDetails(parent.id, { payment_method: detailsDraft.payment_method, customer: detailsDraft }), 'Order details updated.')) {
+      setEditingDetails(false);
     }
   };
 
@@ -541,6 +528,7 @@ const OrderDetailPage: React.FC = () => {
                 <p className="text-xs text-neutral-400 pt-1">
                   Customer coordinates: {typeof customer?.latitude === 'number' ? customer.latitude : 'N/A'}, {typeof customer?.longitude === 'number' ? customer.longitude : 'N/A'}
                 </p>
+                <button onClick={() => setEditingDetails(true)} className="mt-3 rounded-lg border border-white/10 px-3 py-2 text-xs text-white hover:bg-white/10">Edit customer, delivery & payment</button>
               </div>
             </div>
 
@@ -640,6 +628,8 @@ const OrderDetailPage: React.FC = () => {
               {isUpdating ? 'Updating...' : 'Push Status'}
             </button>
 
+            <button onClick={() => parent && void runUpdate(() => AdminCommerce.resendOrderUpdate(parent.id), 'Current order update emailed to customer and seller.')} disabled={isUpdating || !parent} className="w-full rounded-xl border border-white/10 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-white/10 disabled:opacity-50">Resend order update emails</button>
+
             <button
               onClick={handleCancelSelectedChild}
               disabled={isUpdating || !selectedChildId}
@@ -650,6 +640,11 @@ const OrderDetailPage: React.FC = () => {
                 Cancel Child Order
               </span>
             </button>
+
+            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/10">
+              <button onClick={() => void printReceipt('customer')} disabled={!parent} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 disabled:opacity-50"><Printer size={13} className="mr-1 inline" />Customer receipt</button>
+              <button onClick={() => void printReceipt('seller')} disabled={!selectedChildId} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 disabled:opacity-50"><Printer size={13} className="mr-1 inline" />Packing receipt</button>
+            </div>
 
             <div className="pt-3 border-t border-white/10 grid grid-cols-2 gap-2">
               <input value={warehouseLat} onChange={(e) => setWarehouseLat(e.target.value)} placeholder="Lat" className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
@@ -713,6 +708,10 @@ const OrderDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {editingDetails && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60"><button className="flex-1" onClick={() => setEditingDetails(false)} aria-label="Close" /><aside className="h-full w-full max-w-xl overflow-y-auto border-l border-white/10 bg-[#111] p-5"><div className="flex items-center justify-between"><h3 className="text-lg font-semibold text-white">Edit order details</h3><button onClick={() => setEditingDetails(false)} className="rounded-md border border-white/10 p-2 text-white"><XCircle size={16} /></button></div><p className="mt-2 text-sm text-neutral-400">Updates customer, delivery, payment, parent order, and every seller child order together.</p><div className="mt-5 grid gap-3">{[['full_name','Name'],['phone_number','Phone'],['email','Email'],['address_line1','Address line 1'],['address_line2','Address line 2'],['city','City'],['province','Province'],['postal_code','Postal code'],['country','Country']].map(([key,label]) => <label key={key} className="text-xs text-neutral-400">{label}<input value={detailsDraft[key] || ''} onChange={(event) => setDetailsDraft((current) => ({ ...current, [key]: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>)}<label className="text-xs text-neutral-400">Payment method<select value={detailsDraft.payment_method || 'cod'} onChange={(event) => setDetailsDraft((current) => ({ ...current, payment_method: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"><option value="cod">Cash on delivery</option><option value="easypaisa">Easypaisa</option><option value="bank_transfer">Bank transfer</option></select></label></div><button disabled={isUpdating} onClick={() => void saveOrderDetails()} className="mt-5 w-full rounded-md bg-white px-3 py-3 text-sm font-semibold text-black disabled:opacity-50">Save all order details</button></aside></div>
+      )}
     </motion.div>
   );
 };

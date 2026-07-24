@@ -11,6 +11,8 @@ import {
   RefreshCw,
   Search,
   ShoppingCart,
+  Plus,
+  Copy,
   Trash2,
   X,
 } from 'lucide-react';
@@ -88,6 +90,9 @@ const ManageOrders: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dmDraftOpen, setDMDraftOpen] = useState(false);
+  const [dmQuizLink, setDMQuizLink] = useState('');
+  const [dmDraft, setDMDraft] = useState({ product_id: '', quantity: '1', payment_method: 'cod', full_name: '', phone_number: '', email: '', address_line1: '', address_line2: '', city: '', province: '', postal_code: '', country: 'Pakistan' });
 
   const load = async () => {
     setLoading(true);
@@ -251,6 +256,19 @@ const ManageOrders: React.FC = () => {
     }
   };
 
+  const createDMDraft = async () => {
+    setSaving(true); setError(null);
+    try {
+      const res = await AdminPortal.createDMOrderDraft({
+        product_id: dmDraft.product_id, quantity: Number(dmDraft.quantity), payment_method: dmDraft.payment_method,
+        customer: { full_name: dmDraft.full_name, phone_number: dmDraft.phone_number, email: dmDraft.email || undefined, address_line1: dmDraft.address_line1, address_line2: dmDraft.address_line2 || undefined, city: dmDraft.city, province: dmDraft.province || undefined, postal_code: dmDraft.postal_code || undefined, country: dmDraft.country || 'Pakistan' },
+      });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Could not create DM order draft');
+      setDMQuizLink(`${window.location.origin}${res.body.quiz_path}`);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not create DM order draft'); }
+    finally { setSaving(false); }
+  };
+
   const views: Array<{ id: OrderView; label: string; count?: number }> = [
     { id: 'open', label: 'Open', count: metrics.open },
     { id: 'pending', label: 'Pending' },
@@ -275,6 +293,7 @@ const ManageOrders: React.FC = () => {
             <p className="mt-1 text-xs text-neutral-400">Admin order desk for status batches, single-order cancellation, carts, and customer repair.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => { setDMQuizLink(''); setDMDraftOpen(true); }} className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-xs font-semibold text-black hover:bg-neutral-200"><Plus size={14} /> DM order</button>
             <button onClick={() => void load()} className="inline-flex items-center gap-1 rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10">
               <RefreshCw size={14} /> Refresh
             </button>
@@ -453,6 +472,23 @@ const ManageOrders: React.FC = () => {
               <button onClick={() => setSelectedOrder(null)} className="rounded-md border border-white/10 px-3 py-2 text-sm text-white/80 hover:bg-white/10">Close</button>
               <button disabled={saving} onClick={() => void saveCustomer()} className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-black disabled:opacity-50">Save changes</button>
             </div>
+          </aside>
+        </div>
+      )}
+
+      {dmDraftOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60">
+          <button className="flex-1" onClick={() => setDMDraftOpen(false)} aria-label="Close" />
+          <aside className="h-full w-full max-w-xl overflow-y-auto border-l border-white/10 bg-[#111] p-5 shadow-2xl">
+            <div className="flex items-start justify-between"><div><p className="text-xs uppercase tracking-wide text-neutral-500">DM order</p><h3 className="mt-1 text-lg font-semibold text-white">Prepare a size-quiz link</h3></div><button onClick={() => setDMDraftOpen(false)} className="rounded-md border border-white/10 p-2 text-neutral-300"><X size={16} /></button></div>
+            <p className="mt-3 text-sm text-neutral-400">No order is created yet. The customer’s completed quiz chooses the size and creates the order.</p>
+            <div className="mt-5 grid gap-3">
+              {[
+                ['product_id', 'Product ID'], ['quantity', 'Quantity'], ['full_name', 'Customer name'], ['phone_number', 'Phone number'], ['email', 'Email'], ['address_line1', 'Address line 1'], ['address_line2', 'Address line 2'], ['city', 'City'], ['province', 'Province'], ['postal_code', 'Postal code'], ['country', 'Country'],
+              ].map(([key, label]) => <label key={key} className="text-xs text-neutral-400">{label}<input type={key === 'quantity' ? 'number' : 'text'} min={key === 'quantity' ? 1 : undefined} value={(dmDraft as any)[key]} onChange={(event) => setDMDraft((current) => ({ ...current, [key]: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary/60" /></label>)}
+              <label className="text-xs text-neutral-400">Payment method<select value={dmDraft.payment_method} onChange={(event) => setDMDraft((current) => ({ ...current, payment_method: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"><option value="cod">Cash on delivery</option><option value="easypaisa">Easypaisa</option><option value="bank_transfer">Bank transfer</option></select></label>
+            </div>
+            {dmQuizLink ? <div className="mt-5 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3"><p className="text-xs text-emerald-200">Share this with the customer</p><p className="mt-2 break-all font-mono text-xs text-white">{dmQuizLink}</p><button onClick={() => void navigator.clipboard.writeText(dmQuizLink)} className="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-xs font-semibold text-black"><Copy size={13} /> Copy link</button></div> : <button disabled={saving} onClick={() => void createDMDraft()} className="mt-5 w-full rounded-md bg-white px-3 py-3 text-sm font-semibold text-black disabled:opacity-50">{saving ? 'Preparing…' : 'Create size-quiz link'}</button>}
           </aside>
         </div>
       )}
