@@ -59,57 +59,6 @@ const ProductGridSkeleton: React.FC = () => (
     </div>
 );
 
-const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
-    if (products.length <= 1) return products;
-
-    const diversified = [...products];
-    const maxIterations = diversified.length * 2;
-    let iterations = 0;
-
-    const getSimilarityKey = (product: CatalogProduct) => {
-        const brand = product.seller_id || '';
-        const category = product.categories?.[0]?.id || '';
-        const group = product.metadata?.product_group || '';
-        return `${brand}:${category}:${group}`;
-    };
-
-    for (let i = 0; i < diversified.length - 1 && iterations < maxIterations; i++) {
-        const currentKey = getSimilarityKey(diversified[i]);
-        const nextKey = getSimilarityKey(diversified[i + 1]);
-
-        if (currentKey === nextKey && i + 2 < diversified.length) {
-            for (let j = i + 2; j < diversified.length; j++) {
-                const swapKey = getSimilarityKey(diversified[j]);
-                if (swapKey !== currentKey) {
-                    [diversified[i + 1], diversified[j]] = [diversified[j], diversified[i + 1]];
-                    iterations++;
-                    break;
-                }
-            }
-        }
-        iterations++;
-    }
-
-    return diversified;
-};
-
-const moveSoldOutToEnd = (products: CatalogProduct[]): CatalogProduct[] => {
-    if (products.length <= 1) return products;
-
-    const inStockProducts: CatalogProduct[] = [];
-    const soldOutProducts: CatalogProduct[] = [];
-
-    products.forEach((product) => {
-        if (product.inventory?.in_stock) {
-            inStockProducts.push(product);
-        } else {
-            soldOutProducts.push(product);
-        }
-    });
-
-    return [...inStockProducts, ...soldOutProducts];
-};
-
 const humanizeCatalogValue = (value: string) =>
     value
         .split(/[_-]+/)
@@ -164,7 +113,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
     const categoryId = searchParams.get('category') ?? '';
     const collectionId = searchParams.get('collection') ?? '';
     const sellerId = searchParams.get('seller_id') ?? '';
-    const sort = searchParams.get('sort') ?? 'popularity';
+    const sort = searchParams.get('sort') ?? 'priority';
     const order = (searchParams.get('order') as 'asc' | 'desc' | null) ?? 'desc';
     const minPrice = searchParams.get('min_price');
     const maxPrice = searchParams.get('max_price');
@@ -250,7 +199,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             ...(pakistaniWear ? { pakistani_wear: list(pakistaniWear) } : {}),
             sort: sort as CatalogQueryParams['sort'],
             order,
-            limit: 48,
+            limit: 100,
         }, fixedQueryParams),
         [
             brandIds,
@@ -310,11 +259,6 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             setIsAppending(append);
             setIsRefreshingResults(!append && products.length > 0);
 
-            const baseParams: CatalogQueryParams = {
-                ...discoveryParams,
-                ...(append && nextCursor ? { cursor: nextCursor } : {}),
-            };
-
             const usesAdvancedFilters = Boolean(
                 brandIds ||
                     colors ||
@@ -328,24 +272,57 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                     pakistaniWear
             );
 
-            const response = collectionId
-                ? await Catalog.getCollectionProducts(collectionId, {
-                      page: append ? collectionPage : 1,
-                      limit: 48,
-                  })
-                : debouncedQuery
-                  ? await Catalog.searchProducts({ keyword: debouncedQuery, ...baseParams })
+            let requestSort = sort;
+            const fetchPage = async (cursor?: string) => {
+                if (collectionId) {
+                    return Catalog.getCollectionProducts(collectionId, {
+                        page: append ? collectionPage : 1,
+                        limit: 48,
+                    });
+                }
+
+                const params = { ...discoveryParams, sort: requestSort as CatalogQueryParams['sort'], ...(cursor ? { cursor } : {}) };
+                const response = debouncedQuery
+                    ? await Catalog.searchProducts({ keyword: debouncedQuery, ...params })
                     : usesAdvancedFilters
                     ? await Catalog.filterProducts({
-                          ...(baseParams as unknown as ProductFilterRequest),
-                          category_id: categoryId || undefined,
-                          seller_ids: list(brandIds),
-                          min_price: minPrice || undefined,
-                          max_price: maxPrice || undefined,
-                          limit: '48',
-                          cursor: append ? nextCursor : undefined,
-                      })
-                    : await Catalog.getProducts(baseParams);
+                        ...(params as ProductFilterRequest),
+                        category_id: categoryId || undefined,
+                        seller_ids: list(brandIds),
+                        min_price: minPrice || undefined,
+                        max_price: maxPrice || undefined,
+                        limit: '100',
+                    })
+                    : await Catalog.getProducts(params);
+
+                // ponytail: legacy API fallback; remove after every environment supports priority.
+                if (!response.ok && requestSort === 'priority') {
+                    requestSort = 'popularity';
+                    return fetchPage(cursor);
+                }
+                return response;
+            };
+
+            let response = await fetchPage(append ? nextCursor : undefined);
+
+            // The catalog contract is cursor-based: keep following next_cursor
+            // so the browse grid represents the complete catalog, not one page.
+            if (response.ok && !append && !collectionId) {
+                const allProducts = asArray(response.body);
+                let pagination = response.meta?.pagination as CatalogPagination | undefined;
+
+                while (pagination?.has_more && pagination.next_cursor) {
+                    const page = await fetchPage(pagination.next_cursor);
+                    if (requestId !== requestIdRef.current) return;
+                    if (!page.ok) {
+                        break;
+                    }
+
+                    allProducts.push(...asArray(page.body));
+                    pagination = page.meta?.pagination as CatalogPagination | undefined;
+                    response = { ...page, body: allProducts };
+                }
+            }
 
             if (requestId !== requestIdRef.current) {
                 return;
@@ -359,21 +336,15 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                     if (fallback.ok) nextProducts = asArray(fallback.body);
                 }
 
-                const diversified = moveSoldOutToEnd(diversifyProducts(nextProducts));
                 setProducts((prev) => {
-                    if (!append) return diversified;
+                    if (!append) return nextProducts;
                     const seen = new Set(prev.map((product) => product.id));
-                    return [...prev, ...diversified.filter((product) => !seen.has(product.id))];
+                    return [...prev, ...nextProducts.filter((product) => !seen.has(product.id))];
                 });
 
                 const pagination = response.meta?.pagination as CatalogPagination | undefined;
                 setLoadedProductsCount((prev) => (append ? prev + nextProducts.length : nextProducts.length));
-                const paginationTotal =
-                    typeof pagination?.total === 'number'
-                        ? pagination.total
-                        : typeof (pagination as CatalogPagination & { total_count?: number } | undefined)?.total_count === 'number'
-                          ? (pagination as CatalogPagination & { total_count?: number }).total_count ?? null
-                          : null;
+                const paginationTotal = pagination?.total ?? null;
                 setMatchingProductsTotal((prev) => (append ? prev : paginationTotal));
                 setNextCursor(pagination?.next_cursor);
                 setHasMore(pagination ? pagination.has_more : nextProducts.length === 48);
@@ -410,6 +381,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             productTypes,
             products.length,
             sellerId,
+            sort,
             styleCategories,
         ]
     );
@@ -535,10 +507,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
     }, [debouncedQuery, filterOptions?.brands, list, maxPrice, minPrice, searchParams]);
 
     const visibleProductsCount = products.length;
-    const hierarchyTotal = hierarchy?.departments?.length
-        ? hierarchy.departments.reduce((total, department) => total + department.product_count, 0)
-        : null;
-    const actualProductsTotal = matchingProductsTotal ?? hierarchyTotal;
+    const actualProductsTotal = matchingProductsTotal;
     const displayTotalProducts = actualProductsTotal ?? loadedProductsCount;
     const productCountLabel = actualProductsTotal !== null
         ? `Showing ${visibleProductsCount} of ${actualProductsTotal} products`
@@ -655,6 +624,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                                         aria-label="Sort products"
                                         className="rounded-lg border border-white/12 bg-[#121214] px-3 py-2 text-[12px] font-semibold text-white/80 outline-none focus:border-primary/60"
                                     >
+                                        <option value="priority:desc">Discover</option>
                                         <option value="popularity:desc">Most popular</option>
                                         <option value="created_at:desc">Newest first</option>
                                         <option value="rating:desc">Top rated</option>
@@ -750,14 +720,6 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                                         </div>
                                     ) : null}
 
-                                    {!hasMore ? (
-                                        <div className="mt-8 text-center">
-                                            <p className="text-sm font-bold uppercase tracking-[0.16em] text-white/50">
-                                                You&apos;ve reached the end
-                                            </p>
-                                            <p className="mt-1 text-xs text-white/30">{products.length} products total in this loaded run</p>
-                                        </div>
-                                    ) : null}
                                 </div>
                             )}
                     </main>

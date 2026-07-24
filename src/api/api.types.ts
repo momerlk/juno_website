@@ -539,6 +539,7 @@ export interface ProductFilterRequest {
 }
 
 export type CatalogSort =
+    | 'priority'
     | 'created_at'
     | 'updated_at'
     | 'price'
@@ -549,6 +550,7 @@ export type CatalogSort =
 export interface CatalogPagination {
     limit: number;
     returned: number;
+    total: number;
     has_more: boolean;
     next_cursor?: string;
 }

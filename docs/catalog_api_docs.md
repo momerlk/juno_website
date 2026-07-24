@@ -27,15 +27,15 @@ pagination state in `meta.pagination`.
 | `brands` / `brand` | string | Comma-separated exact brand names, matched case-insensitively |
 | `min_price` | number | Minimum price |
 | `max_price` | number | Maximum price |
-| `in_stock` | boolean | `true` for available products, `false` for unavailable products |
+| `in_stock` | boolean | Omit or set `true` for available products (default). Set `false` to request sold-out products only. |
 | `sizes` | string | Comma-separated variant sizes |
 | `colors` | string | Comma-separated variant colors |
 | `product_types` | string | Comma-separated product types |
 | `materials` | string | Comma-separated material tags |
 | `occasions` | string | Comma-separated occasion tags |
 | `tags` | string | Comma-separated product tags |
-| `sort` | string | `priority` (default badge precedence), `created_at`, `updated_at`, `price`, `rating`, `popularity`, or `title` |
-| `order` | string | Sort direction: `asc` or `desc` |
+| `sort` | string | `priority` / `default` (default discovery ranking), `created_at` / `newest` / `latest`, `updated_at`, `price`, `rating`, `popularity` / `popular`, or `title` |
+| `order` | string | `asc` or `desc` for the requested secondary sort. |
 | `limit` | int | Items per page. Default `20`, maximum `100` |
 | `cursor` | string | Opaque `next_cursor` from the previous response |
 | `page` | int | Legacy page number. Ignored when `cursor` is supplied |
@@ -52,6 +52,7 @@ pagination state in `meta.pagination`.
     "pagination": {
       "limit": 100,
       "returned": 100,
+      "total": 842,
       "has_more": true,
       "next_cursor": "eyJ2IjoxLCJzb3J0IjoiY3JlYXRlZF9hdCIsLi4ufQ"
     }
@@ -67,8 +68,12 @@ pagination state in `meta.pagination`.
    with `cursor=<meta.pagination.next_cursor>`.
 4. Continue until `has_more` is `false`.
 
-The sort, order, and filters must remain unchanged while following a cursor.
-Cursors are opaque and clients must not decode or modify them.
+The sort, order, keyword, availability setting, seller visibility, and normalized
+filters must remain unchanged while following a cursor. A cursor stores a hash of
+that query scope, the canonical sort (not its alias), its ranking bucket, and a
+stable product-ID tie-breaker. A cursor with a different scope is rejected. If
+`has_more` is `true`, `next_cursor` is always present. Cursors are opaque and
+clients must not decode or modify them.
 
 ```ts
 async function fetchEntireCatalog() {
@@ -91,16 +96,26 @@ async function fetchEntireCatalog() {
 }
 ```
 
+`total` is the full number of retrievable products for the same status,
+seller-visibility, and filter scope; it is not the number in the current page.
 Page-number pagination remains available for older clients, but cursor pagination
-avoids increasingly expensive database skips on deep pages and gives deterministic
-ordering using the product ID as a tie-breaker.
+is the preferred deterministic traversal.
 
-Default catalog listing gives badge precedence to:
-1. products with `badges.marketing_campaign=true`
-2. then products with `badges.best_seller=true`
-3. then all other products
+Every list, search, and filter result first uses these deterministic badge buckets:
 
-If a product has both marketing-campaign and best-seller badges, it appears ahead of products that only have one.
+1. `marketing_campaign=true` and `best_seller=true`
+2. `best_seller=true`
+3. `marketing_campaign=true`
+4. all remaining products
+
+Within a bucket, the requested canonical sort and product ID determine the order.
+For `sort=priority`/`default`, the secondary sort defaults to newest first and
+brand/product-group positions are interleaved within each bucket where possible.
+This never moves an item ahead of a higher badge bucket.
+
+Sold-out products are excluded by default from catalog, search, filter, popular,
+related, count, facet, and hierarchy responses. Use `in_stock=false` to request
+only sold-out products.
 
 ---
 
@@ -223,10 +238,10 @@ Returns full details for a single product.
 ### Search Products
 `GET /api/v2/catalog/products/search`
 
-Ranked fuzzy search powered by the MongoDB Atlas Search index `products_search`.
-Search covers product titles, descriptions, short descriptions, HTML body text,
-tags, brand names, product types, and category names. Title and brand matches are
-boosted above generic description matches.
+Search uses the same catalog visibility, filters, canonical sorts, totals, and
+cursor contract as List Products. It matches product titles, descriptions, short
+descriptions, HTML body text, tags, brand names, product types, categories, and
+structured metadata.
 
 **Query Parameters**
 
@@ -240,13 +255,14 @@ boosted above generic description matches.
 | `min_price` / `max_price` | number | no | Price range |
 | `in_stock` | boolean | no | Inventory availability |
 | `sizes`, `colors`, `product_types`, `materials`, `occasions`, `tags` | string | no | Comma-separated filters |
-| `cursor` | string | no | Atlas Search `next_cursor` from the previous response |
+| `sort`, `order` | string | no | Same canonical sort options as List Products |
+| `cursor` | string | no | Opaque `next_cursor` from the previous response |
 | `page` | int | no | Legacy page number |
 | `limit` | int | no | Default `20`, maximum `100` |
 
-The response uses the same `data` and `meta.pagination` structure as List Products.
-Search cursors are generated by Atlas Search and are only valid for the same keyword,
-filters, and sort semantics.
+The response uses the same `data` and `meta.pagination` structure as List Products,
+including authoritative `meta.pagination.total`. Keep the keyword, filters,
+availability setting, sort, and order unchanged while following a cursor.
 
 ---
 
@@ -277,9 +293,11 @@ Advanced multi-criteria filtering via JSON body. Use when query params are insuf
   "occasions": ["Casual"]
 }
 ```
-All fields are optional. If `keyword` is present, this endpoint uses Atlas Search;
-otherwise it uses the normal catalog listing query. Multi-value filters use OR
-within one field and AND across different fields.
+All fields are optional. If `keyword` is present, it uses the same search and
+pagination contract as the search endpoint; otherwise it uses normal catalog
+listing. Multi-value filters use OR within one field and AND across different
+fields. Every response includes the authoritative filtered total in
+`meta.pagination.total`.
 
 **Response `200`** — products in `data`, with cursor state in `meta.pagination`.
 
@@ -314,9 +332,11 @@ here to scope the returned filter options to the current result set.
 ### Get Catalog Facets
 `GET /api/v2/catalog/products/facets`
 
-Returns count-based facet buckets built from `products_v2` metadata after
-applying any query parameters. This is the richer discovery endpoint for
-building layered catalog filters in the frontend.
+Returns count-based facet buckets built from the exact same retrievable-product
+scope as `/catalog/products`: status, availability (in-stock by default),
+active-seller visibility, and every supplied filter are applied before aggregation.
+This is the richer discovery endpoint for building layered catalog filters in the
+frontend.
 
 **Response `200`**
 ```json
@@ -338,9 +358,11 @@ building layered catalog filters in the frontend.
 `GET /api/v2/catalog/hierarchy`
 
 Returns a live taxonomy tree from `department -> product_group -> product_type`
-using `products_v2.metadata`, with counts at each level. Optional query filters
-can be supplied to scope the hierarchy to a gender, brand, price band, or any
-other metadata selection.
+using `products_v2.metadata`, with counts at each level. It uses the exact same
+retrievable-product scope as `/catalog/products`, including the default in-stock
+rule, so each hierarchy count matches the products that can be requested with the
+corresponding filters. Optional query filters can scope the hierarchy to a gender,
+brand, price band, or metadata selection.
 
 **Response `200`**
 ```json
@@ -536,7 +558,11 @@ The brands array only includes brands that have at least one product in the retu
 ### Get Related Products
 `GET /api/v2/catalog/products/{id}/related`
 
-Returns a recommendation set related to the given product.
+Returns a deterministic, varied recommendation set related to the given product.
+The source product, sold-out products, inactive sellers, and products with the same
+non-empty handle are excluded. Ranking uses department, group, type, gender, style
+category, occasion, material, colour family, tags, price proximity, rating, and
+purchase activity. Different brands receive a relevance bonus when comparable.
 
 **Query Parameters**
 

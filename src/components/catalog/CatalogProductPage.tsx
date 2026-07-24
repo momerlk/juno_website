@@ -22,6 +22,7 @@ import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useProbe';
 import CatalogNavbar from './CatalogNavbar';
 import SizeGuideModal from './SizeGuideModal';
+import EditorialProductCard from '../shared/editorial/EditorialProductCard';
 import { toTikTokProductContent, trackTikTokViewContent } from '../../utils/tiktokPixel';
 import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 
@@ -95,6 +96,7 @@ const CatalogProductPage: React.FC = () => {
     const { productId, genderOrId } = useParams<{ productId?: string; genderOrId?: string }>();
     const actualProductId = productId || genderOrId || '';
     const [product, setProduct] = useState<CatalogProduct | null>(null);
+    const [relatedProducts, setRelatedProducts] = useState<CatalogProduct[]>([]);
     const [selectedImageIdx, setSelectedImageIdx] = useState(0);
     const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
     const [quantity, setQuantity] = useState(1);
@@ -179,6 +181,20 @@ const CatalogProductPage: React.FC = () => {
         };
 
         loadProduct();
+        return () => {
+            cancelled = true;
+        };
+    }, [actualProductId]);
+
+    useEffect(() => {
+        let cancelled = false;
+        setRelatedProducts([]);
+
+        if (!actualProductId) return undefined;
+        void Catalog.getRelatedProducts(actualProductId, 8).then((response) => {
+            if (!cancelled && response.ok) setRelatedProducts(asArray(response.body));
+        });
+
         return () => {
             cancelled = true;
         };
@@ -866,6 +882,28 @@ const CatalogProductPage: React.FC = () => {
                         ) : null}
                     </div>
                 </div>
+
+                {relatedProducts.length > 0 ? (
+                    <section className="mt-16 border-t border-white/[0.08] pt-10 md:mt-24 md:pt-14">
+                        <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-white/35">Keep exploring</p>
+                        <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.04em] text-white md:text-3xl">Similar pieces</h2>
+                        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
+                            {relatedProducts.map((related, index) => (
+                                <EditorialProductCard
+                                    key={related.id}
+                                    title={related.title}
+                                    sellerName={related.seller_name}
+                                    images={related.images}
+                                    badges={related.badges}
+                                    pricing={related.pricing}
+                                    inventory={related.inventory}
+                                    index={index}
+                                    to={`/catalog/${related.id}`}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                ) : null}
             </div>
 
             <AnimatePresence>
