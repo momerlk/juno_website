@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AdminPortal, approveSeller } from '../../api/adminApi';
 import { Auth as SellerAuth } from '../../api/sellerApi';
+import { Button } from '@astryxdesign/core/Button';
 
 type SellerStatus = 'all' | 'pending' | 'active' | 'suspended' | 'rejected';
 type DrawerTab = 'profile' | 'inventory' | 'wallet' | 'products' | 'draft';
@@ -367,9 +368,7 @@ const ManageSellers: React.FC = () => {
             </div>
             <p className="mt-1 text-xs text-neutral-400">Approval queue, account remediation, inventory checks, and seller wallet operations.</p>
           </div>
-          <button onClick={() => void load()} className="inline-flex w-fit items-center gap-1 rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10">
-            <RefreshCw size={14} /> Refresh
-          </button>
+          <Button label="Refresh" size="sm" icon={<RefreshCw size={14} />} onClick={() => void load()} />
         </div>
 
         <div className="grid grid-cols-2 gap-px border-b border-white/10 bg-white/10 text-xs md:grid-cols-5">
@@ -407,7 +406,7 @@ const ManageSellers: React.FC = () => {
               <option value="rejected">rejected</option>
             </select>
             <input value={bulkNote} onChange={(e) => setBulkNote(e.target.value)} className="w-48 rounded-md border border-white/10 bg-black/30 px-2 py-2 text-xs text-white" />
-            <button disabled={saving || selectedIds.length === 0} onClick={() => void setSellerStatus(selectedIds, bulkStatus)} className="rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10 disabled:opacity-40">Apply</button>
+            <Button label="Apply" size="sm" isDisabled={saving || selectedIds.length === 0} onClick={() => void setSellerStatus(selectedIds, bulkStatus)} />
           </div>
         </div>
 

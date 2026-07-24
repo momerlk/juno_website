@@ -1,35 +1,25 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import {
-  ShoppingCart, X, LogOut, Package, Bell, Settings, ShieldCheck, ChevronLeft, ChevronRight
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Bell, Package, Settings, ShieldCheck, ShoppingCart, LogOut } from 'lucide-react';
+import { Button } from '@astryxdesign/core/Button';
+import { Divider } from '@astryxdesign/core/Divider';
+import { NavIcon } from '@astryxdesign/core/NavIcon';
+import { SideNav, SideNavHeading, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav';
+import { StatusDot } from '@astryxdesign/core/StatusDot';
+import { VStack } from '@astryxdesign/core/VStack';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 export const navigation = [
-  {
-    group: 'Operations',
-    items: [
-      { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, subtitle: 'Platform-wide fulfillment desk' },
-      { name: 'Sellers', href: '/admin/sellers', icon: ShieldCheck, subtitle: 'Approvals, remediation, and wallet ops' },
-      { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Database-wide catalog control' },
-      { name: 'Create Product', href: '/admin/products/create', icon: Package, subtitle: 'Manual creation and store imports' },
-      { name: 'Import Products', href: '/admin/products/imports', icon: Package, subtitle: 'Shopify and WooCommerce imports' },
-      { name: 'Notifications', href: '/admin/notifications', icon: Bell, subtitle: 'Platform broadcasts' },
-    ],
-  },
-  {
-    group: 'Management',
-    items: [
-      { name: 'Invites', href: '/admin/invites', icon: Bell, subtitle: 'Admin invite coordination' },
-    ]
-  },
-  {
-    group: 'System',
-    items: [
-      { name: 'Infrastructure', href: '/admin/system', icon: Settings, subtitle: 'Health, waitlist, OTPs, and tooling' },
-    ]
-  }
+  { group: 'Operations', items: [
+    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, subtitle: 'Platform-wide fulfillment desk' },
+    { name: 'Sellers', href: '/admin/sellers', icon: ShieldCheck, subtitle: 'Approvals, remediation, and wallet ops' },
+    { name: 'Products', href: '/admin/products', icon: Package, subtitle: 'Database-wide catalog control' },
+    { name: 'Create Product', href: '/admin/products/create', icon: Package, subtitle: 'Manual creation and store imports' },
+    { name: 'Import Products', href: '/admin/products/imports', icon: Package, subtitle: 'Shopify and WooCommerce imports' },
+    { name: 'Notifications', href: '/admin/notifications', icon: Bell, subtitle: 'Platform broadcasts' },
+  ] },
+  { group: 'Management', items: [{ name: 'Invites', href: '/admin/invites', icon: Bell, subtitle: 'Admin invite coordination' }] },
+  { group: 'System', items: [{ name: 'Infrastructure', href: '/admin/system', icon: Settings, subtitle: 'Health, waitlist, OTPs, and tooling' }] },
 ];
 
 interface SidebarProps {
@@ -39,152 +29,37 @@ interface SidebarProps {
   onToggleCollapse: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isCollapsed, onToggleCollapse }) => {
+const Sidebar: React.FC<SidebarProps> = ({ setIsOpen, isCollapsed, onToggleCollapse }) => {
   const { admin, logout } = useAdminAuth();
-  const collapsed = isOpen ? false : isCollapsed;
-
-  const sidebarContent = (
-    <div className="flex h-full flex-col border-r border-white/10 bg-[#0b0b0b]">
-      <div className="border-b border-white/10 px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/images/juno-logos/icon+text_white.png" alt="Juno Admin" className="h-7" />
-            {!collapsed ? (
-              <div className="rounded-md border border-white/15 bg-white/[0.03] px-2 py-0.5">
-                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-300">Admin</span>
-              </div>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onToggleCollapse}
-              className="hidden rounded-md border border-white/15 bg-white/[0.03] p-2 text-neutral-300 transition-colors hover:text-white md:inline-flex"
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            </button>
-            <button onClick={() => setIsOpen(false)} className="rounded-md border border-white/15 bg-white/[0.03] p-2 text-neutral-300 transition-colors hover:text-white md:hidden">
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4 scrollbar-hide">
-        {navigation.map((group) => (
-          <div key={group.group}>
-            {!collapsed ? (
-              <div className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">{group.group}</div>
-            ) : (
-              <div className="mb-2 border-t border-white/10" />
-            )}
-            <ul className="space-y-1">
-              {group.items.map((item) => (
-                <li key={item.name}>
-                  <NavLink
-                    to={item.href}
-                    end={item.href === '/admin'}
-                    onClick={() => isOpen && setIsOpen(false)}
-                    className={({ isActive }) =>
-                      `group block rounded-md border p-2.5 transition-colors ${
-                        isActive
-                          ? 'border-white/20 bg-white/[0.09]'
-                          : 'border-transparent bg-transparent hover:border-white/10 hover:bg-white/[0.04]'
-                      }`
-                    }
-                    title={collapsed ? item.name : undefined}
-                  >
-                    {({ isActive }) => (
-                      <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
-                        <div className={`rounded-md p-1.5 ${isActive ? 'bg-white/15 text-white' : 'text-white/50 group-hover:text-white/80'}`}>
-                          <item.icon size={14} />
-                        </div>
-                        {!collapsed ? (
-                          <div className="min-w-0 flex-1">
-                            <p className={`truncate text-[12px] font-medium ${isActive ? 'text-white' : 'text-neutral-200'}`}>{item.name}</p>
-                            <p className="truncate text-[10px] text-neutral-500 group-hover:text-neutral-400">
-                              {item.subtitle}
-                            </p>
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
-
-      <div className="border-t border-white/10 p-3">
-        <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
-          <div className={`mb-3 flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
-            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-white/[0.05]">
-              <span className="text-sm font-semibold text-neutral-100">{admin?.name?.[0] || 'A'}</span>
-            </div>
-            {!collapsed ? (
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-white">{admin?.name || 'Admin'}</p>
-                <p className="text-[10px] uppercase tracking-[0.08em] text-neutral-500">{admin?.role || 'Administrator'}</p>
-              </div>
-            ) : null}
-          </div>
-          
-          <button
-            onClick={logout}
-            className={`flex w-full items-center justify-center gap-2 rounded-md border border-white/15 bg-black/30 px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-red-400/30 hover:text-red-300 ${collapsed ? 'px-2' : ''}`}
-            title={collapsed ? 'Logout' : undefined}
-          >
-            <LogOut size={15} />
-            {!collapsed ? 'Logout' : null}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const sidebarVariants = {
-    open: { x: 0 },
-    closed: { x: '-100%' },
-  };
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   return (
-    <>
-      <div className={`hidden md:sticky md:top-0 md:flex md:h-[100dvh] md:flex-shrink-0 md:flex-col ${isCollapsed ? 'md:w-20' : 'md:w-72'}`}>
-        {sidebarContent}
-      </div>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex md:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="h-[100dvh] w-[19rem] shadow-2xl"
-              initial={{ x: -320 }}
-              animate={{ x: 0 }}
-              exit={{ x: -320 }}
-              transition={{ type: 'spring', stiffness: 280, damping: 30 }}
-            >
-              {sidebarContent}
-            </motion.div>
-            <motion.button
-              type="button"
-              className="flex-1 bg-black/65"
-              onClick={() => setIsOpen(false)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+    <SideNav
+      header={<SideNavHeading heading="Juno Admin" superheading="Operations" subheading="Marketplace control" headingHref="/admin/orders" icon={<NavIcon icon={<ShieldCheck size={16} />} />} headerEndContent={<StatusDot variant="success" label="System operational" tooltip="System operational" />} />}
+      collapsible={{ isCollapsed, onCollapsedChange: onToggleCollapse }}
+      resizable={{ defaultWidth: 280, minWidth: 220, maxWidth: 340, autoSaveId: 'juno-admin-sidebar' }}
+      footer={<VStack gap={2}><Divider /><SideNavSection title="Session"><SideNavItem label={admin?.name || 'Administrator'} icon={ShieldCheck} isDisabled /></SideNavSection><Button label="Sign out" variant="ghost" size="sm" icon={<LogOut size={14} />} onClick={logout} /></VStack>}
+    >
+      {navigation.map((group) => (
+        <SideNavSection key={group.group} title={group.group}>
+          {group.items.map((item) => (
+            <SideNavItem
+              key={item.href}
+              href={item.href}
+              label={item.name}
+              icon={item.icon}
+              isSelected={pathname === item.href || (item.href !== '/admin/orders' && pathname.startsWith(`${item.href}/`))}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate(item.href);
+                setIsOpen(false);
+              }}
             />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+          ))}
+        </SideNavSection>
+      ))}
+    </SideNav>
   );
 };
 

@@ -2,6 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar, { navigation } from './Sidebar';
 import { Clock3, Menu } from 'lucide-react';
+import { Theme } from '@astryxdesign/core/theme';
+import '@astryxdesign/core/astryx.css';
+import { junoAdminTheme } from './junoAdminTheme';
 
 const AdminDashboard: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -23,6 +26,7 @@ const AdminDashboard: React.FC = () => {
   }).format(new Date()), []);
 
   return (
+    <Theme theme={junoAdminTheme} mode="dark">
     <div className="flex h-screen overflow-hidden bg-background text-white">
       <Sidebar
         isOpen={isSidebarOpen}
@@ -66,6 +70,7 @@ const AdminDashboard: React.FC = () => {
         </main>
       </div>
     </div>
+    </Theme>
   );
 };
 

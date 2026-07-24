@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Banner } from '@astryxdesign/core/Banner';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
+import { Dialog } from '@astryxdesign/core/Dialog';
+import { Heading } from '@astryxdesign/core/Heading';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { VStack } from '@astryxdesign/core/VStack';
 import {
   ArrowLeft,
   Ban,
@@ -163,13 +170,7 @@ const ProductLineItem: React.FC<{
               </option>
             ))}
           </select>
-          <button
-            onClick={() => void onUpdateVariant(child, itemIndex, selectedVariantId)}
-            disabled={isSavingVariant || !selectedVariantId || selectedVariantId === item.variant_id}
-            className="rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 hover:bg-primary/90 disabled:opacity-50"
-          >
-            {isSavingVariant ? 'Saving...' : 'Update Variant'}
-          </button>
+          <Button label="Update variant" size="sm" variant="primary" onClick={() => void onUpdateVariant(child, itemIndex, selectedVariantId)} isLoading={isSavingVariant} isDisabled={!selectedVariantId || selectedVariantId === item.variant_id} />
         </div>
       </div>
     </div>
@@ -507,12 +508,12 @@ const OrderDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {error && <div className="bg-red-900/20 text-red-400 border border-red-700 rounded-lg text-center p-4">{error}</div>}
+      {error && <Banner status="error" title={error} />}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <Card padding={4}>
               <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
                 <User size={16} className="text-primary" /> Full Customer Details
               </h3>
@@ -528,11 +529,11 @@ const OrderDetailPage: React.FC = () => {
                 <p className="text-xs text-neutral-400 pt-1">
                   Customer coordinates: {typeof customer?.latitude === 'number' ? customer.latitude : 'N/A'}, {typeof customer?.longitude === 'number' ? customer.longitude : 'N/A'}
                 </p>
-                <button onClick={() => setEditingDetails(true)} className="mt-3 rounded-lg border border-white/10 px-3 py-2 text-xs text-white hover:bg-white/10">Edit customer, delivery & payment</button>
+                <Button label="Edit customer, delivery & payment" size="sm" onClick={() => setEditingDetails(true)} />
               </div>
-            </div>
+            </Card>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <Card padding={4}>
               <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
                 <CreditCard size={16} className="text-primary" /> Order Metrics
               </h3>
@@ -544,10 +545,10 @@ const OrderDetailPage: React.FC = () => {
                 <p className="text-neutral-300">Child Orders: <span className="text-white">{children.length}</span></p>
                 <p className="text-neutral-300">Customer Type: <span className="text-white">{parent.customer_type}</span></p>
               </div>
-            </div>
+            </Card>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <Card padding={4}>
             <h3 className="text-sm font-black uppercase tracking-wider text-white mb-4 flex items-center gap-2">
               <Store size={16} className="text-primary" /> Seller Pickup Location + Child Financials
             </h3>
@@ -556,9 +557,9 @@ const OrderDetailPage: React.FC = () => {
                 <SellerLocationCard key={child.id} child={child} seller={sellerMap.get(child.seller_id)} />
               ))}
             </div>
-          </div>
+          </Card>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <Card padding={4}>
             <h3 className="text-sm font-black uppercase tracking-wider text-white mb-4 flex items-center gap-2">
               <Package size={16} className="text-primary" /> Product + Variant + Inventory Details
             </h3>
@@ -578,11 +579,12 @@ const OrderDetailPage: React.FC = () => {
                 ))
               )}
             </div>
-          </div>
+          </Card>
         </div>
 
         <div className="space-y-8">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
+          <Card padding={4}>
+            <VStack gap={3}>
             <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
               <Truck size={16} className="text-primary" /> Status + Tracking Controls
             </h3>
@@ -620,30 +622,15 @@ const OrderDetailPage: React.FC = () => {
               className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
             />
 
-            <button
-              onClick={handleUpdateStatus}
-              disabled={isUpdating || !selectedChildId}
-              className="w-full rounded-xl bg-primary text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-primary/90 disabled:opacity-50"
-            >
-              {isUpdating ? 'Updating...' : 'Push Status'}
-            </button>
+            <Button label="Push status" variant="primary" onClick={handleUpdateStatus} isLoading={isUpdating} isDisabled={!selectedChildId} width="100%" />
 
-            <button onClick={() => parent && void runUpdate(() => AdminCommerce.resendOrderUpdate(parent.id), 'Current order update emailed to customer and seller.')} disabled={isUpdating || !parent} className="w-full rounded-xl border border-white/10 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-white/10 disabled:opacity-50">Resend order update emails</button>
+            <Button label="Resend order update emails" onClick={() => parent && void runUpdate(() => AdminCommerce.resendOrderUpdate(parent.id), 'Current order update emailed to customer and seller.')} isDisabled={isUpdating || !parent} width="100%" />
 
-            <button
-              onClick={handleCancelSelectedChild}
-              disabled={isUpdating || !selectedChildId}
-              className="w-full rounded-xl border border-red-500/30 text-red-300 text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-red-500/10 disabled:opacity-50"
-            >
-              <span className="inline-flex items-center gap-2">
-                <Ban size={14} />
-                Cancel Child Order
-              </span>
-            </button>
+            <Button label="Cancel child order" variant="destructive" icon={<Ban size={14} />} onClick={handleCancelSelectedChild} isDisabled={isUpdating || !selectedChildId} width="100%" />
 
             <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/10">
-              <button onClick={() => void printReceipt('customer')} disabled={!parent} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 disabled:opacity-50"><Printer size={13} className="mr-1 inline" />Customer receipt</button>
-              <button onClick={() => void printReceipt('seller')} disabled={!selectedChildId} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 disabled:opacity-50"><Printer size={13} className="mr-1 inline" />Packing receipt</button>
+              <Button label="Customer receipt" size="sm" icon={<Printer size={13} />} onClick={() => void printReceipt('customer')} isDisabled={!parent} />
+              <Button label="Packing receipt" size="sm" icon={<Printer size={13} />} onClick={() => void printReceipt('seller')} isDisabled={!selectedChildId} />
             </div>
 
             <div className="pt-3 border-t border-white/10 grid grid-cols-2 gap-2">
@@ -651,13 +638,7 @@ const OrderDetailPage: React.FC = () => {
               <input value={warehouseLng} onChange={(e) => setWarehouseLng(e.target.value)} placeholder="Lng" className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
               <input value={warehouseCity} onChange={(e) => setWarehouseCity(e.target.value)} placeholder="City" className="col-span-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
               <input value={warehouseLabel} onChange={(e) => setWarehouseLabel(e.target.value)} placeholder="Label" className="col-span-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
-              <button
-                onClick={handleSetWarehouse}
-                disabled={isUpdating || !selectedChildId || !warehouseLat || !warehouseLng}
-                className="col-span-2 rounded-xl border border-white/10 text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-white/10 disabled:opacity-50"
-              >
-                Set Warehouse Anchor
-              </button>
+              <Button label="Set warehouse anchor" size="sm" onClick={handleSetWarehouse} isDisabled={isUpdating || !selectedChildId || !warehouseLat || !warehouseLng} />
             </div>
 
             <div className="pt-3 border-t border-white/10 space-y-2">
@@ -667,17 +648,13 @@ const OrderDetailPage: React.FC = () => {
                 onChange={(e) => setNewEta(e.target.value)}
                 className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
               />
-              <button
-                onClick={handleUpdateEta}
-                disabled={isUpdating || !selectedChildId || !newEta}
-                className="w-full rounded-xl border border-white/10 text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-white/10 disabled:opacity-50"
-              >
-                Update ETA
-              </button>
+              <Button label="Update ETA" onClick={handleUpdateEta} isDisabled={isUpdating || !selectedChildId || !newEta} width="100%" />
             </div>
-          </div>
+            </VStack>
+          </Card>
 
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.04] p-5 space-y-3">
+          <Card padding={4}>
+            <VStack gap={3}>
             <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
               <XCircle size={16} className="text-red-400" /> Cancel Parent Order
             </h3>
@@ -687,16 +664,11 @@ const OrderDetailPage: React.FC = () => {
               placeholder="Reason (optional)"
               className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-red-400"
             />
-            <button
-              onClick={handleCancelParent}
-              disabled={isUpdating}
-              className="w-full rounded-xl bg-red-600 text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-red-500 disabled:opacity-50"
-            >
-              {isUpdating ? 'Processing...' : 'Cancel Parent'}
-            </button>
-          </div>
+            <Button label="Cancel parent" variant="destructive" onClick={handleCancelParent} isLoading={isUpdating} width="100%" />
+            </VStack>
+          </Card>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <Card padding={4}>
             <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
               <Calendar size={16} className="text-primary" /> Timeline Metadata
             </h3>
@@ -705,12 +677,26 @@ const OrderDetailPage: React.FC = () => {
               <p>Rollup Status: <span className="text-white">{rollupStatus}</span></p>
               <p>Total Child Orders: <span className="text-white">{children.length}</span></p>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
 
       {editingDetails && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60"><button className="flex-1" onClick={() => setEditingDetails(false)} aria-label="Close" /><aside className="h-full w-full max-w-xl overflow-y-auto border-l border-white/10 bg-[#111] p-5"><div className="flex items-center justify-between"><h3 className="text-lg font-semibold text-white">Edit order details</h3><button onClick={() => setEditingDetails(false)} className="rounded-md border border-white/10 p-2 text-white"><XCircle size={16} /></button></div><p className="mt-2 text-sm text-neutral-400">Updates customer, delivery, payment, parent order, and every seller child order together.</p><div className="mt-5 grid gap-3">{[['full_name','Name'],['phone_number','Phone'],['email','Email'],['address_line1','Address line 1'],['address_line2','Address line 2'],['city','City'],['province','Province'],['postal_code','Postal code'],['country','Country']].map(([key,label]) => <label key={key} className="text-xs text-neutral-400">{label}<input value={detailsDraft[key] || ''} onChange={(event) => setDetailsDraft((current) => ({ ...current, [key]: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>)}<label className="text-xs text-neutral-400">Payment method<select value={detailsDraft.payment_method || 'cod'} onChange={(event) => setDetailsDraft((current) => ({ ...current, payment_method: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"><option value="cod">Cash on delivery</option><option value="easypaisa">Easypaisa</option><option value="bank_transfer">Bank transfer</option></select></label></div><button disabled={isUpdating} onClick={() => void saveOrderDetails()} className="mt-5 w-full rounded-md bg-white px-3 py-3 text-sm font-semibold text-black disabled:opacity-50">Save all order details</button></aside></div>
+        <Dialog isOpen onOpenChange={(isOpen) => !isOpen && setEditingDetails(false)} purpose="form" width="640px" maxHeight="90vh">
+          <Card padding={4}>
+            <VStack gap={4}>
+              <Heading level={2}>Edit order details</Heading>
+              <p className="text-sm text-neutral-400">Updates the customer, delivery address, payment method, parent order, and seller child orders together.</p>
+              {[
+                ['full_name', 'Name'], ['phone_number', 'Phone'], ['email', 'Email'], ['address_line1', 'Address line 1'], ['address_line2', 'Address line 2'], ['city', 'City'], ['province', 'Province'], ['postal_code', 'Postal code'], ['country', 'Country'],
+              ].map(([key, label]) => (
+                <TextInput key={key} label={label} value={detailsDraft[key] || ''} onChange={(value) => setDetailsDraft((current) => ({ ...current, [key]: value }))} isRequired={['full_name', 'phone_number', 'address_line1', 'city'].includes(key)} />
+              ))}
+              <label className="text-sm text-neutral-300">Payment method<select value={detailsDraft.payment_method || 'cod'} onChange={(event) => setDetailsDraft((current) => ({ ...current, payment_method: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"><option value="cod">Cash on delivery</option><option value="easypaisa">Easypaisa</option><option value="bank_transfer">Bank transfer</option></select></label>
+              <Button label="Save all order details" variant="primary" onClick={() => void saveOrderDetails()} isLoading={isUpdating} width="100%" />
+            </VStack>
+          </Card>
+        </Dialog>
       )}
     </motion.div>
   );

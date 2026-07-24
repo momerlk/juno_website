@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Bell, Send } from 'lucide-react';
-import FormInput from '../seller/FormInput';
 import { broadcastNotification } from '../../api/adminApi';
+import { Banner } from '@astryxdesign/core/Banner';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
+import { Heading } from '@astryxdesign/core/Heading';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { TextArea } from '@astryxdesign/core/TextArea';
+import { VStack } from '@astryxdesign/core/VStack';
 
 const ManageNotifications: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -38,57 +43,31 @@ const ManageNotifications: React.FC = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.4 }}
-      className="glass-panel p-6 mt-6 max-w-2xl mx-auto"
-    >
-      <div className="flex items-center mb-6 border-b border-white/10 pb-4">
-        <div className="p-3 bg-primary/20 rounded-xl mr-4">
-            <Bell size={24} className="text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold text-white">Broadcast Notifications</h2>
-      </div>
-      <form onSubmit={handleSendBroadcast} className="space-y-6">
-        <FormInput
-          id="notification-title"
+    <Card padding={4} maxWidth="680px">
+      <form onSubmit={handleSendBroadcast}>
+        <VStack gap={4}>
+        <Heading level={2} startIcon={<Bell size={20} />}>Broadcast notifications</Heading>
+        <TextInput
           label="Notification Title"
           value={title}
-          onChange={setTitle}
+          onChange={(value) => setTitle(value)}
           placeholder="e.g., New Season Arrivals!"
-          required
+          isRequired
         />
-        <div>
-          <label htmlFor="notification-body" className="block text-sm font-medium text-neutral-400 mb-1">
-            Notification Body
-          </label>
-          <textarea
-            id="notification-body"
+        <TextArea
+            label="Notification body"
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={(value) => setBody(value)}
             placeholder="Describe the notification..."
-            required
-            className="glass-input w-full min-h-[120px]"
             rows={4}
+            isRequired
           />
-        </div>
-        
-        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">{error}</div>}
-        {success && <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">{success}</div>}
-
-        <div className="text-right">
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="glass-button bg-primary text-white hover:bg-primary-dark shadow-glow-primary border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send size={18} className="mr-2" />
-            {isLoading ? 'Sending...' : 'Send Broadcast'}
-          </button>
-        </div>
+        {error && <Banner status="error" title={error} />}
+        {success && <Banner status="success" title={success} />}
+        <Button type="submit" label="Send broadcast" icon={<Send size={16} />} variant="primary" isLoading={isLoading} />
+        </VStack>
       </form>
-    </motion.div>
+    </Card>
   );
 };
 

@@ -17,6 +17,8 @@ import {
   X,
 } from 'lucide-react';
 import { AdminPortal } from '../../api/adminApi';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
 
 type OrderView = 'all' | 'open' | 'pending' | 'confirmed' | 'packed' | 'delivery' | 'exceptions' | 'closed' | 'carts';
 
@@ -283,7 +285,7 @@ const ManageOrders: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-white/10 bg-[#111]">
+      <Card padding={0}>
         <div className="flex flex-col gap-4 border-b border-white/10 p-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -293,10 +295,8 @@ const ManageOrders: React.FC = () => {
             <p className="mt-1 text-xs text-neutral-400">Admin order desk for status batches, single-order cancellation, carts, and customer repair.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => { setDMQuizLink(''); setDMDraftOpen(true); }} className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-xs font-semibold text-black hover:bg-neutral-200"><Plus size={14} /> DM order</button>
-            <button onClick={() => void load()} className="inline-flex items-center gap-1 rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10">
-              <RefreshCw size={14} /> Refresh
-            </button>
+            <Button label="DM order" variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => { setDMQuizLink(''); setDMDraftOpen(true); }} />
+            <Button label="Refresh" variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => void load()} />
           </div>
         </div>
 
@@ -434,7 +434,7 @@ const ManageOrders: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60">

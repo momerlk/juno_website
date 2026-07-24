@@ -21,6 +21,7 @@ import {
 } from './productManagement';
 import { uploadFileAndGetUrl } from '../../api/shared';
 import type { SizingGuide } from '../../constants/types';
+import { Button } from '@astryxdesign/core/Button';
 
 interface CatalogEditDraft {
   title: string;
@@ -440,13 +441,7 @@ const ManageProducts: React.FC = () => {
             >
               Create / Import
             </Link>
-            <button
-              onClick={() => void fetchProducts(page)}
-              className="inline-flex items-center gap-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-1.5 text-xs"
-            >
-              <RefreshCw size={13} />
-              Refresh
-            </button>
+            <Button label="Refresh" size="sm" icon={<RefreshCw size={13} />} onClick={() => void fetchProducts(page)} />
           </div>
         </div>
 
@@ -478,18 +473,8 @@ const ManageProducts: React.FC = () => {
             </div>
           </label>
           <div className="flex items-end gap-2">
-            <button
-              onClick={applySearch}
-              className="rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100"
-            >
-              Run
-            </button>
-            <button
-              onClick={() => setShowAdvancedFilters((prev) => !prev)}
-              className="rounded border border-white/15 px-3 py-2 text-xs text-neutral-300"
-            >
-              {showAdvancedFilters ? 'Hide filters' : 'Advanced filters'}
-            </button>
+            <Button label="Run" size="sm" onClick={applySearch} />
+            <Button label={showAdvancedFilters ? 'Hide filters' : 'Advanced filters'} size="sm" variant="ghost" onClick={() => setShowAdvancedFilters((prev) => !prev)} />
           </div>
         </div>
 
