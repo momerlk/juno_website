@@ -312,7 +312,7 @@ const CatalogProductPage: React.FC = () => {
             product_title: product.title,
             variant_title: selectedVariant.title,
             variant_options: selectedVariant.options,
-            image_url: selectedVariant.image_url || currentImage,
+            image_url: selectedVariant.image_url || selectedVariant.images?.[0] || currentImage,
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
             source: 'catalog',
@@ -365,7 +365,7 @@ const CatalogProductPage: React.FC = () => {
             product_title: product.title,
             variant_title: selectedVariant.title,
             variant_options: selectedVariant.options,
-            image_url: selectedVariant.image_url || currentImage,
+            image_url: selectedVariant.image_url || selectedVariant.images?.[0] || currentImage,
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
         };

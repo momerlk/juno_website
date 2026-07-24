@@ -548,6 +548,9 @@ const CheckoutPage: React.FC = () => {
                                             >
                                                 {item.product_title || 'Product'}
                                             </h3>
+                                            {item.variant_title && (
+                                                <p className="mt-1 text-xs text-white/55">{item.variant_title}</p>
+                                            )}
                                             <p className="mt-1 text-xs text-white/40">Qty · {item.quantity}</p>
                                         </div>
                                         <p

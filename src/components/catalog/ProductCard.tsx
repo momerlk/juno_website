@@ -108,7 +108,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 product_title: product.title,
                 variant_title: variant.title,
                 variant_options: variant.options,
-                image_url: productImage,
+                image_url: variant.image_url || variant.images?.[0] || productImage,
                 max_quantity: maxVariantQuantity,
                 is_available: variant.available && !!product.inventory?.in_stock,
             }
