@@ -226,7 +226,11 @@ const CatalogProductPage: React.FC = () => {
         );
     }, [product, selectedOptions]);
 
-    const imageGallery = useMemo(() => asArray(product?.images), [product?.images]);
+    const imageGallery = useMemo(() => {
+        const productImages = asArray(product?.images);
+        const variantImage = selectedVariant?.image_url;
+        return variantImage ? [variantImage, ...productImages.filter((image) => image !== variantImage)] : productImages;
+    }, [product?.images, selectedVariant?.image_url]);
     const currentImage = imageGallery[selectedImageIdx] || '/images/misc/juno_app_icon.png';
     const currentImageAspectRatio = imageAspectRatios[currentImage];
     const useContainedMainImage = typeof currentImageAspectRatio === 'number' && currentImageAspectRatio > 0.95;
@@ -265,6 +269,10 @@ const CatalogProductPage: React.FC = () => {
     }, [showAddedFeedback]);
 
     useEffect(() => {
+        setSelectedImageIdx(0);
+    }, [selectedVariant?.image_url]);
+
+    useEffect(() => {
         if (imageGallery.length === 0) {
             if (selectedImageIdx !== 0) setSelectedImageIdx(0);
             return;
@@ -297,7 +305,7 @@ const CatalogProductPage: React.FC = () => {
             product_title: product.title,
             variant_title: selectedVariant.title,
             variant_options: selectedVariant.options,
-            image_url: imageGallery[0] || '/images/misc/juno_app_icon.png',
+            image_url: selectedVariant.image_url || currentImage,
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
             source: 'catalog',
@@ -309,7 +317,7 @@ const CatalogProductPage: React.FC = () => {
         addItem,
         canPurchase,
         currentPrice,
-        imageGallery,
+        currentImage,
         maxAvailableQuantity,
         product,
         quantity,
@@ -350,7 +358,7 @@ const CatalogProductPage: React.FC = () => {
             product_title: product.title,
             variant_title: selectedVariant.title,
             variant_options: selectedVariant.options,
-            image_url: imageGallery[0] || '/images/misc/juno_app_icon.png',
+            image_url: selectedVariant.image_url || currentImage,
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
         };
@@ -358,7 +366,7 @@ const CatalogProductPage: React.FC = () => {
     }, [
         canPurchase,
         currentPrice,
-        imageGallery,
+        currentImage,
         maxAvailableQuantity,
         navigate,
         product,
@@ -728,6 +736,16 @@ const CatalogProductPage: React.FC = () => {
                                         <div className="flex flex-wrap gap-2">
                                             {asArray(option.values).map((value) => {
                                                 const isActive = selectedOptions[option.name] === value;
+                                                const isColorOption = /colou?r/i.test(option.name);
+                                                const matchingVariant = variants.find((variant) =>
+                                                    variant.options?.[option.name] === value &&
+                                                    asArray(product.options).every((otherOption) =>
+                                                        otherOption.name === option.name ||
+                                                        !selectedOptions[otherOption.name] ||
+                                                        variant.options?.[otherOption.name] === selectedOptions[otherOption.name]
+                                                    )
+                                                );
+                                                const colorHex = matchingVariant?.color_hex?.match(/^#[0-9a-f]{3,8}$/i)?.[0];
                                                 const isValueAvailable = variants.some((variant) => {
                                                     if (variant?.options?.[option.name] !== value) return false;
                                                     const matchesOtherSelectedOptions = asArray(product.options).every((otherOption) => {
@@ -751,7 +769,7 @@ const CatalogProductPage: React.FC = () => {
                                                             setSelectedOptions((current) => ({ ...current, [option.name]: value }));
                                                         }}
                                                         disabled={!isValueAvailable}
-                                                        className={`relative min-w-[3rem] rounded-lg px-3.5 py-2.5 text-sm font-bold transition-all ${
+                                                        className={`relative inline-flex min-w-[3rem] items-center justify-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-bold transition-all ${
                                                             isActive
                                                                 ? 'bg-white text-black shadow-[0_6px_18px_rgba(255,255,255,0.18)]'
                                                                 : isValueAvailable
@@ -759,6 +777,13 @@ const CatalogProductPage: React.FC = () => {
                                                                   : 'cursor-not-allowed border border-white/10 bg-white/[0.02] text-white/35 line-through decoration-white/30'
                                                         }`}
                                                     >
+                                                        {isColorOption && colorHex ? (
+                                                            <span
+                                                                aria-hidden="true"
+                                                                className="h-4 w-4 rounded-full border border-black/15 shadow-sm"
+                                                                style={{ backgroundColor: colorHex }}
+                                                            />
+                                                        ) : null}
                                                         {isActive ? (
                                                             <span className="flex items-center justify-center gap-1.5">
                                                                 <Check size={12} strokeWidth={3} />

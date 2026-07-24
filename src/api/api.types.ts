@@ -231,7 +231,13 @@ export interface ProductVariant {
     title: string;
     options: Record<string, string>;
     price: number;
+    brand_price?: number;
     available: boolean;
+    image_url?: string;
+    color_hex?: string;
+    inventory?: { quantity?: number; available_quantity?: number };
+    position?: number;
+    is_default?: boolean;
 }
 
 export interface ProductOption {
