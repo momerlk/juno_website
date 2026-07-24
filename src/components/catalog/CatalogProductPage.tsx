@@ -31,6 +31,12 @@ const DEFAULT_DELIVERY_DAYS = 8;
 
 const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
 
+const getSourceSizingGuide = (guide?: Record<string, unknown>) => {
+    const image_url = typeof guide?.image_url === 'string' ? guide.image_url : undefined;
+    const html_table = typeof guide?.html_table === 'string' ? guide.html_table : undefined;
+    return image_url || html_table ? { image_url, html_table } : null;
+};
+
 const getBaseProductPrice = (product: Partial<CatalogProduct> | null): number => {
     if (!product) return 0;
     return product.pricing?.discounted
@@ -246,6 +252,9 @@ const CatalogProductPage: React.FC = () => {
     const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
     const catalogBadges = getCatalogBadges(product);
     const hasApprovedSizing = sizing?.availability === 'normalized';
+    const sourceSizingGuide = getSourceSizingGuide(product?.sizing_guide ?? product?.enrichment?.sizing_guide);
+    const hasOriginalSizingGuide = Boolean(sourceSizingGuide?.image_url || sourceSizingGuide?.html_table);
+    const hasSizingGuide = hasApprovedSizing || hasOriginalSizingGuide;
 
     const selectRecommendedSize = useCallback((size: string) => {
         const sizeOption = asArray(product?.options).find((option) => option.name.toLowerCase().includes('size'));
@@ -784,7 +793,7 @@ const CatalogProductPage: React.FC = () => {
                                                 );
                                             })}
                                         </div>
-                                        {option.name.toLowerCase().includes('size') && hasApprovedSizing ? (
+                                        {option.name.toLowerCase().includes('size') && hasSizingGuide ? (
                                             <button
                                                 onClick={() => setShowSizeGuide(true)}
                                                 className="group mt-4 flex w-full items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 to-secondary/[0.07] p-3.5 text-left transition-all hover:border-primary/60 hover:from-primary/15 hover:to-secondary/10"
@@ -793,8 +802,8 @@ const CatalogProductPage: React.FC = () => {
                                                     <Ruler size={17} />
                                                 </span>
                                                 <span className="min-w-0 flex-1">
-                                                    <span className="block text-xs font-black uppercase tracking-[0.14em] text-white">Find my size</span>
-                                                    <span className="mt-0.5 block text-[11px] text-white/45">Take the size quiz or view the chart</span>
+                                                    <span className="block text-xs font-black uppercase tracking-[0.14em] text-white">{hasApprovedSizing ? 'Find my size' : 'View size guide'}</span>
+                                                    <span className="mt-0.5 block text-[11px] text-white/45">{hasApprovedSizing ? 'Take the size quiz or view the chart' : 'View this brand’s size chart'}</span>
                                                 </span>
                                                 <ChevronRight size={16} className="text-white/35 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
                                             </button>
@@ -987,6 +996,7 @@ const CatalogProductPage: React.FC = () => {
                 onClose={() => setShowSizeGuide(false)}
                 productId={product.id}
                 sizing={sizing}
+                sourceGuide={sourceSizingGuide}
                 selectedSize={Object.entries(selectedOptions).find(([name]) => name.toLowerCase().includes('size'))?.[1]}
                 onSelectSize={selectRecommendedSize}
             />

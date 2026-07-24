@@ -8,9 +8,28 @@ interface SizeGuideModalProps {
     onClose: () => void;
     productId: string;
     sizing: ProductSizing | null;
+    sourceGuide?: { image_url?: string; html_table?: string } | null;
     selectedSize?: string;
     onSelectSize: (size: string) => void;
 }
+
+const ALLOWED_TABLE_TAGS = new Set(['table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col', 'br', 'span']);
+const ALLOWED_TABLE_ATTRIBUTES = new Set(['class', 'id', 'colspan', 'rowspan', 'scope']);
+
+const sanitizeSizeTable = (html?: string): string => {
+    if (!html || typeof DOMParser === 'undefined') return '';
+    const document = new DOMParser().parseFromString(html, 'text/html');
+    document.body.querySelectorAll('*').forEach((element) => {
+        if (!ALLOWED_TABLE_TAGS.has(element.tagName.toLowerCase())) {
+            element.replaceWith(...Array.from(element.childNodes));
+            return;
+        }
+        Array.from(element.attributes).forEach((attribute) => {
+            if (!ALLOWED_TABLE_ATTRIBUTES.has(attribute.name.toLowerCase())) element.removeAttribute(attribute.name);
+        });
+    });
+    return document.body.innerHTML;
+};
 
 const titleCase = (value: string) => value.replace(/[_-]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
@@ -30,7 +49,8 @@ const displayMeasurement = (value: unknown): string => {
 
     const record = value as Record<string, unknown>;
     if (record.min !== undefined || record.max !== undefined) {
-        return [record.min, record.max].filter((item) => item !== undefined && item !== null).join('–');
+        const range = [record.min, record.max].filter((item) => item !== undefined && item !== null);
+        return range.length === 2 && String(range[0]) === String(range[1]) ? String(range[0]) : range.join('–');
     }
     if (record.value !== undefined) return displayMeasurement(record.value);
     if (record.label !== undefined) return displayMeasurement(record.label);
@@ -52,6 +72,7 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
     onClose,
     productId,
     sizing,
+    sourceGuide,
     selectedSize,
     onSelectSize,
 }) => {
@@ -62,6 +83,9 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
     const [recommendation, setRecommendation] = useState<SizeRecommendation | null>(null);
     const [recommendationError, setRecommendationError] = useState<string | null>(null);
     const [view, setView] = useState<'quiz' | 'chart'>('quiz');
+    const sourceTable = useMemo(() => sanitizeSizeTable(sourceGuide?.html_table), [sourceGuide?.html_table]);
+    const hasOriginalSource = Boolean(sourceGuide?.image_url || sourceTable);
+    const hasNormalizedChart = sizing?.availability === 'normalized';
 
     const section = useMemo<SizeChartSection | null>(() => {
         if (!sizing) return null;
@@ -149,7 +173,7 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
         }
     };
 
-    if (!isOpen || !sizing || sizing.availability !== 'normalized') return null;
+    if (!isOpen || (!hasNormalizedChart && !hasOriginalSource)) return null;
 
     return (
         <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="size-fit-title">
@@ -161,12 +185,19 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
                 <div className="mb-5 flex items-start justify-between gap-4">
                     <div>
                         <div className="mb-2 inline-flex items-center gap-2 text-primary"><Ruler size={16} /><span className="text-[10px] font-black uppercase tracking-[0.22em]">Size & fit</span></div>
-                        <h2 id="size-fit-title" className="text-2xl font-black uppercase tracking-[-0.04em] text-white">Find your size</h2>
-                        {section?.name || section?.title ? <p className="mt-1 text-sm text-white/50">{section.name ?? section.title}{section?.unit ? ` · ${section.unit}` : ''}</p> : null}
+                        <h2 id="size-fit-title" className="text-2xl font-black uppercase tracking-[-0.04em] text-white">{hasNormalizedChart ? 'Find your size' : 'Size guide'}</h2>
+                        {hasNormalizedChart && (section?.name || section?.title) ? <p className="mt-1 text-sm text-white/50">{section.name ?? section.title}{section?.unit ? ` · ${section.unit}` : ''}</p> : null}
                     </div>
                     <button onClick={onClose} aria-label="Close size guide" className="rounded-full border border-white/10 p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white"><X size={20} /></button>
                 </div>
 
+                {!hasNormalizedChart ? (
+                    <div className="space-y-4">
+                        {sourceGuide?.image_url ? <img src={sourceGuide.image_url} alt="Brand size guide" className="w-full rounded-2xl border border-white/10 bg-white" /> : null}
+                        {sourceTable ? <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white p-4 text-black [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-black/15 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-black/15 [&_th]:bg-black/[0.04] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left" dangerouslySetInnerHTML={{ __html: sourceTable }} /> : null}
+                        <p className="text-center text-[11px] leading-5 text-white/40">This brand’s original size guide is shown here.</p>
+                    </div>
+                ) : <>
                 <div className="mb-6 grid grid-cols-2 rounded-xl border border-white/10 bg-white/[0.03] p-1">
                     <button onClick={() => setView('quiz')} className={`rounded-lg px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] transition ${view === 'quiz' ? 'bg-white text-black' : 'text-white/45 hover:text-white'}`}>Size quiz</button>
                     <button onClick={() => setView('chart')} disabled={!rows.length} className={`rounded-lg px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] transition disabled:cursor-not-allowed disabled:opacity-25 ${view === 'chart' ? 'bg-white text-black' : 'text-white/45 hover:text-white'}`}>Size chart</button>
@@ -197,7 +228,7 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
                             })}</tbody>
                         </table>
                     </div>
-                )}
+                )}</>}
             </motion.div>
         </div>
     );

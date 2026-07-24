@@ -369,6 +369,11 @@ export interface CatalogProduct {
         sizing_guide?: Record<string, unknown>;
         [key: string]: unknown;
     };
+    sizing_guide?: {
+        image_url?: string;
+        html_table?: string;
+        [key: string]: unknown;
+    };
     pricing: ProductPricing;
     images: string[];
     variants: ProductVariant[];
