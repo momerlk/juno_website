@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Loader2, Ruler, Sparkles, X } from 'lucide-react';
 import { Sizing, type ProductSizing, type SizeChartRow, type SizeChartSection, type SizeRecommendation } from '../../api/api';
@@ -61,6 +61,7 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
     const [isRecommending, setIsRecommending] = useState(false);
     const [recommendation, setRecommendation] = useState<SizeRecommendation | null>(null);
     const [recommendationError, setRecommendationError] = useState<string | null>(null);
+    const [view, setView] = useState<'quiz' | 'chart'>('quiz');
 
     const section = useMemo<SizeChartSection | null>(() => {
         if (!sizing) return null;
@@ -96,14 +97,39 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
         setRecommendationError(null);
     };
 
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        setUsualSize(selectedSize ?? '');
+        setFit('regular');
+        setMeasurements({});
+        setRecommendation(null);
+        setRecommendationError(null);
+        setView('quiz');
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isOpen, onClose, productId, selectedSize]);
+
     const handleRecommend = async () => {
-        setIsRecommending(true);
         resetRecommendation();
         const parsedMeasurements = Object.fromEntries(
             Object.entries(measurements)
                 .map(([key, value]) => [key, Number(value)])
                 .filter(([, value]) => Number.isFinite(value) && value > 0)
         );
+        if (!usualSize && Object.keys(parsedMeasurements).length === 0) {
+            setRecommendationError('Choose your usual size or add a measurement.');
+            return;
+        }
+        setIsRecommending(true);
 
         try {
             const response = await Sizing.recommend(productId, {
@@ -115,9 +141,7 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
                 setRecommendationError((response.body as { message?: string }).message ?? 'We could not find a fit just now.');
                 return;
             }
-            const result = response.body;
-            setRecommendation(result);
-            if (result.recommended_size) onSelectSize(result.recommended_size);
+            setRecommendation(response.body);
         } catch {
             setRecommendationError('We could not find a fit just now.');
         } finally {
@@ -128,34 +152,27 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
     if (!isOpen || !sizing || sizing.availability !== 'normalized') return null;
 
     return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="size-fit-title">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={onClose} />
             <motion.div
                 initial={{ opacity: 0, scale: 0.97, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 20 }}
-                className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0A0A0A] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.65)] md:p-8"
+                className="relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-[2rem] border border-white/10 bg-[#0A0A0A] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_28px_90px_rgba(0,0,0,0.65)] sm:rounded-[2rem] md:p-8"
             >
-                <div className="mb-7 flex items-start justify-between gap-4">
+                <div className="mb-5 flex items-start justify-between gap-4">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 text-primary"><Ruler size={16} /><span className="text-[10px] font-black uppercase tracking-[0.22em]">Made for this piece</span></div>
-                        <h2 className="text-2xl font-black uppercase tracking-[-0.04em] text-white">Size & fit</h2>
+                        <div className="mb-2 inline-flex items-center gap-2 text-primary"><Ruler size={16} /><span className="text-[10px] font-black uppercase tracking-[0.22em]">Size & fit</span></div>
+                        <h2 id="size-fit-title" className="text-2xl font-black uppercase tracking-[-0.04em] text-white">Find your size</h2>
                         {section?.name || section?.title ? <p className="mt-1 text-sm text-white/50">{section.name ?? section.title}{section?.unit ? ` · ${section.unit}` : ''}</p> : null}
                     </div>
                     <button onClick={onClose} aria-label="Close size guide" className="rounded-full border border-white/10 p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white"><X size={20} /></button>
                 </div>
 
-                {rows.length ? (
-                    <div className="mb-8 overflow-x-auto rounded-2xl border border-white/10">
-                        <table className="w-full min-w-[420px] text-left text-sm">
-                            <thead className="bg-white/[0.05]"><tr><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white/60">Size</th>{columns.map((column) => <th key={column} className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white/60">{titleCase(column)}</th>)}</tr></thead>
-                            <tbody className="divide-y divide-white/[0.06]">{rows.map((row, index) => {
-                                const size = rowSize(row); const values = rowMeasurements(row); const isSelected = size === selectedSize;
-                                return <tr key={`${size}-${index}`} className={isSelected ? 'bg-primary/10' : ''}><td className="px-4 py-3 font-black text-white">{size}</td>{columns.map((column) => <td key={column} className="px-4 py-3 text-white/70">{displayMeasurement(values[column] ?? values[column.toLowerCase()])}</td>)}</tr>;
-                            })}</tbody>
-                        </table>
-                    </div>
-                ) : null}
+                <div className="mb-6 grid grid-cols-2 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+                    <button onClick={() => setView('quiz')} className={`rounded-lg px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] transition ${view === 'quiz' ? 'bg-white text-black' : 'text-white/45 hover:text-white'}`}>Size quiz</button>
+                    <button onClick={() => setView('chart')} disabled={!rows.length} className={`rounded-lg px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] transition disabled:cursor-not-allowed disabled:opacity-25 ${view === 'chart' ? 'bg-white text-black' : 'text-white/45 hover:text-white'}`}>Size chart</button>
+                </div>
 
-                <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/15 to-secondary/10 p-5 md:p-6">
+                {view === 'quiz' ? <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/15 to-secondary/10 p-5 md:p-6">
                     <div className="mb-5 flex items-center gap-2"><Sparkles size={17} className="text-primary" /><h3 className="text-sm font-black uppercase tracking-[0.16em] text-white">Find my fit</h3></div>
                     <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block text-[10px] font-black uppercase tracking-[0.16em] text-white/55">Your usual size
@@ -164,13 +181,23 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
                             </select>
                         </label>
                         <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/55">How do you like it?</p><div className="mt-2 grid grid-cols-3 gap-1.5">{(['fitted', 'regular', 'relaxed'] as const).map((option) => <button key={option} onClick={() => { setFit(option); resetRecommendation(); }} className={`rounded-xl px-2 py-3 text-[10px] font-black uppercase tracking-wide transition ${fit === option ? 'bg-white text-black' : 'border border-white/10 bg-black/25 text-white/60 hover:text-white'}`}>{option}</button>)}</div></div>
-                        {measurementQuestions.map((question) => { const key = getQuestionKey(question); return <label key={key} className="block text-[10px] font-black uppercase tracking-[0.16em] text-white/55">{getQuestionLabel(question)} <span className="text-white/35">(in)</span><input inputMode="decimal" type="number" min="1" step="0.1" value={measurements[key] ?? ''} onChange={(event) => { setMeasurements((current) => ({ ...current, [key]: event.target.value })); resetRecommendation(); }} className="mt-2 w-full rounded-xl border border-white/10 bg-black/35 px-3 py-3 text-sm font-bold normal-case tracking-normal text-white outline-none transition focus:border-primary/70" /></label>; })}
+                        {measurementQuestions.map((question) => { const key = getQuestionKey(question); return <label key={key} className="block text-[10px] font-black uppercase tracking-[0.16em] text-white/55">{getQuestionLabel(question)} <span className="text-white/35">({section?.unit ?? 'in'})</span><input inputMode="decimal" type="number" min="1" step="0.1" value={measurements[key] ?? ''} onChange={(event) => { setMeasurements((current) => ({ ...current, [key]: event.target.value })); resetRecommendation(); }} className="mt-2 w-full rounded-xl border border-white/10 bg-black/35 px-3 py-3 text-sm font-bold normal-case tracking-normal text-white outline-none transition focus:border-primary/70" /></label>; })}
                     </div>
                     <button onClick={handleRecommend} disabled={isRecommending} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-3.5 text-xs font-black uppercase tracking-[0.18em] text-white transition hover:brightness-110 disabled:opacity-60">{isRecommending ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}{isRecommending ? 'Finding your fit...' : 'Recommend my size'}</button>
-                    <AnimatePresence>{recommendation ? <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3.5"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-300 text-black"><Check size={16} strokeWidth={3} /></span><p className="text-sm text-white/85">Your recommended size is <strong className="text-white">{recommendation.recommended_size}</strong>{recommendation.alternative_size ? <span className="text-white/55"> · or {recommendation.alternative_size} for another fit</span> : null}</p></motion.div> : null}</AnimatePresence>
-                    {recommendationError ? <p className="mt-3 text-sm text-red-300">{recommendationError}</p> : null}
-                </div>
-                <p className="mt-4 text-center text-xs leading-5 text-white/40">This recommendation uses this brand’s approved size chart and currently available variants.</p>
+                    <div aria-live="polite"><AnimatePresence>{recommendation ? <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-300 text-black"><Check size={17} strokeWidth={3} /></span><p className="text-sm text-white/85">We recommend <strong className="text-lg text-white">{recommendation.recommended_size}</strong>{recommendation.alternative_size ? <span className="block text-xs text-white/50">Alternative: {recommendation.alternative_size}</span> : null}</p></div><button onClick={() => { onSelectSize(recommendation.recommended_size); onClose(); }} className="mt-3 w-full rounded-lg bg-white px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] text-black">Use size {recommendation.recommended_size}</button></motion.div> : null}</AnimatePresence>
+                    {recommendationError ? <p className="mt-3 text-sm text-red-300">{recommendationError}</p> : null}</div>
+                    <p className="mt-4 text-center text-[11px] leading-5 text-white/40">Based on this brand’s approved chart and available sizes.</p>
+                </div> : (
+                    <div className="overflow-x-auto rounded-2xl border border-white/10">
+                        <table className="w-full min-w-[420px] text-left text-sm">
+                            <thead className="bg-white/[0.05]"><tr><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white/60">Size</th>{columns.map((column) => <th key={column} className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white/60">{titleCase(column)}</th>)}</tr></thead>
+                            <tbody className="divide-y divide-white/[0.06]">{rows.map((row, index) => {
+                                const size = rowSize(row); const values = rowMeasurements(row); const isSelected = size === selectedSize;
+                                return <tr key={`${size}-${index}`} className={isSelected ? 'bg-primary/10' : ''}><td className="px-4 py-3"><button onClick={() => { onSelectSize(size); onClose(); }} className="font-black text-white hover:text-primary">{size}</button></td>{columns.map((column) => <td key={column} className="px-4 py-3 text-white/70">{displayMeasurement(values[column] ?? values[column.toLowerCase()])}</td>)}</tr>;
+                            })}</tbody>
+                        </table>
+                    </div>
+                )}
             </motion.div>
         </div>
     );

@@ -6,9 +6,7 @@ import {
     Check,
     ChevronLeft,
     ChevronRight,
-    CreditCard,
     Minus,
-    Package,
     Plus,
     Ruler,
     ShoppingBag,
@@ -40,7 +38,7 @@ const getBaseProductPrice = (product: Partial<CatalogProduct> | null): number =>
         : product.pricing?.price ?? 0;
 };
 
-const getVariantAvailableQuantity = (variant: any, product: CatalogProduct | null): number | undefined => {
+const getVariantAvailableQuantity = (variant: Partial<ProductVariant> | null | undefined, product: CatalogProduct | null): number | undefined => {
     const variantQty = variant?.inventory?.available_quantity ?? variant?.inventory?.quantity;
     if (typeof variantQty === 'number' && Number.isFinite(variantQty)) return Math.max(0, variantQty);
     const productQty = product?.inventory?.available_quantity ?? product?.inventory?.quantity;
@@ -48,7 +46,7 @@ const getVariantAvailableQuantity = (variant: any, product: CatalogProduct | nul
     return undefined;
 };
 
-const isPurchasableVariant = (variant: any, product: CatalogProduct | null): boolean => {
+const isPurchasableVariant = (variant: Partial<ProductVariant> | null | undefined, product: CatalogProduct | null): boolean => {
     if (!variant) return false;
     if (variant.available === false) return false;
     const qty = getVariantAvailableQuantity(variant, product);
@@ -411,10 +409,8 @@ const CatalogProductPage: React.FC = () => {
     }
 
     const today = new Date();
-    const purchasedDate = today;
-    const customMakingDate = addDays(today, 3);
-    const readyToShipDate = addDays(today, 6);
-    const deliveryDate = addDays(today, product.shipping_details?.estimated_delivery_days || DEFAULT_DELIVERY_DAYS);
+    const estimatedDeliveryDays = product.shipping_details?.estimated_delivery_days || DEFAULT_DELIVERY_DAYS;
+    const deliveryDate = addDays(today, estimatedDeliveryDays);
 
     return (
         <div className="relative min-h-screen bg-[#050505] pb-36 text-white lg:pb-12">
@@ -563,7 +559,7 @@ const CatalogProductPage: React.FC = () => {
                         ) : null}
                     </div>
 
-                    <div className="min-w-0 space-y-6">
+                    <div className="flex min-w-0 flex-col gap-6">
                         <div>
                             <div className="mb-3 flex flex-wrap items-center gap-2">
                                 <span className="font-mono text-[9px] uppercase tracking-[0.36em] text-white/30">
@@ -667,48 +663,49 @@ const CatalogProductPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025]">
-                            <div className="border-b border-white/[0.06] px-4 py-3">
-                                <p className="text-[11px] leading-snug text-white/70">
-                                    Expected delivery by <span className="font-bold text-white">{fmtDay(deliveryDate)}</span>
-                                </p>
+                        <div className="order-4 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025]">
+                            <div className="flex items-center justify-between gap-4 border-b border-white/[0.07] px-4 py-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-white shadow-[0_8px_22px_rgba(220,10,40,0.22)]">
+                                        <Truck size={17} />
+                                    </span>
+                                    <div>
+                                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white">Expected delivery</p>
+                                        <p className="mt-0.5 text-[11px] text-white/40">Tracking begins after checkout</p>
+                                    </div>
+                                </div>
+                                <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-bold text-white/60">
+                                    {estimatedDeliveryDays} days
+                                </span>
                             </div>
 
-                            <div className="px-4 py-5">
-                                <div className="relative flex items-start justify-between">
-                                    <div className="absolute left-5 right-5 top-5 h-px -translate-y-1/2 bg-white/10" />
-                                    <div className="absolute left-5 top-5 h-px w-[10%] -translate-y-1/2 bg-white/60" />
-
-                                    {[
-                                        { icon: CreditCard, label: 'Purchased', date: fmtDay(purchasedDate), active: true },
-                                        { icon: Package, label: 'Custom making', date: fmtDay(customMakingDate), active: false },
-                                        { icon: Package, label: 'Ready to ship', date: fmtDay(readyToShipDate), active: false },
-                                        { icon: Truck, label: 'Delivered', date: fmtDay(deliveryDate), active: false },
-                                    ].map(({ icon: Icon, label, date, active }) => (
-                                        <div key={label} className="relative z-10 flex w-1/4 flex-col items-center gap-2 text-center">
-                                            <div
-                                                className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
-                                                    active
-                                                        ? 'bg-white text-black shadow-[0_0_16px_rgba(255,255,255,0.2)]'
-                                                        : 'border border-white/15 bg-[#0d0d0e] text-white/35'
-                                                }`}
-                                            >
-                                                <Icon size={15} strokeWidth={active ? 2.4 : 2} />
-                                            </div>
-                                            <div>
-                                                <p className={`text-[10px] font-black uppercase tracking-[0.15em] ${active ? 'text-white' : 'text-white/45'}`}>
-                                                    {label}
-                                                </p>
-                                                <p className="mt-0.5 text-[10px] text-white/40">{date}</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                            <div className="px-5 py-5">
+                                <div className="flex items-center">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black">
+                                        <Check size={14} strokeWidth={3} />
+                                    </span>
+                                    <span className="relative mx-2 h-px flex-1 bg-gradient-to-r from-white/70 via-primary/45 to-secondary/70">
+                                        <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#111] bg-primary" />
+                                    </span>
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-secondary/50 bg-secondary/10 text-secondary">
+                                        <Truck size={14} />
+                                    </span>
+                                </div>
+                                <div className="mt-3 flex items-start justify-between gap-6">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white">Order today</p>
+                                        <p className="mt-1 text-[11px] text-white/40">{fmtDay(today)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white">At your door</p>
+                                        <p className="mt-1 text-sm font-black text-white">{fmtDay(deliveryDate)}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {asArray(product.options).length > 0 ? (
-                            <div className="space-y-4">
+                            <div className="order-1 space-y-4">
                                 {asArray(product.options).map((option) => (
                                     <div key={option.name}>
                                         <div className="mb-2.5 flex items-center justify-between">
@@ -723,15 +720,6 @@ const CatalogProductPage: React.FC = () => {
                                                     {selectedOptions[option.name]}
                                                 </p>
                                             </div>
-                                            {option.name.toLowerCase().includes('size') && hasApprovedSizing ? (
-                                                <button
-                                                    onClick={() => setShowSizeGuide(true)}
-                                                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-primary shadow-[0_6px_18px_rgba(220,10,40,0.16)] transition-all hover:border-primary hover:bg-primary hover:text-white"
-                                                >
-                                                    <Ruler size={11} />
-                                                    Size guide & fit
-                                                </button>
-                                            ) : null}
                                         </div>
                                         <div className="flex flex-wrap gap-2">
                                             {asArray(option.values).map((value) => {
@@ -799,9 +787,16 @@ const CatalogProductPage: React.FC = () => {
                                         {option.name.toLowerCase().includes('size') && hasApprovedSizing ? (
                                             <button
                                                 onClick={() => setShowSizeGuide(true)}
-                                                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-primary/60 bg-gradient-to-r from-primary/20 to-secondary/15 px-3.5 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] text-primary shadow-[0_8px_22px_rgba(220,10,40,0.16)] transition-all hover:from-primary hover:to-secondary hover:text-white"
+                                                className="group mt-4 flex w-full items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 to-secondary/[0.07] p-3.5 text-left transition-all hover:border-primary/60 hover:from-primary/15 hover:to-secondary/10"
                                             >
-                                                <Sparkles size={13} /> Find your fit with Juno
+                                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary text-white shadow-[0_8px_22px_rgba(220,10,40,0.25)]">
+                                                    <Ruler size={17} />
+                                                </span>
+                                                <span className="min-w-0 flex-1">
+                                                    <span className="block text-xs font-black uppercase tracking-[0.14em] text-white">Find my size</span>
+                                                    <span className="mt-0.5 block text-[11px] text-white/45">Take the size quiz or view the chart</span>
+                                                </span>
+                                                <ChevronRight size={16} className="text-white/35 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
                                             </button>
                                         ) : null}
                                     </div>
@@ -809,7 +804,7 @@ const CatalogProductPage: React.FC = () => {
                             </div>
                         ) : null}
 
-                        <div className="space-y-3">
+                        <div className="order-2 space-y-3">
                             <div className="flex items-center justify-between">
                                 <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white">Quantity</p>
                                 <div className="inline-flex items-center overflow-hidden rounded-xl border border-white/12 bg-black/30">
@@ -880,7 +875,7 @@ const CatalogProductPage: React.FC = () => {
                         </div>
 
                         {description ? (
-                            <div className="relative border-t border-white/[0.08] pt-5">
+                            <div className="order-5 relative border-t border-white/[0.08] pt-5">
                                 <p className="mb-2.5 font-mono text-[9px] uppercase tracking-[0.32em] text-white/35">
                                     The piece
                                 </p>
@@ -894,7 +889,7 @@ const CatalogProductPage: React.FC = () => {
                         ) : null}
 
                         {asArray(product.tags).length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="order-6 flex flex-wrap gap-1.5">
                                 {asArray(product.tags).slice(0, 6).map((tag) => (
                                     <span
                                         key={tag}
