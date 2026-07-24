@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import {
     AlertCircle,
     Loader2,
-    RefreshCw,
     X,
 } from 'lucide-react';
 import {
@@ -44,6 +43,22 @@ const LEGACY_PARAM_KEYS = ['sizes'] as const;
 type CatalogBrowsePageProps = {
     fixedQueryParams?: Partial<CatalogQueryParams>;
 };
+
+const ProductGridSkeleton: React.FC = () => (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-label="Loading products" role="status">
+        <span className="sr-only">Loading products</span>
+        {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025]">
+                <div className="aspect-[3/4] animate-pulse bg-white/[0.08]" />
+                <div className="space-y-3 p-4">
+                    <div className="h-2.5 w-20 animate-pulse rounded bg-white/[0.08]" />
+                    <div className="h-4 w-4/5 animate-pulse rounded bg-white/[0.08]" />
+                    <div className="h-3 w-16 animate-pulse rounded bg-white/[0.08]" />
+                </div>
+            </div>
+        ))}
+    </div>
+);
 
 const diversifyProducts = (products: CatalogProduct[]): CatalogProduct[] => {
     if (products.length <= 1) return products;
@@ -580,7 +595,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                         <CatalogSidebar
                             options={filterOptions}
                             hierarchy={hierarchy}
-                            isLoading={isRefreshingResults || (isMetaLoading && products.length > 0)}
+                            isLoading={isRefreshingResults || isMetaLoading}
                             totalProducts={displayTotalProducts}
                             isMobileOpen
                             onMobileOpenChange={setIsMobileFiltersOpen}
@@ -593,7 +608,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                         <CatalogSidebar
                             options={filterOptions}
                             hierarchy={hierarchy}
-                            isLoading={isRefreshingResults || (isMetaLoading && products.length > 0)}
+                            isLoading={isRefreshingResults || isMetaLoading}
                             totalProducts={displayTotalProducts}
                         />
                     </aside>
@@ -671,14 +686,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                             ) : null}
 
                             {isLoading && products.length === 0 ? (
-                                <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-                                    <div className="flex flex-col items-center gap-4">
-                                        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-                                        <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40">
-                                            Fetching marketplace pieces...
-                                        </p>
-                                    </div>
-                                </div>
+                                <ProductGridSkeleton />
                             ) : error ? (
                                 <div className="rounded-2xl border border-red-500/20 bg-red-500/5 py-20 text-center">
                                     <div className="mx-auto flex max-w-md flex-col items-center gap-5 px-6">

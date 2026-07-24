@@ -99,6 +99,25 @@ const CheckRow: React.FC<{
     </button>
 );
 
+const FilterSkeleton: React.FC = () => (
+    <div className="space-y-4 pt-2" aria-label="Loading filters" role="status">
+        <span className="sr-only">Loading filters</span>
+        {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="border-b border-white/[0.07] pb-4">
+                <div className="h-4 w-24 animate-pulse rounded bg-white/[0.08]" />
+                <div className="mt-4 space-y-3">
+                    {Array.from({ length: index % 2 === 0 ? 3 : 2 }).map((_, row) => (
+                        <div key={row} className="flex items-center gap-2.5 px-2">
+                            <div className="h-[15px] w-[15px] animate-pulse rounded-[3px] bg-white/[0.08]" />
+                            <div className={`h-3 animate-pulse rounded bg-white/[0.08] ${row === 0 ? 'w-3/4' : 'w-1/2'}`} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
 // Used by: `CatalogBrowsePage` and the scoped gender wrappers through it.
 // Purpose: one responsive filter surface for the public catalog. It owns the
 // query-param interactions so `/catalog/all`, `/catalog/women`, and `/catalog/men`
@@ -223,6 +242,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
         // and a forced 100% height makes flex crush the sections and kills
         // scrolling (container never sees overflow).
         <div>
+            {isLoading && !options && !hierarchy ? <FilterSkeleton /> : <>
             <div className="flex items-center justify-between pb-1 pt-1">
                 <span className="flex items-center gap-2 text-[15px] font-bold text-white">
                     Filters
@@ -417,6 +437,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                     </FilterSection>
                 );
             })}
+            </>}
         </div>
     );
 
