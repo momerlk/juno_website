@@ -6,6 +6,7 @@ export function useFunnelPageView(): void {
     const location = useLocation();
 
     useEffect(() => {
+        if (!location.pathname.startsWith('/catalog')) return;
         Funnel.track('page_view', { path: location.pathname });
     }, [location.pathname]);
 }

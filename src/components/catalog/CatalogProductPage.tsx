@@ -16,6 +16,7 @@ import {
     Zap,
 } from 'lucide-react';
 import { Catalog, Sizing, type CatalogProduct, type ProductSizing, type ProductVariant } from '../../api/api';
+import { Funnel } from '../../api/analyticsApi';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useFunnelAnalytics';
 import CatalogNavbar from './CatalogNavbar';
@@ -369,6 +370,7 @@ const CatalogProductPage: React.FC = () => {
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
         };
+        Funnel.track('add_to_cart', { product_id: product.id, quantity });
         navigate('/checkout', { state: { buyNowItem } });
     }, [
         canPurchase,
