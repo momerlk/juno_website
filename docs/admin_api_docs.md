@@ -62,6 +62,7 @@ Auth:
 - `POST /api/v2/admin/products/bulk-delete`
 - `GET /api/v2/admin/products/{id}`
 - `PATCH /api/v2/admin/products/{id}`
+- `PATCH /api/v2/admin/products/{id}/price`
 - `DELETE /api/v2/admin/products/{id}`
 
 ### Product Queue Management
@@ -688,6 +689,25 @@ Example:
     "best_seller": true,
     "thrifted": false
   }
+}
+```
+
+### Update Product Price Across Variants
+`PATCH /api/v2/admin/products/{id}/price`
+
+Body:
+```json
+{
+  "price": 2189
+}
+```
+
+Applies the raw price to every variant, then recalculates customer display prices, payouts, and discount fields.
+
+Response `200`:
+```json
+{
+  "message": "Product price updated"
 }
 ```
 

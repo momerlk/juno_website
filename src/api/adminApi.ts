@@ -337,6 +337,10 @@ export namespace AdminPortal {
         return request(`${BASE_PATH}/products/${encodeURIComponent(productId)}`, 'PATCH', update, getToken());
     }
 
+    export async function updateProductPrice(productId: string, price: number): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/products/${encodeURIComponent(productId)}/price`, 'PATCH', { price }, getToken());
+    }
+
     export async function deleteProduct(productId: string): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/products/${encodeURIComponent(productId)}`, 'DELETE', undefined, getToken());
     }

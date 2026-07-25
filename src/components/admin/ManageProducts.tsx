@@ -7,7 +7,6 @@ import {
   EMPTY_BADGES,
   asArray,
   badgeTone,
-  formatCurrency,
   getImageUrl,
   getSellerId,
   getSellerName,
@@ -136,6 +135,7 @@ const ManageProducts: React.FC = () => {
   const [bulkFeatured, setBulkFeatured] = useState<string>('');
   const [bulkTags, setBulkTags] = useState('');
   const [bulkSizeChart, setBulkSizeChart] = useState<SizingGuide>(EMPTY_SIZE_CHART);
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   const [editId, setEditId] = useState('');
   const [editDraft, setEditDraft] = useState<CatalogEditDraft>({
     title: '',
@@ -177,6 +177,7 @@ const ManageProducts: React.FC = () => {
       const rows = asArray(body);
       const meta = body?.meta?.pagination || body?.pagination || {};
       setProducts(rows);
+      setPriceDrafts({});
       setTotalPages(Math.max(1, Number(meta.total_pages || meta.pages || (rows.length === PAGE_SIZE ? nextPage + 1 : nextPage)) || 1));
       setResultMeta({
         total: typeof meta.total === 'number' ? meta.total : undefined,
@@ -324,6 +325,32 @@ const ManageProducts: React.FC = () => {
       if (editId === String(product.id || '')) closeEdit();
     } catch (err) {
       window.alert(err instanceof Error ? err.message : 'Failed to delete product');
+    } finally {
+      setActionKey('');
+    }
+  };
+
+  const saveProductPrice = async (product: any) => {
+    const productId = String(product.id || '');
+    const price = Number(priceDrafts[productId] ?? product.pricing?.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      window.alert('Enter a valid price greater than 0.');
+      return;
+    }
+    setActionKey(`${productId}:price`);
+    try {
+      let response = await AdminPortal.updateProductPrice(productId, price);
+      // ponytail: use the live generic route until the documented /price route is deployed.
+      if (response.status === 404) {
+        response = await AdminPortal.updateProduct(productId, {
+          pricing: { ...product.pricing, price },
+          ...(Array.isArray(product.variants) ? { variants: product.variants.map((variant: any) => ({ ...variant, price })) } : {}),
+        });
+      }
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Failed to update product price');
+      await fetchProducts(page);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Failed to update product price');
     } finally {
       setActionKey('');
     }
@@ -656,7 +683,7 @@ const ManageProducts: React.FC = () => {
                     : typeof product.inventory?.quantity === 'number'
                       ? product.inventory.quantity
                       : 0;
-                  const price = typeof product.pricing?.brand_price === 'number' ? product.pricing.brand_price : product.pricing?.price;
+                  const price = product.pricing?.price;
                   const badges = normalizeBadges(product.badges);
                   const enabledBadges = (Object.keys(BADGE_LABELS) as BadgeKey[]).filter((badge) => badges[badge]);
 
@@ -676,7 +703,27 @@ const ManageProducts: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-3 py-2 text-neutral-300">{product.seller_name || product.seller_id || '-'}</td>
-                        <td className="px-3 py-2 text-neutral-300">{formatCurrency(price, product.pricing?.currency)}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1">
+                            <input
+                              aria-label={`Price for ${product.title || productId}`}
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={priceDrafts[productId] ?? (typeof price === 'number' ? String(price) : '')}
+                              onChange={(e) => setPriceDrafts((drafts) => ({ ...drafts, [productId]: e.target.value }))}
+                              className="w-24 rounded border border-white/20 bg-[#080808] px-2 py-1 text-xs text-neutral-100"
+                            />
+                            <button
+                              onClick={() => void saveProductPrice(product)}
+                              disabled={actionKey === `${productId}:price` || !priceDrafts[productId] || Number(priceDrafts[productId]) === price}
+                              className="rounded border border-white/15 px-2 py-1 text-[10px] text-neutral-100 disabled:opacity-40"
+                            >
+                              {actionKey === `${productId}:price` ? 'Saving...' : 'Save'}
+                            </button>
+                          </div>
+                          <p className="mt-1 text-[10px] text-neutral-500">{product.pricing?.currency || 'PKR'} · all variants</p>
+                        </td>
                         <td className="px-3 py-2 text-neutral-300">{typeof stock === 'number' ? stock : '-'}</td>
                         <td className="px-3 py-2">
                           <span className={`rounded border px-2 py-0.5 text-[10px] uppercase ${statusClass(product.status)}`}>{product.status || 'unknown'}</span>
