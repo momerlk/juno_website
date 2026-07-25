@@ -90,7 +90,7 @@ const CategoryShop: React.FC<{
                     ))}
                 </div>
             </div>
-            <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide md:mx-0 md:grid md:grid-cols-4 md:px-0 xl:grid-cols-8">
+            <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 py-2 scrollbar-hide md:mx-0 md:grid md:grid-cols-4 md:px-0 xl:grid-cols-8">
                 {groups.map((group) => {
                     const image = imageForGroup(group.product_group);
                     const imageSet = getResponsiveShopifyImageSet(image ?? '', [180, 240, 360]);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, ShoppingBag } from 'lucide-react';
+import { ArrowRight, ShoppingBag, Star } from 'lucide-react';
 import { getResponsiveShopifyImageSet } from '../../../utils/shopifyImage';
 
 type EditorialProductCardProps = {
@@ -90,8 +90,11 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
                             </span>
                         ) : null}
                         {badges?.best_seller ? (
-                            <span className="rounded-md bg-amber-300 px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black">
-                                Best Seller
+                            <span className="inline-flex items-center gap-1.5 border border-white/20 bg-black/65 py-1 pl-1 pr-2.5 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-md">
+                                <span className="flex h-4 w-4 items-center justify-center bg-primary text-white">
+                                    <Star size={10} className="fill-current" />
+                                </span>
+                                Juno Best Seller
                             </span>
                         ) : null}
                         {badges?.thrifted ? (

@@ -454,8 +454,11 @@ const CatalogProductPage: React.FC = () => {
                                         </span>
                                     ) : null}
                                     {catalogBadges.bestSeller ? (
-                                        <span className="rounded-md border border-amber-100/60 bg-gradient-to-r from-amber-300 via-amber-200 to-amber-300 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black shadow-[0_8px_20px_rgba(255,184,0,0.4)]">
-                                            Best Seller
+                                        <span className="inline-flex items-center gap-1.5 border border-white/20 bg-black/65 py-1 pl-1 pr-2.5 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-md">
+                                            <span className="flex h-4 w-4 items-center justify-center bg-primary text-white">
+                                                <Star size={10} className="fill-current" />
+                                            </span>
+                                            Juno Best Seller
                                         </span>
                                     ) : null}
                                     {catalogBadges.thrifted ? (
@@ -583,8 +586,11 @@ const CatalogProductPage: React.FC = () => {
                                     </span>
                                 ) : null}
                                 {catalogBadges.bestSeller ? (
-                                    <span className="inline-flex items-center rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-amber-200">
-                                        Best Seller
+                                    <span className="inline-flex items-center gap-1.5 border border-white/15 bg-white/[0.04] py-1 pl-1 pr-2.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/90">
+                                        <span className="flex h-4 w-4 items-center justify-center bg-primary text-white">
+                                            <Star size={10} className="fill-current" />
+                                        </span>
+                                        Juno Best Seller
                                     </span>
                                 ) : null}
                                 {catalogBadges.thrifted ? (

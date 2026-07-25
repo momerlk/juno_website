@@ -192,8 +192,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
                             </span>
                         ) : null}
                         {catalogBadges.bestSeller ? (
-                            <span className="rounded-full border border-amber-200/35 bg-amber-300/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-black shadow-[0_12px_32px_rgba(255,184,0,0.24)]">
-                                Best Seller
+                            <span className="inline-flex items-center gap-1.5 border border-white/20 bg-black/65 py-1 pl-1 pr-2.5 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-md">
+                                <span className="flex h-4 w-4 items-center justify-center bg-primary text-white">
+                                    <Star size={10} className="fill-current" />
+                                </span>
+                                Juno Best Seller
                             </span>
                         ) : null}
                         {catalogBadges.thrifted ? (
