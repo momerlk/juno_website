@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import Sidebar, { navigation } from './Sidebar';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import { SellerQueueProvider } from '../../contexts/SellerQueueContext';
-import { sendSellerHeartbeat, trackSellerEvent } from './probe';
 
 const SellerDashboardInner: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -46,37 +45,6 @@ const SellerDashboardInner: React.FC = () => {
       note: currentRoute?.focus ?? 'Current workspace',
     },
   ];
-
-  useEffect(() => {
-    const screenName = title.toLowerCase().replace(/\s+/g, '_');
-    trackSellerEvent({
-      sellerId: seller?.user?.id,
-      type: 'screen.view',
-      screenName,
-      properties: {
-        route: location.pathname,
-      },
-    });
-  }, [location.pathname, seller?.user?.id, title]);
-
-  useEffect(() => {
-    const screenName = title.toLowerCase().replace(/\s+/g, '_');
-    sendSellerHeartbeat({
-      sellerId: seller?.user?.id,
-      screenName,
-      pageCount: 1,
-    });
-
-    const heartbeat = window.setInterval(() => {
-      sendSellerHeartbeat({
-        sellerId: seller?.user?.id,
-        screenName,
-        pageCount: 1,
-      });
-    }, 30000);
-
-    return () => window.clearInterval(heartbeat);
-  }, [seller?.user?.id, title]);
 
   return (
     <div className="relative h-[100dvh] overflow-hidden bg-[#050505] text-white">

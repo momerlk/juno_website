@@ -42,10 +42,6 @@ Auth:
 - `GET /api/v2/admin/sellers/{id}/access/orders`
 - `POST /api/v2/admin/sellers/{id}/access/orders/{orderID}/fulfill`
 - `PUT /api/v2/admin/sellers/{id}/access/orders/{orderID}/status`
-- `GET /api/v2/admin/sellers/{id}/access/analytics/sales`
-- `GET /api/v2/admin/sellers/{id}/access/analytics/orders`
-- `GET /api/v2/admin/sellers/{id}/access/analytics/inventory`
-- `GET /api/v2/admin/sellers/{id}/access/analytics/product/{productID}`
 - `PUT /api/v2/admin/sellers/{id}/approve`
 - `PATCH /api/v2/admin/sellers/{id}/status`
 - `PATCH /api/v2/admin/sellers/status`
@@ -556,42 +552,6 @@ Supported seller-facing statuses depend on seller module rules. Common values:
 - `shipped`
 - `delivered`
 - `cancelled`
-
-### Get Seller Access Sales Analytics
-`GET /api/v2/admin/sellers/{id}/access/analytics/sales`
-
-Returns:
-- `total_revenue`
-- `total_orders`
-- `average_order_value`
-
-### Get Seller Access Order Analytics
-`GET /api/v2/admin/sellers/{id}/access/analytics/orders`
-
-Returns:
-- `pending`
-- `shipped`
-- `delivered`
-- `cancelled`
-- `total`
-
-### Get Seller Access Inventory Analytics
-`GET /api/v2/admin/sellers/{id}/access/analytics/inventory`
-
-Returns:
-- `total_products`
-- `in_stock`
-- `out_of_stock`
-- `low_stock`
-
-### Get Seller Access Product Analytics
-`GET /api/v2/admin/sellers/{id}/access/analytics/product/{productID}`
-
-Returns:
-- `product_id`
-- `product_name`
-- `total_sold`
-- `revenue`
 
 ### Seller Wallet
 `GET /api/v2/admin/sellers/{sellerID}/wallet`
@@ -1244,13 +1204,10 @@ Returns the MongoDB-backed catalog and seller taxonomies used by admin metadata 
 Docs: [Catalog Admin Docs](../catalog/docs.md)
 
 ### Analytics
-- `GET /admin/probe/overview`
-- `GET /admin/probe/real-time`
-- `GET /admin/probe/users`
-- `GET /admin/probe/commerce`
-- `GET /admin/probe/operations`
+The Admin module owns no analytics routes. Customer funnel reporting is owned
+by the Analytics module: `GET /api/v2/admin/analytics/funnel`.
 
-Docs: [Probe Analytics Docs](../analytics/docs.md)
+Docs: [Customer Funnel Analytics](../analytics/docs.md)
 
 ### Notifications
 - `POST /api/v2/admin/notifications/broadcast`

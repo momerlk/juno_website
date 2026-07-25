@@ -5,7 +5,7 @@ import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, Loader2, Zap, Truc
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { GuestCommerce } from '../../api/commerceApi';
 import type { GuestCheckoutDetails, ShippingEstimateResponse } from '../../api/api.types';
-import { useProbeCommerce } from '../../hooks/useProbe';
+import { Funnel } from '../../api/analyticsApi';
 import {
     identifyTikTokUser,
     trackTikTokAddPaymentInfo,
@@ -88,7 +88,6 @@ const CheckoutPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { optimisticCart, clearCart, isHydrated } = useGuestCart();
-    const { trackCheckoutStart, trackCheckoutComplete } = useProbeCommerce();
 
     // Buy Now hands a single item through router state. When present, checkout
     // operates only on that item and leaves the persisted cart untouched. Pin it
@@ -159,9 +158,9 @@ const CheckoutPage: React.FC = () => {
 
     useEffect(() => {
         if (hasTrackedCheckoutStart.current || checkoutItemCount <= 0) return;
-        trackCheckoutStart(checkoutSubtotal, checkoutItemCount);
+        Funnel.track('begin_checkout', { item_count: checkoutItemCount });
         hasTrackedCheckoutStart.current = true;
-    }, [checkoutSubtotal, checkoutItemCount, trackCheckoutStart]);
+    }, [checkoutItemCount]);
 
     useEffect(() => {
         if (hasTrackedInitiateCheckout.current || checkoutItems.length === 0) return;
@@ -311,9 +310,7 @@ const CheckoutPage: React.FC = () => {
                 seller_name: item.seller_name,
             }));
 
-            // Track checkout completion
             if (order) {
-                trackCheckoutComplete(order.id, order.total_amount);
                 await identifyTikTokUser({
                     email: formData.email,
                     phoneNumber: formData.phone_number,

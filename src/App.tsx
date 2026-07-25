@@ -37,6 +37,7 @@ const ShopifySuccess = React.lazy(() => import('./components/seller/ShopifySucce
 const ManageSellers = React.lazy(() => import('./components/admin/ManageSellers'));
 const ManageInvites = React.lazy(() => import('./components/admin/ManageInvites'));
 const ManageNotifications = React.lazy(() => import('./components/admin/ManageNotifications'));
+const AnalyticsFunnelPage = React.lazy(() => import('./components/admin/AnalyticsFunnelPage'));
 const ManageProducts = React.lazy(() => import('./components/admin/ManageProducts'));
 const CreateProductPage = React.lazy(() => import('./components/admin/CreateProductPage'));
 const ProductImportsPage = React.lazy(() => import('./components/admin/ProductImportsPage'));
@@ -56,8 +57,7 @@ const SharedSizeQuizPage = React.lazy(() => import('./components/checkout/Shared
 const WishlistPage = React.lazy(() => import('./components/catalog/WishlistPage'));
 const ResponsiveDownloadBanner = React.lazy(() => import('./components/shared/ResponsiveDownloadBanner'));
 
-// Probe Analytics
-import { useProbeAnalytics } from './hooks/useProbe';
+import { useFunnelPageView } from './hooks/useFunnelAnalytics';
 import {
   consentClarityV2,
   getClarityCustomIdFromIdentity,
@@ -94,8 +94,7 @@ const ScrollToTop: React.FC = () => {
 };
 
 function RoutedApp() {
-  // Initialize Probe analytics for automatic page view and session tracking
-  useProbeAnalytics();
+  useFunnelPageView();
   const location = useLocation();
   const clarityIdentityRef = useRef<ReturnType<typeof resolveClarityIdentityFromStorage>>(null);
   
@@ -238,6 +237,7 @@ function RoutedApp() {
                     <Route path="products/imports" element={<ProductImportsPage />} />
                     <Route path="invites" element={<ManageInvites />} />
                     <Route path="notifications" element={<ManageNotifications />} />
+                    <Route path="analytics" element={<AnalyticsFunnelPage />} />
                   </Route>
                   <Route path="/admin/login" element={<AdminAuth />} />
 

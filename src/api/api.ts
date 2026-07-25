@@ -5,7 +5,7 @@
  * 
  * @example
  * // Import specific modules
- * import { Analytics, Probe } from './api';
+ * import { Funnel } from './api';
  * import { Catalog, AdminCatalog } from './api';
  * import { Commerce, GuestCommerce } from './api';
  * 
@@ -63,23 +63,6 @@ export type {
     ComparisonParams,
     GraphDataPoint,
     QueryComparison,
-    
-    // Analytics types
-    PlatformOverviewResponse,
-    UserAnalyticsResponse,
-    CommerceAnalyticsResponse,
-    FunnelAnalytics,
-    RealTimeResponse,
-    ProbeEvent,
-    RetentionMetrics,
-    SearchAnalyticsResponse,
-    CategoryMetric,
-    OperationalAnalyticsResponse,
-    SellerOperationsResponse,
-    FeedbackAnalyticsResponse,
-    LogisticsAnalyticsResponse,
-    TopProduct,
-    ProductDeepDiveResponse,
     
     // Catalog types
     CatalogProduct,
@@ -173,8 +156,8 @@ export type {
     ShopifyCollectionSyncResponse,
 } from "./api.types";
 
-// Analytics module
-export { Analytics, Probe } from "./analyticsApi";
+// Customer funnel analytics
+export { Funnel, type FunnelEvent } from "./analyticsApi";
 
 // Catalog module
 export { Catalog, AdminCatalog } from "./catalogApi";

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import type { CartItem, GuestCart } from '../api/api.types';
-import { useProbeCommerce } from '../hooks/useProbe';
+import { Funnel } from '../api/analyticsApi';
 import { trackTikTokAddToCart } from '../utils/tiktokPixel';
 
 interface OptimisticCartItem extends CartItem {
@@ -83,7 +83,6 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isHydrated, setIsHydrated] = useState(false);
     const [stockLimitNotice, setStockLimitNotice] = useState<{ id: number; message: string } | null>(null);
-    const { trackAddToCart, trackRemoveFromCart, trackCartView } = useProbeCommerce();
     const cartRef = React.useRef<OptimisticCartItem[]>([]);
     const showStockLimitNotice = useCallback((maxQuantity?: number) => {
         const message = typeof maxQuantity === 'number' && maxQuantity > 0
@@ -127,14 +126,6 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
         };
         saveToStorage(STORAGE_KEYS.CART_SNAPSHOT, snapshot);
     }, [optimisticCart, isHydrated]);
-
-    useEffect(() => {
-        if (!isHydrated || !isCartOpen) return;
-        const currentCart = cartRef.current;
-        const total = currentCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const count = currentCart.reduce((sum, item) => sum + item.quantity, 0);
-        trackCartView(count, total);
-    }, [isCartOpen, isHydrated, trackCartView]);
 
     useEffect(() => {
         if (!stockLimitNotice) return;
@@ -213,7 +204,7 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
             showStockLimitNotice(noticeMaxQuantity);
         }
         if (trackedQuantity > 0) {
-            trackAddToCart(product_id, trackedQuantity, price);
+            Funnel.track('add_to_cart', { product_id, quantity: trackedQuantity });
             trackTikTokAddToCart([{
                 product_id,
                 quantity: trackedQuantity,
@@ -222,14 +213,13 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
                 seller_name: trackedSeller,
             }]);
         }
-    }, [trackAddToCart, showStockLimitNotice]);
+    }, [showStockLimitNotice]);
 
     const removeItem = useCallback((product_id: string, variant_id: string) => {
-        trackRemoveFromCart(product_id);
         const next = cartRef.current.filter((item) => !(item.product_id === product_id && item.variant_id === variant_id));
         setOptimisticCart(next);
         cartRef.current = next;
-    }, [trackRemoveFromCart]);
+    }, []);
 
     const updateQuantity = useCallback((product_id: string, variant_id: string, newQuantity: number) => {
         const prev = cartRef.current;

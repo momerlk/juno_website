@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Catalog, Sizing, type CatalogProduct, type ProductSizing, type ProductVariant } from '../../api/api';
 import { useGuestCart } from '../../contexts/GuestCartContext';
-import { useTrackProductView } from '../../hooks/useProbe';
+import { useTrackProductView } from '../../hooks/useFunnelAnalytics';
 import CatalogNavbar from './CatalogNavbar';
 import SizeGuideModal from './SizeGuideModal';
 import EditorialProductCard from '../shared/editorial/EditorialProductCard';
@@ -117,7 +117,7 @@ const CatalogProductPage: React.FC = () => {
     const { addItem, setCartOpen } = useGuestCart();
     const navigate = useNavigate();
 
-    useTrackProductView(actualProductId, product?.categories?.[0]?.id);
+    useTrackProductView(actualProductId);
 
     useEffect(() => {
         let cancelled = false;
