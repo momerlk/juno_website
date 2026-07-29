@@ -380,7 +380,8 @@ export async function request<T>(
     data?: any,
     token?: string,
     isPublic: boolean = false,
-    timeout: number = 30000
+    timeout: number = 30000,
+    keepalive: boolean = false
 ): Promise<APIResponse<T>> {
     const headers = new Headers();
     const authToken = token || getAuthToken();
@@ -398,7 +399,8 @@ export async function request<T>(
         method,
         headers,
         body: data instanceof FormData ? data : JSON.stringify(data),
-        signal: AbortSignal.timeout(timeout)
+        signal: AbortSignal.timeout(timeout),
+        keepalive,
     };
 
     let resp: Response;

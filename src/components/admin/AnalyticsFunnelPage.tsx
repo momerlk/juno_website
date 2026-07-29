@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, RefreshCw } from 'lucide-react';
 import { AdminAnalytics, type AdminFunnelStage, type FunnelStageEvent } from '../../api/adminApi';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -11,6 +11,7 @@ import { Heading } from '@astryxdesign/core/Heading';
 import { HStack } from '@astryxdesign/core/HStack';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { Text } from '@astryxdesign/core/Text';
+import { ToggleButton, ToggleButtonGroup } from '@astryxdesign/core/ToggleButton';
 import { VStack } from '@astryxdesign/core/VStack';
 
 const EVENT_LABELS: Record<FunnelStageEvent, string> = {
@@ -19,46 +20,76 @@ const EVENT_LABELS: Record<FunnelStageEvent, string> = {
   add_to_cart: 'Added to bag',
   begin_checkout: 'Checkout started',
   purchase: 'Purchases',
+  download_page_view: 'Download page views',
+  store_visit: 'Store visits',
+  app_install: 'App installs',
+  sign_up: 'Sign-ups',
 };
 
-const FUNNEL_EVENTS = Object.keys(EVENT_LABELS) as FunnelStageEvent[];
+const WEBSITE_EVENTS: FunnelStageEvent[] = ['page_view', 'view_item', 'add_to_cart', 'begin_checkout', 'purchase'];
+const APP_EVENTS: FunnelStageEvent[] = ['download_page_view', 'store_visit', 'app_install', 'sign_up', 'view_item', 'add_to_cart', 'begin_checkout', 'purchase'];
 
 const formatCount = (value: number) => new Intl.NumberFormat('en-PK').format(value);
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
 const asISOString = (value?: string) => value ? new Date(`${value}T00:00:00.000Z`).toISOString() : undefined;
+type FunnelType = 'website' | 'app';
 
 const AnalyticsFunnelPage: React.FC = () => {
   const [range, setRange] = useState<DateRange | null>(null);
+  const [funnelType, setFunnelType] = useState<FunnelType>('website');
   const [stages, setStages] = useState<AdminFunnelStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(0);
 
   const load = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setIsLoading(true);
     setError(null);
-    const response = await AdminAnalytics.getFunnel({ from: asISOString(range?.start), to: asISOString(range?.end) });
+    const params = { from: asISOString(range?.start), to: asISOString(range?.end) };
+    const response = funnelType === 'app'
+      ? await AdminAnalytics.getAppFunnel(params)
+      : await AdminAnalytics.getFunnel(params);
+    if (currentRequest !== requestId.current) return;
     if (!response.ok) {
-      setError((response.body as { message?: string }).message || 'Could not load the customer funnel.');
+      setError((response.body as { message?: string }).message || `Could not load the ${funnelType} funnel.`);
     } else {
       setStages(Array.isArray(response.body.stages) ? response.body.stages : []);
     }
     setIsLoading(false);
-  }, [range?.end, range?.start]);
+  }, [funnelType, range?.end, range?.start]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const funnel = useMemo(() => FUNNEL_EVENTS.map((event) => stages.find((stage) => stage.event === event) || { event, count: 0, conversion: 0 }), [stages]);
+  const selectFunnel = (value: string) => {
+    if ((value !== 'website' && value !== 'app') || value === funnelType) return;
+    requestId.current += 1;
+    setStages([]);
+    setError(null);
+    setIsLoading(true);
+    setFunnelType(value);
+  };
+
+  const funnelEvents = funnelType === 'app' ? APP_EVENTS : WEBSITE_EVENTS;
+  const funnel = useMemo(() => funnelEvents.map((event) => stages.find((stage) => stage.event === event) || { event, count: 0, conversion: 0 }), [funnelEvents, stages]);
   const weakestStage = useMemo(() => funnel.slice(1).reduce<AdminFunnelStage | null>((lowest, stage) => !lowest || stage.conversion < lowest.conversion ? stage : lowest, null), [funnel]);
 
   return (
     <VStack gap={6}>
       <HStack gap={3} wrap="wrap" hAlign="between" vAlign="end">
         <VStack gap={1}>
-          <Heading level={2}>Customer funnel</Heading>
-          <Text type="supporting">Customer actions only. Purchases are recorded by Commerce after a successful order.</Text>
+          <Heading level={2}>{funnelType === 'app' ? 'App download funnel' : 'Website shopping funnel'}</Heading>
+          <Text type="supporting">{funnelType === 'app' ? 'From the download page through app purchase.' : 'Customer actions through a website purchase.'}</Text>
         </VStack>
         <HStack gap={2} wrap="wrap" vAlign="end">
+          <VStack gap={1}>
+            <Text type="label">Funnel</Text>
+            <ToggleButtonGroup label="Funnel" type="single" value={funnelType} onChange={(value) => typeof value === 'string' && selectFunnel(value)} size="sm">
+              <ToggleButton value="website" label="Web" />
+              <ToggleButton value="app" label="App" />
+            </ToggleButtonGroup>
+          </VStack>
           <DateRangeInput label="Reporting period" value={range} onChange={setRange} numberOfMonths={1} />
           <Button label="Refresh" variant="secondary" icon={<RefreshCw size={16} />} onClick={() => void load()} isLoading={isLoading} />
         </HStack>

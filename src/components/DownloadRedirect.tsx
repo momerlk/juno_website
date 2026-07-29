@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Apple, Smartphone } from 'lucide-react';
-import { createEvent } from '../api';
+import { Funnel } from '../api/analyticsApi';
 
 const DownloadRedirect: React.FC = () => {
   const [os, setOs] = useState<'android' | 'ios' | 'other'>('other');
@@ -11,30 +11,17 @@ const DownloadRedirect: React.FC = () => {
   const androidUrl = 'https://play.google.com/store/apps/details?id=com.junonow.app';
   const whatsappUrl = 'https://wa.me/923158972405';
 
+  const visitStore = (store: 'app_store' | 'play_store', url: string) => {
+    Funnel.track('store_visit', { store });
+    window.location.assign(url);
+  };
+
   useEffect(() => {
-    const trackVisit = async () => {
-      const hasVisited = localStorage.getItem('hasVisitedDownloadPage');
-      if (!hasVisited) {
-        try {
-          const ipResponse = await fetch('https://api.ipify.org?format=json');
-          if (!ipResponse.ok) return;
+    const timeoutId = window.setTimeout(() => {
+      Funnel.track('download_page_view', { path: window.location.pathname });
+    }, 0);
 
-          const ipData = await ipResponse.json();
-          const userAgent = navigator.userAgent || navigator.vendor;
-          let currentOs = 'other';
-
-          if (/android/i.test(userAgent)) currentOs = 'android';
-          else if (/iPad|iPhone|iPod/.test(userAgent)) currentOs = 'ios';
-
-          await createEvent('download_page_visit', { url: window.location.href, ip: ipData.ip, os: currentOs });
-          localStorage.setItem('hasVisitedDownloadPage', 'true');
-        } catch (e) {
-          console.error('Tracking error:', e);
-        }
-      }
-    };
-
-    trackVisit();
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   useEffect(() => {
@@ -57,7 +44,7 @@ const DownloadRedirect: React.FC = () => {
       }, 1000);
 
       const redirectTimeout = setTimeout(() => {
-        window.location.href = redirectUrl;
+        visitStore(targetOs === 'ios' ? 'app_store' : 'play_store', redirectUrl);
       }, 3000);
 
       return () => {
@@ -115,6 +102,7 @@ const DownloadRedirect: React.FC = () => {
 
               <a
                 href={storeUrl}
+                onClick={() => Funnel.track('store_visit', { store: os === 'ios' ? 'app_store' : 'play_store' })}
                 className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-bold text-black transition-colors hover:bg-neutral-100"
               >
                 Open manually
@@ -147,6 +135,7 @@ const DownloadRedirect: React.FC = () => {
               <div className="mt-8 grid gap-3">
                 <a
                   href={iosUrl}
+                  onClick={() => Funnel.track('store_visit', { store: 'app_store' })}
                   className="flex items-center justify-center gap-3 rounded-2xl bg-white px-5 py-4 font-bold text-black transition-colors hover:bg-neutral-100"
                 >
                   <img
@@ -158,6 +147,7 @@ const DownloadRedirect: React.FC = () => {
                 </a>
                 <a
                   href={androidUrl}
+                  onClick={() => Funnel.track('store_visit', { store: 'play_store' })}
                   className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 font-bold text-white transition-colors hover:bg-white/10"
                 >
                   <img

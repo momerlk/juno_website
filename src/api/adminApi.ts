@@ -84,7 +84,9 @@ export type { APIResponse };
 
 const getToken = () => localStorage.getItem(ADMIN_ACCESS_TOKEN_KEY) ?? undefined;
 
-export type FunnelStageEvent = 'page_view' | 'view_item' | 'add_to_cart' | 'begin_checkout' | 'purchase';
+export type FunnelStageEvent =
+    | 'page_view' | 'view_item' | 'add_to_cart' | 'begin_checkout' | 'purchase'
+    | 'download_page_view' | 'store_visit' | 'app_install' | 'sign_up';
 
 export interface AdminFunnelStage {
     event: FunnelStageEvent;
@@ -99,6 +101,14 @@ export namespace AdminAnalytics {
         if (params?.to) search.set('to', params.to);
         const query = search.toString();
         return request(`/admin/analytics/funnel${query ? `?${query}` : ''}`, 'GET', undefined, getToken());
+    }
+
+    export async function getAppFunnel(params?: { from?: string; to?: string }): Promise<APIResponse<{ stages: AdminFunnelStage[] }>> {
+        const search = new URLSearchParams();
+        if (params?.from) search.set('from', params.from);
+        if (params?.to) search.set('to', params.to);
+        const query = search.toString();
+        return request(`/admin/analytics/app-funnel${query ? `?${query}` : ''}`, 'GET', undefined, getToken());
     }
 }
 
