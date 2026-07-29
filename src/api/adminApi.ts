@@ -94,8 +94,26 @@ export interface AdminFunnelStage {
     conversion: number;
 }
 
+export interface AdminFunnelEvent {
+    type: FunnelStageEvent;
+    created_at: string;
+    user_id?: string;
+    seller_id?: string;
+    product_id?: string;
+    campaign_id?: string;
+    source?: 'web' | 'app';
+    properties?: Record<string, unknown>;
+}
+
+export interface AdminFunnelResponse {
+    from: string;
+    to: string;
+    stages: AdminFunnelStage[];
+    events: AdminFunnelEvent[];
+}
+
 export namespace AdminAnalytics {
-    export async function getFunnel(params?: { from?: string; to?: string }): Promise<APIResponse<{ stages: AdminFunnelStage[] }>> {
+    export async function getFunnel(params?: { from?: string; to?: string }): Promise<APIResponse<AdminFunnelResponse>> {
         const search = new URLSearchParams();
         if (params?.from) search.set('from', params.from);
         if (params?.to) search.set('to', params.to);
@@ -103,7 +121,7 @@ export namespace AdminAnalytics {
         return request(`/admin/analytics/funnel${query ? `?${query}` : ''}`, 'GET', undefined, getToken());
     }
 
-    export async function getAppFunnel(params?: { from?: string; to?: string }): Promise<APIResponse<{ stages: AdminFunnelStage[] }>> {
+    export async function getAppFunnel(params?: { from?: string; to?: string }): Promise<APIResponse<AdminFunnelResponse>> {
         const search = new URLSearchParams();
         if (params?.from) search.set('from', params.from);
         if (params?.to) search.set('to', params.to);

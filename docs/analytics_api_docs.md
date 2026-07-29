@@ -43,6 +43,21 @@ eight-stage app funnel. They return event counts (not unique people), so
 `view_item` intentionally counts every product a customer views. Omitting dates
 uses the last 30 days. Both require admin authentication.
 
+### Funnel response and charting
+
+Both funnel endpoints return the exact effective window as RFC3339 UTC `from`
+and `to`, the aggregate `stages`, and `events`: every matching stored event in
+ascending `created_at` order. The window is inclusive at both ends. This gives
+charts both their summary values and timestamped source data without a second
+analytics request.
+
+Each event has `type` and `created_at`, plus the fields captured for that
+event: `user_id`, `seller_id`, `product_id`, `campaign_id`, `source`, and
+`properties`. Optional fields are omitted when not recorded. `events` is an
+empty array when no event matches. The website endpoint includes `web` events
+(and legacy events with no source); the app endpoint includes only `app`
+events.
+
 `add_to_cart` is client-owned so optimistic cart syncing does not inflate the
 funnel. `sign_up` and `purchase` remain server-owned. The app must send
 `X-Juno-Client: app` on registration and checkout requests; omitted or website
@@ -51,7 +66,23 @@ traffic is counted in the website funnel.
 Example response:
 
 ```json
-{"stages":[{"event":"page_view","count":1200,"conversion":0},{"event":"view_item","count":640,"conversion":0.533}]}
+{
+  "from": "2026-07-01T00:00:00Z",
+  "to": "2026-07-29T00:00:00Z",
+  "stages": [
+    {"event": "page_view", "count": 1200, "conversion": 0},
+    {"event": "view_item", "count": 640, "conversion": 0.533}
+  ],
+  "events": [
+    {
+      "type": "view_item",
+      "product_id": "prod_456",
+      "source": "web",
+      "properties": {"collection": "summer"},
+      "created_at": "2026-07-28T15:04:05Z"
+    }
+  ]
+}
 ```
 
 Events are retained for 90 days in `funnel_events`. The old Probe collections
