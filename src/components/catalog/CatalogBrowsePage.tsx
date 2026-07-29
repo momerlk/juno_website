@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import {
     Catalog,
+    type CatalogFacets,
     type CatalogHierarchy,
-    type CatalogPagination,
     type CatalogProduct,
     type CatalogQueryParams,
     type FilterOptions,
@@ -27,6 +27,7 @@ const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value
 
 const MULTI_PARAM_KEYS = [
     'brand_ids',
+    'sizes',
     'colors',
     'product_types',
     'materials',
@@ -38,8 +39,6 @@ const MULTI_PARAM_KEYS = [
     'pakistani_wear',
 ] as const;
 
-const LEGACY_PARAM_KEYS = ['sizes'] as const;
-
 type CatalogBrowsePageProps = {
     fixedQueryParams?: Partial<CatalogQueryParams>;
 };
@@ -47,11 +46,11 @@ type CatalogBrowsePageProps = {
 const CategoryShop: React.FC<{
     hierarchy: CatalogHierarchy | null;
     products: CatalogProduct[];
-    activeGroup: string;
-    activeGender: string;
+    activeGroups: string[];
+    activeGenders: string[];
     onSelect: (group: string) => void;
     onGenderSelect: (gender: string) => void;
-}> = ({ hierarchy, products, activeGroup, activeGender, onSelect, onGenderSelect }) => {
+}> = ({ hierarchy, products, activeGroups, activeGenders, onSelect, onGenderSelect }) => {
     const groups = hierarchy?.departments
         .flatMap((department) => department.groups)
         .sort((a, b) => b.product_count - a.product_count)
@@ -78,9 +77,9 @@ const CategoryShop: React.FC<{
                             key={value || 'everyone'}
                             type="button"
                             onClick={() => onGenderSelect(value)}
-                            aria-pressed={activeGender === value}
+                            aria-pressed={value ? activeGenders.includes(value) : activeGenders.length === 0}
                             className={`min-h-9 rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.13em] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                                activeGender === value
+                                (value ? activeGenders.includes(value) : activeGenders.length === 0)
                                     ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-[0_6px_18px_rgba(220,10,40,0.28)]'
                                     : 'text-white/45 hover:text-white'
                             }`}
@@ -94,7 +93,7 @@ const CategoryShop: React.FC<{
                 {groups.map((group) => {
                     const image = imageForGroup(group.product_group);
                     const imageSet = getResponsiveShopifyImageSet(image ?? '', [180, 240, 360]);
-                    const isActive = activeGroup === group.product_group;
+                    const isActive = activeGroups.includes(group.product_group);
                     const label = humanizeCatalogValue(group.product_group);
 
                     return (
@@ -189,6 +188,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
     const [searchParams, setSearchParams] = useSearchParams();
     const [products, setProducts] = useState<CatalogProduct[]>([]);
     const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
+    const [facets, setFacets] = useState<CatalogFacets | null>(null);
     const [hierarchy, setHierarchy] = useState<CatalogHierarchy | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isMetaLoading, setIsMetaLoading] = useState(true);
@@ -216,6 +216,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
     const inStock = searchParams.get('in_stock');
 
     const brandIds = searchParams.get('brand_ids') ?? '';
+    const sizes = searchParams.get('sizes') ?? '';
     const colors = searchParams.get('colors') ?? '';
     const productTypes = searchParams.get('product_types') ?? '';
     const materials = searchParams.get('materials') ?? '';
@@ -225,20 +226,6 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
     const genders = searchParams.get('genders') ?? '';
     const styleCategories = searchParams.get('style_categories') ?? '';
     const pakistaniWear = searchParams.get('pakistani_wear') ?? '';
-
-    useEffect(() => {
-        const next = new URLSearchParams(searchParams);
-        let changed = false;
-        LEGACY_PARAM_KEYS.forEach((key) => {
-            if (next.has(key)) {
-                next.delete(key);
-                changed = true;
-            }
-        });
-        if (changed) {
-            setSearchParams(next, { replace: true });
-        }
-    }, [searchParams, setSearchParams]);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -263,6 +250,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
         maxPrice,
         inStock,
         brandIds,
+        sizes,
         colors,
         productTypes,
         materials,
@@ -281,6 +269,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             ...(categoryId ? { category: categoryId } : {}),
             ...(sellerId ? { seller_id: sellerId } : {}),
             ...(brandIds ? { brand_ids: list(brandIds) } : {}),
+            ...(sizes ? { sizes: list(sizes) } : {}),
             ...(minPrice ? { min_price: Number(minPrice) } : {}),
             ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
             ...(inStock ? { in_stock: inStock === 'true' } : {}),
@@ -295,7 +284,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             ...(pakistaniWear ? { pakistani_wear: list(pakistaniWear) } : {}),
             sort: sort as CatalogQueryParams['sort'],
             order,
-            limit: 100,
+            limit: 48,
         }, fixedQueryParams),
         [
             brandIds,
@@ -314,6 +303,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             productGroups,
             productTypes,
             sellerId,
+            sizes,
             sort,
             styleCategories,
             fixedQueryParams,
@@ -321,26 +311,35 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
     );
 
     useEffect(() => {
+        let cancelled = false;
         const loadMeta = async () => {
             setIsMetaLoading(true);
 
-            const [filtersResponse, hierarchyResponse] = await Promise.all([
+            const [filtersResult, facetsResult, hierarchyResult] = await Promise.allSettled([
                 Catalog.getFilters(discoveryParams),
+                Catalog.getFacets(discoveryParams),
                 Catalog.getHierarchy(discoveryParams),
             ]);
 
-            if (filtersResponse.ok) {
-                setFilterOptions(filtersResponse.body);
+            if (cancelled) return;
+
+            if (filtersResult.status === 'fulfilled' && filtersResult.value.ok) {
+                setFilterOptions(filtersResult.value.body);
             }
 
-            if (hierarchyResponse.ok) {
-                setHierarchy(hierarchyResponse.body);
+            if (facetsResult.status === 'fulfilled' && facetsResult.value.ok) {
+                setFacets(facetsResult.value.body);
+            }
+
+            if (hierarchyResult.status === 'fulfilled' && hierarchyResult.value.ok) {
+                setHierarchy(hierarchyResult.value.body);
             }
 
             setIsMetaLoading(false);
         };
 
         loadMeta();
+        return () => { cancelled = true; };
     }, [discoveryParams]);
 
     const loadProducts = useCallback(
@@ -357,6 +356,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
 
             const usesAdvancedFilters = Boolean(
                 brandIds ||
+                    sizes ||
                     colors ||
                     productTypes ||
                     materials ||
@@ -385,9 +385,10 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                         ...(params as ProductFilterRequest),
                         category_id: categoryId || undefined,
                         seller_ids: list(brandIds),
+                        sizes: list(sizes),
                         min_price: minPrice || undefined,
                         max_price: maxPrice || undefined,
-                        limit: '100',
+                        limit: '48',
                     })
                     : await Catalog.getProducts(params);
 
@@ -399,26 +400,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                 return response;
             };
 
-            let response = await fetchPage(append ? nextCursor : undefined);
-
-            // The catalog contract is cursor-based: keep following next_cursor
-            // so the browse grid represents the complete catalog, not one page.
-            if (response.ok && !append && !collectionId) {
-                const allProducts = asArray(response.body);
-                let pagination = response.meta?.pagination as CatalogPagination | undefined;
-
-                while (pagination?.has_more && pagination.next_cursor) {
-                    const page = await fetchPage(pagination.next_cursor);
-                    if (requestId !== requestIdRef.current) return;
-                    if (!page.ok) {
-                        break;
-                    }
-
-                    allProducts.push(...asArray(page.body));
-                    pagination = page.meta?.pagination as CatalogPagination | undefined;
-                    response = { ...page, body: allProducts };
-                }
-            }
+            const response = await fetchPage(append ? nextCursor : undefined);
 
             if (requestId !== requestIdRef.current) {
                 return;
@@ -477,13 +459,22 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             productTypes,
             products.length,
             sellerId,
+            sizes,
             sort,
             styleCategories,
         ]
     );
 
     useEffect(() => {
-        loadProducts(false);
+        void loadProducts(false).catch(() => {
+            setProducts([]);
+            setLoadedProductsCount(0);
+            setMatchingProductsTotal(null);
+            setError('Unable to load the catalog.');
+            setIsLoading(false);
+            setIsAppending(false);
+            setIsRefreshingResults(false);
+        });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         debouncedQuery,
@@ -496,6 +487,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
         maxPrice,
         inStock,
         brandIds,
+        sizes,
         colors,
         productTypes,
         materials,
@@ -538,6 +530,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             collectionId ||
             sellerId ||
             brandIds ||
+            sizes ||
             minPrice ||
             maxPrice ||
             inStock ||
@@ -664,6 +657,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                     <div className="lg:hidden">
                         <CatalogSidebar
                             options={filterOptions}
+                            facets={facets}
                             hierarchy={hierarchy}
                             isLoading={isRefreshingResults || isMetaLoading}
                             totalProducts={displayTotalProducts}
@@ -677,6 +671,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                     <aside className="sticky top-24 hidden max-h-[calc(100vh-7rem)] w-[16.5rem] shrink-0 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 lg:block">
                         <CatalogSidebar
                             options={filterOptions}
+                            facets={facets}
                             hierarchy={hierarchy}
                             isLoading={isRefreshingResults || isMetaLoading}
                             totalProducts={displayTotalProducts}
@@ -759,10 +754,17 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                             <CategoryShop
                                 hierarchy={hierarchy}
                                 products={products}
-                                activeGroup={productGroups}
-                                activeGender={genders}
-                                onSelect={(group) => updateParam('product_groups', group || undefined)}
-                                onGenderSelect={(gender) => updateParam('genders', gender || undefined)}
+                                activeGroups={list(productGroups) ?? []}
+                                activeGenders={list(genders) ?? []}
+                                onSelect={(group) => {
+                                    const active = list(productGroups) ?? [];
+                                    updateParam('product_groups', active.includes(group) ? active.filter((value) => value !== group).join(',') : [...active, group].join(','));
+                                }}
+                                onGenderSelect={(gender) => {
+                                    if (!gender) return updateParam('genders', undefined);
+                                    const active = list(genders) ?? [];
+                                    updateParam('genders', active.includes(gender) ? active.filter((value) => value !== gender).join(',') : [...active, gender].join(','));
+                                }}
                             />
 
                             {isLoading && products.length === 0 ? (

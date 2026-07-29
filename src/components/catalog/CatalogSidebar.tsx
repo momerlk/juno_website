@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Check, ChevronDown, Loader2 } from 'lucide-react';
-import type { CatalogHierarchy, FilterOptions } from '../../api/api';
+import type { CatalogFacets, CatalogHierarchy, FilterOptions } from '../../api/api';
 
 const humanizeCatalogValue = (value: string) =>
     value
@@ -35,6 +35,7 @@ const swatchFor = (name: string): string => {
 const MULTI_FILTERS = [
     { key: 'genders', label: 'Gender', source: 'genders' },
     { key: 'brand_ids', label: 'Brands', source: 'brands' },
+    { key: 'sizes', label: 'Size', source: 'sizes' },
     { key: 'colors', label: 'Color', source: 'colors' },
     { key: 'materials', label: 'Material', source: 'materials' },
     { key: 'occasions', label: 'Occasion', source: 'occasions' },
@@ -44,6 +45,7 @@ const MULTI_FILTERS = [
 
 interface CatalogSidebarProps {
     options: FilterOptions | null;
+    facets: CatalogFacets | null;
     hierarchy: CatalogHierarchy | null;
     isLoading?: boolean;
     totalProducts?: number;
@@ -232,6 +234,7 @@ const FilterSkeleton: React.FC = () => (
 // behave identically and differ only by API scope.
 const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
     options,
+    facets,
     hierarchy,
     isLoading = false,
     totalProducts = 0,
@@ -322,6 +325,8 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
     const activeDepartments = splitParam(searchParams.get('departments'));
     const activeGroups = splitParam(searchParams.get('product_groups'));
     const activeTypes = splitParam(searchParams.get('product_types'));
+    const facetCount = (key: Exclude<keyof CatalogFacets, 'price_range' | 'brands'>, value: string) =>
+        facets?.[key]?.find((entry) => entry.value === value)?.count;
     const displayedProductsCount = totalProducts;
     const categoryCount = activeDepartments.length + activeGroups.length + activeTypes.length;
     const priceCount =
@@ -492,6 +497,30 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                         Go
                     </button>
                 </div>
+                {facets?.price_range ? (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                        {options?.price_ranges?.slice(0, 4).map((range) => {
+                            const selected = priceDraft.min === String(range.min) && priceDraft.max === String(range.max);
+                            return (
+                                <button
+                                    key={`${range.min}-${range.max}`}
+                                    type="button"
+                                    onClick={() => {
+                                        setPriceDraft({ min: String(range.min), max: String(range.max) });
+                                        updateSearchParams((next) => {
+                                            next.set('min_price', String(range.min));
+                                            next.set('max_price', String(range.max));
+                                        });
+                                    }}
+                                    aria-pressed={selected}
+                                    className={`rounded-full border px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${selected ? 'border-primary/50 bg-primary/15 text-white' : 'border-white/10 text-white/50 hover:border-white/25 hover:text-white'}`}
+                                >
+                                    Rs {range.min.toLocaleString()}–{range.max.toLocaleString()}
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : null}
                 <div className="mt-3">
                     <CheckRow
                         label="In stock only"
@@ -532,7 +561,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                                     ? entry
                                     : (entry as { name?: string }).name || (entry as { value?: string }).value || value;
                                 const count = isString
-                                    ? undefined
+                                    ? facetCount(source as Exclude<keyof CatalogFacets, 'price_range' | 'brands'>, value)
                                     : (entry as { product_count?: number; count?: number }).product_count ||
                                       (entry as { product_count?: number; count?: number }).count;
 
