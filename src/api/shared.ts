@@ -1,4 +1,4 @@
-import { API_BASE_URL, request } from "./core";
+import { API_BASE_URL } from "./core";
 
 export async function getDeviceInfo() {
     const app_version = "1.0.0";
@@ -164,11 +164,13 @@ export interface PrivateFileUploadOptions {
     contentType?: string;
 }
 
-interface PrivateUploadPresignResponse {
-    upload_url: string;
-    object_name: string;
-    headers?: Record<string, string>;
-    visibility: 'private';
+/** Fetch a protected image as a temporary browser URL for inline rendering. */
+export async function getPrivateImageUrl(path: string, token?: string): Promise<string> {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!response.ok) throw new Error('Could not load packing photo');
+    return URL.createObjectURL(await response.blob());
 }
 
 /** Upload evidence without ever persisting a temporary download URL. */
@@ -186,30 +188,25 @@ export async function uploadPrivateFile(
         throw new Error(`File must be smaller than ${Math.floor(options.maxBytes / 1024 / 1024)} MB`);
     }
 
-    const presign = await request<PrivateUploadPresignResponse>('/files/presign', 'POST', {
-        filename: file.name,
-        content_type: contentType,
-        file_size: file.size,
-        folder: options.folder || 'documents',
-        visibility: 'private',
-    }, token);
-    if (!presign.ok) throw new Error((presign.body as any)?.message || 'Could not prepare private upload');
+    // Media docs: private evidence must be uploaded through multipart /files/upload with the
+    // owner's bearer token so the server records the uploader, then submitted as `file.object`.
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('visibility', 'private');
 
-    const upload = presign.body as PrivateUploadPresignResponse;
-    if (!upload.upload_url || !upload.object_name) throw new Error('Private upload response is incomplete');
-
-    const uploaded = await fetch(upload.upload_url, {
-        method: 'PUT',
-        headers: upload.headers || { 'Content-Type': contentType },
-        body: file,
+    const response = await fetch(`${API_BASE_URL}/files/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: formData,
     });
-    if (!uploaded.ok) throw new Error('Could not upload private file');
 
-    const confirmed = await request('/files/confirm', 'POST', {
-        object_name: upload.object_name,
-        ...(options.metadata ? { metadata: options.metadata } : {}),
-    }, token);
-    if (!confirmed.ok) throw new Error((confirmed.body as any)?.message || 'Could not confirm private upload');
+    const result = await response.json().catch(() => ({} as any));
+    if (!response.ok) {
+        const message = result?.error?.message || result?.data?.error?.message || result?.message;
+        throw new Error(typeof message === 'string' ? message : 'Could not upload private file');
+    }
 
-    return upload.object_name;
+    const uploaded = result.data?.file || result.file;
+    if (!uploaded?.object) throw new Error('Private upload response is missing the stored object name');
+    return uploaded.object as string;
 }

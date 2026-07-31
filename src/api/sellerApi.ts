@@ -3,8 +3,8 @@ import { Address } from "../constants/address";
 import { NestedOrderMap, Order } from "../constants/orders";
 import { Seller as TSeller} from "../constants/seller";
 import { request, API_BASE_URL, RECSYSTEM_BASE_URL, APIResponse } from "./core";
-import { uploadFileAndGetUrl, COMPRESSION_PRESETS, CompressionOptions } from "./shared";
-import type { SellerStatement } from './api.types';
+import { getPrivateImageUrl, uploadFileAndGetUrl, COMPRESSION_PRESETS, CompressionOptions } from "./shared";
+import type { OrderTracking, SellerStatement } from './api.types';
 
 export { uploadFileAndGetUrl, COMPRESSION_PRESETS };
 export type { CompressionOptions };
@@ -106,10 +106,12 @@ function normalizeOrderStatus(status?: string): Order["status"] {
 }
 
 function normalizeSellerOrder(raw: any): Order {
+  raw = raw?.order ?? raw;
   const items = Array.isArray(raw?.order_items) ? raw.order_items : Array.isArray(raw?.items) ? raw.items : [];
   const total = Number(raw?.total ?? raw?.total_amount ?? 0);
 
   return {
+    ...raw,
     id: raw?.id,
     user_id: raw?.user_id ?? "",
     seller_id: raw?.seller_id ?? "",
@@ -345,19 +347,42 @@ export namespace Seller {
   }
 
   export async function GetOrderByID(token: string, order_id: string): Promise<APIResponse<Order>> {
-    const response = await request<any>(`/commerce/seller/orders/${order_id}`, "GET", undefined, token);
+    const response = await request<any>(`/commerce/seller/orders/${encodeURIComponent(order_id)}`, "GET", undefined, token);
     return {
       ...response,
       body: response.ok ? normalizeSellerOrder(response.body) : response.body,
     };
   }
 
-  export interface StatusUpdatePayload {
-    status: "confirmed" | "handed_to_rider" | "cancelled";
-    note?: string;
+  export async function GetOrderBooking(token: string, order_id: string): Promise<APIResponse<NonNullable<Order['delivery_booking']>>> {
+    return request(`/commerce/seller/orders/${encodeURIComponent(order_id)}/booking`, 'GET', undefined, token);
   }
-  export async function UpdateOrderStatus(token : string, order_id : string, payload : StatusUpdatePayload) : Promise<APIResponse<any>> {
-    return await request(`/commerce/seller/orders/${order_id}/status`, "PATCH", { status: payload.status, note: payload.note }, token);
+
+  export async function GetOrderAirwayBill(token: string, order_id: string): Promise<APIResponse<{ url: string }>> {
+    return request(`/commerce/seller/orders/${encodeURIComponent(order_id)}/airway-bill`, 'GET', undefined, token);
+  }
+
+  export async function GetOrderPackingPhoto(token: string, orderId: string, objectName: string): Promise<string> {
+    return getPrivateImageUrl(`/commerce/seller/orders/${encodeURIComponent(orderId)}/packing-photo?object=${encodeURIComponent(objectName)}`, token);
+  }
+
+  // Seller order mutation is packing only. Confirm/hand-over/cancel are staff actions:
+  // seller docs, "Sellers cannot confirm, hand over, cancel, or otherwise advance an order."
+
+  export async function GetOrderTracking(token: string, order_id: string): Promise<APIResponse<OrderTracking>> {
+    return request(`/commerce/orders/${encodeURIComponent(order_id)}/tracking`, 'GET', undefined, token);
+  }
+
+  export async function GetOrderReceipt(token: string, order_id: string): Promise<APIResponse<{ html: string; tracking_url?: string; support_url?: string }>> {
+    return request(`/commerce/orders/${encodeURIComponent(order_id)}/receipt`, 'GET', undefined, token);
+  }
+
+  export async function ResendOrderReceipt(token: string, order_id: string): Promise<APIResponse<{ message: string }>> {
+    return request(`/commerce/orders/${encodeURIComponent(order_id)}/receipt/resend`, 'POST', {}, token);
+  }
+
+  export async function GetOrderSupportLink(token: string, order_id: string, category = 'delivery'): Promise<APIResponse<{ support_url: string }>> {
+    return request(`/commerce/orders/${encodeURIComponent(order_id)}/support-link?category=${encodeURIComponent(category)}`, 'GET', undefined, token);
   }
 
   export async function submitPackingEvidence(token: string, orderId: string, payload: {
@@ -385,26 +410,6 @@ export namespace Seller {
     return request(`/commerce/seller/statements/${encodeURIComponent(statementId)}/payment-proof`, 'GET', undefined, token);
   }
 
-  export async function GetAirwayBill(order_id: string): Promise<APIResponse<Blob>> {
-    const response = await fetch(`${API_BASE_URL}/orders/${order_id}/airway-bill`);
-
-    if (!response.ok) {
-        return {
-            status: response.status,
-            ok: false,
-            body: {} as any
-        }
-    }
-
-    const blob = await response.blob();
-    return {
-      status: response.status,
-      ok: true,
-      body: blob,
-    };
-  }
-
-  
   export async function GetOnboardingStatus(token: string): Promise<APIResponse<any>> {
     return await request("/seller/onboarding/status", "GET", undefined, token);
   }
@@ -417,11 +422,6 @@ export namespace Seller {
   export async function UpdateProfile(token: string, data: { name?: string; legal_name?: string; business_name?: string; description?: string; short_description?: string; logo_url?: string; banner_url?: string; banner_mobile_url?: string; website?: string; contact?: object; location?: object; business_details?: object; kyc_documents?: object; bank_details?: object }): Promise<APIResponse<any>> {
     const response = await request<any>("/seller/profile", "PATCH", data, token);
     return { ...response, body: response.ok ? normalizeSellerProfile(response.body) : response.body };
-  }
-
-  export async function FulfillOrder(token: string, order_id: string, tracking_number?: string): Promise<APIResponse<any>> {
-    const note = tracking_number ? `Tracking ref: ${tracking_number}` : 'Handed to rider';
-    return await UpdateOrderStatus(token, order_id, { status: 'handed_to_rider', note });
   }
 
   export async function GetInventoryCategories(token: string): Promise<APIResponse<any>> {

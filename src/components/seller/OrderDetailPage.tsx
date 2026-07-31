@@ -1,15 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { VStack } from '@astryxdesign/core/VStack';
-import { ArrowLeft, Calendar, CreditCard, MapPin, Package, Truck, User } from 'lucide-react';
+import { ArrowLeft, Calendar, ExternalLink, MapPin, MessageCircle, Package, Printer, Truck, User } from 'lucide-react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
+import { Catalog } from '../../api/catalogApi';
 import { uploadPrivateFile } from '../../api/shared';
 import { Order } from '../../constants/orders';
+import type { CatalogProduct, OrderTracking } from '../../api/api.types';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
@@ -24,18 +26,9 @@ const statusColors: Record<string, string> = {
   returned: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
 };
 
-const formatCurrency = (value?: number) => `Rs ${(value ?? 0).toLocaleString()}`;
-
-const getAllowedTransitions = (status?: string) => {
-  const normalized = String(status || '').toLowerCase();
-  if (normalized === 'pending') return ['confirmed', 'cancelled'];
-  if (normalized === 'confirmed') return ['cancelled'];
-  if (normalized === 'packed') return ['handed_to_rider', 'cancelled'];
-  return [];
-};
-
-const getItemImage = (item: any) => item?.product_image || item?.image || item?.product?.image || 'https://via.placeholder.com/120x120?text=No+Image';
-const getItemTitle = (item: any) => item?.product_name || item?.title || item?.product_title || item?.product_id || 'Product';
+const getCatalogVariant = (item: any, product?: CatalogProduct) => product?.variants.find((variant) => String(variant.id) === String(item?.variant_id));
+const getItemImage = (item: any, product?: CatalogProduct) => item?.product_image || item?.variant_image_url || item?.variant_image || item?.image || item?.product?.image || getCatalogVariant(item, product)?.image_url || product?.images?.[0] || 'https://via.placeholder.com/120x120?text=No+Image';
+const getItemTitle = (item: any, product?: CatalogProduct) => item?.product_name || item?.title || item?.product_title || product?.title || item?.product_id || 'Product';
 const safeTrackingLabel = (status?: string) => ['pending', 'confirmed', 'packed', 'handed_to_rider', 'at_warehouse', 'out_for_delivery', 'delivery_attempted', 'picked_up', 'travelling', 'attempted', 'delivered', 'returned'].includes(status || '') ? String(status).replace(/_/g, ' ') : 'Delivery update received';
 
 const OrderDetailPage: React.FC = () => {
@@ -46,14 +39,17 @@ const OrderDetailPage: React.FC = () => {
   const prefix = location.pathname.startsWith('/studio') ? '/studio' : '/seller';
 
   const [order, setOrder] = useState<Order | null>(null);
+  const [catalogProducts, setCatalogProducts] = useState<Record<string, CatalogProduct>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [note, setNote] = useState('');
+  const [tracking, setTracking] = useState<OrderTracking | null>(null);
+  const [airwayBillURL, setAirwayBillURL] = useState('');
+  const [docAction, setDocAction] = useState<string | null>(null);
   const [itemPhotos, setItemPhotos] = useState<Record<string, string>>({});
   const [parcelPhoto, setParcelPhoto] = useState('');
   const [uploadingEvidence, setUploadingEvidence] = useState<string | null>(null);
+  const [packingPhotoUrls, setPackingPhotoUrls] = useState<Record<string, string>>({});
 
   const fetchOrder = async () => {
     if (!seller?.token || !orderId) return;
@@ -66,11 +62,16 @@ const OrderDetailPage: React.FC = () => {
         throw new Error((response.body as any)?.message || 'Failed to fetch order details');
       }
       const fetched = response.body as Order;
-      setOrder(fetched);
+      const [bookingRes, airwayBillRes, trackingRes] = await Promise.all([
+        api.Seller.GetOrderBooking(seller.token, orderId),
+        api.Seller.GetOrderAirwayBill(seller.token, orderId),
+        api.Seller.GetOrderTracking(seller.token, orderId),
+      ]);
+      setOrder({ ...fetched, delivery_booking: bookingRes.ok && bookingRes.body ? bookingRes.body : fetched.delivery_booking });
+      setAirwayBillURL(airwayBillRes.ok ? airwayBillRes.body?.url || '' : '');
       setItemPhotos(Object.fromEntries((fetched.packing_evidence?.item_photos || []).map((photo) => [photo.order_item_id, photo.url])));
       setParcelPhoto(fetched.packing_evidence?.packed_parcel_photo_url || '');
-      const transitions = getAllowedTransitions(fetched.status);
-      setSelectedStatus(transitions[0] || fetched.status);
+      setTracking(trackingRes.ok ? (trackingRes.body as OrderTracking) : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch order details');
     } finally {
@@ -83,27 +84,90 @@ const OrderDetailPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seller?.token, orderId]);
 
-  const transitions = useMemo(() => getAllowedTransitions(order?.status), [order?.status]);
+  useEffect(() => {
+    const missingProductIDs = [...new Set((order?.order_items || [])
+      .filter((item) => item.product_id && (!item.product_name || !item.product_image))
+      .map((item) => item.product_id))];
+    if (!missingProductIDs.length) return;
 
-  const handleStatusUpdate = async () => {
-    if (!seller?.token || !order?.id || transitions.length === 0) return;
+    void Promise.all(missingProductIDs.map(async (id) => {
+      const response = await Catalog.getProduct(id);
+      return response.ok && response.body ? [id, response.body] as const : null;
+    })).then((products) => {
+      const resolved = products.filter((product): product is readonly [string, CatalogProduct] => Boolean(product));
+      if (resolved.length) setCatalogProducts((current) => ({ ...current, ...Object.fromEntries(resolved) }));
+    });
+  }, [order]);
 
-    setIsUpdating(true);
+  useEffect(() => {
+    if (!seller?.token || !order?.id || !order.packing_evidence) return;
+    let active = true;
+    let urls: string[] = [];
+    const objects = [...order.packing_evidence.item_photos.map((photo) => photo.url), order.packing_evidence.packed_parcel_photo_url];
+    void Promise.all(objects.map(async (objectName) => {
+      try {
+        return [objectName, await api.Seller.GetOrderPackingPhoto(seller.token, order.id, objectName)] as const;
+      } catch {
+        return null;
+      }
+    })).then((photos) => {
+      const entries = photos.filter((photo): photo is readonly [string, string] => Boolean(photo));
+      urls = entries.map(([, url]) => url);
+      if (active) setPackingPhotoUrls(Object.fromEntries(entries));
+    });
+    return () => {
+      active = false;
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [order?.id, order?.packing_evidence, seller?.token]);
+
+  const openReceipt = async () => {
+    if (!seller?.token || !order?.id) return;
+    const popup = window.open('', '_blank');
+    if (!popup) return setError('Allow pop-ups to view the receipt.');
+    setDocAction('receipt');
     setError(null);
     try {
-      const response = await api.Seller.UpdateOrderStatus(seller.token, order.id, {
-        status: selectedStatus as 'confirmed' | 'handed_to_rider' | 'cancelled',
-        note: note || undefined,
-      });
-      if (!response.ok) {
-        throw new Error((response.body as any)?.message || 'Failed to update order status');
-      }
-      await fetchOrder();
-      setNote('');
+      const response = await api.Seller.GetOrderReceipt(seller.token, order.id);
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Could not load the receipt');
+      popup.document.write((response.body as any).html);
+      popup.document.close();
+      popup.focus();
+      popup.print();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update order status');
+      popup.close();
+      setError(err instanceof Error ? err.message : 'Could not load the receipt');
     } finally {
-      setIsUpdating(false);
+      setDocAction(null);
+    }
+  };
+
+  const openSupport = async () => {
+    if (!seller?.token || !order?.id) return;
+    setDocAction('support');
+    setError(null);
+    try {
+      const response = await api.Seller.GetOrderSupportLink(seller.token, order.id);
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Could not open support');
+      window.open((response.body as any).support_url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not open support');
+    } finally {
+      setDocAction(null);
+    }
+  };
+
+  const resendReceipt = async () => {
+    if (!seller?.token || !order?.id) return;
+    setDocAction('resend');
+    setError(null);
+    try {
+      const response = await api.Seller.ResendOrderReceipt(seller.token, order.id);
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Could not resend the receipt');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resend the receipt');
+    } finally {
+      setDocAction(null);
     }
   };
 
@@ -164,7 +228,6 @@ const OrderDetailPage: React.FC = () => {
   }
 
   const shipping = order.shipping_address as any;
-  const financials = (order as any).financials || {};
   const orderItems = order.order_items || [];
   const allPackingPhotosReady = orderItems.length > 0 && orderItems.every((item) => item.id && itemPhotos[item.id]) && Boolean(parcelPhoto);
   const booking = order.delivery_booking;
@@ -204,9 +267,13 @@ const OrderDetailPage: React.FC = () => {
 
       {error && <Banner status="error" title={error} />}
 
+      {status === 'pending' ? (
+        <Banner status="info" title="Waiting on Juno operations" description="This order is in address review. Packing unlocks once it is confirmed." />
+      ) : null}
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="max-w-xl">
             <Card padding={4}>
               <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
                 <User size={16} className="text-primary" /> Customer Details
@@ -222,20 +289,6 @@ const OrderDetailPage: React.FC = () => {
                 <p>{shipping?.country || 'Pakistan'}</p>
               </div>
             </Card>
-
-            <Card padding={4}>
-              <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
-                <CreditCard size={16} className="text-primary" /> Order Metrics
-              </h3>
-              <div className="space-y-2 text-sm">
-                <p className="text-neutral-300">Subtotal: <span className="text-white">{formatCurrency(financials.subtotal)}</span></p>
-                <p className="text-neutral-300">Shipping: <span className="text-white">{formatCurrency(financials.shipping_fee)}</span></p>
-                <p className="text-neutral-300">Total: <span className="text-white font-black">{formatCurrency(order.total)}</span></p>
-                <p className="text-neutral-300">Commission: <span className="text-white">{formatCurrency(financials.commission)}</span></p>
-                <p className="text-neutral-300">Seller payout: <span className="text-emerald-400">{formatCurrency(financials.seller_payout)}</span></p>
-                <p className="text-neutral-300">Items: <span className="text-white">{orderItems.length}</span></p>
-              </div>
-            </Card>
           </div>
 
           <Card padding={4}>
@@ -248,13 +301,13 @@ const OrderDetailPage: React.FC = () => {
                 <div key={`${order.id}-${item.product_id}-${item.variant_id}-${idx}`} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="flex gap-4">
                     <img
-                      src={getItemImage(item)}
-                      alt={getItemTitle(item)}
+                      src={getItemImage(item, catalogProducts[item.product_id])}
+                      alt={getItemTitle(item, catalogProducts[item.product_id])}
                       className="h-24 w-24 rounded-xl object-cover border border-white/10"
                     />
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-white truncate">{getItemTitle(item)}</p>
+                      <p className="text-sm font-black text-white truncate">{getItemTitle(item, catalogProducts[item.product_id])}</p>
                       <p className="text-xs text-neutral-400 mt-1 break-all">Product ID: {item.product_id}</p>
                       <p className="text-xs text-neutral-400 break-all">Variant ID: {item.variant_id}</p>
                       {item.variant_label && <p className="text-xs text-primary mt-1">Variant: {item.variant_label}</p>}
@@ -271,9 +324,7 @@ const OrderDetailPage: React.FC = () => {
                     </div>
 
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-white">{formatCurrency(item.unit_price)}</p>
-                      <p className="text-xs text-neutral-400 mt-1">Ordered: {item.quantity || 0}</p>
-                      <p className="text-xs text-neutral-400">Line total: {formatCurrency(item.line_total ?? item.total_price ?? 0)}</p>
+                      <p className="text-xs text-neutral-400">Ordered: {item.quantity || 0}</p>
                     </div>
                   </div>
 
@@ -289,80 +340,72 @@ const OrderDetailPage: React.FC = () => {
                     <p className="mt-2 text-xs text-neutral-400">
                       {item.id && itemPhotos[item.id] ? 'Saved privately' : uploadingEvidence === item.id ? 'Uploading…' : item.id ? 'Photo required' : 'Order item ID is missing'}
                     </p>
+                    {item.id && packingPhotoUrls[itemPhotos[item.id]] ? <img src={packingPhotoUrls[itemPhotos[item.id]]} alt={`Packed ${getItemTitle(item, catalogProducts[item.product_id])}`} className="mt-3 h-28 w-28 rounded-lg border border-white/10 object-cover" /> : null}
                   </div>
                 </div>
               ))}
             </div>
           </Card>
 
-          {booking && (
+          {(tracking?.timeline?.length || booking) ? (
             <Card padding={4}>
               <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
-                <Truck size={16} className="text-primary" /> DEX Tracking
+                <Truck size={16} className="text-primary" /> Delivery Tracking
               </h3>
               <div className="space-y-1 text-xs text-neutral-400">
-                <p>Status: <span className="text-white">{safeTrackingLabel(booking.status)}</span></p>
-                <p>Tracking number: <span className="text-white">{booking.tracking_number || '-'}</span></p>
-                {booking.last_checked_at && <p>Last checked: <span className="text-white">{new Date(booking.last_checked_at).toLocaleString()}</span></p>}
-                {booking.tracking_url && <p>Tracking link: <a href={booking.tracking_url} target="_blank" rel="noreferrer" className="text-primary underline">Track parcel</a></p>}
-                {booking.tracking_history?.length ? (
-                  <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
-                    <p className="font-semibold text-white">DEX updates</p>
-                    {booking.tracking_history.map((event, index) => (
-                      <p key={`${event.status}-${event.occurred_at || index}-${index}`}>
-                        <span className="text-white">{safeTrackingLabel(event.status)}</span>
-                        {event.location ? ` · ${event.location}` : ''}
-                        {event.occurred_at ? ` · ${new Date(event.occurred_at).toLocaleString()}` : ''}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
+                <p>Current: <span className="text-white">{safeTrackingLabel(tracking?.current_status || order.status)}</span></p>
+                {booking?.tracking_number ? <p>DEX tracking: <span className="text-white">{booking.tracking_number}</span></p> : null}
+                {airwayBillURL ? <p>Airway bill: <a href={airwayBillURL} target="_blank" rel="noreferrer" download className="text-primary underline">Download airway bill <ExternalLink size={11} className="inline" /></a></p> : null}
+                {booking?.tracking_url ? <p>Tracking link: <a href={booking.tracking_url} target="_blank" rel="noreferrer" className="text-primary underline">Track parcel <ExternalLink size={11} className="inline" /></a></p> : null}
+                {tracking?.estimated_delivery ? <p>Estimated delivery: <span className="text-white">{new Date(tracking.estimated_delivery).toLocaleDateString('en-PK')}</span></p> : null}
+                {booking?.last_checked_at ? <p>Last checked: <span className="text-white">{new Date(booking.last_checked_at).toLocaleString()}</span></p> : null}
               </div>
+
+              {tracking?.timeline?.length ? (
+                <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+                  {tracking.timeline.map((event, index) => (
+                    <div key={`${event.status}-${event.occurred_at || index}`} className="flex gap-3">
+                      <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                      <div>
+                        <p className="text-sm text-white">{event.label || safeTrackingLabel(event.status)}</p>
+                        <p className="text-xs text-neutral-500">
+                          {event.occurred_at ? new Date(event.occurred_at).toLocaleString() : ''}
+                          {(event as any).location?.city ? ` · ${(event as any).location.city}` : ''}
+                        </p>
+                        {(event as any).note ? <p className="mt-1 text-xs text-neutral-400">{(event as any).note}</p> : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </Card>
-          )}
+          ) : null}
         </div>
 
         <div className="space-y-8">
           <Card padding={4}>
             <VStack gap={3}>
               <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
-                <Truck size={16} className="text-primary" /> Status Controls
+                <Truck size={16} className="text-primary" /> Order Stage
               </h3>
 
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                disabled={transitions.length === 0}
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary disabled:opacity-50"
-              >
-                {transitions.length === 0 ? (
-                  <option value={order.status}>No transition available</option>
-                ) : (
-                  transitions.map((transition) => (
-                    <option key={transition} value={transition}>{transition.replace(/_/g, ' ')}</option>
-                  ))
-                )}
-              </select>
-
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Status note (optional)"
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
-              />
-
-              <Button
-                label="Push status"
-                variant="primary"
-                onClick={() => void handleStatusUpdate()}
-                isLoading={isUpdating}
-                isDisabled={transitions.length === 0}
-                width="100%"
-              />
+              <p className="text-sm text-neutral-300">
+                {status === 'pending'
+                  ? 'Juno operations are reviewing the delivery address. Wait for Confirmed before packing.'
+                  : status === 'confirmed'
+                    ? 'Upload one photo per item plus the sealed parcel photo, then mark this order packed.'
+                    : status === 'packed'
+                      ? 'Packing evidence received. Juno operations arrange the DEX handover.'
+                      : 'This order is with the courier. Juno operations update its status from DEX.'}
+              </p>
 
               <p className="text-xs text-neutral-500">
-                Seller lifecycle: pending → confirmed → packed → handed to rider. Platform controls stay with Juno operations.
+                Confirming, handing over, and cancelling are Juno operations actions. Packing is your only order action.
               </p>
+
+              <Button label="Print processing receipt" icon={<Printer size={14} />} onClick={() => void openReceipt()} isLoading={docAction === 'receipt'} width="100%" />
+              <Button label="Resend customer receipt" variant="secondary" icon={<MessageCircle size={14} />} onClick={() => void resendReceipt()} isLoading={docAction === 'resend'} width="100%" />
+              <Button label="Contact Juno about this order" icon={<MessageCircle size={14} />} onClick={() => void openSupport()} isLoading={docAction === 'support'} width="100%" />
             </VStack>
           </Card>
 
@@ -388,6 +431,7 @@ const OrderDetailPage: React.FC = () => {
               <p className="text-xs text-neutral-500">
                 {parcelPhoto ? 'Saved privately' : uploadingEvidence === 'parcel' ? 'Uploading…' : 'Parcel photo required'}
               </p>
+              {packingPhotoUrls[parcelPhoto] ? <img src={packingPhotoUrls[parcelPhoto]} alt="Packed parcel" className="h-40 w-full rounded-lg border border-white/10 object-cover" /> : null}
 
               <Button
                 label={order.packing_evidence ? 'Packing evidence saved' : 'Mark packed'}

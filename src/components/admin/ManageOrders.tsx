@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Ban,
   CheckSquare,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Edit3,
@@ -16,10 +17,11 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { AdminPortal } from "../../api/adminApi";
+import { AdminCommerce, AdminPortal } from "../../api/adminApi";
 import { uploadFile } from "../../api/shared";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
+import { Lightbox } from "@astryxdesign/core/Lightbox";
 
 type OrderView =
   | "all"
@@ -145,6 +147,11 @@ const ManageOrders: React.FC = () => {
   const [deliveryBookings, setDeliveryBookings] = useState<
     Record<string, any | null>
   >({});
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [expandedOrderDetails, setExpandedOrderDetails] = useState<Record<string, any>>({});
+  const [expandedPackingPhotos, setExpandedPackingPhotos] = useState<Record<string, string>>({});
+  const [expandedOrderLoadingId, setExpandedOrderLoadingId] = useState<string | null>(null);
+  const [previewPackingPhoto, setPreviewPackingPhoto] = useState<{ src: string; alt: string } | null>(null);
   const [carts, setCarts] = useState<any[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -311,6 +318,41 @@ const ManageOrders: React.FC = () => {
       cancelled = true;
     };
   }, [deliveryBookings, pageRows]);
+
+  const toggleOrderDetails = async (order: any) => {
+    const id = getOrderId(order);
+    if (!id) return;
+    if (expandedOrderId === id) {
+      setExpandedOrderId(null);
+      return;
+    }
+    setExpandedOrderId(id);
+    if (expandedOrderDetails[id]) return;
+
+    setExpandedOrderLoadingId(id);
+    try {
+      const response = await AdminPortal.getOrder(id);
+      if (!response.ok || !response.body) throw new Error((response.body as any)?.message || 'Could not load order details');
+      const detail = response.body as any;
+      setExpandedOrderDetails((current) => ({ ...current, [id]: detail }));
+      const evidence = detail.packing_evidence;
+      if (evidence) {
+        const objects = [...(evidence.item_photos || []).map((photo: any) => photo.url), evidence.packed_parcel_photo_url].filter(Boolean);
+        const photos = await Promise.all(objects.map(async (objectName: string) => {
+          try {
+            return [`${id}:${objectName}`, await AdminCommerce.getPackingPhoto(id, objectName)] as const;
+          } catch {
+            return null;
+          }
+        }));
+        setExpandedPackingPhotos((current) => ({ ...current, ...Object.fromEntries(photos.filter((photo): photo is readonly [string, string] => Boolean(photo))) }));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load order details');
+    } finally {
+      setExpandedOrderLoadingId((current) => current === id ? null : current);
+    }
+  };
 
   const metrics = useMemo(() => {
     const open = orders.filter((o) => viewMatches(o, "open"));
@@ -1077,11 +1119,13 @@ const ManageOrders: React.FC = () => {
                     const dexStatus = booking?.status
                       ? String(booking.status).toLowerCase()
                       : "";
+                    const isExpanded = expandedOrderId === id;
+                    const detail = expandedOrderDetails[id] || order;
+                    const evidence = detail.packing_evidence;
+                    const detailBooking = detail.delivery_booking ?? booking;
                     return (
-                      <tr
-                        key={id}
-                        className="border-b border-white/5 hover:bg-white/[0.03]"
-                      >
+                      <React.Fragment key={id}>
+                      <tr className="border-b border-white/5 hover:bg-white/[0.03]">
                         <td className="p-3">
                           <input
                             type="checkbox"
@@ -1151,6 +1195,13 @@ const ManageOrders: React.FC = () => {
                               <Eye size={14} />
                             </Link>
                             <button
+                              onClick={() => void toggleOrderDetails(order)}
+                              className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10"
+                              title="Toggle order details"
+                            >
+                              <ChevronDown size={14} className={isExpanded ? "rotate-180 transition-transform" : "transition-transform"} />
+                            </button>
+                            <button
                               onClick={() => openCustomerEditor(order)}
                               className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10"
                               title="Edit customer"
@@ -1171,6 +1222,37 @@ const ManageOrders: React.FC = () => {
                           </div>
                         </td>
                       </tr>
+                      {isExpanded && (
+                        <tr className="border-b border-white/5 bg-black/20">
+                          <td colSpan={10} className="p-4">
+                            {expandedOrderLoadingId === id ? <p className="text-sm text-neutral-400">Loading order details…</p> : (
+                              <div className="grid gap-4 xl:grid-cols-4">
+                                <section className="rounded-lg border border-white/10 bg-black/30 p-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Customer shipping</p>
+                                  <p className="mt-3 text-sm font-medium text-white">{detail.customer_name || detail.shipping_address?.name || detail.shipping_address?.full_name || 'Guest customer'}</p>
+                                  <p className="mt-1 text-xs text-neutral-300">{detail.customer_phone || detail.shipping_address?.phone_number || '-'}</p>
+                                  <p className="mt-3 text-xs text-neutral-300">{[detail.shipping_address?.address_line1, detail.shipping_address?.address_line2, detail.shipping_address?.city, detail.shipping_address?.province, detail.shipping_address?.postal_code, detail.shipping_address?.country].filter(Boolean).join(', ') || 'Address unavailable'}</p>
+                                </section>
+                                <section className="rounded-lg border border-white/10 bg-black/30 p-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">DEX tracking</p>
+                                  {detailBooking ? <div className="mt-3 space-y-1 text-xs text-neutral-300"><p>Tracking: <span className="text-white">{detailBooking.tracking_number || detailBooking.consignment_number || '-'}</span></p><p>Status: <span className="text-white">{String(detailBooking.status || 'Booked').replace(/_/g, ' ')}</span></p>{detailBooking.tracking_url ? <a href={detailBooking.tracking_url} target="_blank" rel="noreferrer" className="text-primary underline">Open DEX tracking</a> : null}</div> : <p className="mt-3 text-xs text-neutral-500">No DEX booking yet.</p>}
+                                </section>
+                                <section className="rounded-lg border border-white/10 bg-black/30 p-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Order items</p>
+                                  <div className="mt-3 space-y-2">
+                                    {(detail.order_items || []).length ? detail.order_items.map((item: any, index: number) => <p key={item.id || index} className="text-xs text-neutral-300"><span className="font-medium text-white">{item.product_name || item.product_id || 'Product'}</span>{item.variant_label || item.variant_id ? ` · ${item.variant_label || item.variant_id}` : ''} · Qty {item.quantity || 0}</p>) : <p className="text-xs text-neutral-500">No order items available.</p>}
+                                  </div>
+                                </section>
+                                <section className="rounded-lg border border-white/10 bg-black/30 p-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Packing evidence</p>
+                                  {evidence ? <div className="mt-3 grid grid-cols-2 gap-2">{[...(evidence.item_photos || []).map((photo: any) => ({ label: 'Item', object: photo.url })), { label: 'Parcel', object: evidence.packed_parcel_photo_url }].map((photo: any, index: number) => expandedPackingPhotos[`${id}:${photo.object}`] ? <button key={`${photo.object}-${index}`} type="button" onClick={() => setPreviewPackingPhoto({ src: expandedPackingPhotos[`${id}:${photo.object}`], alt: `${photo.label} packing evidence` })} className="rounded-md focus:outline-none focus:ring-2 focus:ring-primary"><img src={expandedPackingPhotos[`${id}:${photo.object}`]} alt={`${photo.label} packing evidence`} className="h-24 w-full rounded-md object-cover transition-transform hover:scale-[1.03]" /></button> : <p key={`${photo.object}-${index}`} className="rounded-md border border-white/10 p-2 text-[11px] text-neutral-500">Loading {photo.label.toLowerCase()} photo…</p>)}</div> : <p className="mt-3 text-xs text-neutral-500">Seller has not submitted evidence.</p>}
+                                </section>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })
                 )}
@@ -1203,6 +1285,8 @@ const ManageOrders: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {previewPackingPhoto && <Lightbox isOpen onOpenChange={(isOpen) => !isOpen && setPreviewPackingPhoto(null)} media={previewPackingPhoto} hasZoom />}
 
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60">

@@ -40,6 +40,10 @@ const ORDER_STATUSES = [
   'returned',
 ] as const;
 
+const DEX_ROW_COLUMNS = [
+  'Order number', 'Sender address', "Recipient's name", 'Recipient phone number', 'Province', 'District', 'Wards', 'Specific address', "Product's name", 'Unit price', 'Quantity', 'Weight', 'Length', 'Width', 'Height', 'COD', 'COD amount collected on behalf', 'Fail delivery storage', 'Delivery note',
+] as const;
+
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   confirmed: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -231,7 +235,6 @@ const OrderDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [newStatus, setNewStatus] = useState<string>('pending');
-  const [statusNote, setStatusNote] = useState('');
 
   const [warehouseLat, setWarehouseLat] = useState('');
   const [warehouseLng, setWarehouseLng] = useState('');
@@ -244,6 +247,8 @@ const OrderDetailPage: React.FC = () => {
   const [addressReview, setAddressReview] = useState<AddressReview | null>(null);
   const [bookingDraft, setBookingDraft] = useState({ consignment_number: '' });
   const [airwayBillFile, setAirwayBillFile] = useState<File | null>(null);
+  const [packingPhotoUrls, setPackingPhotoUrls] = useState<Record<string, string>>({});
+  const [previewPackingPhoto, setPreviewPackingPhoto] = useState<{ src: string; alt: string } | null>(null);
 
   const sellerMap = useMemo(() => new Map(sellers.map((s) => [s.id, s])), [sellers]);
 
@@ -332,6 +337,34 @@ const OrderDetailPage: React.FC = () => {
     }
   }, [selectedChild?.status]);
 
+  useEffect(() => {
+    let active = true;
+    let urls: string[] = [];
+    const photos = children.flatMap((child) => {
+      const evidence = child.packing_evidence;
+      return evidence ? [...evidence.item_photos, { order_item_id: 'parcel', url: evidence.packed_parcel_photo_url }].map((photo) => ({ childId: child.id, ...photo })) : [];
+    });
+    if (!photos.length) {
+      setPackingPhotoUrls({});
+      return;
+    }
+    void Promise.all(photos.map(async (photo) => {
+      try {
+        return [`${photo.childId}:${photo.url}`, await AdminCommerce.getPackingPhoto(photo.childId, photo.url)] as const;
+      } catch {
+        return null;
+      }
+    })).then((results) => {
+      const entries = results.filter((result): result is readonly [string, string] => Boolean(result));
+      urls = entries.map(([, url]) => url);
+      if (active) setPackingPhotoUrls(Object.fromEntries(entries));
+    });
+    return () => {
+      active = false;
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [children]);
+
   const runUpdate = async (action: () => Promise<any>, successMessage: string) => {
     setIsUpdating(true);
     setError(null);
@@ -351,13 +384,13 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
-  const handleUpdateStatus = async () => {
+  const handleUpdateStatus = async (status: string) => {
     if (!selectedChildId) return;
+    setNewStatus(status);
     await runUpdate(
-      () => AdminPortal.bulkUpdateOrders({ updates: [{ order_id: selectedChildId, status: newStatus, note: statusNote || undefined }] }),
+      () => AdminPortal.bulkUpdateOrders({ updates: [{ order_id: selectedChildId, status }] }),
       'Order status updated.'
     );
-    setStatusNote('');
   };
 
   const handleCancelSelectedChild = async () => {
@@ -459,6 +492,20 @@ const OrderDetailPage: React.FC = () => {
       await navigator.clipboard.writeText(value);
     } catch {
       setError('Could not copy text. Select and copy it manually.');
+    }
+  };
+
+  const copyDexBookingRow = async () => {
+    if (!selectedChildId) return;
+    setError(null);
+    try {
+      const response = await AdminPortal.getDexBookingData(selectedChildId);
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Could not load DEX booking row');
+      const rows = Array.isArray((response.body as any)?.rows) ? (response.body as any).rows : [];
+      if (!rows[0]) throw new Error('No DEX booking row is available for this order');
+      await navigator.clipboard.writeText(DEX_ROW_COLUMNS.map((column) => String(rows[0][column] ?? '')).join('\t'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not copy DEX booking row');
     }
   };
 
@@ -670,7 +717,7 @@ const OrderDetailPage: React.FC = () => {
               <p className="text-xs text-neutral-400">Enter the DEX tracking number and upload the airway bill.</p>
               <input value={bookingDraft.consignment_number} onChange={(event) => setBookingDraft({ consignment_number: event.target.value })} placeholder="DEX tracking number" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
               <label className="text-xs text-neutral-400">Airway bill (PDF, JPG or PNG, max 10 MB)<input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => setAirwayBillFile(event.target.files?.[0] || null)} className="mt-1 block w-full text-xs text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-black" /></label>
-              <Button label="Save DEX booking" variant="primary" onClick={() => void saveManualDexBooking()} isLoading={isUpdating} isDisabled={!selectedChildId || !bookingDraft.consignment_number.trim() || !airwayBillFile} width="100%" />
+              <div className="grid grid-cols-2 gap-2"><Button label="Save DEX booking" variant="primary" onClick={() => void saveManualDexBooking()} isLoading={isUpdating} isDisabled={!selectedChildId || !bookingDraft.consignment_number.trim() || !airwayBillFile} width="100%" /><Button label="Copy booking row" icon={<Copy size={14} />} onClick={() => void copyDexBookingRow()} isDisabled={!selectedChildId} width="100%" /></div>
               {booking && <div className="border-t border-white/10 pt-3 text-xs text-neutral-400"><div className="flex items-center justify-between gap-2"><p>DEX tracking: <span className="text-white">{booking.tracking_number || booking.consignment_number || '-'}</span></p><Button label="Refresh DEX" size="sm" onClick={() => void refreshDexTracking()} isLoading={isUpdating} /></div>{booking.tracking_url && <p className="mt-1">Tracking link: <a href={booking.tracking_url} target="_blank" rel="noreferrer" className="text-primary underline">Track parcel</a></p>}{booking.airway_bill_url && <p className="mt-1">Airway bill: <a href={booking.airway_bill_url} target="_blank" rel="noreferrer" className="text-primary underline">Open airway bill</a></p>}<p className="mt-1">Status: <span className="text-white">{booking.status.replace(/_/g, ' ')}</span></p>{booking.dex_raw_status && <p className="mt-1">DEX status: <span className="text-white">{booking.dex_raw_status}</span></p>}<p className="mt-1">Booked at: {booking.booked_at || booking.booking_time || '-'}</p><p className="mt-1">Last checked: {booking.last_checked_at || '-'}</p>{booking.tracking_history?.length ? <div className="mt-3 space-y-2 border-t border-white/10 pt-3"><p className="font-semibold text-white">DEX updates</p>{booking.tracking_history.map((event, index) => <p key={`${event.status}-${event.occurred_at || index}-${index}`}><span className="text-white">{event.status.replace(/_/g, ' ')}</span>{event.location ? ` · ${event.location}` : ''}{event.occurred_at ? ` · ${new Date(event.occurred_at).toLocaleString()}` : ''}{event.raw_status ? ` (${event.raw_status})` : ''}</p>)}</div> : null}</div>}
             </VStack>
           </Card>
@@ -707,6 +754,43 @@ const OrderDetailPage: React.FC = () => {
               )}
             </div>
           </Card>
+
+          <Card padding={4}>
+            <h3 className="text-sm font-black uppercase tracking-wider text-white mb-4 flex items-center gap-2">
+              <Package size={16} className="text-primary" /> Seller Packing Evidence
+            </h3>
+            {children.some((child) => child.packing_evidence) ? (
+              <div className="space-y-5">
+                {children.map((child) => {
+                  const evidence = child.packing_evidence;
+                  if (!evidence) return null;
+                  const photoByItemId = Object.fromEntries(evidence.item_photos.map((photo) => [photo.order_item_id, photo.url]));
+                  return (
+                    <div key={child.id} className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0">
+                      <p className="mb-3 text-xs font-semibold text-white">{child.order_number || child.id}</p>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {(child.order_items || []).map((item, index) => {
+                          const objectName = photoByItemId[item.id];
+                          const url = objectName ? packingPhotoUrls[`${child.id}:${objectName}`] : '';
+                          return (
+                            <div key={item.id || index} className="rounded-lg border border-white/10 bg-black/20 p-3">
+                              <p className="truncate text-xs font-medium text-white">{item.product_name || item.product_id || 'Order item'}</p>
+                              {url ? <button type="button" onClick={() => setPreviewPackingPhoto({ src: url, alt: `Packed ${item.product_name || 'order item'}` })} className="mt-3 block w-full rounded-md focus:outline-none focus:ring-2 focus:ring-primary"><img src={url} alt={`Packed ${item.product_name || 'order item'}`} className="h-44 w-full rounded-md object-cover transition-transform hover:scale-[1.02]" /></button> : <p className="mt-3 text-xs text-neutral-500">{objectName ? 'Loading item photo…' : 'No item photo'}</p>}
+                            </div>
+                          );
+                        })}
+                        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                          <p className="text-xs font-medium text-white">Packed parcel / airway bill</p>
+                          {packingPhotoUrls[`${child.id}:${evidence.packed_parcel_photo_url}`] ? <button type="button" onClick={() => setPreviewPackingPhoto({ src: packingPhotoUrls[`${child.id}:${evidence.packed_parcel_photo_url}`], alt: 'Packed parcel with airway bill' })} className="mt-3 block w-full rounded-md focus:outline-none focus:ring-2 focus:ring-primary"><img src={packingPhotoUrls[`${child.id}:${evidence.packed_parcel_photo_url}`]} alt="Packed parcel with airway bill" className="h-44 w-full rounded-md object-cover transition-transform hover:scale-[1.02]" /></button> : <p className="mt-3 text-xs text-neutral-500">Loading parcel photo…</p>}
+                        </div>
+                      </div>
+                      {evidence.submitted_at ? <p className="mt-3 text-xs text-neutral-500">Submitted {new Date(evidence.submitted_at).toLocaleString()}</p> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : <p className="text-sm text-neutral-400">The seller has not submitted packing evidence.</p>}
+          </Card>
         </div>
 
         <div className="space-y-8">
@@ -734,22 +818,14 @@ const OrderDetailPage: React.FC = () => {
 
             <select
               value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
+              onChange={(e) => void handleUpdateStatus(e.target.value)}
+              disabled={!selectedChildId || isUpdating}
               className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
             >
               {ORDER_STATUSES.map((status) => (
                 <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>
               ))}
             </select>
-
-            <input
-              value={statusNote}
-              onChange={(e) => setStatusNote(e.target.value)}
-              placeholder="Status note (optional)"
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
-            />
-
-            <Button label="Push status" variant="primary" onClick={handleUpdateStatus} isLoading={isUpdating} isDisabled={!selectedChildId} width="100%" />
 
             <Button label="Resend order update emails" onClick={() => selectedChildId && void runUpdate(() => AdminCommerce.resendOrderUpdate(selectedChildId), 'Current order update emailed to customer and seller.')} isDisabled={isUpdating || !selectedChildId} width="100%" />
 
@@ -807,6 +883,13 @@ const OrderDetailPage: React.FC = () => {
               <label className="text-sm text-neutral-300">Payment method<select value={detailsDraft.payment_method || 'cod'} onChange={(event) => setDetailsDraft((current) => ({ ...current, payment_method: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"><option value="cod">Cash on delivery</option><option value="easypaisa">Easypaisa</option><option value="bank_transfer">Bank transfer</option></select></label>
               <Button label="Save all order details" variant="primary" onClick={() => void saveOrderDetails()} isLoading={isUpdating} width="100%" />
             </VStack>
+          </Card>
+        </Dialog>
+      )}
+      {previewPackingPhoto && (
+        <Dialog isOpen onOpenChange={(isOpen) => !isOpen && setPreviewPackingPhoto(null)} purpose="dialog" width="900px" maxHeight="90vh">
+          <Card padding={3}>
+            <img src={previewPackingPhoto.src} alt={previewPackingPhoto.alt} className="max-h-[80vh] w-full rounded-lg object-contain" />
           </Card>
         </Dialog>
       )}

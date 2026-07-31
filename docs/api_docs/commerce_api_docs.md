@@ -86,7 +86,8 @@ Auth:
 - `GET /api/v2/commerce/guest/orders/{id}/receipt` and `/invoice` — public guest receipt route (requires matching phone/email query)
 - `GET /api/v2/commerce/seller/orders` — seller auth required
 - `GET /api/v2/commerce/seller/orders/{id}` — seller auth required
-- `PATCH /api/v2/commerce/seller/orders/{id}/status` — seller auth required
+- `GET /api/v2/commerce/seller/orders/{id}/booking` — seller auth required; DEX booking status, tracking number, and history
+- `GET /api/v2/commerce/seller/orders/{id}/airway-bill` — seller auth required; staff-uploaded DEX airway-bill URL
 - `POST /api/v2/commerce/seller/orders/{id}/packing` — seller auth required
 - `GET /api/v2/commerce/seller/statements` — seller auth required; statement list only
 - `POST /api/v2/admin/logistics/orders/{orderID}/refresh-tracking` — admin auth required
@@ -120,9 +121,9 @@ All protected endpoints require `Authorization: Bearer <token>`.
 
 Success returns the updated order with `packing_evidence`, including `submitted_by` and `submitted_at`. Missing evidence returns `400`; another seller receives `403`; an unknown order returns `404`. Repeating a completed request is safe and does not send another ready email. It appends the normal `packed` tracking milestone and emails Juno operations with the brand CC'd, including only the order number and seller portal link.
 
-**Storage contract:** the frontend must submit private upload `object_name` values returned by the media API, never a public or signed URL. The current endpoint stores the provided string and does not yet verify that each private object belongs to the submitting seller; therefore the frontend must not expose this action until the private-object ownership check is added server-side. No permanent download URL is returned or should be stored.
+**Storage contract:** upload every image with `POST /api/v2/files/upload`, seller bearer token, and `visibility=private`, then submit the returned `file.object` value—not a public or signed URL. The upload endpoint is otherwise public, but the token is required to establish private-object ownership. The service verifies every object is a private image uploaded by the authenticated seller before changing the order. No permanent download URL is returned or stored.
 
-Sellers cannot use the generic status endpoint to set `packed`; admins may do so only with a non-empty `note` reason. **Frontend notes:** upload one file per item plus the parcel/AWB photo, disable the button until all uploads succeed, then refresh the order. **Rollback/fallback:** hide this action and restore the prior seller status button; saved optional evidence remains intact.
+Sellers cannot use the generic status endpoint; packing is their only order mutation. Admins may set `packed` only with a non-empty `note` reason. A successful first packing submission sends the existing ready-for-collection email to Juno operations; recipients are application-owned, not deployment environment configuration. **Frontend notes:** upload one file per item plus the parcel/AWB photo, disable the button until all uploads succeed, then refresh the order. **Rollback/fallback:** hide this action; saved optional evidence remains intact.
 
 Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` so the website can persist a fast, anonymous cart for performance marketing traffic.
 
@@ -1146,32 +1147,19 @@ Returns full details of a specific child order.
 
 ---
 
-### Update Order Status (Seller)
-`PATCH /api/v2/commerce/seller/orders/{id}/status`
+### Seller delivery updates
 
-Auth: seller token required (must own the order)
+`GET /api/v2/commerce/seller/orders/{id}/booking` returns the owning seller's DEX booking, including its status, tracking number, DEX raw status, last check time, and tracking history.
 
-Updates the status of an order and appends a tracking milestone.
+`GET /api/v2/commerce/seller/orders/{id}/airway-bill` returns `{ "url": "..." }` for the airway bill uploaded by Juno operations. Both endpoints return `404` when the booking or label does not exist and reject another seller's order. `GET /api/v2/commerce/orders/{id}/airway-bill` returns the same stored public URL without authentication for simple seller/admin downloads.
 
-**Body**
-```json
-{
-  "status": "packed",
-  "note": "Parcel ready for pickup"
-}
-```
+### Viewing all packing evidence
 
-Allowed statuses: `confirmed`, `packed`, `handed_to_rider`, `cancelled`.
+The seller order detail and admin parent-order detail include `packing_evidence`. It contains one `item_photos[]` entry for every order item and one `packed_parcel_photo_url` entry for the complete sealed order. The portal must render every entry, not just the parcel photo.
 
-**Response `200`**
-```json
-{ "success": true, "data": { "message": "Order status updated successfully" } }
-```
+Private packing images are streamed—not exposed as storage URLs—at `GET /api/v2/commerce/seller/orders/{id}/packing-photo?object={object_name}` for the owning seller and `GET /api/v2/commerce/admin/orders/{id}/packing-photo?object={object_name}` for admins. Pass each `item_photos[].url` and `packed_parcel_photo_url` value in turn; both endpoints render the corresponding image inline and reject any object not saved in that order's `packing_evidence`.
 
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid seller token
-- `403 FORBIDDEN` — not your order
-- `400` — invalid status transition
+Sellers do not update delivery statuses. Their only order mutation is `POST /api/v2/commerce/seller/orders/{id}/packing`.
 
 ---
 

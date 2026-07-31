@@ -1,4 +1,5 @@
 import { request, API_BASE_URL, APIResponse, APIError } from "./core";
+import { getPrivateImageUrl } from './shared';
 import type { AddressReview, DeliveryBooking, ParentOrder as CommerceParentOrder, Order as CommerceChildOrder } from "./api.types";
 
 export const api_url = API_BASE_URL;
@@ -160,6 +161,10 @@ export namespace AdminCommerce {
 
     export async function getSellerProcessingReceipt(orderId: string): Promise<APIResponse<{ html: string }>> {
         return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/processing-receipt`, 'GET', undefined, getToken());
+    }
+
+    export async function getPackingPhoto(orderId: string, objectName: string): Promise<string> {
+        return getPrivateImageUrl(`${BASE_PATH}/${encodeURIComponent(orderId)}/packing-photo?object=${encodeURIComponent(objectName)}`, getToken());
     }
 
     export async function updateOrderDetails(orderId: string, payload: { payment_method: string; customer: Record<string, any> }): Promise<APIResponse<any>> {

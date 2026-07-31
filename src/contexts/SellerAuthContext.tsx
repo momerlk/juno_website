@@ -48,6 +48,13 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
 
     useEffect(() => {
+        const syncRefreshedSession = (event: Event) => {
+            const session = (event as CustomEvent<SellerSession>).detail;
+            if (session?.token) setSeller(session);
+        };
+
+        window.addEventListener('seller-auth-refreshed', syncRefreshedSession);
+
         const stored = localStorage.getItem('seller');
         const storedToken = localStorage.getItem('seller_token') ?? localStorage.getItem('token');
         const storedRefreshToken = localStorage.getItem('seller_refresh_token');
@@ -81,8 +88,8 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                         if (!resp.ok) throw new Error('Failed to fetch seller profile');
 
                         const refreshedSession: SellerSession = {
-                            token: parsed!.token,
-                            refreshToken: parsed!.refreshToken,
+                            token: localStorage.getItem('seller_token') ?? parsed!.token,
+                            refreshToken: localStorage.getItem('seller_refresh_token') ?? parsed!.refreshToken,
                             user: resp.body,
                         };
 
@@ -115,8 +122,8 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     if (!resp.ok) throw new Error('Failed to fetch seller profile');
 
                     const refreshedSession: SellerSession = {
-                        token: storedToken,
-                        refreshToken: storedRefreshToken ?? undefined,
+                        token: localStorage.getItem('seller_token') ?? storedToken,
+                        refreshToken: localStorage.getItem('seller_refresh_token') ?? storedRefreshToken ?? undefined,
                         user: resp.body,
                     };
 
@@ -163,6 +170,8 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         };
 
         void restore();
+
+        return () => window.removeEventListener('seller-auth-refreshed', syncRefreshedSession);
     }, []);
 
     const login = async (email: string, password: string) => {
@@ -177,8 +186,8 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
             const profileResponse = await SellerApi.Seller.GetProfile(accessToken);
             const session: SellerSession = {
-                token: accessToken,
-                refreshToken: payload.refresh_token,
+                token: localStorage.getItem('seller_token') ?? accessToken,
+                refreshToken: localStorage.getItem('seller_refresh_token') ?? payload.refresh_token,
                 user: profileResponse.ok ? profileResponse.body : payload.seller ?? null,
             };
 
@@ -204,8 +213,8 @@ export const SellerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
             const profileResponse = await SellerApi.Seller.GetProfile(accessToken);
             const session: SellerSession = {
-                token: accessToken,
-                refreshToken: payload.refresh_token,
+                token: localStorage.getItem('seller_token') ?? accessToken,
+                refreshToken: localStorage.getItem('seller_refresh_token') ?? payload.refresh_token,
                 user: profileResponse.ok ? profileResponse.body : payload.seller ?? null,
             };
 

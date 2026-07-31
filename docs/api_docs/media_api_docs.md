@@ -93,7 +93,7 @@ Auth:
 
 ## Allowed File Types
 
-**Extensions:** `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.pdf`, `.doc`, `.docx`, `.mp4`, `.mov`
+**Extensions:** `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.pdf`, `.doc`, `.docx`, `.xlsx`, `.mp4`, `.mov`
 
 **Max file sizes:**
 - Images: 10 MB
@@ -111,7 +111,8 @@ Uploads a file to Google Cloud Storage via multipart form.
 
 **Content-Type:** `multipart/form-data`
 **Form Field:** `file` (required)
-**Form Field:** `visibility` (optional, `public` by default; `private` requires authentication)
+**Auth:** bearer user, seller, or admin token required.
+**Form Field:** `visibility` (optional, `public` by default; `private` records the authenticated uploader and returns no permanent URL)
 
 **Response `201`**: [`UploadResponse`](#uploadresponse)
 
@@ -176,6 +177,8 @@ Generates a presigned URL for direct client-to-GCS upload. The client then uploa
 }
 ```
 
+DEX payment statements may use `filename: "dex-statement.xlsx"` with content type `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`; they are private documents with the normal 20 MB limit.
+
 **Private response `200`**:
 ```json
 {
@@ -192,8 +195,12 @@ outside the authenticated uploader's object prefix returns `401`.
 
 **Response `200`**: [`PresignUploadResponse`](#presignuploadresponse)
 
+Both access-token user and admin JWTs may create and confirm private uploads. The object's prefix remains tied to the authenticated `user_id`, so an admin can confirm only an object created under that admin account's prefix.
+
 **Common errors**
-- `401 UNAUTHORIZED` — Authentication required
+- `401 UNAUTHORIZED` — Authentication required; returned as JSON `{ "ok": false, "error": { "code", "message" } }`
+- `403 INVALID_TOKEN_TYPE` — Non-access or unsupported token type; returned as the same JSON error shape
+- `500 STORAGE_SIGNING_FAILED` — Cloud Run could not sign the upload URL. The JSON message contains the GCS signing error; configure the deployed service account with bucket access and `iam.serviceAccounts.signBlob` permission, then retry.
 - `400 BAD_REQUEST` — Invalid content type, file size exceeds limit, or unsupported file extension
 - `400 BAD_REQUEST` — Visibility is not `public` or `private`
 
@@ -209,7 +216,8 @@ Confirms a direct upload to GCS and creates a file record in the database. Used 
 **Response `200`**: [`UploadResponse`](#uploadresponse)
 
 **Common errors**
-- `401 UNAUTHORIZED` — Authentication required
+- `401 UNAUTHORIZED` — Authentication required; returned as JSON
+- `403 INVALID_TOKEN_TYPE` — Non-access or unsupported token type; returned as JSON
 - `401 UNAUTHORIZED` — Object name does not belong to the authenticated uploader
 - `400 INVALID_BODY` — Invalid request body
 - `404 NOT_FOUND` — File not found in storage

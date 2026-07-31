@@ -201,7 +201,7 @@ function RoutedApp() {
 
                   {/* Juno Studio (Seller) Routes */}
                   <Route path="/studio" element={<JunoStudioLanding />} />
-                  <Route path="/seller" element={<JunoStudioLanding />} />
+                  <Route path="/seller" element={<Navigate to="/seller/dashboard" replace />} />
                   
                   <Route path="/seller/auth" element={<SellerAuth />} />
                   <Route path="/studio/auth" element={<SellerAuth />} />

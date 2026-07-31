@@ -130,6 +130,7 @@ const CheckoutPage: React.FC = () => {
     const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
     const hasTrackedCheckoutStart = React.useRef(false);
     const hasTrackedInitiateCheckout = React.useRef(false);
+    const isSubmittingRef = useRef(false);
 
     useEffect(() => {
         const savedDraft = localStorage.getItem(STORAGE_KEYS.CHECKOUT_DRAFT);
@@ -267,8 +268,9 @@ const CheckoutPage: React.FC = () => {
     };
 
     const handleSubmit = async () => {
-        if (!validateForm()) return;
+        if (isSubmittingRef.current || !validateForm()) return;
 
+        isSubmittingRef.current = true;
         setIsSubmitting(true);
         setErrors({});
 
@@ -282,6 +284,20 @@ const CheckoutPage: React.FC = () => {
                 throw new Error('Your bag is empty. Please add items to your cart first.');
             }
 
+            const estimateResponse = await GuestCommerce.estimateShipping({
+                buyer_city: formData.city.trim(),
+                items,
+            });
+            if (!estimateResponse.ok) {
+                throw new Error('Could not verify your order total. Please try again.');
+            }
+            const confirmationSummary = {
+                subtotal: estimateResponse.body.subtotal,
+                shipping_fee: estimateResponse.body.shipping_total,
+                total: estimateResponse.body.subtotal + estimateResponse.body.shipping_total,
+                currency: estimateResponse.body.currency,
+            };
+
             await identifyTikTokUser({
                 email: formData.email,
                 phoneNumber: formData.phone_number,
@@ -294,9 +310,12 @@ const CheckoutPage: React.FC = () => {
                 items,
                 customer: formData,
             });
-            if (!checkoutResponse.ok) throw new Error('Failed to place order');
+            if (!checkoutResponse.ok) throw new Error((checkoutResponse.body as { message?: string })?.message || 'Failed to place order');
 
             const checkout = checkoutResponse.body;
+            if (!Array.isArray(checkout.orders) || checkout.orders.length === 0) {
+                throw new Error('Order confirmation was incomplete. Please contact Juno support before placing another order.');
+            }
             const receiptItems = checkoutItems.map((item) => ({
                 product_id: item.product_id,
                 variant_id: item.variant_id,
@@ -330,12 +349,13 @@ const CheckoutPage: React.FC = () => {
             // Buy Now never added to the cart, so leave it intact.
             if (!isBuyNow) clearCart();
 
-            navigate('/checkout/confirmation', { state: { checkout, receiptItems, customer: formData } });
+            navigate('/checkout/confirmation', { state: { checkout, receiptItems, customer: formData, summary: confirmationSummary } });
         } catch (error: unknown) {
             setErrors({
                 general: error instanceof Error ? error.message : 'Failed to place order. Please try again.',
             });
         } finally {
+            isSubmittingRef.current = false;
             setIsSubmitting(false);
         }
     };

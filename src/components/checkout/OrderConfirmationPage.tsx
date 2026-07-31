@@ -32,12 +32,56 @@ interface ReceiptItem {
     seller_name?: string;
 }
 
+interface CheckoutSummary {
+    subtotal: number;
+    shipping_fee: number;
+    total: number;
+    currency?: string;
+}
+
 interface LocationState {
     order?: ParentOrder;
     checkout?: CheckoutResult;
     customer?: GuestCheckoutDetails;
     receiptItems?: ReceiptItem[];
+    summary?: CheckoutSummary;
 }
+
+const toAmount = (value: unknown): number | undefined =>
+    typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
+const getOrderTotal = (order: CheckoutResult['orders'][number]) =>
+    toAmount(order.financials?.total) ?? toAmount(order.total) ?? toAmount(order.total_amount) ?? 0;
+
+const getOrderSubtotal = (order: CheckoutResult['orders'][number]) =>
+    toAmount(order.financials?.subtotal) ?? 0;
+
+const getOrderShipping = (order: CheckoutResult['orders'][number]) =>
+    toAmount(order.financials?.shipping_fee) ?? 0;
+
+const buildConfirmationOrder = (checkout: CheckoutResult, customer?: GuestCheckoutDetails, summary?: CheckoutSummary): ParentOrder => {
+    const firstOrder = checkout.orders[0];
+    const subtotal = summary?.subtotal ?? checkout.orders.reduce((sum, item) => sum + getOrderSubtotal(item), 0);
+    const shippingFee = summary?.shipping_fee ?? checkout.orders.reduce((sum, item) => sum + getOrderShipping(item), 0);
+    const total = summary?.total ?? checkout.orders.reduce((sum, item) => sum + getOrderTotal(item), 0);
+
+    return {
+        id: firstOrder.id,
+        user_id: '',
+        customer_type: 'guest',
+        customer_name: customer?.full_name,
+        customer_phone: customer?.phone_number,
+        customer_email: customer?.email,
+        total_amount: total,
+        shipping_fee: shippingFee,
+        subtotal,
+        status: 'confirmed',
+        payment_method: 'cod',
+        shipping_address: customer,
+        child_order_ids: checkout.orders.map((item) => item.id),
+        created_at: new Date().toISOString(),
+    };
+};
 
 const buildGuestTrackingPath = (order: ParentOrder): string => {
     const params = new URLSearchParams();
@@ -85,24 +129,8 @@ const OrderConfirmationPage: React.FC = () => {
     useEffect(() => {
         const state = location.state as LocationState;
         if (state?.checkout?.orders?.length) {
-            const firstOrder = state.checkout.orders[0];
             setCheckout(state.checkout);
-            setOrder({
-                id: firstOrder.id,
-                user_id: '',
-                customer_type: 'guest',
-                customer_name: state.customer?.full_name,
-                customer_phone: state.customer?.phone_number,
-                customer_email: state.customer?.email,
-                total_amount: state.checkout.orders.reduce((sum, item) => sum + (item.total || 0), 0),
-                shipping_fee: 0,
-                subtotal: 0,
-                status: 'confirmed',
-                payment_method: 'cod',
-                shipping_address: state.customer,
-                child_order_ids: state.checkout.orders.map((item) => item.id),
-                created_at: new Date().toISOString(),
-            });
+            setOrder(buildConfirmationOrder(state.checkout, state.customer, state.summary));
             setReceiptItems(Array.isArray(state.receiptItems) ? state.receiptItems : []);
             return;
         }
@@ -115,16 +143,16 @@ const OrderConfirmationPage: React.FC = () => {
         const storedPayload = sessionStorage.getItem(STORAGE_KEY);
         if (storedPayload) {
             try {
-                const parsed = JSON.parse(storedPayload) as { order?: ParentOrder; checkout?: CheckoutResult; receiptItems?: ReceiptItem[] };
-                if (parsed?.checkout?.orders?.length) {
-                    setCheckout(parsed.checkout);
-                    const firstOrder = parsed.checkout.orders[0];
-                    setOrder({ id: firstOrder.id, user_id: '', customer_type: 'guest', total_amount: parsed.checkout.orders.reduce((sum, item) => sum + (item.total || 0), 0), shipping_fee: 0, subtotal: 0, status: 'confirmed', payment_method: 'cod', child_order_ids: parsed.checkout.orders.map((item) => item.id), created_at: new Date().toISOString() });
+                const parsed = JSON.parse(storedPayload) as { order?: ParentOrder; checkout?: CheckoutResult; receiptItems?: ReceiptItem[]; summary?: CheckoutSummary; customer?: GuestCheckoutDetails };
+                if (parsed?.order) {
+                    setOrder(parsed.order);
+                    setCheckout(parsed.checkout ?? null);
                     setReceiptItems(Array.isArray(parsed.receiptItems) ? parsed.receiptItems : []);
                     return;
                 }
-                if (parsed?.order) {
-                    setOrder(parsed.order);
+                if (parsed?.checkout?.orders?.length) {
+                    setCheckout(parsed.checkout);
+                    setOrder(buildConfirmationOrder(parsed.checkout, parsed.customer, parsed.summary));
                     setReceiptItems(Array.isArray(parsed.receiptItems) ? parsed.receiptItems : []);
                     return;
                 }
@@ -361,7 +389,7 @@ const OrderConfirmationPage: React.FC = () => {
                                 <div key={createdOrder.id} className="rounded-xl border border-white/10 bg-black/20 p-4 print-card">
                                     <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/40 print-muted">{createdOrder.seller_name || 'Independent brand'}</p>
                                     <p className="mt-2 font-mono text-sm font-bold text-white print-text">{createdOrder.order_number}</p>
-                                    <p className="mt-1 text-sm text-white/60 print-muted">{typeof createdOrder.total === 'number' ? formatCurrency(createdOrder.total) : 'Amount in your confirmation email'}</p>
+                                    <p className="mt-1 text-sm text-white/60 print-muted">{getOrderTotal(createdOrder) > 0 ? formatCurrency(getOrderTotal(createdOrder)) : 'Amount included in your total'}</p>
                                     <div className="mt-4 flex items-center gap-4 no-print">
                                         <Link to={createdOrder.tracking_url || trackingPath} className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-[0.14em] text-primary">Track this order <ArrowRight size={13} /></Link>
                                         {createdOrder.receipt_url && <a href={createdOrder.receipt_url} target="_blank" rel="noreferrer" className="text-xs font-bold uppercase tracking-[0.14em] text-white/65 hover:text-white">Receipt</a>}

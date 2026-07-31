@@ -145,6 +145,9 @@ export interface Order {
     tracking_number: string;
     status: string;
     tracking_url?: string;
+    airway_bill_number?: string;
+    airway_bill_url?: string;
+    booked_at?: string;
     last_checked_at?: string;
     tracking_history?: Array<{ status: string; location?: string; occurred_at?: string }>;
   };

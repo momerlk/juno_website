@@ -1078,7 +1078,16 @@ export interface Order {
 
 export interface CheckoutResult {
     checkout_id: string;
-    orders: Array<{ id: string; order_number: string; seller_name?: string; total?: number; tracking_url?: string; receipt_url?: string }>;
+    orders: Array<{
+        id: string;
+        order_number: string;
+        seller_name?: string;
+        total?: number;
+        total_amount?: number;
+        financials?: Pick<NonNullable<Order['financials']>, 'subtotal' | 'shipping_fee' | 'total' | 'currency'>;
+        tracking_url?: string;
+        receipt_url?: string;
+    }>;
 }
 
 export interface AddressReview {

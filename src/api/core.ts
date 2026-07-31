@@ -183,6 +183,7 @@ function persistRefreshedTokens(scope: AuthScope, body: any, fallbackRefreshToke
             localStorage.setItem(SELLER_REFRESH_TOKEN_KEY, refreshToken);
         }
         localStorage.setItem(SELLER_SESSION_KEY, JSON.stringify(nextSession));
+        window.dispatchEvent(new CustomEvent('seller-auth-refreshed', { detail: nextSession }));
         return;
     }
 

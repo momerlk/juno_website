@@ -17,7 +17,7 @@ Seller settlement reads are under `/api/v2/commerce/seller/statements` and alway
 - `GET /api/v2/commerce/seller/statements` lists safe settlement summaries.
 - `GET /api/v2/commerce/seller/statements/{id}` returns the statement's orders, DEX deductions, commission, transfer amount, payment date/reference, and `proof_available`.
 - `GET /api/v2/commerce/seller/statements/{id}/invoice` returns the existing printable HTML invoice after ownership verification.
-- `GET /api/v2/commerce/seller/statements/{id}/payment-proof` returns `{ "url": "..." }` only for a paid statement with a proof object. The URL is signed for 15 minutes.
+- `GET /api/v2/commerce/seller/statements/{id}/payment-proof` returns the stored `{ "url": "..." }` only for a paid statement with a proof object. The ownership check happens before the URL is returned.
 
 Statements belonging to another seller return `404`; the portal should show no action rather than retrying with a browser-supplied seller ID.
 
@@ -893,58 +893,24 @@ Auth: seller token required
 
 ---
 
-### Fulfill Order
-`POST /api/v2/seller/orders/{id}/fulfill`
+### Pack an order
 
-Auth: seller token required
+Seller order processing uses `POST /api/v2/commerce/seller/orders/{id}/packing`; legacy fulfillment/status mutation routes are not exposed. Sellers cannot confirm, hand over, cancel, or otherwise advance an order.
 
-The handler accepts an optional body in Swagger, but the current implementation ignores it and only transitions the order to `shipped`.
+Upload one private image per order item and one private image of the complete sealed parcel first:
 
-**Response `200`**
+`POST /api/v2/files/upload` with a seller bearer token, multipart `file`, and `visibility=private` returns `file.object`. Submit those object names:
+
 ```json
-{ "message": "Order fulfilled successfully" }
-```
-
-**Common errors**
-- `401 UNAUTHORIZED` — missing or invalid seller token
-- `404 NOT_FOUND` — order not found
-
----
-
-### Update Order Status
-`PUT /api/v2/seller/orders/{id}/status` (Legacy)
-`PATCH /api/v2/commerce/seller/orders/{id}/status` (Recommended for Tracking)
-
-Auth: seller token required
-
-The `PATCH` route under commerce module is recommended as it supports the **Interactive Order Tracking** timeline and FSM validation.
-
-**Body (PATCH commerce route)**
-```json
-{ 
-  "status": "packed",
-  "note": "Optional update note"
+{
+  "item_photos": [{"order_item_id": "item-1", "url": "seller-id/private/..."}],
+  "packed_parcel_photo_url": "seller-id/private/..."
 }
 ```
 
-Valid values for interactive tracking:
-- `confirmed`
-- `packed`
-- `handed_to_rider`
-- `cancelled`
+Every order item needs one image and the parcel image is mandatory. Juno verifies each object is a private image uploaded by the logged-in seller, marks the confirmed order `packed`, records the seller/timestamp, and emails Juno operations. Another seller's object or order is rejected.
 
-See [Commerce Module Tracking Docs](../commerce/docs.md#seller-order-management) for details.
-
-**Response `200`**
-```json
-{ "success": true, "data": { "message": "Order status updated successfully" } }
-```
-
-**Common errors**
-- `400 INVALID_BODY` — malformed JSON
-- `400` — unsupported status
-- `401 UNAUTHORIZED` — missing or invalid seller token
-- `404 NOT_FOUND` — order not found
+See [Commerce Module Packing Docs](../commerce/docs.md#seller-packing-evidence) for the response and errors.
 
 ---
 
