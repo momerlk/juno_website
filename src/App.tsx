@@ -109,6 +109,9 @@ function RoutedApp() {
                          location.pathname.startsWith('/track') || 
                          location.pathname.startsWith('/size-quiz') ||
                          location.pathname.startsWith('/wishlist');
+  const isBackOfficePath = location.pathname.startsWith('/seller') ||
+                            location.pathname.startsWith('/studio') ||
+                            location.pathname.startsWith('/admin');
 
   useEffect(() => {
     document.title = 'Juno - Home of Indie Brands';
@@ -158,6 +161,11 @@ function RoutedApp() {
           <GuestCartProvider>
               <div className="min-h-screen bg-background text-white">
               <ScrollToTop />
+              {!isBackOfficePath && (
+                <div className="sticky top-0 z-[70] bg-gradient-to-r from-primary to-secondary px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] text-white sm:text-xs">
+                  Free shipping on every order
+                </div>
+              )}
               {!isExcludedPath && <Navbar />}
               <Suspense fallback={<AppShellFallback />}>
               <Routes>
