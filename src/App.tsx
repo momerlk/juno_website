@@ -20,6 +20,7 @@ const AdminManageOrders = React.lazy(() => import('./components/admin/ManageOrde
 const Analytics = React.lazy(() => import('./components/seller/Analytics'));
 const Profile = React.lazy(() => import('./components/seller/Profile'));
 const SellerOrderDetailPage = React.lazy(() => import('./components/seller/OrderDetailPage'));
+const SellerStatementsPage = React.lazy(() => import('./components/seller/StatementsPage'));
 const JunoStudioLanding = React.lazy(() => import('./components/seller/JunoStudioLanding'));
 import { SellerAuthProvider } from './contexts/SellerAuthContext';
 import { JunoStudioProvider } from './contexts/JunoStudioContext';
@@ -42,6 +43,7 @@ const ManageProducts = React.lazy(() => import('./components/admin/ManageProduct
 const CreateProductPage = React.lazy(() => import('./components/admin/CreateProductPage'));
 const ProductImportsPage = React.lazy(() => import('./components/admin/ProductImportsPage'));
 const OrderDetailPage = React.lazy(() => import('./components/admin/OrderDetailPage'));
+const AdminGuidePage = React.lazy(() => import('./components/admin/AdminGuidePage'));
 const BrandsSection = React.lazy(() => import('./components/landing/BrandsSection'));
 const BrandShowcase = React.lazy(() => import('./components/landing/BrandShowcase'));
 const CatchyProducts = React.lazy(() => import('./components/landing/CatchyProducts'));
@@ -209,6 +211,7 @@ function RoutedApp() {
                     <Route path="inventory" element={<ManageInventory />} />
                     <Route path="orders" element={<SellerManageOrders />} />
                     <Route path="orders/:orderId" element={<SellerOrderDetailPage />} />
+                    <Route path="statements" element={<SellerStatementsPage />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="profile" element={<Profile />} />
                   </Route>
@@ -218,6 +221,7 @@ function RoutedApp() {
                     <Route path="inventory" element={<ManageInventory />} />
                     <Route path="orders" element={<SellerManageOrders />} />
                     <Route path="orders/:orderId" element={<SellerOrderDetailPage />} />
+                    <Route path="statements" element={<SellerStatementsPage />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="profile" element={<Profile />} />
                   </Route>
@@ -238,6 +242,8 @@ function RoutedApp() {
                     <Route path="invites" element={<ManageInvites />} />
                     <Route path="notifications" element={<ManageNotifications />} />
                     <Route path="analytics" element={<AnalyticsFunnelPage />} />
+                    <Route path="guides/order-processing" element={<AdminGuidePage guide="processing" />} />
+                    <Route path="guides/customer-support" element={<AdminGuidePage guide="support" />} />
                   </Route>
                   <Route path="/admin/login" element={<AdminAuth />} />
 

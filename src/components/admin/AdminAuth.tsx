@@ -11,7 +11,8 @@ import { TextInput } from '@astryxdesign/core/TextInput';
 import { VStack } from '@astryxdesign/core/VStack';
 import '@astryxdesign/core/astryx.css';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
-import { junoAdminTheme } from './junoAdminTheme';
+import { junoAdminTheme } from './juno-admin';
+import './junoAdminTheme.css';
 
 const AdminAuth: React.FC = () => {
   const navigate = useNavigate();

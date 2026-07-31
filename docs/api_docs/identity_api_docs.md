@@ -5,6 +5,10 @@ User registration, authentication, and profile management. Auth responses return
 - `access_token`: short-lived JWT used in `Authorization: Bearer <access_token>` for protected API requests.
 - `refresh_token`: long-lived opaque token used only with `POST /api/v2/auth/refresh` to rotate the session.
 
+New password and OAuth registrations also record the analytics `sign_up`
+funnel event. It contains no contact details; app requests send
+`X-Juno-Client: app` to enter the app funnel.
+
 ---
 
 ## Auth Endpoints

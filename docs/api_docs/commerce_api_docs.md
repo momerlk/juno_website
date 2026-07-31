@@ -2,6 +2,62 @@
 
 Shopping cart, checkout, order management, and order tracking.
 
+## Day 1 operational order contract
+
+Seller `Order` records are the working orders for checkout confirmation, customer/guest lookup,
+receipts, tracking, admin detail, and cancellation. `ParentOrder` remains an analytics/correlation
+record only; its list/detail routes are read-only and the parent cascade-cancel route is no longer registered.
+
+All checkout endpoints return `201` with:
+
+```json
+{
+  "checkout_id": "analytics-correlation-id",
+  "orders": [{ "id": "seller-order-id", "order_number": "ORD-300726-0001-A" }]
+}
+```
+
+Each returned order has its own customer confirmation email, receipt, and tracking link. Sellers receive
+only their order email, including packing instructions and the seller processing receipt; Juno CC recipients
+come from the comma-separated `JUNO_OPERATIONS_EMAILS` environment variable. An empty value sends no CC.
+
+**Frontend notes:** store and route using each `orders[].id`; do not send `checkout_id` to detail, tracking,
+receipt, or cancellation actions. Refresh each seller order independently after an action.
+
+New seller orders also snapshot `financials.brand_price` separately from the customer-facing subtotal. It is the seller's raw product price before Juno markup and is the immutable base for commission and brand settlement; `financials.seller_payout` is `brand_price − commission`.
+
+**Rollback/fallback:** parent records and legacy code are retained for sprint rollback, but no active parent
+cascade cancellation route exists.
+
+## Address review
+
+Every new seller order receives a `manual_review` with a ready-to-copy `formatter_prompt` for ChatGPT and
+a safe customer message. No AI key, external formatter, or automated address invention is required.
+Staff paste ChatGPT's JSON result back through the existing admin customer endpoint; accepted missing-field
+names are `house_or_building`, `area`, `city`, `province`, and `postal_code`.
+
+The review is returned as `order.address_review`:
+
+```json
+{
+  "original_address": "12 Main Street, Karachi",
+  "formatted_address": "12 Main Street, Karachi",
+  "missing_fields": [],
+  "customer_message": "Hi, to deliver your order, please reply with your house_or_building.",
+  "format_status": "manual_review",
+  "formatter_prompt": "You are helping Juno Pakistan dispatch order ...",
+  "customer_confirmed": false,
+  "formatted_at": "2026-07-30T12:00:00Z",
+  "confirmed_at": null,
+  "confirmed_by": ""
+}
+```
+
+**Frontend notes:** display copy buttons for `formatter_prompt` and `customer_message`. Paste ChatGPT's
+three JSON fields (`formatted_address`, `missing_fields`, `customer_message`) into the existing admin
+customer endpoint; its response becomes `ready`. Submit customer corrections without those fields to
+generate a fresh prompt. Only allow confirmation when a `ready` review has no missing fields.
+
 Auth:
 - `GET /api/v2/commerce/cart` — user auth required
 - `POST /api/v2/commerce/cart` — user auth required
@@ -13,7 +69,7 @@ Auth:
 - `GET /api/v2/commerce/orders/{id}/tracking` — user/seller/admin auth required
 - `POST /api/v2/commerce/orders/{id}/tracking/share` — user auth required
 - `GET /api/v2/commerce/orders/{id}/support-link` — user/seller/admin auth required
-- `GET /api/v2/commerce/orders/{id}/receipt` — user/seller/admin auth required
+- `GET /api/v2/commerce/orders/{id}/receipt` and `/invoice` — user/seller/admin auth required
 - `POST /api/v2/commerce/orders/{id}/receipt/resend` — user/seller/admin auth required
 - `POST /api/v2/commerce/shipping/estimate` — public
 - `GET /api/v2/support/link` — public
@@ -27,13 +83,16 @@ Auth:
 - `POST /api/v2/commerce/guest/checkout/direct` — public guest direct checkout route
 - `POST /api/v2/commerce/guest/orders/lookup` — public guest order tracking route
 - `GET /api/v2/commerce/guest/orders/{id}/tracking` — public guest tracking route (requires matching phone/email query)
-- `GET /api/v2/commerce/guest/orders/{id}/receipt` — public guest receipt route (requires matching phone/email query)
+- `GET /api/v2/commerce/guest/orders/{id}/receipt` and `/invoice` — public guest receipt route (requires matching phone/email query)
 - `GET /api/v2/commerce/seller/orders` — seller auth required
 - `GET /api/v2/commerce/seller/orders/{id}` — seller auth required
 - `PATCH /api/v2/commerce/seller/orders/{id}/status` — seller auth required
-- `GET /api/v2/commerce/admin/orders` — admin auth required
-- `GET /api/v2/commerce/admin/orders/{id}` — admin auth required
-- `POST /api/v2/commerce/admin/orders/{id}/cancel` — admin auth required
+- `POST /api/v2/commerce/seller/orders/{id}/packing` — seller auth required
+- `GET /api/v2/commerce/seller/statements` — seller auth required; statement list only
+- `POST /api/v2/admin/logistics/orders/{orderID}/refresh-tracking` — admin auth required
+- `POST /api/v2/admin/logistics/orders/{orderID}/correct-tracking` — admin auth required
+- `GET /api/v2/commerce/admin/analytics/orders` — admin auth required, legacy parent analytics only
+- `GET /api/v2/commerce/admin/analytics/orders/{id}` — admin auth required, legacy parent analytics only
 - `PATCH /api/v2/commerce/admin/orders/{id}/status` — admin auth required
 - `PUT /api/v2/commerce/admin/orders/{id}/tracking/warehouse` — admin auth required
 - `PATCH /api/v2/commerce/admin/orders/{id}/tracking/eta` — admin auth required
@@ -46,7 +105,69 @@ Auth:
 
 All protected endpoints require `Authorization: Bearer <token>`.
 
+## Seller packing evidence
+
+### Submit packing
+
+`POST /api/v2/commerce/seller/orders/{id}/packing` marks the seller's confirmed order as `packed` while saving its evidence. Every order item needs a photo and the final packed parcel/AWB photo is required.
+
+```json
+{
+  "item_photos": [{"order_item_id": "item-1", "url": "private-object-name"}],
+  "packed_parcel_photo_url": "private-object-name"
+}
+```
+
+Success returns the updated order with `packing_evidence`, including `submitted_by` and `submitted_at`. Missing evidence returns `400`; another seller receives `403`; an unknown order returns `404`. Repeating a completed request is safe and does not send another ready email. It appends the normal `packed` tracking milestone and emails Juno operations with the brand CC'd, including only the order number and seller portal link.
+
+**Storage contract:** the frontend must submit private upload `object_name` values returned by the media API, never a public or signed URL. The current endpoint stores the provided string and does not yet verify that each private object belongs to the submitting seller; therefore the frontend must not expose this action until the private-object ownership check is added server-side. No permanent download URL is returned or should be stored.
+
+Sellers cannot use the generic status endpoint to set `packed`; admins may do so only with a non-empty `note` reason. **Frontend notes:** upload one file per item plus the parcel/AWB photo, disable the button until all uploads succeed, then refresh the order. **Rollback/fallback:** hide this action and restore the prior seller status button; saved optional evidence remains intact.
+
 Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` so the website can persist a fast, anonymous cart for performance marketing traffic.
+
+## Seller brand statements
+
+`GET https://api.juno.com.pk/api/v2/commerce/seller/statements` requires seller authentication and returns only statements whose `seller_id` matches the logged-in seller. It is read-only; statement calculation and payment remain admin actions. It returns list records only. Seller statement detail, printable statement/invoice, and payment-proof signed download routes do not exist yet, so the seller UI must not offer those links. Frontend: load it on entry and refresh after a payment notification. Fallback: no seller action can alter payout data.
+
+## DEX manual tracking refresh
+
+`POST /api/v2/admin/logistics/orders/{orderID}/refresh-tracking` checks the saved manual DEX tracking number and returns the updated booking. It is admin-only and requires `DEX_TRACKING_POLL_ENABLED=true`. By default it uses DEX's public `POST https://www.dex.com.pk/api/get_package_history` response with `{"trackingNumber":"..."}`; `DEX_TRACKING_BASE_URL` may override the `/api` base for tests or an approved replacement. No request body is required.
+
+```json
+{
+  "id": "booking-id",
+  "order_id": "order-id",
+  "delivery_partner": "Dex",
+  "status": "out_for_delivery",
+  "tracking_number": "DEX-123",
+  "dex_raw_status": "Out for delivery",
+  "last_checked_at": "2026-07-30T12:00:00Z",
+  "tracking_history": [{"status":"out_for_delivery","source":"admin_refresh","raw_status":"Out for delivery"}]
+}
+```
+
+Saving a manual DEX booking immediately performs this same refresh with `source: "manual_booking"`. The full DEX `timeline` is retained in `tracking_history`, including DEX timestamps, raw status, location and failure reason. Known DEX states update the order timeline: picked up, travelling, out for delivery, attempted, delivered and returned. Unknown raw states remain visible in booking history and `dex_raw_status`, while the customer-facing order status stays at its last known safe value. Repeated events are deduplicated by DEX status and timestamp, and terminal orders never move backward. A native poller refreshes every non-final DEX booking hourly from 08:00 through 22:00 Pakistan time and at 00:00, 03:00 and 06:00 otherwise; event `source` is `dex_poll`.
+
+Common errors: `400` when tracking is disabled or missing a number; `401/403` for non-admin callers; `404` when there is no DEX booking; `500` for an unavailable/invalid DEX response. **Frontend notes:** show the last checked time and normal order timeline to all permitted viewers; only admins show Refresh and raw DEX status/errors, then refresh the order after success. **Rollback/fallback:** set `DEX_TRACKING_POLL_ENABLED=false`; the saved tracking number and manual status tools remain available.
+
+### Correct a DEX status
+
+`POST /api/v2/admin/logistics/orders/{orderID}/correct-tracking` is an admin-only audited override when DEX has reported the wrong status. It requires a non-empty reason and accepts `picked_up`, `travelling`, `out_for_delivery`, `attempted`, `delivered`, or `returned` plus an optional location.
+
+```json
+{"status":"out_for_delivery","reason":"DEX support confirmed the rider has the parcel","location":"Karachi"}
+```
+
+The success response is the updated booking. The booking history saves `source: "admin_correction"`, the reason, time, and the admin account; the order timeline receives the same correction. Unlike DEX polling, an explicit correction may move a mistaken status backward. Common errors: `400` for an invalid status or missing reason, `401/403` for non-admin callers, `404` for no DEX booking, and `500` if it cannot be saved. **Frontend notes:** require a reason, confirm before submit, then refresh the order. **Rollback/fallback:** hide this control; its recorded timeline remains as an audit trail.
+
+## Funnel analytics
+
+Cart additions are client-tracked, so optimistic cart syncing does not inflate
+funnel counts. Successful order creation records server-owned `purchase`.
+Website is the default source; the app sends `X-Juno-Client: app` on checkout
+so its purchase enters the app funnel. The app or website records
+`begin_checkout` when the customer enters checkout.
 
 ## DM orders with a shared size quiz
 
@@ -80,6 +201,8 @@ at most one order.
 Admins can correct a variant through `PATCH /api/v2/admin/orders/{orderID}/items/{itemID}/variant`.
 Only an available variant may be selected; the original order price is retained,
 and customer/seller emails are sent when email addresses are available.
+Order item snapshots use the selected variant image when one is available,
+falling back to the product image.
 
 For contact, delivery, and payment corrections, use
 `PATCH /api/v2/commerce/admin/orders/{id}/details`:
@@ -924,6 +1047,8 @@ Generates a signed token for public, read-only tracking access.
 
 ### Get Order Receipt
 `GET /api/v2/commerce/orders/{id}/receipt`
+
+`GET /api/v2/commerce/orders/{id}/invoice` is an alias for the same individual-order customer invoice payload. The guest equivalent is `GET /api/v2/commerce/guest/orders/{id}/invoice` with the same phone/email proof as the guest receipt route.
 
 Auth: user/seller/admin token required (must have access to order)
 

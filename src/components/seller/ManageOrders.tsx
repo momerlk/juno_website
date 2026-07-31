@@ -39,7 +39,7 @@ const formatCurrency = (value?: number) => `Rs ${(value ?? 0).toLocaleString()}`
 const getAllowedTransitions = (status?: string) => {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'pending') return ['confirmed', 'cancelled'];
-  if (normalized === 'confirmed') return ['packed', 'cancelled'];
+  if (normalized === 'confirmed') return ['cancelled'];
   if (normalized === 'packed') return ['handed_to_rider', 'cancelled'];
   return [];
 };
@@ -166,7 +166,7 @@ const ManageOrders: React.FC = () => {
     setError(null);
     try {
       const response = await api.Seller.UpdateOrderStatus(seller.token, order.id, {
-        status: selectedStatus as 'confirmed' | 'packed' | 'handed_to_rider' | 'cancelled',
+        status: selectedStatus as 'confirmed' | 'handed_to_rider' | 'cancelled',
         note: statusNote || undefined,
       });
 

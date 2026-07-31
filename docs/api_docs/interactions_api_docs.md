@@ -1,6 +1,6 @@
 # Interactions Module
 
-User-product interaction tracking (ratings, likes, swipes). Powers recommendation and analytics. All endpoints require user authentication (`Authorization: Bearer <token>`).
+User-product interaction tracking (ratings, likes, swipes). Powers recommendation and analytics. User routes require user authentication (`Authorization: Bearer <token>`); the admin listing requires admin authentication. The V2 router registers `GET` and `POST /api/v2/interactions`, plus `GET /api/v2/admin/interactions`.
 
 ---
 
@@ -46,7 +46,8 @@ Records or updates a user's interaction with a product. If an interaction for th
 
 Returns all recorded interactions for the authenticated user.
 
-**Response `200`** — array of `Interaction` objects.
+**Response `200`** — an array of `Interaction` objects. When no interactions exist,
+the response is `[]` (never `null`).
 
 ---
 
@@ -57,4 +58,5 @@ Returns all recorded interactions for the authenticated user.
 
 Returns all interactions across all users. Used for analytics and recommendation model training.
 
-**Response `200`** — array of `Interaction` objects.
+**Response `200`** — an array of `Interaction` objects. When no interactions exist,
+the response is `[]` (never `null`).

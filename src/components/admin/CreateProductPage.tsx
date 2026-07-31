@@ -92,7 +92,7 @@ const CreateProductPage: React.FC = () => {
       .map((option) => ({
         ...option,
         name: option.name.trim(),
-        values: option.values.map((value) => value.trim()).filter(Boolean),
+        values: Array.from(new Set(option.values.map((value) => value.trim()).filter(Boolean))),
       }))
       .filter((option) => option.name && option.values.length > 0);
 

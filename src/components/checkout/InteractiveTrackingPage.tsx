@@ -103,7 +103,7 @@ const asStatus = (value: string): OrderStatus | 'legacy' => {
 };
 
 const statusLabel = (value: string): string => {
-    return STATUS_CONFIG[value]?.label ?? value.replace(/_/g, ' ');
+    return STATUS_CONFIG[value]?.label ?? 'Delivery update received';
 };
 
 const resolvePolyline = (body: unknown): string | null => {

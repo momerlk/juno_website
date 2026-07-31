@@ -4,6 +4,7 @@ import { ArrowLeft, MapPin, Package, Truck, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import * as api from '../../api/sellerApi';
+import { uploadPrivateFile } from '../../api/shared';
 import { Order } from '../../constants/orders';
 import { OrderStatusBadge } from './OrderStatusBadge';
 
@@ -12,13 +13,14 @@ const formatCurrency = (value?: number) => `Rs ${(value ?? 0).toLocaleString()}`
 const getAllowedTransitions = (status?: string) => {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'pending') return ['confirmed', 'cancelled'];
-  if (normalized === 'confirmed') return ['packed', 'cancelled'];
+  if (normalized === 'confirmed') return ['cancelled'];
   if (normalized === 'packed') return ['handed_to_rider', 'cancelled'];
   return [];
 };
 
 const getItemImage = (item: any) => item?.product_image || item?.image || item?.product?.image || 'https://via.placeholder.com/80x80?text=No+Image';
 const getItemTitle = (item: any) => item?.product_name || item?.title || item?.product_title || item?.product_id || 'Product';
+const safeTrackingLabel = (status?: string) => ['pending', 'confirmed', 'packed', 'handed_to_rider', 'at_warehouse', 'out_for_delivery', 'delivery_attempted', 'picked_up', 'travelling', 'attempted', 'delivered', 'returned'].includes(status || '') ? String(status).replace(/_/g, ' ') : 'Delivery update received';
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams();
@@ -33,6 +35,9 @@ const OrderDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [note, setNote] = useState('');
+  const [itemPhotos, setItemPhotos] = useState<Record<string, string>>({});
+  const [parcelPhoto, setParcelPhoto] = useState('');
+  const [uploadingEvidence, setUploadingEvidence] = useState<string | null>(null);
 
   const fetchOrder = async () => {
     if (!seller?.token || !orderId) return;
@@ -45,6 +50,8 @@ const OrderDetailPage: React.FC = () => {
         throw new Error((response.body as any)?.message || 'Failed to fetch order details');
       }
       setOrder(response.body);
+      setItemPhotos(Object.fromEntries((response.body.packing_evidence?.item_photos || []).map((photo) => [photo.order_item_id, photo.url])));
+      setParcelPhoto(response.body.packing_evidence?.packed_parcel_photo_url || '');
       const transitions = getAllowedTransitions(response.body.status);
       setSelectedStatus(transitions[0] || response.body.status);
     } catch (err) {
@@ -68,7 +75,7 @@ const OrderDetailPage: React.FC = () => {
     setError(null);
     try {
       const response = await api.Seller.UpdateOrderStatus(seller.token, order.id, {
-        status: selectedStatus as 'confirmed' | 'packed' | 'handed_to_rider' | 'cancelled',
+        status: selectedStatus as 'confirmed' | 'handed_to_rider' | 'cancelled',
         note: note || undefined,
       });
       if (!response.ok) {
@@ -78,6 +85,45 @@ const OrderDetailPage: React.FC = () => {
       setNote('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update order status');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const uploadEvidence = async (file: File | undefined, key: string) => {
+    if (!file || !seller?.token) return;
+    setUploadingEvidence(key);
+    setError(null);
+    try {
+      const objectName = await uploadPrivateFile(file, {
+        folder: 'orders',
+        allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+        maxBytes: 10 * 1024 * 1024,
+      }, seller.token);
+      if (key === 'parcel') setParcelPhoto(objectName);
+      else setItemPhotos((current) => ({ ...current, [key]: objectName }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not upload packing photo');
+    } finally {
+      setUploadingEvidence(null);
+    }
+  };
+
+  const markPacked = async () => {
+    if (!seller?.token || !order?.id) return;
+    const items = order.order_items || [];
+    if (order.status !== 'confirmed' || !parcelPhoto || items.some((item) => !item.id || !itemPhotos[item.id])) return;
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const response = await api.Seller.submitPackingEvidence(seller.token, order.id, {
+        item_photos: items.map((item) => ({ order_item_id: item.id!, url: itemPhotos[item.id!] })),
+        packed_parcel_photo_url: parcelPhoto,
+      });
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Could not mark order packed');
+      await fetchOrder();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not mark order packed');
     } finally {
       setIsUpdating(false);
     }
@@ -97,6 +143,9 @@ const OrderDetailPage: React.FC = () => {
 
   const shipping = order.shipping_address as any;
   const financials = (order as any).financials || {};
+  const orderItems = order.order_items || [];
+  const allPackingPhotosReady = orderItems.length > 0 && orderItems.every((item) => item.id && itemPhotos[item.id]) && Boolean(parcelPhoto);
+  const booking = order.delivery_booking;
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-6 mt-6">
@@ -184,10 +233,19 @@ const OrderDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {booking && <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <p className="text-xs font-bold text-white flex items-center gap-2"><Truck size={14} className="text-primary" /> DEX tracking</p>
+        <p className="mt-3 text-sm text-white">{safeTrackingLabel(booking.status)}</p>
+        <p className="mt-1 text-xs text-white/60">Tracking number: {booking.tracking_number}</p>
+        {booking.last_checked_at && <p className="mt-1 text-xs text-white/60">Last checked: {new Date(booking.last_checked_at).toLocaleString()}</p>}
+        {booking.tracking_url && <a href={booking.tracking_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-primary underline">Open DEX tracking</a>}
+        {!!booking.tracking_history?.length && <div className="mt-3 border-t border-white/10 pt-3 space-y-2">{booking.tracking_history.map((event, index) => <p key={index} className="text-xs text-white/60"><span className="text-white">{safeTrackingLabel(event.status)}</span>{event.location ? ` · ${event.location}` : ''}{event.occurred_at ? ` · ${new Date(event.occurred_at).toLocaleString()}` : ''}</p>)}</div>}
+      </div>}
+
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
         <p className="text-xs font-bold text-white flex items-center gap-2 mb-3"><Package size={14} className="text-primary" /> Order Items ({order.order_items?.length || 0})</p>
         <div className="space-y-3">
-          {(order.order_items || []).map((item: any, idx) => (
+          {orderItems.map((item: any, idx) => (
             <div key={`${order.id}-${item.product_id}-${item.variant_id}-${idx}`} className="rounded-lg border border-white/10 bg-black/30 p-3">
               <div className="flex gap-3">
                 <img src={getItemImage(item)} alt={getItemTitle(item)} className="h-16 w-16 rounded-md object-cover border border-white/10" />
@@ -209,9 +267,24 @@ const OrderDetailPage: React.FC = () => {
                   <p className="text-[11px] text-neutral-400">{formatCurrency(item.line_total ?? item.total_price ?? 0)}</p>
                 </div>
               </div>
+              <label className="mt-3 block text-xs text-white/60">Packed item photo
+                <input type="file" accept="image/jpeg,image/png,image/webp" disabled={order.status !== 'confirmed' || Boolean(order.packing_evidence)} onChange={(event) => void uploadEvidence(event.target.files?.[0], item.id || '')} className="mt-1 block w-full text-xs text-white/70 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-black disabled:opacity-50" />
+              </label>
+              <p className="mt-2 text-xs text-white/50">{item.id && itemPhotos[item.id] ? 'Saved privately' : uploadingEvidence === item.id ? 'Uploading…' : item.id ? 'Photo required' : 'Order item ID is missing'}</p>
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <p className="text-xs font-black uppercase tracking-widest text-primary">Packing evidence</p>
+        <p className="mt-2 text-xs text-white/60">Upload one item photo per row, then one photo of the sealed parcel with its airway bill.</p>
+        <label className="mt-3 block text-xs text-white/60">Packed parcel with airway bill
+          <input type="file" accept="image/jpeg,image/png,image/webp" disabled={order.status !== 'confirmed' || Boolean(order.packing_evidence)} onChange={(event) => void uploadEvidence(event.target.files?.[0], 'parcel')} className="mt-1 block w-full text-xs text-white/70 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-black disabled:opacity-50" />
+        </label>
+        <p className="mt-2 text-xs text-white/50">{parcelPhoto ? 'Saved privately' : uploadingEvidence === 'parcel' ? 'Uploading…' : 'Parcel photo required'}</p>
+        {order.packing_evidence?.submitted_at && <p className="mt-3 text-xs text-white/50">Submitted {new Date(order.packing_evidence.submitted_at).toLocaleString()}</p>}
+        <button onClick={() => void markPacked()} disabled={isUpdating || order.status !== 'confirmed' || !allPackingPhotosReady || Boolean(order.packing_evidence)} className="mt-4 w-full rounded-xl bg-primary px-4 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">{isUpdating ? 'Marking packed…' : order.packing_evidence ? 'Packing evidence saved' : 'Mark packed'}</button>
       </div>
 
       <div className="mt-4 text-xs text-white/45 flex items-center gap-2">

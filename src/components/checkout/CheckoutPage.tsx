@@ -296,7 +296,7 @@ const CheckoutPage: React.FC = () => {
             });
             if (!checkoutResponse.ok) throw new Error('Failed to place order');
 
-            const order = checkoutResponse.body;
+            const checkout = checkoutResponse.body;
             const receiptItems = checkoutItems.map((item) => ({
                 product_id: item.product_id,
                 variant_id: item.variant_id,
@@ -310,13 +310,13 @@ const CheckoutPage: React.FC = () => {
                 seller_name: item.seller_name,
             }));
 
-            if (order) {
+            if (checkout) {
                 await identifyTikTokUser({
                     email: formData.email,
                     phoneNumber: formData.phone_number,
                     externalId: formData.phone_number || formData.email,
                 });
-                trackTikTokPurchase(checkoutItems, order.total_amount);
+                trackTikTokPurchase(checkoutItems, checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
             }
 
             if (formData.phone_number) {
@@ -330,7 +330,7 @@ const CheckoutPage: React.FC = () => {
             // Buy Now never added to the cart, so leave it intact.
             if (!isBuyNow) clearCart();
 
-            navigate('/checkout/confirmation', { state: { order, receiptItems } });
+            navigate('/checkout/confirmation', { state: { checkout, receiptItems, customer: formData } });
         } catch (error: unknown) {
             setErrors({
                 general: error instanceof Error ? error.message : 'Failed to place order. Please try again.',

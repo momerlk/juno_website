@@ -13,6 +13,7 @@ import type {
     Cart,
     ShippingEstimateResponse,
     ParentOrder,
+    CheckoutResult,
     CheckoutRequest,
     CheckoutDirectRequest,
     GuestCartResponse,
@@ -84,12 +85,11 @@ export namespace Commerce {
     /**
      * Checkout
      * 
-     * Creates a parent transaction from the current cart and splits
-     * it into seller-specific child orders.
+     * Creates independent seller orders from the current cart.
      * 
      * Required fields: address_id, payment_method
      */
-    export async function checkout(payload: CheckoutRequest, token?: string): Promise<APIResponse<ParentOrder>> {
+    export async function checkout(payload: CheckoutRequest, token?: string): Promise<APIResponse<CheckoutResult>> {
         return request(`${BASE_PATH}/checkout`, 'POST', payload, token || getUserToken());
     }
 
@@ -98,14 +98,14 @@ export namespace Commerce {
      *
      * Creates order directly from provided items; does not rely on server cart.
      */
-    export async function checkoutDirect(payload: CheckoutDirectRequest, token?: string): Promise<APIResponse<ParentOrder>> {
+    export async function checkoutDirect(payload: CheckoutDirectRequest, token?: string): Promise<APIResponse<CheckoutResult>> {
         return request(`${BASE_PATH}/checkout/direct`, 'POST', payload, token || getUserToken());
     }
 
     /**
      * Get user orders
      * 
-     * Returns the authenticated user's child orders, one per seller
+     * Returns the authenticated user's seller orders, one per
      * fulfillment group. Includes order status history.
      */
     export async function getOrders(token?: string): Promise<APIResponse<Order[]>> {
@@ -119,6 +119,10 @@ export namespace Commerce {
      */
     export async function getOrderTracking(orderId: string, token?: string): Promise<APIResponse<OrderTracking>> {
         return request(`${BASE_PATH}/orders/${orderId}/tracking`, 'GET', undefined, token || getUserToken());
+    }
+
+    export async function getOrderInvoice(orderId: string, token?: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${orderId}/invoice`, 'GET', undefined, token || getUserToken());
     }
 
     /**
@@ -285,7 +289,7 @@ export namespace GuestCommerce {
      * 
      * Required fields: payment_method
      */
-    export async function checkout(payload: GuestCheckoutRequest, guestCartId?: string): Promise<APIResponse<ParentOrder>> {
+    export async function checkout(payload: GuestCheckoutRequest, guestCartId?: string): Promise<APIResponse<CheckoutResult>> {
         const headers = getHeaders(guestCartId);
         headers.append('Content-Type', 'application/json');
         const resp = await fetch(`${API_BASE_URL}${BASE_PATH}/checkout`, {
@@ -293,7 +297,7 @@ export namespace GuestCommerce {
             headers,
             body: JSON.stringify(payload)
         });
-        return handleGuestResponse<ParentOrder>(resp);
+        return handleGuestResponse<CheckoutResult>(resp);
     }
 
     /**
@@ -301,13 +305,13 @@ export namespace GuestCommerce {
      *
      * Creates guest order directly from items + inline customer details.
      */
-    export async function checkoutDirect(payload: GuestCheckoutDirectRequest): Promise<APIResponse<ParentOrder>> {
+    export async function checkoutDirect(payload: GuestCheckoutDirectRequest): Promise<APIResponse<CheckoutResult>> {
         const resp = await fetch(`${API_BASE_URL}${BASE_PATH}/checkout/direct`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        return handleGuestResponse<ParentOrder>(resp);
+        return handleGuestResponse<CheckoutResult>(resp);
     }
 
     /**
@@ -353,6 +357,15 @@ export namespace GuestCommerce {
             { method: 'GET' }
         );
         return handleGuestResponse<OrderTracking>(resp);
+    }
+
+    export async function getGuestOrderInvoice(orderId: string, payload: GuestOrderLookupRequest): Promise<APIResponse<any>> {
+        const params = new URLSearchParams();
+        if (payload.phone_number?.trim()) params.set('phone_number', payload.phone_number.trim());
+        if (payload.email?.trim()) params.set('email', payload.email.trim());
+        const query = params.toString();
+        const resp = await fetch(`${API_BASE_URL}${BASE_PATH}/orders/${encodeURIComponent(orderId)}/invoice${query ? `?${query}` : ''}`, { method: 'GET' });
+        return handleGuestResponse<any>(resp);
     }
 
     /**

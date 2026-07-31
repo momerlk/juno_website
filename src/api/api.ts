@@ -50,9 +50,11 @@ export {
 // Shared utilities
 export {
     getDeviceInfo,
+    uploadFile,
     uploadFileAndGetUrl,
     COMPRESSION_PRESETS,
     type CompressionOptions,
+    type UploadedFile,
 } from "./shared";
 
 // Type exports

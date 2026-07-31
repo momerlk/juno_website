@@ -1,5 +1,50 @@
 # Admin Module
 
+## DEX manual rows and manual booking
+
+`GET /api/v2/admin/logistics/orders/{orderID}/booking-data?delivery_note=...` and `POST /api/v2/admin/logistics/booking-data/bulk` return one staff-copyable row per product in `rows`. The rows contain: order number, sender address, recipient name and 10-digit phone, province, district, wards, specific address, product name, unit price, quantity, weight, length, width, height, COD, COD amount, failed-delivery storage, and delivery note. Sender address is deliberately `""` so staff select it in DEX; default weight/length/width/height are `0.2` kg, `15` cm, `20` cm and `0.5` cm. Specific address uses the ready ChatGPT-formatted address where available, otherwise the complete saved address, always including city. The first product row contains full COD and every later row contains `0`. The default delivery note is `Call before delivery`; pass `delivery_note` to override it. DEX order numbers contain digits only; a trailing `-A`/`-B`/`-C` becomes `1`/`2`/`3`. There is no DEX/Smartlane export, location-resolution, dispatch/SLA, pickup-threshold, parcel, or carrier-payload system. Manual booking is DEX-only and requires exactly the DEX tracking number plus the `airway_bill_url` returned by the existing `POST /api/v2/files/upload` media upload. The API fills the DEX tracking URL and booking time itself.
+
+## DEX statement imports and brand payments
+
+Upload the Net-Off `.xlsx` with the existing simple media endpoint, then send the returned `file.object` to `POST /api/v2/admin/financials/dex-statements`:
+
+```json
+{"statement_object_name":"2026/07/31/uploaded-statement"}
+```
+
+There is no order selection, manually entered statement number, bank reference, or DEX payment checkbox. The server first verifies that `statement_object_name` is an exact record in the media `files` collection, then reads that same storage object. The importer reads `Statement Number`, `Tracking No.`, `COD Amount`, `Shipping Fee`, `Shipping Fee VAT`, `Income Tax`, `Sales Tax`, and `Payable Amount`; it keeps every supplied Net-Off column in each persisted row. It normalizes each tracking value and matches it against both saved DEX `tracking_number` and `consignment_number`. Matched orders are marked `dex_payment_status: "received"`; unmatched DEX tracking numbers remain on the imported document for operations review. Duplicate file hashes and statement numbers are rejected before anything is saved.
+
+The import response explicitly returns `matched_order_count`, `unmatched_tracking_count`, `order_ids`, `statement_object_name`, `statement_file_name`, and every persisted `rows` entry. The portal must use `matched_order_count` for its matched number—not the number of brand statements. Each row includes its source `tracking_number`, `normalized_tracking_number`, `match_status` (`matched` or `unmatched`), `matched_order_id`, and `matched_by` (`tracking_number` or `consignment_number`) so operations can immediately see which workbook values were processed and why a row did or did not match.
+
+The import automatically creates one brand payment statement per seller represented by the matched orders. Its rows use each order's immutable `financials.brand_price` and checkout-time commission rate; the final transfer is `brand price − Juno commission`, not DEX remittance minus commission. It separately shows COD, DEX delivery fee, DEX VAT, income-tax withholding, sales-tax withholding, and DEX net remittance. Under the current Juno settlement policy those DEX deductions do not reduce the contracted brand transfer; operations must retain the courier tax certificate and confirm seller filing treatment with a Pakistan tax adviser. A seller without complete bank details receives a visible `needs_bank_details` statement, which cannot be paid until the details are fixed. Existing pre-snapshot statements are recalculated once from their DEX source and current catalog brand price when read. `GET /api/v2/admin/financials/dex-statements` lists the fully converted source statements, `GET /api/v2/admin/financials/dex-statements/{id}` returns every converted row, and `GET /api/v2/admin/financials/brand-statements` lists their split brand payments.
+
+Admin routes: `GET /api/v2/admin/financials/brand-statements`, `GET /api/v2/admin/financials/brand-statements/{id}`, and `POST /api/v2/admin/financials/brand-statements/{id}/pay`. Upload payment proof with the same simple media endpoint and submit its returned `file.url`:
+
+```json
+{"payment_proof_url":"https://storage.googleapis.com/junos_storage/...","bank_reference":"BANK-123","payment_date":"2026-07-31"}
+```
+
+Only an `open` brand statement may be marked paid. Printable admin statement/invoice views are `GET https://api.juno.com.pk/api/v2/admin/financials/brand-statements/{id}/statement` and `/invoice`; each displays bank details, order rows, deductions, and the final amount to transfer. The customer invoice aliases are `GET /api/v2/commerce/orders/{id}/invoice` for signed-in customers and `GET /api/v2/commerce/guest/orders/{id}/invoice` with the existing guest proof.
+
+**Frontend notes:** require a media-uploaded `.xlsx` and let the server read its statement number. Display the returned row decisions and refresh the financial list after success; do not calculate DEX totals in the browser. **Rollback/fallback:** hide the action and status filter; the additive batch and booking fields remain auditable.
+
+## Address formatting and confirmation
+
+### `POST /api/v2/admin/orders/{orderID}/address/format`
+
+Creates a fresh ready-to-copy ChatGPT prompt for one seller order. Requires admin authentication; no request
+body. Returns `200` with the `address_review` object documented in the Commerce module. The action records
+`formatted_at`; it does not confirm the address.
+
+### `PATCH /api/v2/admin/orders/{orderID}/customer`
+
+This existing admin-only endpoint accepts the existing optional customer/address fields plus ChatGPT output:
+`formatted_address`, `missing_fields`, and `customer_message`, plus `customer_confirmed` (optional boolean).
+It saves the structured correction and returns the updated seller order. Confirmation is saved only when a
+ready review has no missing fields, with the admin ID/time in `address_review`. Frontend: refresh from this
+response and keep confirmation disabled while fields remain. Rollback: omit the optional review fields;
+normal customer-address editing continues.
+
 Platform administration endpoints for ops, moderation, catalog control, seller onboarding, logistics, finance, and user management.
 
 Auth:
@@ -94,19 +139,10 @@ documented in the [Commerce Module](../commerce/docs.md#correcting-an-order).
 - `GET /api/v2/admin/carts`
 
 ### Logistics Operations
-- `GET /api/v2/admin/logistics/operational-config`
-- `PUT /api/v2/admin/logistics/operational-config`
 - `GET /api/v2/admin/logistics/orders/{orderID}/booking-data`
 - `POST /api/v2/admin/logistics/booking-data/bulk`
-- `POST /api/v2/admin/logistics/exports`
-- `GET /api/v2/admin/logistics/exports`
 - `POST /api/v2/admin/logistics/orders/{orderID}/manual-booking`
 - `POST /api/v2/admin/logistics/orders/manual-booking/bulk`
-- `POST /api/v2/admin/logistics/orders/{orderID}/dex-location-verification`
-- `POST /api/v2/admin/logistics/orders/{orderID}/dispatch-override`
-- `POST /api/v2/admin/logistics/orders/dispatch-override/bulk`
-- `GET /api/v2/admin/logistics/pickup-aging`
-- `POST /api/v2/admin/logistics/pickup-aging/process`
 
 ### Financials + Misc
 - `GET /api/v2/admin/financials/summary`
@@ -1019,38 +1055,10 @@ Documentation: [Commerce Module Tracking Docs](../commerce/docs.md#admin-order-m
 
 ## Logistics Operations
 
-### Get Operational Config
-`GET /api/v2/admin/logistics/operational-config`
-
-Returns the active runtime policy enforced by the backend:
-- DEX pickup threshold
-- seller-center dropoff SLA
-- seller-center source
-- recipient phone export format
-- COD split policy
-- DEX location strictness
-- wallet deduction policy
-- seller-center liability policy
-- supported carriers
-
-### Update Operational Config
-`PUT /api/v2/admin/logistics/operational-config`
-
-Body:
-```json
-{
-  "dex_pickup_threshold": 7,
-  "sla_hours": 36,
-  "supported_carriers": ["DEX", "Smartlane", "Trax"]
-}
-```
-
-This updates the in-memory operational overrides used by admin logistics workflows.
-
 ### Booking Data
-`GET /api/v2/admin/logistics/orders/{orderID}/booking-data?carrier=dex`
+`GET /api/v2/admin/logistics/orders/{orderID}/booking-data`
 
-Returns booking validation, warnings, parcel data, carrier payload, export preview, and location resolution when available.
+Returns only `{order_id, order_number, rows}`. Add optional `?delivery_note=...` to override the default `Call before delivery` note. `rows` contains the 19 manual DEX fields staff copy into DEX. It does not validate pickup SLAs, resolve locations, choose a dispatch mode, build a parcel object, or create a workbook.
 
 ### Bulk Booking Data
 `POST /api/v2/admin/logistics/booking-data/bulk`
@@ -1058,27 +1066,10 @@ Returns booking validation, warnings, parcel data, carrier payload, export previ
 Body:
 ```json
 {
-  "carrier": "dex",
   "order_ids": ["order-1", "order-2"],
-  "include_location_resolution": true
+  "delivery_note": "Leave with reception"
 }
 ```
-
-### Create Logistics Export
-`POST /api/v2/admin/logistics/exports`
-
-Body:
-```json
-{
-  "carrier": "smartlane",
-  "order_ids": ["order-1", "order-2"],
-  "format": "xlsx",
-  "require_human_verified_locations": false
-}
-```
-
-### List Logistics Exports
-`GET /api/v2/admin/logistics/exports?carrier=dex&status=ready&page=1&limit=20`
 
 ### Manual Booking
 `POST /api/v2/admin/logistics/orders/{orderID}/manual-booking`
@@ -1086,11 +1077,35 @@ Body:
 Body:
 ```json
 {
-  "carrier": "dex",
-  "consignment_number": "CN-12345",
-  "airway_bill_number": "AWB-12345",
-  "tracking_url": "https://carrier.example.com/track/CN-12345",
-  "notes": "Booked by ops after portal outage"
+  "consignment_number": "PK-DEX204946602",
+  "airway_bill_url": "https://storage.googleapis.com/junos_storage/2026/07/31/airway-bill.pdf"
+}
+```
+
+Manual booking is DEX-only. Upload the PDF, JPG, or PNG first through the existing media endpoint, then send its returned `file.url` as `airway_bill_url`. These are the only two inputs. The API generates the DEX tracking URL and booking time, immediately imports every DEX timeline event already available for that tracking number, and then polls non-final parcels hourly from 08:00 through 22:00 Pakistan time and at 00:00, 03:00 and 06:00 otherwise. It does not calculate courier cost, dispatch SLA, pickup threshold, revenue, or seller payout.
+
+The successful manual-booking response includes `status`, `dex_raw_status`, `last_checked_at`, and `tracking_history` when DEX responds; refresh the order detail afterward to display the persisted history.
+
+### Admin order detail delivery booking
+`GET /api/v2/admin/orders/{orderID}` returns the seller order and its latest manual booking in `delivery_booking`. The relationship uses the same seller `order_id` accepted by manual booking; it never reads a parent order. When no booking exists, `delivery_booking` is `null`.
+
+```json
+{
+  "id": "order-1",
+  "order_number": "ORD-1",
+  "delivery_booking": {
+    "order_id": "order-1",
+    "consignment_number": "PK-DEX204946602",
+    "tracking_number": "PK-DEX204946602",
+    "airway_bill_url": "https://storage.googleapis.com/junos_storage/2026/07/31/airway-bill.pdf",
+    "tracking_url": "https://www.dex.com.pk/tracking?references=PK-DEX204946602",
+    "status": "booked",
+    "dex_raw_status": "domestic_package_stationed_in",
+    "last_checked_at": "2026-07-31T12:00:00Z",
+    "tracking_history": [{"status":"in_transit","raw_status":"domestic_package_stationed_in","source":"manual_booking"}],
+    "booking_time": "2026-07-31T12:00:00Z",
+    "booked_at": "2026-07-31T12:00:00Z"
+  }
 }
 ```
 
@@ -1103,81 +1118,14 @@ Body:
   "bookings": [
     {
       "order_id": "order-1",
-      "carrier": "dex",
-      "consignment_number": "CN-1001",
-      "airway_bill_number": "AWB-1001"
-    },
-    {
-      "order_id": "order-2",
-      "carrier": "smartlane",
-      "consignment_number": "CN-1002",
-      "tracking_url": "https://carrier.example.com/track/CN-1002"
+      "consignment_number": "PK-DEX204946602",
+      "airway_bill_url": "https://storage.googleapis.com/junos_storage/2026/07/31/airway-bill.pdf"
     }
   ]
 }
 ```
 
 Writes manual booking rows for multiple orders and returns per-order outcomes.
-
-### DEX Location Verification
-`POST /api/v2/admin/logistics/orders/{orderID}/dex-location-verification`
-
-Body:
-```json
-{
-  "province": "Punjab",
-  "district": "Lahore",
-  "ward": "Gulberg",
-  "specific_address": "12 Main Gulberg",
-  "apply_as_override": true
-}
-```
-
-### Dispatch Override
-`POST /api/v2/admin/logistics/orders/{orderID}/dispatch-override`
-
-Body:
-```json
-{
-  "dispatch_mode": "carrier_pickup",
-  "reason": "Strategic seller approved for pickup below threshold",
-  "approval_reference": "OPS-2026-0515-001",
-  "approved_by": "ops-lead@juno"
-}
-```
-
-### Bulk Dispatch Override
-`POST /api/v2/admin/logistics/orders/dispatch-override/bulk`
-
-Body:
-```json
-{
-  "overrides": [
-    {
-      "order_id": "order-30",
-      "dispatch_mode": "carrier_pickup",
-      "reason": "Approved pickup exception",
-      "approval_reference": "OPS-2026-0709-01"
-    },
-    {
-      "order_id": "order-31",
-      "dispatch_mode": "manual_override",
-      "reason": "DEX routing correction"
-    }
-  ]
-}
-```
-
-Applies dispatch overrides across multiple orders with per-order success or failure reporting.
-
-### Pickup Aging
-`GET /api/v2/admin/logistics/pickup-aging?seller_id=seller-1&carrier=dex`
-
-Returns rows with:
-- `seller_dispatch_due_at`
-- `days_waiting_for_pickup`
-- `pickup_urgency`
-- threshold state
 
 ---
 
@@ -1198,7 +1146,7 @@ Returns:
 - booked/unbooked order counts
 
 ### Financial Orders
-`GET /api/v2/admin/financials/orders?from=2026-07-01&to=2026-07-31&carrier=smartlane&page=1&limit=50`
+`GET /api/v2/admin/financials/orders?from=2026-07-01&to=2026-07-31&page=1&limit=50`
 
 Returns order-level financial rows for reconciliation and export checks.
 

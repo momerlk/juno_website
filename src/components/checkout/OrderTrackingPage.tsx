@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Search, Package, Mail, Phone, ArrowLeft, Clock, CheckCircle, Truck, AlertCircle, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Commerce, GuestCommerce } from '../../api/commerceApi';
-import type { ParentOrder } from '../../api/api.types';
+import type { OrderTracking, ParentOrder } from '../../api/api.types';
 
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
@@ -34,12 +34,14 @@ const buildFallbackSupportUrl = (orderRef?: string) => {
 };
 
 const formatStatusLabel = (status: string) => status.replace(/_/g, ' ');
+const safeTrackingLabel = (status?: string) => ['pending', 'confirmed', 'packed', 'handed_to_rider', 'at_warehouse', 'out_for_delivery', 'delivery_attempted', 'delivered', 'cancelled', 'returned', 'picked_up', 'travelling', 'attempted'].includes(status || '') ? formatStatusLabel(status || '') : 'Delivery update received';
 
 const OrderTrackingPage: React.FC = () => {
     const [lookupBy, setLookupBy] = useState<'phone' | 'email'>('phone');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [email, setEmail] = useState('');
     const [orders, setOrders] = useState<ParentOrder[]>([]);
+    const [trackingByOrderId, setTrackingByOrderId] = useState<Record<string, OrderTracking>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasSearched, setHasSearched] = useState(false);
@@ -57,6 +59,7 @@ const OrderTrackingPage: React.FC = () => {
         e.preventDefault();
         setError(null);
         setOrders([]);
+        setTrackingByOrderId({});
 
         const lookupValue = lookupBy === 'phone' ? phoneNumber.trim() : email.trim();
 
@@ -86,6 +89,12 @@ const OrderTrackingPage: React.FC = () => {
             }
 
             setOrders(foundOrders);
+            const trackingEntries = await Promise.all(foundOrders.map(async (order) => {
+                const orderId = order.child_order_ids?.[0] || order.id;
+                const tracking = await GuestCommerce.getGuestOrderTracking(orderId, payload);
+                return tracking.ok && tracking.body ? [orderId, tracking.body] as const : null;
+            }));
+            setTrackingByOrderId(Object.fromEntries(trackingEntries.filter((entry): entry is readonly [string, OrderTracking] => Boolean(entry))));
 
             // Save for next time
             if (lookupBy === 'phone') {
@@ -407,6 +416,15 @@ const OrderTrackingPage: React.FC = () => {
                                         </p>
                                     </div>
                                 </div>
+
+                                {trackingByOrderId[order.child_order_ids?.[0] || order.id] && (() => {
+                                    const tracking = trackingByOrderId[order.child_order_ids?.[0] || order.id];
+                                    return <div className="mt-4 rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">Delivery update</p>
+                                        <p className="mt-1 text-sm font-bold text-white">{safeTrackingLabel(tracking.current_status)}</p>
+                                        {tracking.timeline?.length > 0 && <div className="mt-3 space-y-2 border-t border-white/10 pt-3">{tracking.timeline.slice(-3).reverse().map((event, eventIndex) => <p key={eventIndex} className="text-xs text-white/60"><span className="text-white">{safeTrackingLabel(event.status)}</span>{event.location ? ` · ${event.location}` : ''}{event.occurred_at ? ` · ${new Date(event.occurred_at).toLocaleString()}` : ''}</p>)}</div>}
+                                    </div>;
+                                })()}
 
                                 {/* Live Tracking CTA */}
                                 <div className="mt-6 grid gap-2 sm:grid-cols-2">

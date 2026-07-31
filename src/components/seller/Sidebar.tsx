@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
+  FileText,
   BarChart2,
   User,
   X,
@@ -20,6 +21,7 @@ export const navigation = [
   { name: 'Dashboard', href: '/seller/dashboard', icon: LayoutDashboard, subtitle: 'Build something delightful.', focus: 'Lead with story, not admin.' },
   { name: 'Inventory', href: '/seller/dashboard/inventory', icon: Package, subtitle: 'Add products fast and make quality feel easy.', focus: 'Keep listing friction brutally low.' },
   { name: 'Orders', href: '/seller/dashboard/orders', icon: ShoppingCart, subtitle: 'Fulfill quickly and keep trust compounding.', focus: 'Every delivery shapes brand loyalty.' },
+  { name: 'Statements', href: '/seller/dashboard/statements', icon: FileText, subtitle: 'See payout status without chasing a spreadsheet.', focus: 'Clear settlement, stronger trust.' },
   { name: 'Analytics', href: '/seller/dashboard/analytics', icon: BarChart2, subtitle: 'Read the signals behind saves, visits, and demand.', focus: 'Think like Instagram insights, not spreadsheets.' },
   { name: 'Profile', href: '/seller/dashboard/profile', icon: User, subtitle: 'Sharpen the way your label presents itself.', focus: 'Your store page should feel editorial, not generic.' },
 ];

@@ -60,6 +60,12 @@ pagination state in `meta.pagination`.
 }
 ```
 
+`meta.pagination.total` is the exact number of products matching the complete
+filter scope, not the number returned in `data`. For example, a request with
+`limit=48` can return 48 apparel products with `total: 342` and
+`has_more: true`. The catalog web client uses 48-item pages and requests the
+next cursor only when the customer scrolls.
+
 **How a client fetches every product**
 
 1. Request `GET /api/v2/catalog/products?limit=100`.
@@ -112,6 +118,9 @@ Within a bucket, the requested canonical sort and product ID determine the order
 For `sort=priority`/`default`, the secondary sort defaults to newest first and
 brand/product-group positions are interleaved within each bucket where possible.
 This never moves an item ahead of a higher badge bucket.
+
+Priority ranking uses an internal composite sort key for its MongoDB window
+stages; it is removed before products are decoded or returned.
 
 Sold-out products are excluded by default from catalog, search, filter, popular,
 related, count, facet, and hierarchy responses. Use `in_stock=false` to request
@@ -297,7 +306,8 @@ All fields are optional. If `keyword` is present, it uses the same search and
 pagination contract as the search endpoint; otherwise it uses normal catalog
 listing. Multi-value filters use OR within one field and AND across different
 fields. Every response includes the authoritative filtered total in
-`meta.pagination.total`.
+`meta.pagination.total`; the result page and total are calculated in one Mongo
+aggregation.
 
 **Response `200`** — products in `data`, with cursor state in `meta.pagination`.
 
@@ -308,7 +318,14 @@ fields. Every response includes the authoritative filtered total in
 
 Returns filter values derived from active `products_v2` rows belonging to active
 sellers. The same query parameters supported by product listing can be supplied
-here to scope the returned filter options to the current result set.
+here to scope the returned filter options to the current result set. All option
+groups are returned by one Mongo aggregation, rather than one database query per
+group.
+
+For public browse screens, request filter options once for the fixed browse scope
+(for example, `genders=women`) and retain them while customers change product
+filters. This keeps the controls stable and avoids an unnecessary metadata
+request after every selection; only the product list needs to refresh.
 
 **Response `200`**
 ```json

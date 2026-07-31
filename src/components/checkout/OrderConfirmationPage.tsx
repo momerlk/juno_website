@@ -14,7 +14,7 @@ import {
     Truck,
 } from 'lucide-react';
 import { Commerce } from '../../api/commerceApi';
-import type { ParentOrder } from '../../api/api.types';
+import type { CheckoutResult, GuestCheckoutDetails, ParentOrder } from '../../api/api.types';
 
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
@@ -34,6 +34,8 @@ interface ReceiptItem {
 
 interface LocationState {
     order?: ParentOrder;
+    checkout?: CheckoutResult;
+    customer?: GuestCheckoutDetails;
     receiptItems?: ReceiptItem[];
 }
 
@@ -75,12 +77,35 @@ const buildFallbackSupportUrl = (orderRef?: string) => {
 const OrderConfirmationPage: React.FC = () => {
     const location = useLocation();
     const [order, setOrder] = useState<ParentOrder | null>(null);
+    const [checkout, setCheckout] = useState<CheckoutResult | null>(null);
     const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
     const [showParticles, setShowParticles] = useState(true);
     const [isOpeningSupport, setIsOpeningSupport] = useState(false);
 
     useEffect(() => {
         const state = location.state as LocationState;
+        if (state?.checkout?.orders?.length) {
+            const firstOrder = state.checkout.orders[0];
+            setCheckout(state.checkout);
+            setOrder({
+                id: firstOrder.id,
+                user_id: '',
+                customer_type: 'guest',
+                customer_name: state.customer?.full_name,
+                customer_phone: state.customer?.phone_number,
+                customer_email: state.customer?.email,
+                total_amount: state.checkout.orders.reduce((sum, item) => sum + (item.total || 0), 0),
+                shipping_fee: 0,
+                subtotal: 0,
+                status: 'confirmed',
+                payment_method: 'cod',
+                shipping_address: state.customer,
+                child_order_ids: state.checkout.orders.map((item) => item.id),
+                created_at: new Date().toISOString(),
+            });
+            setReceiptItems(Array.isArray(state.receiptItems) ? state.receiptItems : []);
+            return;
+        }
         if (state?.order) {
             setOrder(state.order);
             setReceiptItems(Array.isArray(state.receiptItems) ? state.receiptItems : []);
@@ -90,7 +115,14 @@ const OrderConfirmationPage: React.FC = () => {
         const storedPayload = sessionStorage.getItem(STORAGE_KEY);
         if (storedPayload) {
             try {
-                const parsed = JSON.parse(storedPayload) as { order?: ParentOrder; receiptItems?: ReceiptItem[] };
+                const parsed = JSON.parse(storedPayload) as { order?: ParentOrder; checkout?: CheckoutResult; receiptItems?: ReceiptItem[] };
+                if (parsed?.checkout?.orders?.length) {
+                    setCheckout(parsed.checkout);
+                    const firstOrder = parsed.checkout.orders[0];
+                    setOrder({ id: firstOrder.id, user_id: '', customer_type: 'guest', total_amount: parsed.checkout.orders.reduce((sum, item) => sum + (item.total || 0), 0), shipping_fee: 0, subtotal: 0, status: 'confirmed', payment_method: 'cod', child_order_ids: parsed.checkout.orders.map((item) => item.id), created_at: new Date().toISOString() });
+                    setReceiptItems(Array.isArray(parsed.receiptItems) ? parsed.receiptItems : []);
+                    return;
+                }
                 if (parsed?.order) {
                     setOrder(parsed.order);
                     setReceiptItems(Array.isArray(parsed.receiptItems) ? parsed.receiptItems : []);
@@ -109,18 +141,20 @@ const OrderConfirmationPage: React.FC = () => {
 
     useEffect(() => {
         if (order) {
-            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ order, receiptItems }));
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ order, checkout, receiptItems }));
             sessionStorage.setItem('juno_last_order', JSON.stringify(order));
         }
 
         const timeoutId = window.setTimeout(() => setShowParticles(false), 4200);
         return () => window.clearTimeout(timeoutId);
-    }, [order, receiptItems]);
+    }, [checkout, order, receiptItems]);
 
     const orderTrackingPath = useMemo(() => {
         if (!order) return '/track';
         return order.customer_type === 'guest' ? buildGuestTrackingPath(order) : `/checkout/track/${order.id}`;
     }, [order]);
+
+    const createdOrders = checkout?.orders || (order ? [{ id: order.child_order_ids?.[0] || order.id, order_number: order.id, total: order.total_amount }] : []);
 
     const handlePrintReceipt = () => {
         window.print();
@@ -274,8 +308,8 @@ const OrderConfirmationPage: React.FC = () => {
                                     <span className="font-bold text-white print-text">{orderPlacedAt.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-white/55 print-muted">Child Orders</span>
-                                    <span className="font-bold text-white print-text">{order.child_order_ids?.length || 1}</span>
+                                    <span className="text-white/55 print-muted">Seller Orders</span>
+                                    <span className="font-bold text-white print-text">{createdOrders.length}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-white/55 print-muted">Payment</span>
@@ -305,6 +339,36 @@ const OrderConfirmationPage: React.FC = () => {
                                 <p className="mt-2 text-sm text-white/55 print-muted">{order.shipping_address?.phone_number || order.customer_phone || 'No phone'}</p>
                             </div>
                         </div>
+                    </div>
+                </motion.section>
+
+                <motion.section
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.06, duration: 0.45 }}
+                    className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5 print-card"
+                >
+                    <div className="mb-4 flex items-center gap-2">
+                        <Package size={16} className="text-primary" />
+                        <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-white/45 print-muted">Your seller orders</p>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                        {createdOrders.map((createdOrder) => {
+                            const trackingPath = order.customer_type === 'guest'
+                                ? buildGuestTrackingPath({ ...order, id: createdOrder.id, child_order_ids: [createdOrder.id] })
+                                : `/checkout/track/${createdOrder.id}`;
+                            return (
+                                <div key={createdOrder.id} className="rounded-xl border border-white/10 bg-black/20 p-4 print-card">
+                                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/40 print-muted">{createdOrder.seller_name || 'Independent brand'}</p>
+                                    <p className="mt-2 font-mono text-sm font-bold text-white print-text">{createdOrder.order_number}</p>
+                                    <p className="mt-1 text-sm text-white/60 print-muted">{typeof createdOrder.total === 'number' ? formatCurrency(createdOrder.total) : 'Amount in your confirmation email'}</p>
+                                    <div className="mt-4 flex items-center gap-4 no-print">
+                                        <Link to={createdOrder.tracking_url || trackingPath} className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-[0.14em] text-primary">Track this order <ArrowRight size={13} /></Link>
+                                        {createdOrder.receipt_url && <a href={createdOrder.receipt_url} target="_blank" rel="noreferrer" className="text-xs font-bold uppercase tracking-[0.14em] text-white/65 hover:text-white">Receipt</a>}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </motion.section>
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Bell, Package, Settings, ShieldCheck, ShoppingCart, LogOut } from 'lucide-react';
+import { BarChart3, Bell, BookOpen, Headphones, Package, Settings, ShieldCheck, ShoppingCart, LogOut } from 'lucide-react';
 import { Button } from '@astryxdesign/core/Button';
 import { Divider } from '@astryxdesign/core/Divider';
 import { NavIcon } from '@astryxdesign/core/NavIcon';
@@ -18,6 +18,8 @@ export const navigation = [
     { name: 'Import Products', href: '/admin/products/imports', icon: Package, subtitle: 'Shopify and WooCommerce imports' },
     { name: 'Notifications', href: '/admin/notifications', icon: Bell, subtitle: 'Platform broadcasts' },
     { name: 'Customer Funnel', href: '/admin/analytics', icon: BarChart3, subtitle: 'Customer conversion by stage' },
+    { name: 'Order Processing Guide', href: '/admin/guides/order-processing', icon: BookOpen, subtitle: 'Staff workflow from order to seller payment' },
+    { name: 'Customer Support Guide', href: '/admin/guides/customer-support', icon: Headphones, subtitle: 'Customer communication and escalation' },
   ] },
   { group: 'Management', items: [{ name: 'Invites', href: '/admin/invites', icon: Bell, subtitle: 'Admin invite coordination' }] },
   { group: 'System', items: [{ name: 'Infrastructure', href: '/admin/system', icon: Settings, subtitle: 'Health, waitlist, OTPs, and tooling' }] },

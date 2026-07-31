@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Ban,
   Calendar,
+  Copy,
   CreditCard,
   MapPin,
   Package,
@@ -19,10 +20,10 @@ import {
   Store,
   Truck,
   User,
-  XCircle,
 } from 'lucide-react';
 import { AdminCommerce, AdminPortal, GetProductById } from '../../api/adminApi';
-import type { Order, ParentOrder } from '../../api/api.types';
+import { uploadFileAndGetUrl } from '../../api/shared';
+import type { AddressReview, DeliveryBooking, Order, ParentOrder } from '../../api/api.types';
 import type { Product, Variant } from '../../constants/types';
 import type { Seller } from '../../constants/seller';
 
@@ -53,9 +54,17 @@ const statusColors: Record<string, string> = {
 };
 
 const formatCurrency = (value?: number) => `Rs ${(value ?? 0).toLocaleString()}`;
+const ADDRESS_FIELDS = ['house_or_building', 'area', 'city', 'province', 'postal_code'];
+const normalizeAddressReview = (review?: AddressReview | null): AddressReview | null => review ? {
+  ...review,
+  missing_fields: Array.isArray(review.missing_fields) ? review.missing_fields : [],
+  format_status: review.format_status || 'manual_review',
+  customer_message: review.customer_message || '',
+  customer_confirmed: Boolean(review.customer_confirmed),
+} : null;
 
 const parentFromChild = (child: Order): ParentOrder => ({
-  id: child.parent_order_id || child.id,
+  id: child.id,
   user_id: child.user_id,
   customer_type: child.user_id?.startsWith('guest:') ? 'guest' : 'user',
   customer_name: child.customer_name,
@@ -223,7 +232,6 @@ const OrderDetailPage: React.FC = () => {
 
   const [newStatus, setNewStatus] = useState<string>('pending');
   const [statusNote, setStatusNote] = useState('');
-  const [cancelReason, setCancelReason] = useState('');
 
   const [warehouseLat, setWarehouseLat] = useState('');
   const [warehouseLng, setWarehouseLng] = useState('');
@@ -233,6 +241,9 @@ const OrderDetailPage: React.FC = () => {
   const [updatingVariantKey, setUpdatingVariantKey] = useState<string | null>(null);
   const [editingDetails, setEditingDetails] = useState(false);
   const [detailsDraft, setDetailsDraft] = useState<Record<string, string>>({});
+  const [addressReview, setAddressReview] = useState<AddressReview | null>(null);
+  const [bookingDraft, setBookingDraft] = useState({ consignment_number: '' });
+  const [airwayBillFile, setAirwayBillFile] = useState<File | null>(null);
 
   const sellerMap = useMemo(() => new Map(sellers.map((s) => [s.id, s])), [sellers]);
 
@@ -258,19 +269,10 @@ const OrderDetailPage: React.FC = () => {
       }
 
       const child = childRes.body as Order;
-      let payload: { parent: ParentOrder; children: Order[] } = {
+      const payload: { parent: ParentOrder; children: Order[] } = {
         parent: parentFromChild(child),
         children: [child],
       };
-
-      // A list row represents a child order. Load its parent group when one
-      // exists, but keep the child detail usable for legacy/standalone orders.
-      if (child.parent_order_id) {
-        const parentRes = await AdminCommerce.getParentOrder(child.parent_order_id);
-        if (parentRes.ok) {
-          payload = parentRes.body as { parent: ParentOrder; children: Order[] };
-        }
-      }
 
       setParent(payload.parent);
       setChildren(payload.children);
@@ -280,6 +282,10 @@ const OrderDetailPage: React.FC = () => {
       const linkedChild = payload.children.find((candidate) => candidate.id === child.id) || payload.children[0];
       setSelectedChildId(linkedChild?.id || '');
       setNewStatus(linkedChild?.status || payload.parent.rollup_status || payload.parent.status || 'pending');
+      setAddressReview(normalizeAddressReview(child.address_review));
+      const booking = child.delivery_booking;
+      setBookingDraft({ consignment_number: booking?.consignment_number || booking?.tracking_number || '' });
+      setAirwayBillFile(null);
 
       if (sellersRes.ok && Array.isArray(sellersRes.body)) {
         setSellers(sellersRes.body as Seller[]);
@@ -356,10 +362,10 @@ const OrderDetailPage: React.FC = () => {
 
   const handleCancelSelectedChild = async () => {
     if (!selectedChildId) return;
-    if (!window.confirm('Cancel the selected child order?')) return;
+    if (!window.confirm('Cancel this seller order?')) return;
     await runUpdate(
-      () => AdminPortal.cancelOrder(selectedChildId, cancelReason || 'Cancelled by admin'),
-      'Child order cancelled.'
+      () => AdminPortal.cancelOrder(selectedChildId, 'Cancelled by admin'),
+      'Seller order cancelled.'
     );
   };
 
@@ -382,16 +388,6 @@ const OrderDetailPage: React.FC = () => {
       () => AdminCommerce.updateETA(selectedChildId, new Date(newEta).toISOString()),
       'ETA updated.'
     );
-  };
-
-  const handleCancelParent = async () => {
-    if (!parent) return;
-    if (!window.confirm('Cancel this parent order and all child orders?')) return;
-    await runUpdate(
-      () => AdminCommerce.cancelParentOrder(parent.id, cancelReason || undefined),
-      'Parent order cancelled.'
-    );
-    setCancelReason('');
   };
 
   const handleUpdateOrderItemVariant = async (child: Order, itemIndex: number, nextVariantId: string) => {
@@ -437,7 +433,7 @@ const OrderDetailPage: React.FC = () => {
   };
 
   const printReceipt = async (kind: 'customer' | 'seller') => {
-    const id = kind === 'customer' ? parent?.id : selectedChildId;
+    const id = selectedChildId;
     if (!id) return;
     const res = kind === 'customer' ? await AdminCommerce.getCustomerReceipt(id) : await AdminCommerce.getSellerProcessingReceipt(id);
     if (!res.ok) { setError((res.body as any)?.message || 'Could not generate receipt'); return; }
@@ -447,13 +443,102 @@ const OrderDetailPage: React.FC = () => {
   };
 
   const saveOrderDetails = async () => {
-    if (!parent) return;
+    if (!selectedChildId) return;
     if (!detailsDraft.full_name?.trim() || !detailsDraft.phone_number?.trim() || !detailsDraft.address_line1?.trim() || !detailsDraft.city?.trim()) {
       setError('Name, phone, address line 1, and city are required.');
       return;
     }
-    if (await runUpdate(() => AdminCommerce.updateOrderDetails(parent.id, { payment_method: detailsDraft.payment_method, customer: detailsDraft }), 'Order details updated.')) {
+    if (await runUpdate(() => AdminPortal.updateOrderCustomer(selectedChildId, detailsDraft), 'Order details updated.')) {
       setEditingDetails(false);
+    }
+  };
+
+  const copyText = async (value?: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      setError('Could not copy text. Select and copy it manually.');
+    }
+  };
+
+  const createAddressPrompt = async () => {
+    if (!selectedChildId) return;
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const res = await AdminPortal.createAddressPrompt(selectedChildId);
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Could not create ChatGPT prompt');
+      setAddressReview(normalizeAddressReview(res.body as AddressReview));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create ChatGPT prompt');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const saveAddressReview = async (confirmed = false) => {
+    if (!selectedChildId || !addressReview) return;
+    const missingFields = addressReview.missing_fields.filter((field) => ADDRESS_FIELDS.includes(field));
+    if (missingFields.length !== addressReview.missing_fields.length) {
+      setError(`Missing fields must be one of: ${ADDRESS_FIELDS.join(', ')}`);
+      return;
+    }
+    if (confirmed && (addressReview.format_status !== 'ready' || missingFields.length > 0)) return;
+
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const res = await AdminPortal.updateOrderCustomer(selectedChildId, {
+        formatted_address: addressReview.formatted_address,
+        missing_fields: missingFields,
+        customer_message: addressReview.customer_message,
+        ...(confirmed ? { customer_confirmed: true } : {}),
+      });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Could not save address review');
+      setAddressReview(normalizeAddressReview((res.body as any)?.address_review) || addressReview);
+      if (confirmed) await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save address review');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const saveManualDexBooking = async () => {
+    if (!selectedChildId || !bookingDraft.consignment_number.trim() || !airwayBillFile) {
+      setError('A DEX tracking number and airway-bill file are required.');
+      return;
+    }
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const airway_bill_url = await uploadFileAndGetUrl(airwayBillFile);
+      const res = await AdminPortal.saveManualBooking(selectedChildId, {
+        consignment_number: bookingDraft.consignment_number.trim(),
+        airway_bill_url,
+      });
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Could not save DEX booking');
+      await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save DEX booking');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const refreshDexTracking = async () => {
+    if (!selectedChildId) return;
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const res = await AdminPortal.refreshDexTracking(selectedChildId);
+      if (!res.ok) throw new Error((res.body as any)?.message || 'Could not refresh DEX tracking');
+      await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not refresh DEX tracking');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -476,6 +561,7 @@ const OrderDetailPage: React.FC = () => {
 
   const rollupStatus = parent.rollup_status || parent.status;
   const customer = parent.shipping_address;
+  const booking: DeliveryBooking | undefined = selectedChild?.delivery_booking;
 
   return (
     <motion.div
@@ -493,7 +579,7 @@ const OrderDetailPage: React.FC = () => {
           </button>
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-3xl font-black uppercase tracking-tight text-white">Parent Order</h2>
+              <h2 className="text-3xl font-black uppercase tracking-tight text-white">Seller Order</h2>
               <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border ${statusColors[rollupStatus] || 'bg-neutral-500/10 text-neutral-300 border-neutral-500/20'}`}>
                 {rollupStatus.replace(/_/g, ' ')}
               </span>
@@ -542,15 +628,56 @@ const OrderDetailPage: React.FC = () => {
                 <p className="text-neutral-300">Subtotal: <span className="text-white">{formatCurrency(parent.subtotal)}</span></p>
                 <p className="text-neutral-300">Shipping: <span className="text-white">{formatCurrency(parent.shipping_fee)}</span></p>
                 <p className="text-neutral-300">Total: <span className="text-white font-black">{formatCurrency(parent.total_amount)}</span></p>
-                <p className="text-neutral-300">Child Orders: <span className="text-white">{children.length}</span></p>
+                <p className="text-neutral-300">Seller order: <span className="text-white">{selectedChild?.order_number || selectedChildId}</span></p>
                 <p className="text-neutral-300">Customer Type: <span className="text-white">{parent.customer_type}</span></p>
               </div>
             </Card>
           </div>
 
           <Card padding={4}>
+            <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wider text-white">Address review</h3>
+                <p className="mt-1 text-xs text-neutral-400">Create a prompt, review it in ChatGPT, then paste only the reviewed address data below.</p>
+              </div>
+              <Button label="Create ChatGPT prompt" size="sm" onClick={() => void createAddressPrompt()} isLoading={isUpdating} isDisabled={!selectedChildId} />
+            </div>
+
+            {!addressReview ? (
+              <p className="py-6 text-sm text-neutral-400">No address review yet. Create a prompt to begin.</p>
+            ) : (
+              <div className="mt-4 space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div><p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Original address</p><p className="mt-2 whitespace-pre-wrap text-sm text-white/80">{addressReview.original_address || customer?.address_line1 || '-'}</p></div>
+                  <div><p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Review status</p><p className="mt-2 text-sm font-semibold text-white">{addressReview.customer_confirmed ? 'Customer confirmed' : addressReview.format_status.replace(/_/g, ' ')}</p>{addressReview.confirmed_at && <p className="mt-1 text-xs text-neutral-400">Confirmed {new Date(addressReview.confirmed_at).toLocaleString()}{addressReview.confirmed_by ? ` by ${addressReview.confirmed_by}` : ''}</p>}</div>
+                </div>
+
+                {addressReview.formatter_prompt && <div><div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">ChatGPT prompt</p><button onClick={() => void copyText(addressReview.formatter_prompt)} className="inline-flex items-center gap-1 text-xs font-semibold text-primary"><Copy size={13} /> Copy prompt</button></div><textarea readOnly value={addressReview.formatter_prompt} className="h-28 w-full rounded-xl border border-white/10 bg-black/30 p-3 font-mono text-xs text-white/70 outline-none" /></div>}
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="text-xs text-neutral-400">Formatted address<textarea value={addressReview.formatted_address || ''} onChange={(event) => setAddressReview((current) => current ? { ...current, formatted_address: event.target.value, format_status: 'ready' } : current)} className="mt-1 h-24 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-primary" /></label>
+                  <label className="text-xs text-neutral-400">Missing fields (comma separated)<input value={addressReview.missing_fields.join(', ')} onChange={(event) => setAddressReview((current) => current ? { ...current, missing_fields: event.target.value.split(',').map((field) => field.trim()).filter(Boolean), format_status: 'ready' } : current)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary" /><span className="mt-1 block text-[10px] text-neutral-500">{ADDRESS_FIELDS.join(', ')}</span></label>
+                </div>
+                <div><div className="mb-2 flex items-center justify-between"><p className="text-xs text-neutral-400">Customer message</p><button onClick={() => void copyText(addressReview.customer_message)} className="inline-flex items-center gap-1 text-xs font-semibold text-primary"><Copy size={13} /> Copy message</button></div><textarea value={addressReview.customer_message || ''} onChange={(event) => setAddressReview((current) => current ? { ...current, customer_message: event.target.value, format_status: 'ready' } : current)} className="h-20 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-primary" /></div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4"><p className="text-xs text-neutral-400">{addressReview.missing_fields.length ? `${addressReview.missing_fields.length} field(s) still needed` : 'No missing fields'}</p><div className="flex gap-2"><Button label="Save review" size="sm" onClick={() => void saveAddressReview()} isLoading={isUpdating} /><Button label="Customer confirmed address" size="sm" variant="primary" onClick={() => void saveAddressReview(true)} isDisabled={isUpdating || addressReview.customer_confirmed || addressReview.format_status !== 'ready' || addressReview.missing_fields.length > 0} /></div></div>
+              </div>
+            )}
+          </Card>
+
+          <Card padding={4}>
+            <VStack gap={3}>
+              <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2"><Truck size={16} className="text-primary" /> Manual DEX booking</h3>
+              <p className="text-xs text-neutral-400">Enter the DEX tracking number and upload the airway bill.</p>
+              <input value={bookingDraft.consignment_number} onChange={(event) => setBookingDraft({ consignment_number: event.target.value })} placeholder="DEX tracking number" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
+              <label className="text-xs text-neutral-400">Airway bill (PDF, JPG or PNG, max 10 MB)<input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => setAirwayBillFile(event.target.files?.[0] || null)} className="mt-1 block w-full text-xs text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-black" /></label>
+              <Button label="Save DEX booking" variant="primary" onClick={() => void saveManualDexBooking()} isLoading={isUpdating} isDisabled={!selectedChildId || !bookingDraft.consignment_number.trim() || !airwayBillFile} width="100%" />
+              {booking && <div className="border-t border-white/10 pt-3 text-xs text-neutral-400"><div className="flex items-center justify-between gap-2"><p>DEX tracking: <span className="text-white">{booking.tracking_number || booking.consignment_number || '-'}</span></p><Button label="Refresh DEX" size="sm" onClick={() => void refreshDexTracking()} isLoading={isUpdating} /></div>{booking.tracking_url && <p className="mt-1">Tracking link: <a href={booking.tracking_url} target="_blank" rel="noreferrer" className="text-primary underline">Track parcel</a></p>}{booking.airway_bill_url && <p className="mt-1">Airway bill: <a href={booking.airway_bill_url} target="_blank" rel="noreferrer" className="text-primary underline">Open airway bill</a></p>}<p className="mt-1">Status: <span className="text-white">{booking.status.replace(/_/g, ' ')}</span></p>{booking.dex_raw_status && <p className="mt-1">DEX status: <span className="text-white">{booking.dex_raw_status}</span></p>}<p className="mt-1">Booked at: {booking.booked_at || booking.booking_time || '-'}</p><p className="mt-1">Last checked: {booking.last_checked_at || '-'}</p>{booking.tracking_history?.length ? <div className="mt-3 space-y-2 border-t border-white/10 pt-3"><p className="font-semibold text-white">DEX updates</p>{booking.tracking_history.map((event, index) => <p key={`${event.status}-${event.occurred_at || index}-${index}`}><span className="text-white">{event.status.replace(/_/g, ' ')}</span>{event.location ? ` · ${event.location}` : ''}{event.occurred_at ? ` · ${new Date(event.occurred_at).toLocaleString()}` : ''}{event.raw_status ? ` (${event.raw_status})` : ''}</p>)}</div> : null}</div>}
+            </VStack>
+          </Card>
+
+          <Card padding={4}>
             <h3 className="text-sm font-black uppercase tracking-wider text-white mb-4 flex items-center gap-2">
-              <Store size={16} className="text-primary" /> Seller Pickup Location + Child Financials
+              <Store size={16} className="text-primary" /> Seller Pickup Location + Financials
             </h3>
             <div className="grid gap-3 md:grid-cols-2">
               {children.map((child) => (
@@ -599,7 +726,7 @@ const OrderDetailPage: React.FC = () => {
               }}
               className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
             >
-              <option value="">Select child order</option>
+              <option value="">Select seller order</option>
               {children.map((child) => (
                 <option key={child.id} value={child.id}>{(child.seller_name || child.seller_id) + ' • ' + child.id.slice(0, 8)}</option>
               ))}
@@ -624,12 +751,12 @@ const OrderDetailPage: React.FC = () => {
 
             <Button label="Push status" variant="primary" onClick={handleUpdateStatus} isLoading={isUpdating} isDisabled={!selectedChildId} width="100%" />
 
-            <Button label="Resend order update emails" onClick={() => parent && void runUpdate(() => AdminCommerce.resendOrderUpdate(parent.id), 'Current order update emailed to customer and seller.')} isDisabled={isUpdating || !parent} width="100%" />
+            <Button label="Resend order update emails" onClick={() => selectedChildId && void runUpdate(() => AdminCommerce.resendOrderUpdate(selectedChildId), 'Current order update emailed to customer and seller.')} isDisabled={isUpdating || !selectedChildId} width="100%" />
 
-            <Button label="Cancel child order" variant="destructive" icon={<Ban size={14} />} onClick={handleCancelSelectedChild} isDisabled={isUpdating || !selectedChildId} width="100%" />
+            <Button label="Cancel order" variant="destructive" icon={<Ban size={14} />} onClick={handleCancelSelectedChild} isDisabled={isUpdating || !selectedChildId} width="100%" />
 
             <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/10">
-              <Button label="Customer receipt" size="sm" icon={<Printer size={13} />} onClick={() => void printReceipt('customer')} isDisabled={!parent} />
+              <Button label="Customer receipt" size="sm" icon={<Printer size={13} />} onClick={() => void printReceipt('customer')} isDisabled={!selectedChildId} />
               <Button label="Packing receipt" size="sm" icon={<Printer size={13} />} onClick={() => void printReceipt('seller')} isDisabled={!selectedChildId} />
             </div>
 
@@ -654,28 +781,13 @@ const OrderDetailPage: React.FC = () => {
           </Card>
 
           <Card padding={4}>
-            <VStack gap={3}>
-            <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
-              <XCircle size={16} className="text-red-400" /> Cancel Parent Order
-            </h3>
-            <input
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Reason (optional)"
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-red-400"
-            />
-            <Button label="Cancel parent" variant="destructive" onClick={handleCancelParent} isLoading={isUpdating} width="100%" />
-            </VStack>
-          </Card>
-
-          <Card padding={4}>
             <h3 className="text-sm font-black uppercase tracking-wider text-white mb-3 flex items-center gap-2">
               <Calendar size={16} className="text-primary" /> Timeline Metadata
             </h3>
             <div className="space-y-1 text-xs text-neutral-400">
               <p>Created: <span className="text-white">{new Date(parent.created_at).toLocaleString()}</span></p>
-              <p>Rollup Status: <span className="text-white">{rollupStatus}</span></p>
-              <p>Total Child Orders: <span className="text-white">{children.length}</span></p>
+              <p>Order Status: <span className="text-white">{rollupStatus}</span></p>
+              <p>Seller: <span className="text-white">{selectedChild?.seller_name || selectedChild?.seller_id || '-'}</span></p>
             </div>
           </Card>
         </div>
@@ -686,7 +798,7 @@ const OrderDetailPage: React.FC = () => {
           <Card padding={4}>
             <VStack gap={4}>
               <Heading level={2}>Edit order details</Heading>
-              <p className="text-sm text-neutral-400">Updates the customer, delivery address, payment method, parent order, and seller child orders together.</p>
+              <p className="text-sm text-neutral-400">Updates the customer and delivery address for this seller order.</p>
               {[
                 ['full_name', 'Name'], ['phone_number', 'Phone'], ['email', 'Email'], ['address_line1', 'Address line 1'], ['address_line2', 'Address line 2'], ['city', 'City'], ['province', 'Province'], ['postal_code', 'Postal code'], ['country', 'Country'],
               ].map(([key, label]) => (

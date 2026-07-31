@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./core";
+import { API_BASE_URL, request } from "./core";
 
 export async function getDeviceInfo() {
     const app_version = "1.0.0";
@@ -92,11 +92,16 @@ async function compressImage(
     });
 }
 
-export async function uploadFileAndGetUrl(
+export interface UploadedFile {
+    url: string;
+    object: string;
+}
+
+export async function uploadFile(
     file: File,
     compressionOptions?: CompressionOptions | keyof typeof COMPRESSION_PRESETS,
     url: string = API_BASE_URL + '/files/upload',
-): Promise<string> {
+): Promise<UploadedFile> {
     if (!file) throw new Error('No file provided');
 
     let processedFile = file;
@@ -110,15 +115,22 @@ export async function uploadFileAndGetUrl(
     const response = await fetch(url, { method: 'POST', body: formData });
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || err.data?.error || `HTTP error ${response.status}: ${response.statusText}`);
+        const message = err.error?.message || err.data?.error?.message || err.error || err.data?.error;
+        throw new Error(typeof message === 'string' ? message : `HTTP error ${response.status}: ${response.statusText}`);
     }
 
     const result = await response.json();
-    // V2 API format: { success: true, data: { file: { url: "..." }, message: "..." } }
-    if (result.success && result.data?.file?.url) return result.data.file.url;
-    // Fallback for legacy format: { success: true, file: { url: "..." } }
-    if (result.success && result.file?.url) return result.file.url;
-    throw new Error('Invalid response format or missing URL');
+    const uploaded = result.data?.file || result.file;
+    if (result.success && uploaded?.url && uploaded?.object) return { url: uploaded.url, object: uploaded.object };
+    throw new Error('Invalid response format or missing file URL/object');
+}
+
+export async function uploadFileAndGetUrl(
+    file: File,
+    compressionOptions?: CompressionOptions | keyof typeof COMPRESSION_PRESETS,
+    url?: string,
+): Promise<string> {
+    return (await uploadFile(file, compressionOptions, url)).url;
 }
 
 export async function uploadImagesAndGetUrls(files: FileList | File[]): Promise<string[]> {
@@ -133,7 +145,8 @@ export async function uploadImagesAndGetUrls(files: FileList | File[]): Promise<
     const response = await fetch(`${API_BASE_URL}/files/upload/images`, { method: 'POST', body: formData });
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || err.data?.error || `HTTP error ${response.status}: ${response.statusText}`);
+        const message = err.error?.message || err.data?.error?.message || err.error || err.data?.error;
+        throw new Error(typeof message === 'string' ? message : `HTTP error ${response.status}: ${response.statusText}`);
     }
 
     const result = await response.json();
@@ -141,4 +154,62 @@ export async function uploadImagesAndGetUrls(files: FileList | File[]): Promise<
     const urls = uploaded.map((file: any) => file?.url).filter(Boolean);
     if (urls.length !== images.length) throw new Error('Invalid response format or missing image URLs');
     return urls;
+}
+
+export interface PrivateFileUploadOptions {
+    folder?: 'products' | 'avatars' | 'documents' | 'kyc' | 'orders';
+    allowedTypes?: readonly string[];
+    maxBytes?: number;
+    metadata?: Record<string, unknown>;
+    contentType?: string;
+}
+
+interface PrivateUploadPresignResponse {
+    upload_url: string;
+    object_name: string;
+    headers?: Record<string, string>;
+    visibility: 'private';
+}
+
+/** Upload evidence without ever persisting a temporary download URL. */
+export async function uploadPrivateFile(
+    file: File,
+    options: PrivateFileUploadOptions = {},
+    token?: string,
+): Promise<string> {
+    if (!file) throw new Error('No file provided');
+    const contentType = options.contentType || file.type || 'application/octet-stream';
+    if (options.allowedTypes?.length && !options.allowedTypes.includes(contentType)) {
+        throw new Error('This file type is not allowed');
+    }
+    if (options.maxBytes && file.size > options.maxBytes) {
+        throw new Error(`File must be smaller than ${Math.floor(options.maxBytes / 1024 / 1024)} MB`);
+    }
+
+    const presign = await request<PrivateUploadPresignResponse>('/files/presign', 'POST', {
+        filename: file.name,
+        content_type: contentType,
+        file_size: file.size,
+        folder: options.folder || 'documents',
+        visibility: 'private',
+    }, token);
+    if (!presign.ok) throw new Error((presign.body as any)?.message || 'Could not prepare private upload');
+
+    const upload = presign.body as PrivateUploadPresignResponse;
+    if (!upload.upload_url || !upload.object_name) throw new Error('Private upload response is incomplete');
+
+    const uploaded = await fetch(upload.upload_url, {
+        method: 'PUT',
+        headers: upload.headers || { 'Content-Type': contentType },
+        body: file,
+    });
+    if (!uploaded.ok) throw new Error('Could not upload private file');
+
+    const confirmed = await request('/files/confirm', 'POST', {
+        object_name: upload.object_name,
+        ...(options.metadata ? { metadata: options.metadata } : {}),
+    }, token);
+    if (!confirmed.ok) throw new Error((confirmed.body as any)?.message || 'Could not confirm private upload');
+
+    return upload.object_name;
 }

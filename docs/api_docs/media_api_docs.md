@@ -4,7 +4,8 @@ File upload, storage, and management via Google Cloud Storage. Supports images, 
 
 Auth:
 - Most endpoints require user auth via `Authorization: Bearer <token>`.
-- `GET /api/v2/files/{objectName}` is public (no auth required).
+- `GET /api/v2/files/{objectName}` returns public files only. Private evidence is
+  downloaded by an authorized order/statement endpoint through a 15-minute signed URL.
 
 ---
 
@@ -21,6 +22,7 @@ Auth:
 | `size` | int | File size in bytes |
 | `filename` | string | Original filename |
 | `url` | string | Public URL to access the file |
+| `visibility` | `public` or `private` | `private` files never include a permanent URL |
 | `uploaded_by` | string | User ID of uploader (empty if public) |
 | `created_at` | ISO 8601 | Upload timestamp |
 | `updated_at` | ISO 8601 | Last update timestamp |
@@ -49,6 +51,7 @@ Auth:
 | `content_type` | string | yes | MIME type |
 | `file_size` | int | yes | File size in bytes |
 | `folder` | string | yes | Folder/category: `products`, `avatars`, `documents`, `kyc` |
+| `visibility` | `public` or `private` | no | Defaults to `public`; private uploads require auth and return no `public_url` |
 
 ### `PresignUploadResponse`
 
@@ -57,6 +60,7 @@ Auth:
 | `upload_url` | string | Presigned URL for direct GCS upload |
 | `object_name` | string | GCS object name that will be created |
 | `public_url` | string | Public URL after upload |
+| `visibility` | `public` or `private` | Selected visibility |
 | `expires_in` | int | Seconds until presigned URL expires (3600) |
 | `headers` | object | Required headers for upload (e.g., `Content-Type`) |
 
@@ -107,6 +111,7 @@ Uploads a file to Google Cloud Storage via multipart form.
 
 **Content-Type:** `multipart/form-data`
 **Form Field:** `file` (required)
+**Form Field:** `visibility` (optional, `public` by default; `private` requires authentication)
 
 **Response `201`**: [`UploadResponse`](#uploadresponse)
 
@@ -114,13 +119,18 @@ Uploads a file to Google Cloud Storage via multipart form.
 - `400 INVALID_FORM` — Failed to parse multipart form
 - `400 MISSING_FILE` — No file provided in 'file' form field
 - `400 INVALID_FILE_TYPE` — File extension not allowed
+- `400 BAD_REQUEST` — `visibility` is not `public` or `private`
+- `401 UNAUTHORIZED` — Private upload without authentication
 
 ---
 
 ### Get File URL
 `GET /api/v2/files/{objectName}`
 
-Retrieves the public download URL for an uploaded file.
+Retrieves the public download URL for an uploaded file. Private objects return
+`401`; order and statement endpoints must first verify admin/seller ownership,
+then use the media module's internal signed-download helper. Signed download URLs
+expire after 15 minutes and are never stored as permanent file URLs.
 
 **Path Params**
 | Param | Type | Description |
@@ -131,6 +141,7 @@ Retrieves the public download URL for an uploaded file.
 
 **Common errors**
 - `400 MISSING_OBJECT` — Object name is required
+- `401 UNAUTHORIZED` — Object is private
 - `404 NOT_FOUND` — File not found in storage
 
 ---
@@ -154,11 +165,37 @@ Generates a presigned URL for direct client-to-GCS upload. The client then uploa
 
 **Request Body**: [`PresignUploadRequest`](#presignuploadrequest)
 
+**Private upload example**:
+```json
+{
+  "filename": "airway-bill.pdf",
+  "content_type": "application/pdf",
+  "file_size": 120000,
+  "folder": "orders",
+  "visibility": "private"
+}
+```
+
+**Private response `200`**:
+```json
+{
+  "upload_url": "https://storage.googleapis.com/...",
+  "object_name": "seller-123/private/orders/2026/07/30/uuid.pdf",
+  "visibility": "private",
+  "expires_in": 3600,
+  "headers": { "Content-Type": "application/pdf" }
+}
+```
+
+`public_url` is intentionally absent for private uploads. Confirming an object
+outside the authenticated uploader's object prefix returns `401`.
+
 **Response `200`**: [`PresignUploadResponse`](#presignuploadresponse)
 
 **Common errors**
 - `401 UNAUTHORIZED` — Authentication required
 - `400 BAD_REQUEST` — Invalid content type, file size exceeds limit, or unsupported file extension
+- `400 BAD_REQUEST` — Visibility is not `public` or `private`
 
 ---
 
@@ -173,6 +210,7 @@ Confirms a direct upload to GCS and creates a file record in the database. Used 
 
 **Common errors**
 - `401 UNAUTHORIZED` — Authentication required
+- `401 UNAUTHORIZED` — Object name does not belong to the authenticated uploader
 - `400 INVALID_BODY` — Invalid request body
 - `404 NOT_FOUND` — File not found in storage
 

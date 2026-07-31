@@ -4,6 +4,7 @@ import { NestedOrderMap, Order } from "../constants/orders";
 import { Seller as TSeller} from "../constants/seller";
 import { request, API_BASE_URL, RECSYSTEM_BASE_URL, APIResponse } from "./core";
 import { uploadFileAndGetUrl, COMPRESSION_PRESETS, CompressionOptions } from "./shared";
+import type { SellerStatement } from './api.types';
 
 export { uploadFileAndGetUrl, COMPRESSION_PRESETS };
 export type { CompressionOptions };
@@ -157,6 +158,8 @@ function normalizeSellerOrder(raw: any): Order {
     gift_message: raw?.gift_message,
     require_signature: Boolean(raw?.require_signature),
     tracking_info: raw?.tracking_info,
+    packing_evidence: raw?.packing_evidence,
+    delivery_booking: raw?.delivery_booking,
     created_at: raw?.created_at ?? new Date().toISOString(),
     updated_at: raw?.updated_at ?? raw?.created_at ?? new Date().toISOString(),
     deleted_at: raw?.deleted_at,
@@ -350,11 +353,22 @@ export namespace Seller {
   }
 
   export interface StatusUpdatePayload {
-    status: "confirmed" | "packed" | "handed_to_rider" | "cancelled";
+    status: "confirmed" | "handed_to_rider" | "cancelled";
     note?: string;
   }
   export async function UpdateOrderStatus(token : string, order_id : string, payload : StatusUpdatePayload) : Promise<APIResponse<any>> {
     return await request(`/commerce/seller/orders/${order_id}/status`, "PATCH", { status: payload.status, note: payload.note }, token);
+  }
+
+  export async function submitPackingEvidence(token: string, orderId: string, payload: {
+    item_photos: Array<{ order_item_id: string; url: string }>;
+    packed_parcel_photo_url: string;
+  }): Promise<APIResponse<Order>> {
+    return request(`/commerce/seller/orders/${encodeURIComponent(orderId)}/packing`, 'POST', payload, token);
+  }
+
+  export async function getStatements(token: string): Promise<APIResponse<SellerStatement[]>> {
+    return request('/commerce/seller/statements', 'GET', undefined, token);
   }
 
   export async function GetAirwayBill(order_id: string): Promise<APIResponse<Blob>> {

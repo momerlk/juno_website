@@ -1071,6 +1071,55 @@ export interface Order {
     tracking?: OrderTracking;
     total: number;
     created_at: string;
+    address_review?: AddressReview;
+    packing_evidence?: PackingEvidence;
+    delivery_booking?: DeliveryBooking;
+}
+
+export interface CheckoutResult {
+    checkout_id: string;
+    orders: Array<{ id: string; order_number: string; seller_name?: string; total?: number; tracking_url?: string; receipt_url?: string }>;
+}
+
+export interface AddressReview {
+    original_address: string;
+    formatted_address?: string;
+    missing_fields: string[];
+    customer_message: string;
+    format_status: 'manual_review' | 'ready' | 'failed' | string;
+    formatter_prompt?: string;
+    customer_confirmed: boolean;
+    formatted_at?: string;
+    confirmed_at?: string | null;
+    confirmed_by?: string;
+}
+
+export interface PackingEvidence {
+    item_photos: Array<{ order_item_id: string; url: string }>;
+    packed_parcel_photo_url: string;
+    submitted_by?: string;
+    submitted_at?: string;
+}
+
+export interface DexTrackingEvent {
+    status: string;
+    source: 'dex_poll' | 'admin_refresh' | 'admin_correction' | string;
+    raw_status?: string;
+    reason?: string;
+    location?: string;
+    occurred_at?: string;
+}
+
+export interface SellerStatement {
+    id: string;
+    seller_id: string;
+    status: 'open' | 'paid' | string;
+    amount?: number;
+    transfer_amount?: number;
+    created_at?: string;
+    paid_at?: string;
+    payment_date?: string;
+    bank_reference?: string;
 }
 
 // ============================================================================
@@ -1100,10 +1149,23 @@ export interface AddressPoint {
 export interface DeliveryBooking {
     id: string;
     order_id: string;
-    delivery_partner: DeliveryPartner;
+    delivery_partner: DeliveryPartner | string;
     status: string;
-    tracking_number: string;
-    booking_time: string;
+    tracking_number?: string;
+    booking_time?: string | null;
+    consignment_number?: string;
+    airway_bill_number?: string;
+    booked_at?: string | null;
+    notes?: string;
+    tracking_url?: string;
+    airway_bill_url?: string;
+    dex_raw_status?: string;
+    last_checked_at?: string;
+    tracking_history?: DexTrackingEvent[];
+    created_by?: string;
+    updated_by?: string;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface BookDeliveryRequest {

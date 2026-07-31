@@ -4,7 +4,8 @@ import Sidebar, { navigation } from './Sidebar';
 import { Clock3, Menu } from 'lucide-react';
 import { Theme } from '@astryxdesign/core/theme';
 import '@astryxdesign/core/astryx.css';
-import { junoAdminTheme } from './junoAdminTheme';
+import { junoAdminTheme } from './juno-admin';
+import './junoAdminTheme.css';
 
 const AdminDashboard: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);

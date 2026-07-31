@@ -1,5 +1,5 @@
 import { request, API_BASE_URL, APIResponse, APIError } from "./core";
-import type { ParentOrder as CommerceParentOrder, Order as CommerceChildOrder } from "./api.types";
+import type { AddressReview, DeliveryBooking, ParentOrder as CommerceParentOrder, Order as CommerceChildOrder } from "./api.types";
 
 export const api_url = API_BASE_URL;
 
@@ -488,8 +488,74 @@ export namespace AdminPortal {
         address_line1?: string;
         address_line2?: string;
         city?: string;
+        formatted_address?: string;
+        missing_fields?: string[];
+        customer_message?: string;
+        customer_confirmed?: boolean;
     }): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/customer`, 'PATCH', payload, getToken());
+    }
+
+    export async function createAddressPrompt(orderId: string): Promise<APIResponse<AddressReview>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/address/format`, 'POST', undefined, getToken());
+    }
+
+    export async function getDexBookingData(orderId: string, deliveryNote?: string): Promise<APIResponse<any>> {
+        const query = deliveryNote ? `?delivery_note=${encodeURIComponent(deliveryNote)}` : '';
+        return request(`${BASE_PATH}/logistics/orders/${encodeURIComponent(orderId)}/booking-data${query}`, 'GET', undefined, getToken());
+    }
+
+    export async function getBulkDexBookingData(orderIds: string[], deliveryNote?: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/logistics/booking-data/bulk`, 'POST', { order_ids: orderIds, ...(deliveryNote ? { delivery_note: deliveryNote } : {}) }, getToken());
+    }
+
+    export async function saveManualBooking(orderId: string, payload: {
+        consignment_number: string;
+        airway_bill_url: string;
+    }): Promise<APIResponse<DeliveryBooking>> {
+        return request(`${BASE_PATH}/logistics/orders/${encodeURIComponent(orderId)}/manual-booking`, 'POST', payload, getToken());
+    }
+
+    export async function refreshDexTracking(orderId: string): Promise<APIResponse<DeliveryBooking>> {
+        return request(`${BASE_PATH}/logistics/orders/${encodeURIComponent(orderId)}/refresh-tracking`, 'POST', undefined, getToken());
+    }
+
+    export async function correctDexTracking(orderId: string, payload: { status: string; reason: string; location?: string }): Promise<APIResponse<DeliveryBooking>> {
+        return request(`${BASE_PATH}/logistics/orders/${encodeURIComponent(orderId)}/correct-tracking`, 'POST', payload, getToken());
+    }
+
+    export async function importDexStatement(statement_object_name: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/financials/dex-statements`, 'POST', { statement_object_name }, getToken());
+    }
+
+    export async function listDexStatements(): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/financials/dex-statements`, 'GET', undefined, getToken());
+    }
+
+    export async function getDexStatement(statementId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/financials/dex-statements/${encodeURIComponent(statementId)}`, 'GET', undefined, getToken());
+    }
+
+    export async function listBrandStatements(): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/financials/brand-statements`, 'GET', undefined, getToken());
+    }
+
+    export async function getBrandStatement(statementId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/financials/brand-statements/${encodeURIComponent(statementId)}`, 'GET', undefined, getToken());
+    }
+
+    export async function getBrandStatementDocument(statementId: string, kind: 'statement' | 'invoice'): Promise<APIResponse<{ html: string }>> {
+        const response = await fetch(`${API_BASE_URL}${BASE_PATH}/financials/brand-statements/${encodeURIComponent(statementId)}/${kind}`, {
+            headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : undefined,
+        });
+        const html = await response.text();
+        return response.ok
+            ? { status: response.status, ok: true, body: { html } }
+            : { status: response.status, ok: false, body: { message: html || 'Could not load printable document' } };
+    }
+
+    export async function payBrandStatement(statementId: string, payload: { payment_proof_url: string; bank_reference: string; payment_date: string }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/financials/brand-statements/${encodeURIComponent(statementId)}/pay`, 'POST', payload, getToken());
     }
 
     export async function cancelOrder(orderId: string, reason: string): Promise<APIResponse<any>> {

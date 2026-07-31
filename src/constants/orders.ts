@@ -135,6 +135,19 @@ export interface Order {
   gift_message?: string;
   require_signature: boolean;
   tracking_info?: TrackingInfo[];
+  packing_evidence?: {
+    item_photos: Array<{ order_item_id: string; url: string }>;
+    packed_parcel_photo_url: string;
+    submitted_by?: string;
+    submitted_at?: string;
+  };
+  delivery_booking?: {
+    tracking_number: string;
+    status: string;
+    tracking_url?: string;
+    last_checked_at?: string;
+    tracking_history?: Array<{ status: string; location?: string; occurred_at?: string }>;
+  };
   created_at: string;
   updated_at: string;
   deleted_at?: string;
