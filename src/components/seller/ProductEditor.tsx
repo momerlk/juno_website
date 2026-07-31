@@ -32,14 +32,14 @@ const getShopifyThumbnail = (url: string, size: string = '100x100') => {
 };
 
 const Section: React.FC<{ id?: string; title: string; icon: React.ReactNode; eyebrow?: string; children: React.ReactNode }> = ({ id, title, icon, eyebrow, children }) => (
-    <section id={id} className="rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-5 scroll-mt-24">
+    <section id={id} className="rounded-lg border border-white/10 bg-[#121212] p-5 scroll-mt-24">
         <div className="mb-4 flex items-center gap-3">
-            <div className="rounded-[1rem] border border-white/10 bg-black/25 p-2.5 text-primary">
+            <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-2.5 text-primary">
                 {icon}
             </div>
             <div>
-                {eyebrow && <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">{eyebrow}</p>}
-                <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-white">{title}</h3>
+                {eyebrow && <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">{eyebrow}</p>}
+                <h3 className="text-lg font-semibold text-white">{title}</h3>
             </div>
         </div>
         <div className="space-y-4">{children}</div>
@@ -58,8 +58,8 @@ const generateHandle = (title: string, brand: string): string => {
     .replace(/-+$/, '');            // Trim - from end of text
 };
 
-const fieldClassName = 'mt-1 w-full rounded-[1.05rem] border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/22 focus:border-primary/35';
-const quickChipClassName = 'rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white/72 transition-colors hover:border-primary/30 hover:text-white';
+const fieldClassName = 'mt-1 w-full rounded-lg border border-white/10 bg-[#080808] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-neutral-500 focus:border-primary/35';
+const quickChipClassName = 'rounded-full border border-white/10 bg-[#121212] px-3 py-1.5 text-xs font-semibold text-neutral-300 transition-colors hover:border-primary/30 hover:text-white';
 const sizePresets = ['XS, S, M, L, XL', 'S, M, L', '30, 32, 34, 36', 'One Size'];
 type ProfitData = {
     brand_price: number;
@@ -589,16 +589,16 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            className="flex h-full min-h-[calc(100dvh-9rem)] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#060606_0%,#0a0a0a_100%)] shadow-[0_30px_100px_rgba(0,0,0,0.35)]"
+            className="flex h-full min-h-[calc(100dvh-9rem)] flex-col overflow-hidden rounded-lg border border-white/10 bg-[linear-gradient(180deg,#060606_0%,#0a0a0a_100%)] shadow-[0_30px_100px_rgba(0,0,0,0.35)]"
         >
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 bg-black/70 px-6 py-4 backdrop-blur-xl">
                 <div>
-                    <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-primary/75">{editorMode}</p>
-                    <h2 className="mt-1 text-xl font-black uppercase tracking-[-0.03em] text-white">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-primary/75">{editorMode}</p>
+                    <h2 className="mt-1 text-xl font-semibold text-white">
                         {product ? product.title || 'Untitled Product' : 'New Product'}
                     </h2>
                 </div>
-                <button onClick={onClose} className="rounded-xl border border-white/10 bg-white/[0.03] p-2 text-neutral-400 transition-colors hover:text-white">
+                <button onClick={onClose} className="rounded-xl border border-white/10 bg-[#121212] p-2 text-neutral-400 transition-colors hover:text-white">
                     <X size={18} />
                 </button>
             </div>
@@ -645,10 +645,10 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
                                                 <AnimatePresence>
                                                     {formData.images?.map((url, index) => (
-                                                        <motion.div layout key={url} className="relative overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                                                        <motion.div layout key={url} className="relative overflow-hidden rounded-xl border border-white/10 bg-[#080808]">
                                                             <img src={getShopifyThumbnail(url)} loading="lazy" alt={`Product image ${index + 1}`} className="h-24 w-full object-cover" />
                                                             {index === 0 && (
-                                                                <div className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-white/80">
+                                                                <div className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-neutral-300">
                                                                     Cover
                                                                 </div>
                                                             )}
@@ -657,7 +657,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                                     type="button"
                                                                     onClick={() => handleReorderImage(index, 'left')}
                                                                     disabled={index === 0}
-                                                                    className="rounded-md border border-white/10 bg-white/[0.04] p-1 text-white/80 disabled:opacity-30 hover:bg-white/[0.08]"
+                                                                    className="rounded-md border border-white/10 bg-[#121212] p-1 text-neutral-300 disabled:opacity-30 hover:bg-white/[0.08]"
                                                                 >
                                                                     <ArrowLeft size={11} />
                                                                 </button>
@@ -672,7 +672,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                                     type="button"
                                                                     onClick={() => handleReorderImage(index, 'right')}
                                                                     disabled={index === (formData.images?.length || 0) - 1}
-                                                                    className="rounded-md border border-white/10 bg-white/[0.04] p-1 text-white/80 disabled:opacity-30 hover:bg-white/[0.08]"
+                                                                    className="rounded-md border border-white/10 bg-[#121212] p-1 text-neutral-300 disabled:opacity-30 hover:bg-white/[0.08]"
                                                                 >
                                                                     <ArrowRight size={11} />
                                                                 </button>
@@ -682,7 +682,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                 </AnimatePresence>
                                                 <label
                                                     htmlFor="image-upload"
-                                                    className={`flex h-24 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/10 bg-white/[0.03] text-center text-neutral-400 transition-colors ${uploadingMedia ? 'cursor-not-allowed' : 'hover:border-primary/50 hover:bg-primary/5 hover:text-primary'}`}
+                                                    className={`flex h-24 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/10 bg-[#121212] text-center text-neutral-400 transition-colors ${uploadingMedia ? 'cursor-not-allowed' : 'hover:border-primary/50 hover:bg-primary/5 hover:text-primary'}`}
                                                 >
                                                     {uploadingMedia === 'image' ? (
                                                         <>
@@ -705,7 +705,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                     />
                                                 </label>
                                             </div>
-                                            <p className="mt-1.5 text-[11px] text-white/35">First image is the cover. Drag to reorder.</p>
+                                            <p className="mt-1.5 text-[11px] text-neutral-400">First image is the cover. Drag to reorder.</p>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-3">
@@ -752,7 +752,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                     <div className="space-y-4">
                                         <div>
                                             <label htmlFor="price" className="mb-1 block text-xs font-medium text-neutral-400">
-                                                Price <span className="font-normal text-white/30">(PKR)</span>
+                                                Price <span className="font-normal text-neutral-500">(PKR)</span>
                                             </label>
                                             <input
                                                 type="number"
@@ -769,7 +769,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                         {showComparePrice && (
                                             <div>
                                                 <label htmlFor="compare_at_price" className="mb-1 block text-xs font-medium text-neutral-400">
-                                                    Compare-at price <span className="font-normal text-white/30">(original / struck-through)</span>
+                                                    Compare-at price <span className="font-normal text-neutral-500">(original / struck-through)</span>
                                                 </label>
                                                 <input
                                                     type="number"
@@ -786,7 +786,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                         {showUnitPrice && (
                                             <div>
                                                 <label htmlFor="unit_price" className="mb-1 block text-xs font-medium text-neutral-400">
-                                                    Unit price <span className="font-normal text-white/30">(price per unit for bulk listings)</span>
+                                                    Unit price <span className="font-normal text-neutral-500">(price per unit for bulk listings)</span>
                                                 </label>
                                                 <input
                                                     type="number"
@@ -805,7 +805,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowComparePrice(true)}
-                                                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                    className="rounded-full border border-white/10 bg-[#121212] px-3 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-primary/30 hover:text-white"
                                                 >
                                                     + Compare-at price
                                                 </button>
@@ -814,17 +814,17 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowUnitPrice(true)}
-                                                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                    className="rounded-full border border-white/10 bg-[#121212] px-3 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-primary/30 hover:text-white"
                                                 >
                                                     + Unit price
                                                 </button>
                                             )}
                                         </div>
 
-                                        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/25 px-4 py-3">
+                                        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0e0e0e] px-4 py-3">
                                             <div>
-                                                <p className="text-xs font-medium text-white/80">Shipping included in price</p>
-                                                <p className="mt-0.5 text-[11px] text-white/40">
+                                                <p className="text-xs font-medium text-neutral-300">Shipping included in price</p>
+                                                <p className="mt-0.5 text-[11px] text-neutral-400">
                                                     Juno adds Rs. 99 shipping to each product. If this is on, Rs. 99 will be deducted from your listed price, plus commission.
                                                 </p>
                                             </div>
@@ -844,21 +844,21 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                             <button
                                                 type="button"
                                                 onClick={() => setShowCostSection(true)}
-                                                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/50 transition-colors hover:border-primary/20 hover:text-white/80"
+                                                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#121212] px-3 py-1.5 text-[11px] font-medium text-neutral-400 transition-colors hover:border-primary/20 hover:text-neutral-300"
                                             >
                                                 <span className="rounded-sm bg-white/10 px-1 py-0.5 text-[9px] uppercase tracking-wider">Cost</span>
                                                 Add cost price to see profit & margin
                                             </button>
                                         ) : (
-                                            <div className="space-y-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+                                            <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0e0e0e] p-4">
                                                 <div className="flex items-center justify-between">
-                                                    <p className="text-xs font-semibold uppercase tracking-widest text-white/60">Cost & Profit</p>
-                                                    <p className="text-[10px] text-white/30">Not shown to customers</p>
+                                                    <p className="text-xs font-semibold uppercase tracking-widest text-neutral-300">Cost & Profit</p>
+                                                    <p className="text-[10px] text-neutral-500">Not shown to customers</p>
                                                 </div>
 
                                                 <div>
                                                     <label htmlFor="cost_price" className="mb-1 block text-xs font-medium text-neutral-400">
-                                                        Cost price <span className="font-normal text-white/30">(PKR)</span>
+                                                        Cost price <span className="font-normal text-neutral-500">(PKR)</span>
                                                     </label>
                                                     <div className="flex gap-2">
                                                         <input
@@ -880,7 +880,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                 </div>
 
                                                 {loadingProfit && (
-                                                    <div className="flex items-center gap-2 text-[11px] text-white/40">
+                                                    <div className="flex items-center gap-2 text-[11px] text-neutral-400">
                                                         <Loader size={12} className="animate-spin" />
                                                         Calculating...
                                                     </div>
@@ -901,39 +901,39 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                     return (
                                                         <div className="space-y-2">
                                                             <div className="grid grid-cols-2 gap-2 text-[11px]">
-                                                                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                                                                    <p className="text-white/40">Display price</p>
+                                                                <div className="rounded-xl border border-white/10 bg-[#121212] p-3">
+                                                                    <p className="text-neutral-400">Display price</p>
                                                                     <p className="mt-1 font-semibold text-white">Rs {displayValues.displayPrice.toLocaleString()}</p>
-                                                                    {!shippingIncluded && <p className="text-[10px] text-white/30">incl. Rs 99 buffer</p>}
+                                                                    {!shippingIncluded && <p className="text-[10px] text-neutral-500">incl. Rs 99 buffer</p>}
                                                                 </div>
-                                                                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                                                                    <p className="text-white/40">Commission (17.5%)</p>
+                                                                <div className="rounded-xl border border-white/10 bg-[#121212] p-3">
+                                                                    <p className="text-neutral-400">Commission (17.5%)</p>
                                                                     <p className="mt-1 font-semibold text-white">- Rs {displayValues.commission.toLocaleString()}</p>
                                                                 </div>
-                                                                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                                                                    <p className="text-white/40">Your payout</p>
+                                                                <div className="rounded-xl border border-white/10 bg-[#121212] p-3">
+                                                                    <p className="text-neutral-400">Your payout</p>
                                                                     <p className="mt-1 font-semibold text-white">Rs {displayValues.payout.toLocaleString()}</p>
                                                                 </div>
-                                                                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                                                                    <p className="text-white/40">Cost price</p>
+                                                                <div className="rounded-xl border border-white/10 bg-[#121212] p-3">
+                                                                    <p className="text-neutral-400">Cost price</p>
                                                                     <p className="mt-1 font-semibold text-white">- Rs {displayValues.cost.toLocaleString()}</p>
                                                                 </div>
                                                             </div>
                                                             <div className={`flex items-center justify-between rounded-xl border p-3 ${displayValues.profit >= 0 ? 'border-emerald-400/20 bg-emerald-500/10' : 'border-red-400/20 bg-red-500/10'}`}>
                                                                 <div>
-                                                                    <p className="text-[10px] uppercase tracking-wider text-white/50">Profit</p>
-                                                                    <p className={`mt-0.5 text-lg font-black ${displayValues.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                    <p className="text-[10px] uppercase tracking-wider text-neutral-400">Profit</p>
+                                                                    <p className={`mt-0.5 text-lg font-semibold ${displayValues.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                                                         Rs {displayValues.profit.toLocaleString()}
                                                                     </p>
                                                                 </div>
                                                                 <div className="text-right">
-                                                                    <p className="text-[10px] uppercase tracking-wider text-white/50">Margin</p>
-                                                                    <p className={`mt-0.5 text-lg font-black ${displayValues.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                    <p className="text-[10px] uppercase tracking-wider text-neutral-400">Margin</p>
+                                                                    <p className={`mt-0.5 text-lg font-semibold ${displayValues.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                                                         {displayValues.margin}%
                                                                     </p>
                                                                 </div>
                                                             </div>
-                                                            <p className="text-center text-[10px] text-white/25">
+                                                            <p className="text-center text-[10px] text-neutral-500">
                                                                 Profit = payout after 17.5% commission {!shippingIncluded ? '+ Rs 99 shipping buffer ' : ''}minus your cost
                                                             </p>
                                                         </div>
@@ -941,7 +941,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                 })()}
 
                                                 {!product?.id && (
-                                                    <p className="text-[11px] text-white/35">
+                                                    <p className="text-[11px] text-neutral-400">
                                                         Save the product first to get a live profit calculation from the API.
                                                     </p>
                                                 )}
@@ -953,7 +953,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                 <Section id="shipping" title="Shipping" eyebrow="Step 3" icon={<Package size={16} />}>
                                     <div>
                                         <label htmlFor="weight" className="mb-1 block text-xs font-medium text-neutral-400">
-                                            Product weight <span className="font-normal text-white/30">(grams)</span>
+                                            Product weight <span className="font-normal text-neutral-500">(grams)</span>
                                         </label>
                                         <input
                                             type="number"
@@ -964,7 +964,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                             className={fieldClassName}
                                             placeholder="e.g. 350"
                                         />
-                                        <p className="mt-1.5 text-[11px] text-white/35">
+                                        <p className="mt-1.5 text-[11px] text-neutral-400">
                                             Used to calculate shipping rates accurately.
                                         </p>
                                     </div>
@@ -977,30 +977,30 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                 <button
                                                     type="button"
                                                     onClick={addOption}
-                                                    className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/60 transition-colors hover:border-primary/30 hover:text-primary"
+                                                    className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-[#121212] text-neutral-300 transition-colors hover:border-primary/30 hover:text-primary"
                                                 >
                                                     <Plus size={22} />
                                                 </button>
-                                                <p className="mt-3 text-xs text-white/40">Add an option like size or color</p>
+                                                <p className="mt-3 text-xs text-neutral-400">Add an option like size or color</p>
                                                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                                                     <button
                                                         type="button"
                                                         onClick={() => setPresetOption('Size', ['S', 'M', 'L'])}
-                                                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                        className="rounded-full border border-white/10 bg-[#121212] px-3 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-primary/30 hover:text-white"
                                                     >
                                                         Size S / M / L
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPresetOption('Size', ['XS', 'S', 'M', 'L', 'XL'])}
-                                                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                        className="rounded-full border border-white/10 bg-[#121212] px-3 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-primary/30 hover:text-white"
                                                     >
                                                         Size XS / S / M / L / XL
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPresetOption('Color', ['Black', 'White'])}
-                                                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                        className="rounded-full border border-white/10 bg-[#121212] px-3 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-primary/30 hover:text-white"
                                                     >
                                                         Color Black / White
                                                     </button>
@@ -1016,16 +1016,16 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                     : [...opt.values, ''];
 
                                             return (
-                                                <div key={optionIndex} className="space-y-3 rounded-2xl border border-white/10 bg-black/25 p-4">
+                                                <div key={optionIndex} className="space-y-3 rounded-2xl border border-white/10 bg-[#0e0e0e] p-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex-1">
-                                                            <label className="mb-1 block text-[11px] text-white/40">Option name</label>
+                                                            <label className="mb-1 block text-[11px] text-neutral-400">Option name</label>
                                                             <input
                                                                 type="text"
                                                                 placeholder="e.g. Size, Color, Material"
                                                                 value={opt.name}
                                                                 onChange={e => handleOptionChange(optionIndex, e.target.value)}
-                                                                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-primary/35"
+                                                                className="w-full rounded-xl border border-white/10 bg-[#121212] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-neutral-500 focus:border-primary/35"
                                                             />
                                                         </div>
                                                         <button
@@ -1038,7 +1038,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                     </div>
 
                                                     <div>
-                                                        <label className="mb-2 block text-[11px] text-white/40">Option values</label>
+                                                        <label className="mb-2 block text-[11px] text-neutral-400">Option values</label>
                                                         <div className="space-y-2">
                                                             <AnimatePresence initial={false}>
                                                                 {displayValues.map((val, valueIndex) => {
@@ -1060,7 +1060,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                                                         type="button"
                                                                                         onClick={() => moveOptionValue(optionIndex, valueIndex, 'up')}
                                                                                         disabled={valueIndex === 0}
-                                                                                        className="rounded-md border border-white/10 bg-white/[0.03] p-0.5 text-white/40 transition-colors hover:text-white disabled:opacity-20"
+                                                                                        className="rounded-md border border-white/10 bg-[#121212] p-0.5 text-neutral-400 transition-colors hover:text-white disabled:opacity-20"
                                                                                     >
                                                                                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                                                                                             <path d="M5 2L9 8H1L5 2Z" fill="currentColor" />
@@ -1070,7 +1070,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                                                         type="button"
                                                                                         onClick={() => moveOptionValue(optionIndex, valueIndex, 'down')}
                                                                                         disabled={valueIndex >= displayValues.length - 2}
-                                                                                        className="rounded-md border border-white/10 bg-white/[0.03] p-0.5 text-white/40 transition-colors hover:text-white disabled:opacity-20"
+                                                                                        className="rounded-md border border-white/10 bg-[#121212] p-0.5 text-neutral-400 transition-colors hover:text-white disabled:opacity-20"
                                                                                     >
                                                                                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                                                                                             <path d="M5 8L1 2H9L5 8Z" fill="currentColor" />
@@ -1089,14 +1089,14 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                                                         addOptionValueField(optionIndex);
                                                                                     }
                                                                                 }}
-                                                                                className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-primary/35"
+                                                                                className="flex-1 rounded-xl border border-white/10 bg-[#121212] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-neutral-500 focus:border-primary/35"
                                                                             />
 
                                                                             {!isLastField && !isOnlyField && (
                                                                                 <button
                                                                                     type="button"
                                                                                     onClick={() => removeOptionValueField(optionIndex, valueIndex)}
-                                                                                    className="rounded-xl border border-white/10 bg-white/[0.03] p-1.5 text-white/30 transition-colors hover:border-red-400/20 hover:text-red-400"
+                                                                                    className="rounded-xl border border-white/10 bg-[#121212] p-1.5 text-neutral-500 transition-colors hover:border-red-400/20 hover:text-red-400"
                                                                                 >
                                                                                     <X size={12} />
                                                                                 </button>
@@ -1130,7 +1130,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                             <button
                                                 type="button"
                                                 onClick={addOption}
-                                                className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-medium text-white/60 transition-colors hover:text-white"
+                                                className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-[#121212] px-4 py-2 text-xs font-medium text-neutral-300 transition-colors hover:text-white"
                                             >
                                                 <Plus size={14} />
                                                 Add another option
@@ -1138,11 +1138,11 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                         )}
 
                                         {formData.variants && formData.variants.length > 0 && (
-                                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
                                                 <div className="grid grid-cols-[1fr_120px_120px] gap-3 border-b border-white/10 px-4 py-2.5">
-                                                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/30">Variant</p>
-                                                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/30">Price (PKR)</p>
-                                                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/30">Qty</p>
+                                                    <p className="text-[10px] uppercase tracking-widest text-neutral-500">Variant</p>
+                                                    <p className="text-[10px] uppercase tracking-widest text-neutral-500">Price (PKR)</p>
+                                                    <p className="text-[10px] uppercase tracking-widest text-neutral-500">Qty</p>
                                                 </div>
                                                 <div className="divide-y divide-white/[0.06]">
                                                     {formData.variants.map(variant => (
@@ -1154,19 +1154,19 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                                 type="number"
                                                                 value={variant.price}
                                                                 onChange={e => handleVariantChange(variant.id, 'price', e.target.value)}
-                                                                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-primary/35"
+                                                                className="w-full rounded-xl border border-white/10 bg-[#080808] px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-primary/35"
                                                             />
                                                             <input
                                                                 type="number"
                                                                 value={variant.inventory?.quantity || 0}
                                                                 onChange={e => handleVariantChange(variant.id, 'quantity', e.target.value)}
-                                                                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-primary/35"
+                                                                className="w-full rounded-xl border border-white/10 bg-[#080808] px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-primary/35"
                                                             />
                                                         </div>
                                                     ))}
                                                 </div>
                                                 <div className="flex items-center justify-between border-t border-white/10 bg-black/20 px-4 py-3">
-                                                    <p className="text-xs text-white/40">Total inventory</p>
+                                                    <p className="text-xs text-neutral-400">Total inventory</p>
                                                     <p className="text-sm font-semibold text-white">{totalStock} units</p>
                                                 </div>
                                             </div>
@@ -1178,32 +1178,32 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                     <div id="sizing-guide" className="scroll-mt-24 space-y-5">
                                         <Section title="Sizing Guide" eyebrow="Step 5" icon={<Ruler size={16} />}>
                                             <div className="space-y-4">
-                                                <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                                                <div className="rounded-2xl border border-white/10 bg-[#0e0e0e] p-4">
                                                     <div className="flex flex-wrap items-start justify-between gap-3">
                                                         <div>
-                                                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Buyer Confidence</p>
+                                                            <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-400">Buyer Confidence</p>
                                                             <h4 className="mt-1 text-sm font-semibold text-white">Keep sizing practical and easy to trust.</h4>
                                                         </div>
-                                                        <p className="text-[11px] text-white/35">Only include measurements shoppers actually use.</p>
+                                                        <p className="text-[11px] text-neutral-400">Only include measurements shoppers actually use.</p>
                                                     </div>
                                                     <div className="mt-4 grid gap-3 md:grid-cols-3">
-                                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                                                            <p className="text-[11px] font-medium text-white/75">Sizes</p>
-                                                            <p className="mt-1 text-[11px] leading-relaxed text-white/45">
+                                                        <div className="rounded-xl border border-white/10 bg-[#121212] p-3">
+                                                            <p className="text-[11px] font-medium text-neutral-300">Sizes</p>
+                                                            <p className="mt-1 text-[11px] leading-relaxed text-neutral-400">
                                                                 {sizeCount > 0 ? `${sizeCount} sizes are ready from your variants.` : 'Add a Size option in Variants first.'}
                                                             </p>
                                                         </div>
-                                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                                                            <p className="text-[11px] font-medium text-white/75">Fit notes</p>
-                                                            <p className="mt-1 text-[11px] leading-relaxed text-white/45">Use short language like true to size, relaxed, slim, or oversized.</p>
+                                                        <div className="rounded-xl border border-white/10 bg-[#121212] p-3">
+                                                            <p className="text-[11px] font-medium text-neutral-300">Fit notes</p>
+                                                            <p className="mt-1 text-[11px] leading-relaxed text-neutral-400">Use short language like true to size, relaxed, slim, or oversized.</p>
                                                         </div>
-                                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                                                            <p className="text-[11px] font-medium text-white/75">Measurements</p>
-                                                            <p className="mt-1 text-[11px] leading-relaxed text-white/45">Chest, length, waist, or inseam usually matter most. Skip the noise.</p>
+                                                        <div className="rounded-xl border border-white/10 bg-[#121212] p-3">
+                                                            <p className="text-[11px] font-medium text-neutral-300">Measurements</p>
+                                                            <p className="mt-1 text-[11px] leading-relaxed text-neutral-400">Chest, length, waist, or inseam usually matter most. Skip the noise.</p>
                                                         </div>
                                                     </div>
                                                     <div className="mt-4 flex flex-wrap gap-2">
-                                                        <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-medium text-white/65">
+                                                        <span className="rounded-full border border-white/10 bg-[#121212] px-3 py-2 text-[11px] font-medium text-neutral-300">
                                                             {sizeCount || 'No'} sizes detected
                                                         </span>
                                                         <span className={`rounded-full border px-3 py-2 text-[11px] font-medium ${sizeFitReady ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300' : 'border-yellow-400/20 bg-yellow-500/10 text-yellow-300'}`}>
@@ -1215,7 +1215,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                     </div>
                                                 </div>
 
-                                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                                <div className="rounded-2xl border border-white/10 bg-[#121212] p-4">
                                                     <SizingGuideEditor
                                                         value={formData.sizing_guide}
                                                         onChange={handleSizingGuideUpdate}
@@ -1227,17 +1227,17 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                         </Section>
                                     </div>
                                 ) : (
-                                    <div id="sizing-guide" className="scroll-mt-24 rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-5">
-                                        <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Step 5</p>
+                                    <div id="sizing-guide" className="scroll-mt-24 rounded-lg border border-white/10 bg-[#121212] p-5">
+                                        <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-400">Step 5</p>
                                         <p className="mt-2 text-sm font-semibold text-white">Sizing guide not required</p>
-                                        <p className="mt-1 text-[11px] text-white/45">Sizing appears for apparel product types. Select an apparel category if this product needs measurements.</p>
+                                        <p className="mt-1 text-[11px] text-neutral-400">Sizing appears for apparel product types. Select an apparel category if this product needs measurements.</p>
                                     </div>
                                 )}
                             </div>
 
                             <div className="space-y-4 lg:sticky lg:top-6" id="sidebar-col">
-                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                                    <p className="mb-3 text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Status</p>
+                                <div className="rounded-2xl border border-white/10 bg-[#121212] p-4">
+                                    <p className="mb-3 text-[10px] uppercase tracking-[0.12em] text-neutral-400">Status</p>
                                     <div className="flex items-center gap-2">
                                         <span className={`h-2 w-2 rounded-full ${product?.id ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
                                         <span className="text-sm font-semibold text-white">
@@ -1245,39 +1245,39 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                         </span>
                                     </div>
                                     {queueId && (
-                                        <p className="mt-2 text-[11px] text-white/40">In review queue. Save to update.</p>
+                                        <p className="mt-2 text-[11px] text-neutral-400">In review queue. Save to update.</p>
                                     )}
                                 </div>
 
-                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                                    <p className="mb-3 text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Publishing</p>
-                                    <div className="space-y-2 text-[11px] text-white/50">
+                                <div className="rounded-2xl border border-white/10 bg-[#121212] p-4">
+                                    <p className="mb-3 text-[10px] uppercase tracking-[0.12em] text-neutral-400">Publishing</p>
+                                    <div className="space-y-2 text-[11px] text-neutral-400">
                                         <div className="flex items-center justify-between">
                                             <span>Juno Catalog</span>
-                                            <span className={`font-semibold ${product?.id ? 'text-emerald-400' : 'text-white/30'}`}>
+                                            <span className={`font-semibold ${product?.id ? 'text-emerald-400' : 'text-neutral-500'}`}>
                                                 {product?.id ? 'Listed' : 'Pending approval'}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <span>Discovery feed</span>
-                                            <span className={`font-semibold ${product?.id ? 'text-emerald-400' : 'text-white/30'}`}>
+                                            <span className={`font-semibold ${product?.id ? 'text-emerald-400' : 'text-neutral-500'}`}>
                                                 {product?.id ? 'Eligible' : '—'}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                                    <p className="mb-3 text-[10px] font-mono uppercase tracking-[0.2em] text-white/35">Organisation</p>
+                                <div className="rounded-2xl border border-white/10 bg-[#121212] p-4">
+                                    <p className="mb-3 text-[10px] uppercase tracking-[0.12em] text-neutral-400">Organisation</p>
                                     <div className="space-y-3">
                                         <div>
-                                            <label className="mb-1 block text-[11px] text-white/45">Tags</label>
+                                            <label className="mb-1 block text-[11px] text-neutral-400">Tags</label>
                                             <input
                                                 type="text"
                                                 value={tagInput}
                                                 onChange={(e) => setTagInput(e.target.value)}
                                                 onBlur={(e) => handleTagChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                                                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-white outline-none transition-colors placeholder:text-white/20 focus:border-primary/35"
+                                                className="w-full rounded-xl border border-white/10 bg-[#080808] px-3 py-2 text-xs text-white outline-none transition-colors placeholder:text-neutral-500 focus:border-primary/35"
                                                 placeholder="summer, new-arrival"
                                             />
                                         </div>
@@ -1287,7 +1287,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                                     key={tag}
                                                     type="button"
                                                     onClick={() => addSuggestedTag(tag)}
-                                                    className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-medium text-white/60 transition-colors hover:border-primary/30 hover:text-white"
+                                                    className="rounded-full border border-white/10 bg-[#121212] px-2 py-1 text-[10px] font-medium text-neutral-300 transition-colors hover:border-primary/30 hover:text-white"
                                                 >
                                                     {tag}
                                                 </button>
@@ -1299,7 +1299,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ product, queueId, onClose
                                 <button
                                     type="submit"
                                     disabled={isSaving}
-                                    className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                                    className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                                 >
                                     {isSaving ? 'Saving...' : product?.id ? 'Save Changes' : 'Submit for Review'}
                                 </button>

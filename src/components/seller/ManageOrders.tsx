@@ -21,19 +21,6 @@ const STATUS_FILTERS = [
   'returned',
 ] as const;
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-  confirmed: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  packed: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-  handed_to_rider: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  at_warehouse: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-  out_for_delivery: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
-  delivery_attempted: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  delivered: 'bg-green-500/10 text-green-400 border-green-500/20',
-  cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
-  returned: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-};
-
 const formatCurrency = (value?: number) => `Rs ${(value ?? 0).toLocaleString()}`;
 
 const getAllowedTransitions = (status?: string) => {
@@ -188,97 +175,92 @@ const ManageOrders: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45 }}
-      className="glass-panel p-6 mt-6"
+      className="mt-4 space-y-4 text-neutral-100"
     >
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4 border-b border-white/10 pb-6">
-        <div className="flex items-center gap-4">
-          <div className="p-2 bg-primary/20 rounded-lg">
-            <ShoppingCart size={24} className="text-primary" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Order Management</h2>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as (typeof STATUS_FILTERS)[number])}
-                className="bg-white/5 border border-white/10 text-neutral-300 rounded-full px-3 py-1 text-[10px] uppercase tracking-wider font-bold outline-none"
-              >
-                {STATUS_FILTERS.map((status) => (
-                  <option key={status} value={status}>
-                    {toLabel(status)}
-                  </option>
-                ))}
-              </select>
-              <span className="text-[10px] uppercase tracking-wider font-bold rounded-full px-3 py-1 bg-white/5 text-neutral-300 border border-white/10">
-                {orders.length} orders
-              </span>
+      <section className="rounded-lg border border-white/10 bg-[#121212] p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2">
+            <ShoppingCart size={16} className="text-primary" />
+            <div>
+              <h2 className="text-base font-semibold">Order Management</h2>
+              <p className="text-xs text-neutral-500">Fulfilment queue for your brand&apos;s customer orders.</p>
             </div>
           </div>
-        </div>
 
-        <div className="flex w-full lg:w-auto gap-2">
-          <div className="relative w-full lg:w-80">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search by customer, phone, order id..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="glass-input pl-10 pr-4 py-2 w-full text-sm text-white"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as (typeof STATUS_FILTERS)[number])}
+              className="rounded border border-white/20 bg-[#080808] px-2 py-2 text-xs text-neutral-100 [color-scheme:dark]"
+            >
+              {STATUS_FILTERS.map((status) => (
+                <option key={status} value={status}>
+                  {toLabel(status)}
+                </option>
+              ))}
+            </select>
+            <span className="rounded border border-white/15 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-neutral-400">
+              {orders.length} orders
+            </span>
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-500" size={14} />
+              <input
+                type="text"
+                placeholder="Search by customer, phone, order id..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded border border-white/20 bg-[#080808] py-2 pl-7 pr-3 text-xs text-neutral-100 placeholder:text-neutral-500"
+              />
+            </div>
+            <button
+              onClick={() => void fetchOrders()}
+              className="inline-flex items-center gap-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100"
+            >
+              <RefreshCw size={13} /> Refresh
+            </button>
           </div>
-          <button
-            onClick={() => void fetchOrders()}
-            className="px-3 py-2 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            aria-label="Refresh"
-            title="Refresh"
-          >
-            <RefreshCw size={16} />
-          </button>
         </div>
-      </div>
+      </section>
 
       {pendingOrders.length > 0 && (
-        <div className="mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-2">
-              <AlertTriangle size={16} className="text-yellow-400 mt-0.5" />
-              <div>
-                <p className="text-yellow-200 text-sm font-bold">Pending orders require immediate action</p>
-                <p className="text-yellow-300/80 text-xs mt-1">
-                  {pendingOrders.length} pending order(s) are pinned at the top until confirmed or cancelled.
-                </p>
-              </div>
+        <section className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={14} className="mt-0.5 text-amber-300" />
+            <div>
+              <p className="text-sm font-medium text-amber-200">Pending orders require immediate action</p>
+              <p className="mt-1 text-xs text-amber-300/80">
+                {pendingOrders.length} pending order(s) are pinned at the top until confirmed or cancelled.
+              </p>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
-      {error && <div className="bg-red-900/20 text-red-400 border border-red-700 rounded-lg text-center p-4 mb-4">{error}</div>}
+      {error ? <section className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</section> : null}
 
+      <section className="rounded-lg border border-white/10 bg-[#121212] p-2">
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="border-b border-white/10">
-            <tr className="text-neutral-400 text-xs uppercase tracking-wider">
-              <th className="p-4 font-medium">Order</th>
-              <th className="p-4 font-medium">Customer</th>
-              <th className="p-4 font-medium">Items</th>
-              <th className="p-4 font-medium">Financials</th>
-              <th className="p-4 font-medium">Status</th>
-              <th className="p-4 font-medium">Actions</th>
+        <table className="min-w-full text-left text-xs">
+          <thead className="bg-[#0f0f0f] text-neutral-400">
+            <tr>
+              <th className="px-3 py-2 font-medium">Order</th>
+              <th className="px-3 py-2 font-medium">Customer</th>
+              <th className="px-3 py-2 font-medium">Financials</th>
+              <th className="px-3 py-2 font-medium">Status</th>
+              <th className="px-3 py-2 font-medium">Actions</th>
             </tr>
           </thead>
 
-          <tbody className="text-sm font-sans">
+          <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="text-center p-20 text-neutral-400 animate-pulse font-mono">
+                <td colSpan={5} className="p-6 text-sm text-neutral-400">
                   Loading seller orders...
                 </td>
               </tr>
             ) : filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center p-20 text-neutral-500 italic">No orders found.</td>
+                <td colSpan={5} className="p-6 text-sm text-neutral-500">No orders found.</td>
               </tr>
             ) : (
               filteredOrders.flatMap((order) => {
@@ -290,8 +272,8 @@ const ManageOrders: React.FC = () => {
                 const financials = (detail as any).financials || {};
 
                 const rows: React.ReactNode[] = [
-                  <tr key={order.id} className="border-b border-white/5 hover:bg-white/5 transition-colors align-top">
-                    <td className="p-4">
+                  <tr key={order.id} className="border-t border-white/5 align-top hover:bg-white/[0.03]">
+                    <td className="px-3 py-2">
                       <div className="flex flex-col gap-1">
                         <span className="text-white font-mono text-xs">#{order.order_number || order.id}</span>
                         <span className="text-neutral-500 font-mono text-[10px]">ID: {order.id}</span>
@@ -299,7 +281,7 @@ const ManageOrders: React.FC = () => {
                       </div>
                     </td>
 
-                    <td className="p-4 text-neutral-300">
+                    <td className="px-3 py-2 text-neutral-300">
                       <div className="flex flex-col gap-1">
                         <span className="font-medium text-white">{order.shipping_address?.name || (order.shipping_address as any)?.full_name || 'Customer'}</span>
                         <span className="text-xs text-neutral-500">{order.shipping_address?.phone_number || 'No phone'}</span>
@@ -309,14 +291,7 @@ const ManageOrders: React.FC = () => {
                       </div>
                     </td>
 
-                    <td className="p-4 text-neutral-300">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-white">{items.length} item(s)</span>
-                        <span className="text-xs text-neutral-500">Qty: {items.reduce((sum, item) => sum + (item.quantity || 0), 0)}</span>
-                      </div>
-                    </td>
-
-                    <td className="p-4 text-neutral-300">
+                    <td className="px-3 py-2 text-neutral-300">
                       <div className="flex flex-col gap-1">
                         <span className="font-bold text-white">Total: {formatCurrency(order.total)}</span>
                         <span className="text-xs text-neutral-500">Commission: {formatCurrency(financials.commission)}</span>
@@ -324,27 +299,24 @@ const ManageOrders: React.FC = () => {
                       </div>
                     </td>
 
-                    <td className="p-4">
+                    <td className="px-3 py-2">
                       <div className="flex flex-col gap-2">
                         <OrderStatusBadge status={order.status} />
-                        <span className={`inline-flex w-fit px-2 py-0.5 text-[10px] font-bold rounded-full border ${statusColors[order.status] || 'bg-neutral-500/10 text-neutral-300 border-neutral-500/20'}`}>
-                          {toLabel(order.status).toUpperCase()}
-                        </span>
                       </div>
                     </td>
 
-                    <td className="p-4">
+                    <td className="px-3 py-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           onClick={() => navigate(`${prefix}/dashboard/orders/${order.id}`)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10 text-[10px] uppercase tracking-wider font-bold"
+                          className="inline-flex items-center gap-1.5 rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
                         >
                           <Eye size={12} /> View
                         </button>
 
                         <button
                           onClick={() => { void handleToggleItems(order); }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/10 text-white/80 hover:bg-white/10 text-[10px] uppercase tracking-wider font-bold"
+                          className="inline-flex items-center gap-1.5 rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
                         >
                           <ChevronDown size={12} className={isExpanded ? 'rotate-180 transition-transform' : 'transition-transform'} />
                           Order Items
@@ -353,7 +325,7 @@ const ManageOrders: React.FC = () => {
                         <button
                           onClick={() => openStatusPanel(order)}
                           disabled={transitions.length === 0}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 text-[10px] uppercase tracking-wider font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="inline-flex items-center gap-1.5 rounded border border-primary/40 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-primary hover:bg-primary/10 disabled:opacity-40"
                         >
                           <Truck size={12} /> Update Status
                         </button>
@@ -365,16 +337,16 @@ const ManageOrders: React.FC = () => {
                 if (isExpanded) {
                   const isDetailsLoading = expandedLoadingOrderId === order.id;
                   rows.push(
-                    <tr key={`${order.id}-items`} className="border-b border-white/5 bg-black/20">
-                      <td colSpan={6} className="p-4">
-                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                          <h4 className="text-xs uppercase tracking-widest text-white/70 font-black mb-3">Order Items</h4>
+                    <tr key={`${order.id}-items`} className="border-t border-white/5 bg-[#0e0e0e]">
+                      <td colSpan={5} className="p-4">
+                        <div className="rounded-lg border border-white/10 bg-[#121212] p-4">
+                          <h4 className="mb-3 text-xs font-medium text-neutral-200">Order Items</h4>
                           {isDetailsLoading ? (
                             <p className="text-xs text-neutral-400 animate-pulse">Loading order item details...</p>
                           ) : items.length > 0 ? (
                             <div className="space-y-3">
                               {items.map((item: any, idx) => (
-                                <div key={`${order.id}-${item.product_id}-${item.variant_id}-${idx}`} className="rounded-lg border border-white/10 bg-black/30 p-2.5">
+                                <div key={`${order.id}-${item.product_id}-${item.variant_id}-${idx}`} className="rounded-lg border border-white/10 bg-[#080808] p-2.5">
                                   <div className="flex gap-2.5">
                                     <img
                                       src={getItemImage(item)}
@@ -413,15 +385,15 @@ const ManageOrders: React.FC = () => {
 
                 if (isStatusPanelOpen) {
                   rows.push(
-                    <tr key={`${order.id}-status-panel`} className="border-b border-white/5 bg-black/20">
-                      <td colSpan={6} className="p-4">
-                        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                          <h4 className="text-xs uppercase tracking-widest text-primary font-black mb-3">Inline Status Update</h4>
+                    <tr key={`${order.id}-status-panel`} className="border-t border-white/5 bg-[#0e0e0e]">
+                      <td colSpan={5} className="p-4">
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                          <h4 className="mb-3 text-xs font-medium text-primary">Inline Status Update</h4>
                           <div className="grid gap-3 lg:grid-cols-3">
                             <select
                               value={selectedStatus}
                               onChange={(e) => setSelectedStatus(e.target.value)}
-                              className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
+                              className="rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 outline-none focus:border-primary [color-scheme:dark]"
                             >
                               {transitions.length === 0 ? (
                                 <option value={order.status}>No transition available</option>
@@ -436,13 +408,13 @@ const ManageOrders: React.FC = () => {
                               value={statusNote}
                               onChange={(e) => setStatusNote(e.target.value)}
                               placeholder="Status note (optional)"
-                              className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
+                              className="rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 outline-none focus:border-primary [color-scheme:dark]"
                             />
 
                             <button
                               onClick={() => void handleStatusUpdate(order)}
                               disabled={isUpdating || transitions.length === 0}
-                              className="rounded-xl bg-primary text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-primary/90 disabled:opacity-50"
+                              className="rounded border border-primary/40 bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-40"
                             >
                               {isUpdating ? 'Updating...' : 'Apply'}
                             </button>
@@ -459,6 +431,7 @@ const ManageOrders: React.FC = () => {
           </tbody>
         </table>
       </div>
+      </section>
     </motion.div>
   );
 };

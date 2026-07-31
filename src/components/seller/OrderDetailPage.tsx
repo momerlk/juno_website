@@ -130,15 +130,15 @@ const OrderDetailPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div className="glass-panel p-6 mt-6 text-white">Loading order details...</div>;
+    return <div className="mt-4 rounded-lg border border-white/10 bg-[#121212] p-4 text-neutral-100">Loading order details...</div>;
   }
 
   if (error) {
-    return <div className="glass-panel p-6 mt-6 text-red-400">{error}</div>;
+    return <div className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">{error}</div>;
   }
 
   if (!order) {
-    return <div className="glass-panel p-6 mt-6 text-white">Order not found.</div>;
+    return <div className="mt-4 rounded-lg border border-white/10 bg-[#121212] p-4 text-neutral-100">Order not found.</div>;
   }
 
   const shipping = order.shipping_address as any;
@@ -148,11 +148,11 @@ const OrderDetailPage: React.FC = () => {
   const booking = order.delivery_booking;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-6 mt-6">
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-white/10 bg-[#121212] p-4 text-neutral-100">
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigate(`${prefix}/dashboard/orders`)}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-white/80 hover:bg-white/10"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded border border-white/15 bg-[#1a1a1a] text-neutral-100 hover:bg-white/10"
         >
           <ArrowLeft size={16} /> Back to Orders
         </button>
@@ -160,34 +160,34 @@ const OrderDetailPage: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-          <p className="text-[10px] uppercase tracking-wider text-white/40">Order</p>
+        <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Order</p>
           <p className="text-white font-mono text-sm mt-2">#{order.order_number || order.id}</p>
           <p className="text-xs text-white/55 mt-1">{new Date(order.created_at).toLocaleString()}</p>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-          <p className="text-[10px] uppercase tracking-wider text-white/40">Customer</p>
+        <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Customer</p>
           <p className="text-white text-sm mt-2">{shipping?.name || shipping?.full_name || 'Customer'}</p>
           <p className="text-xs text-white/55 mt-1">{shipping?.phone_number || 'No phone'}</p>
           <p className="text-xs text-white/55">{shipping?.city || 'N/A'}{shipping?.province ? `, ${shipping.province}` : ''}</p>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-          <p className="text-[10px] uppercase tracking-wider text-white/40">Payout</p>
+        <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Payout</p>
           <p className="text-white text-sm mt-2">Total: {formatCurrency(order.total)}</p>
           <p className="text-xs text-white/55 mt-1">Commission: {formatCurrency(financials.commission)}</p>
           <p className="text-xs text-white/55">Seller payout: {formatCurrency(financials.seller_payout)}</p>
         </div>
       </div>
 
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 mb-6">
-        <p className="text-xs uppercase tracking-widest text-primary font-black mb-3">Update Status</p>
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 mb-6">
+        <p className="mb-3 text-xs font-medium text-primary">Update Status</p>
         <div className="grid gap-3 md:grid-cols-3">
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
+            className="rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 outline-none focus:border-primary"
             disabled={transitions.length === 0}
           >
             {transitions.length === 0 ? (
@@ -203,13 +203,13 @@ const OrderDetailPage: React.FC = () => {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Status note (optional)"
-            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
+            className="rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 outline-none focus:border-primary"
           />
 
           <button
             onClick={() => void handleStatusUpdate()}
             disabled={isUpdating || transitions.length === 0}
-            className="rounded-xl bg-primary text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 hover:bg-primary/90 disabled:opacity-50"
+            className="rounded border border-primary/40 bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-40"
           >
             {isUpdating ? 'Updating...' : 'Apply'}
           </button>
@@ -217,14 +217,14 @@ const OrderDetailPage: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 mb-6">
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
           <p className="text-xs font-bold text-white flex items-center gap-2 mb-3"><User size={14} className="text-primary" /> Customer Details</p>
           <p className="text-sm text-white">{shipping?.name || shipping?.full_name || 'Customer'}</p>
           <p className="text-xs text-white/60 mt-1">{shipping?.phone_number || 'No phone'}</p>
           <p className="text-xs text-white/60">{shipping?.email || 'No email'}</p>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
           <p className="text-xs font-bold text-white flex items-center gap-2 mb-3"><MapPin size={14} className="text-primary" /> Shipping Address</p>
           <p className="text-sm text-white">{shipping?.address_line1 || 'Address unavailable'}</p>
           {shipping?.address_line2 && <p className="text-xs text-white/60">{shipping.address_line2}</p>}
@@ -233,7 +233,7 @@ const OrderDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {booking && <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      {booking && <div className="mb-6 rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
         <p className="text-xs font-bold text-white flex items-center gap-2"><Truck size={14} className="text-primary" /> DEX tracking</p>
         <p className="mt-3 text-sm text-white">{safeTrackingLabel(booking.status)}</p>
         <p className="mt-1 text-xs text-white/60">Tracking number: {booking.tracking_number}</p>
@@ -242,11 +242,11 @@ const OrderDetailPage: React.FC = () => {
         {!!booking.tracking_history?.length && <div className="mt-3 border-t border-white/10 pt-3 space-y-2">{booking.tracking_history.map((event, index) => <p key={index} className="text-xs text-white/60"><span className="text-white">{safeTrackingLabel(event.status)}</span>{event.location ? ` · ${event.location}` : ''}{event.occurred_at ? ` · ${new Date(event.occurred_at).toLocaleString()}` : ''}</p>)}</div>}
       </div>}
 
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
         <p className="text-xs font-bold text-white flex items-center gap-2 mb-3"><Package size={14} className="text-primary" /> Order Items ({order.order_items?.length || 0})</p>
         <div className="space-y-3">
           {orderItems.map((item: any, idx) => (
-            <div key={`${order.id}-${item.product_id}-${item.variant_id}-${idx}`} className="rounded-lg border border-white/10 bg-black/30 p-3">
+            <div key={`${order.id}-${item.product_id}-${item.variant_id}-${idx}`} className="rounded-lg border border-white/10 bg-[#080808] p-3">
               <div className="flex gap-3">
                 <img src={getItemImage(item)} alt={getItemTitle(item)} className="h-16 w-16 rounded-md object-cover border border-white/10" />
                 <div className="min-w-0 flex-1">
@@ -276,15 +276,15 @@ const OrderDetailPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <p className="text-xs font-black uppercase tracking-widest text-primary">Packing evidence</p>
+      <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+        <p className="text-xs font-medium text-primary">Packing evidence</p>
         <p className="mt-2 text-xs text-white/60">Upload one item photo per row, then one photo of the sealed parcel with its airway bill.</p>
         <label className="mt-3 block text-xs text-white/60">Packed parcel with airway bill
           <input type="file" accept="image/jpeg,image/png,image/webp" disabled={order.status !== 'confirmed' || Boolean(order.packing_evidence)} onChange={(event) => void uploadEvidence(event.target.files?.[0], 'parcel')} className="mt-1 block w-full text-xs text-white/70 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-black disabled:opacity-50" />
         </label>
         <p className="mt-2 text-xs text-white/50">{parcelPhoto ? 'Saved privately' : uploadingEvidence === 'parcel' ? 'Uploading…' : 'Parcel photo required'}</p>
         {order.packing_evidence?.submitted_at && <p className="mt-3 text-xs text-white/50">Submitted {new Date(order.packing_evidence.submitted_at).toLocaleString()}</p>}
-        <button onClick={() => void markPacked()} disabled={isUpdating || order.status !== 'confirmed' || !allPackingPhotosReady || Boolean(order.packing_evidence)} className="mt-4 w-full rounded-xl bg-primary px-4 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">{isUpdating ? 'Marking packed…' : order.packing_evidence ? 'Packing evidence saved' : 'Mark packed'}</button>
+        <button onClick={() => void markPacked()} disabled={isUpdating || order.status !== 'confirmed' || !allPackingPhotosReady || Boolean(order.packing_evidence)} className="mt-4 w-full rounded border border-primary/40 bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">{isUpdating ? 'Marking packed…' : order.packing_evidence ? 'Packing evidence saved' : 'Mark packed'}</button>
       </div>
 
       <div className="mt-4 text-xs text-white/45 flex items-center gap-2">

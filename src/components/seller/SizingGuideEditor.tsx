@@ -141,10 +141,10 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
 
     return (
         <div className="space-y-5">
-            <div className="rounded-[1.8rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.12),transparent_34%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5">
-                <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-primary/75">Sizing Setup</p>
-                <h3 className="mt-2 text-lg font-black uppercase tracking-[-0.03em] text-white">Buyer Confidence Layer</h3>
-                <p className="mt-2 text-sm text-white/60">
+            <div className="rounded-lg border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.12),transparent_34%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-primary/75">Sizing Setup</p>
+                <h3 className="mt-2 text-lg font-semibold text-white">Buyer Confidence Layer</h3>
+                <p className="mt-2 text-sm text-neutral-300">
                     Keep the chart practical. Buyers need clean fit notes and clear measurements, not a dense spreadsheet.
                 </p>
             </div>
@@ -155,7 +155,7 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
                     <select 
                         value={selectedType} 
                         onChange={e => handleTypeChange(e.target.value)} 
-                        className="mt-1 w-full rounded-[1.2rem] border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-primary/35"
+                        className="mt-1 w-full rounded-lg border border-white/10 bg-[#0e0e0e] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-primary/35"
                     >
                         <option value="" className="bg-neutral-900">Select Type</option>
                         {Object.keys(dummySizingGuides).map(key => (
@@ -170,7 +170,7 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
                     <select 
                         value={value?.measurement_unit || 'inch'} 
                         onChange={e => handleChange('measurement_unit', e.target.value)} 
-                        className="mt-1 w-full rounded-[1.2rem] border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-primary/35"
+                        className="mt-1 w-full rounded-lg border border-white/10 bg-[#0e0e0e] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-primary/35"
                     >
                         <option value="inch" className="bg-neutral-900">Inch</option>
                         <option value="cm" className="bg-neutral-900">CM</option>
@@ -188,19 +188,19 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
                             handleChange('size_fit', sizeFitDraft);
                         }
                     }}
-                    className="mt-1 h-24 w-full rounded-[1.2rem] border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/35" 
+                    className="mt-1 h-24 w-full rounded-lg border border-white/10 bg-[#0e0e0e] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-neutral-500 focus:border-primary/35" 
                     placeholder="Tell buyers how this fits (e.g. true to size, relaxed shoulder, narrow waist)."
                 />
             </div>
 
             {availableSizes.length > 0 && selectedType && (
-                <div className="overflow-hidden rounded-[1.8rem] border border-white/10 bg-white/[0.03]">
+                <div className="overflow-hidden rounded-lg border border-white/10 bg-[#121212]">
                     <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                        <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Size Matrix</p>
+                        <p className="text-xs uppercase tracking-[0.12em] text-neutral-400">Size Matrix</p>
                         <button
                             type="button"
                             onClick={applyLinearPreset}
-                            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/75 hover:text-white"
+                            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-[#121212] px-3 py-1.5 text-xs text-neutral-300 hover:text-white"
                         >
                             <Wand2 size={13} />
                             Quick Fill
@@ -208,10 +208,10 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
                     </div>
                     <div className="grid gap-3 p-4 md:hidden">
                         {availableSizes.map((size) => (
-                            <div key={size} className="rounded-[1.2rem] border border-white/10 bg-black/25 p-4">
+                            <div key={size} className="rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
                                 <div className="flex items-center justify-between">
-                                    <p className="text-sm font-black uppercase tracking-[0.03em] text-white">{size}</p>
-                                    <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/30">
+                                    <p className="text-sm font-semibold text-white">{size}</p>
+                                    <span className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
                                         {value?.measurement_unit}
                                     </span>
                                 </div>
@@ -222,7 +222,7 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
                                         const storedValue = (value?.size_chart?.[size]?.[col] ?? -1) === -1 ? '' : String(value?.size_chart?.[size]?.[col]);
                                         return (
                                             <div key={col}>
-                                                <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-white/30">{col}</label>
+                                                <label className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">{col}</label>
                                                 <input
                                                     type="number"
                                                     placeholder="N/A"
@@ -234,7 +234,7 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
                                                             e.currentTarget.blur();
                                                         }
                                                     }}
-                                                    className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-primary/35"
+                                                    className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-[#080808] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-neutral-500 focus:border-primary/35"
                                                 />
                                             </div>
                                         );
@@ -245,7 +245,7 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
                     </div>
                     <div className="hidden overflow-x-auto md:block">
                     <table className="w-full text-sm text-left text-neutral-300">
-                        <thead className="text-xs uppercase text-neutral-400 bg-black/25">
+                        <thead className="text-xs uppercase text-neutral-400 bg-[#0e0e0e]">
                             <tr>
                                 <th scope="col" className="px-4 py-3">Size</th>
                                 {sizingGuideColumns.map(col => (
@@ -275,7 +275,7 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
                                                         e.currentTarget.blur();
                                                     }
                                                 }}
-                                                className="h-9 w-24 rounded-lg border border-white/10 bg-black/30 px-3 py-1 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-primary/35" 
+                                                className="h-9 w-24 rounded-lg border border-white/10 bg-[#080808] px-3 py-1 text-sm text-white outline-none transition-colors placeholder:text-neutral-500 focus:border-primary/35" 
                                             />
                                                 );
                                             })()}
@@ -289,7 +289,7 @@ const SizingGuideEditor: React.FC<SizingGuideEditorProps> = ({ value, onChange, 
                 </div>
             )}
              {availableSizes.length === 0 && (
-                <div className="flex items-center gap-2 rounded-[1.2rem] border border-yellow-500/15 bg-yellow-500/8 px-4 py-3 text-xs text-yellow-300">
+                <div className="flex items-center gap-2 rounded-lg border border-yellow-500/15 bg-yellow-500/8 px-4 py-3 text-xs text-yellow-300">
                     <AlertTriangle size={14} />
                     <span>No sizes detected. Add variants with a `Size` option or select products that already include sizes.</span>
                 </div>

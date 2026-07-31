@@ -6,10 +6,10 @@ import { Loader, Save, Building, User, Mail, Phone, MapPin, Upload } from 'lucid
 import { motion } from 'framer-motion';
 
 const Section: React.FC<{title: string, children: React.ReactNode}> = ({ title, children }) => (
-    <div className="glass-panel p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
-        <div className="space-y-4">{children}</div>
-    </div>
+    <section className="rounded-lg border border-white/10 bg-[#121212] p-4">
+        <h3 className="text-base font-semibold text-neutral-100">{title}</h3>
+        <div className="mt-4 space-y-4">{children}</div>
+    </section>
 );
 
 const Profile: React.FC = () => {
@@ -88,35 +88,35 @@ const Profile: React.FC = () => {
         }
     };
 
-    if (isLoading) return <div className="text-center p-8 text-white"><Loader className="animate-spin inline-block"/> Loading profile...</div>;
-    if (error) return <div className="text-center p-8 text-red-500">{error}</div>;
+    if (isLoading) return <div className="p-6 text-sm text-neutral-400"><Loader className="animate-spin inline-block"/> Loading profile...</div>;
+    if (error) return <div className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">{error}</div>;
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 text-neutral-100">
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <Section title="Business Information">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="business_name" className="block text-sm font-medium text-neutral-300">Business Name</label>
-                            <input type="text" name="business_name" id="business_name" value={profile.business_name || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="business_name" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Business Name</label>
+                            <input type="text" name="business_name" id="business_name" value={profile.business_name || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                         </div>
                         <div>
-                            <label htmlFor="legal_name" className="block text-sm font-medium text-neutral-300">Legal Name</label>
-                            <input type="text" name="legal_name" id="legal_name" value={profile.legal_name || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="legal_name" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Legal Name</label>
+                            <input type="text" name="legal_name" id="legal_name" value={profile.legal_name || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                         </div>
                     </div>
                     <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-neutral-300">Description</label>
-                        <textarea name="description" id="description" value={profile.description || ''} onChange={handleChange} className="glass-input w-full mt-1 h-24" />
+                        <label htmlFor="description" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Description</label>
+                        <textarea name="description" id="description" value={profile.description || ''} onChange={handleChange} className="mt-1 h-24 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                     </div>
                 </Section>
 
                 <Section title="Brand Identity">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-neutral-300">Logo</label>
+                            <label className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Logo</label>
                             <input type="file" id="logo-upload" onChange={e => handleImageUpload(e, 'logo_url')} className="hidden" disabled={uploadingImage === 'logo_url'} />
-                            <label htmlFor="logo-upload" className={`mt-1 flex justify-center items-center w-32 h-32 rounded-full bg-white/5 border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 overflow-hidden relative ${uploadingImage === 'logo_url' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <label htmlFor="logo-upload" className={`mt-1 flex justify-center items-center w-32 h-32 rounded-full border-2 border-dashed border-white/15 bg-[#080808] cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 overflow-hidden relative ${uploadingImage === 'logo_url' ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                 {uploadingImage === 'logo_url' ? (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-10">
                                         <Loader className="animate-spin text-white mb-1" size={24} />
@@ -130,9 +130,9 @@ const Profile: React.FC = () => {
                             </label>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-neutral-300">Banner</label>
+                            <label className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Banner</label>
                             <input type="file" id="banner-upload" onChange={e => handleImageUpload(e, 'banner_url')} className="hidden" disabled={uploadingImage === 'banner_url'} />
-                            <label htmlFor="banner-upload" className={`mt-1 flex justify-center items-center w-full h-48 rounded-xl bg-white/5 border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 overflow-hidden relative ${uploadingImage === 'banner_url' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <label htmlFor="banner-upload" className={`mt-1 flex justify-center items-center w-full h-48 rounded-lg border-2 border-dashed border-white/15 bg-[#080808] cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 overflow-hidden relative ${uploadingImage === 'banner_url' ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                 {uploadingImage === 'banner_url' ? (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-10">
                                         <Loader className="animate-spin text-white mb-1" size={24} />
@@ -151,53 +151,53 @@ const Profile: React.FC = () => {
                 <Section title="Contact Information">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="contact.contact_person_name" className="block text-sm font-medium text-neutral-300">Contact Person</label>
-                            <input type="text" name="contact.contact_person_name" id="contact.contact_person_name" value={profile.contact?.contact_person_name || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="contact.contact_person_name" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Contact Person</label>
+                            <input type="text" name="contact.contact_person_name" id="contact.contact_person_name" value={profile.contact?.contact_person_name || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                         </div>
                         <div>
-                            <label htmlFor="contact.support_email" className="block text-sm font-medium text-neutral-300">Support Email</label>
-                            <input type="email" name="contact.support_email" id="contact.support_email" value={profile.contact?.support_email || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="contact.support_email" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Support Email</label>
+                            <input type="email" name="contact.support_email" id="contact.support_email" value={profile.contact?.support_email || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                         </div>
                         <div>
-                            <label htmlFor="contact.phone_number" className="block text-sm font-medium text-neutral-300">Phone Number</label>
-                            <input type="tel" name="contact.phone_number" id="contact.phone_number" value={profile.contact?.phone_number || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="contact.phone_number" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Phone Number</label>
+                            <input type="tel" name="contact.phone_number" id="contact.phone_number" value={profile.contact?.phone_number || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                         </div>
                         <div>
-                            <label htmlFor="contact.whatsapp" className="block text-sm font-medium text-neutral-300">WhatsApp Number</label>
-                            <input type="tel" name="contact.whatsapp" id="contact.whatsapp" value={profile.contact?.whatsapp || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="contact.whatsapp" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">WhatsApp Number</label>
+                            <input type="tel" name="contact.whatsapp" id="contact.whatsapp" value={profile.contact?.whatsapp || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                         </div>
                     </div>
                 </Section>
 
                 <Section title="Store Location">
                     <div>
-                        <label htmlFor="location.address" className="block text-sm font-medium text-neutral-300">Address</label>
-                        <input type="text" name="location.address" id="location.address" value={profile.location?.address || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                        <label htmlFor="location.address" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Address</label>
+                        <input type="text" name="location.address" id="location.address" value={profile.location?.address || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label htmlFor="location.city" className="block text-sm font-medium text-neutral-300">City</label>
-                            <input type="text" name="location.city" id="location.city" value={profile.location?.city || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="location.city" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">City</label>
+                            <input type="text" name="location.city" id="location.city" value={profile.location?.city || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                         </div>
                         <div>
-                            <label htmlFor="location.state" className="block text-sm font-medium text-neutral-300">State/Province</label>
-                            <input type="text" name="location.state" id="location.state" value={profile.location?.state || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="location.state" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">State/Province</label>
+                            <input type="text" name="location.state" id="location.state" value={profile.location?.state || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                         </div>
                         <div>
-                            <label htmlFor="location.postal_code" className="block text-sm font-medium text-neutral-300">Postal Code</label>
-                            <input type="text" name="location.postal_code" id="location.postal_code" value={profile.location?.postal_code || ''} onChange={handleChange} className="glass-input w-full mt-1" />
+                            <label htmlFor="location.postal_code" className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Postal Code</label>
+                            <input type="text" name="location.postal_code" id="location.postal_code" value={profile.location?.postal_code || ''} onChange={handleChange} className="mt-1 w-full rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100" />
                         </div>
                     </div>
                 </Section>
 
-                <div className="flex flex-col items-end pt-6 border-t border-white/10">
+                <div className="flex flex-col items-end rounded-lg border border-white/10 bg-[#121212] p-4">
                     {hasUnsavedChanges && (
-                        <div className="mb-4 flex items-center text-yellow-400 bg-yellow-400/10 px-4 py-2 rounded-lg border border-yellow-400/20">
-                            <span className="text-sm font-medium">You have unsaved changes. Please save to apply.</span>
+                        <div className="mb-3 rounded border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+                            You have unsaved changes. Save to apply them.
                         </div>
                     )}
-                    <button type="submit" disabled={isSaving} className="glass-button bg-primary text-white hover:bg-primary-dark shadow-glow-primary border-primary/50 disabled:opacity-50">
-                        {isSaving ? <><Loader className="animate-spin mr-2"/> Saving...</> : <><Save className="mr-2"/> Save Changes</>}
+                    <button type="submit" disabled={isSaving} className="inline-flex items-center gap-2 rounded border border-primary/40 bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-40">
+                        {isSaving ? <><Loader size={14} className="animate-spin"/> Saving...</> : <><Save size={14}/> Save Changes</>}
                     </button>
                 </div>
             </form>

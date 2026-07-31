@@ -174,31 +174,31 @@ const SellerHome: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="mt-4 space-y-4 text-neutral-100">
       {pendingPriorityOrders.length > 0 && (
         <motion.section
           {...fadeUp}
           transition={{ duration: 0.35 }}
-          className="mb-4 overflow-hidden rounded-[1.8rem] border border-yellow-500/35 bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.22),transparent_50%),linear-gradient(135deg,rgba(245,158,11,0.14),rgba(255,255,255,0.03))] p-5 shadow-[0_24px_80px_rgba(245,158,11,0.14)]"
+          className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-4"
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
-              <div className="rounded-[1.2rem] border border-yellow-400/40 bg-yellow-400/15 p-3">
-                <AlertTriangle size={20} className="text-yellow-300" />
+              <div className="rounded border border-amber-400/30 bg-amber-400/15 p-2">
+                <AlertTriangle size={16} className="text-amber-300" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-mono uppercase tracking-[0.25em] text-yellow-200/80">Top Priority</p>
-                <h3 className="mt-2 text-xl font-black uppercase tracking-[-0.03em] text-white">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-amber-200/80">Top Priority</p>
+                <h3 className="mt-1 text-base font-semibold text-neutral-100">
                   {pendingPriorityOrders.length} pending order{pendingPriorityOrders.length > 1 ? 's' : ''} need immediate action
                 </h3>
-                <p className="mt-2 text-sm text-yellow-100/80">
+                <p className="mt-1 text-xs text-amber-100/80">
                   Newest pending order: #{pendingPriorityOrders[0]?.order_number || pendingPriorityOrders[0]?.id}
                 </p>
               </div>
             </div>
             <Link
               to={`${prefix}/dashboard/orders`}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-yellow-300/35 bg-yellow-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-yellow-100 transition-colors hover:bg-yellow-300/20"
+              className="inline-flex items-center justify-center gap-2 rounded border border-amber-300/35 bg-amber-300/10 px-3 py-2 text-xs text-amber-100 hover:bg-amber-300/20"
             >
               Open Orders Queue
               <ArrowRight size={14} />
@@ -211,39 +211,39 @@ const SellerHome: React.FC = () => {
         <motion.section
           {...fadeUp}
           transition={{ duration: 0.4 }}
-          className="mb-4 overflow-hidden rounded-[1.8rem] border border-primary/30 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.22),transparent_45%),linear-gradient(135deg,rgba(255,24,24,0.14),rgba(255,255,255,0.03))] p-5 shadow-[0_24px_80px_rgba(255,24,24,0.12)]"
+          className="rounded-lg border border-primary/25 bg-primary/10 p-4"
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
-              <div className="rounded-[1.2rem] border border-primary/30 bg-primary/15 p-3">
-                <Inbox size={20} className="text-primary" />
+              <div className="rounded border border-primary/30 bg-primary/15 p-2">
+                <Inbox size={16} className="text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-mono uppercase tracking-[0.28em] text-primary/80">Draft Queue</p>
-                <h3 className="mt-1 text-xl font-black uppercase tracking-[-0.03em] text-white">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-primary/80">Draft Queue</p>
+                <h3 className="mt-1 text-base font-semibold text-neutral-100">
                   {queuePendingCount} product{queuePendingCount !== 1 ? 's' : ''} awaiting your review
                 </h3>
-                <div className="mt-2 flex flex-wrap gap-3 text-xs text-white/60">
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-400">
                   {queueBreakdown.readyToPublish > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-emerald-300">
+                    <span className="inline-flex items-center gap-1.5 rounded border border-emerald-400/25 bg-emerald-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-emerald-300">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                       {queueBreakdown.readyToPublish} ready to publish
                     </span>
                   )}
                   {queueBreakdown.needsReview > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-amber-300">
+                    <span className="inline-flex items-center gap-1.5 rounded border border-amber-400/25 bg-amber-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-amber-300">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                       {queueBreakdown.needsReview} need details
                     </span>
                   )}
                   {queueBreakdown.outOfStock > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-400/25 bg-orange-500/10 px-3 py-1 text-orange-300">
+                    <span className="inline-flex items-center gap-1.5 rounded border border-orange-400/25 bg-orange-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-orange-300">
                       <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
                       {queueBreakdown.outOfStock} out of stock
                     </span>
                   )}
                   {queueBreakdown.failed > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-red-400/25 bg-red-500/10 px-3 py-1 text-red-300">
+                    <span className="inline-flex items-center gap-1.5 rounded border border-red-400/25 bg-red-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-red-300">
                       <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
                       {queueBreakdown.failed} failed
                     </span>
@@ -253,7 +253,7 @@ const SellerHome: React.FC = () => {
             </div>
             <Link
               to={`${prefix}/dashboard/inventory`}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white transition-opacity hover:opacity-90"
+              className="inline-flex shrink-0 items-center gap-2 rounded border border-primary/40 bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary/90"
             >
               Review Drafts
               <ArrowRight size={15} />
@@ -265,35 +265,35 @@ const SellerHome: React.FC = () => {
       <motion.section
         {...fadeUp}
         transition={{ duration: 0.45 }}
-        className="mt-1 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]"
+        className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]"
       >
-        <div className="rounded-[1.8rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.14),transparent_34%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5">
-          <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-primary/75">Seller Overview</p>
-          <h2 className="mt-2 text-xl font-black uppercase tracking-[-0.04em] text-white">Today&apos;s Operations</h2>
-          <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-lg border border-white/10 bg-[#121212] p-4">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-primary/75">Seller Overview</p>
+          <h2 className="mt-1 text-base font-semibold text-neutral-100">Today&apos;s Operations</h2>
+          <div className="mt-3 grid grid-cols-2 gap-3">
             {[
               { label: 'Open', value: metrics.openOrders },
               { label: 'Delivered', value: metrics.delivered },
               { label: 'Revenue', value: `Rs ${metrics.revenue.toLocaleString()}` },
               { label: 'Fulfillment', value: `${metrics.fulfillmentRate}%` },
             ].map(card => (
-              <div key={card.label} className="rounded-[1.1rem] border border-white/10 bg-black/25 p-3">
-                <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">{card.label}</p>
-                <p className="mt-2 text-base font-black uppercase tracking-[-0.03em] text-white">{card.value}</p>
+              <div key={card.label} className="rounded-lg border border-white/10 bg-[#0e0e0e] p-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">{card.label}</p>
+                <p className="mt-2 text-base font-semibold text-neutral-100">{card.value}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-5">
+        <div className="rounded-lg border border-white/10 bg-[#121212] p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.25em] text-white/30">
+            <div className="flex items-center gap-2 text-xs font-medium text-neutral-200">
               <Globe size={12} />
               Product Import
             </div>
             {shopifyConnected && (
               <div className="flex items-center gap-2">
-                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.15em] ${
+                <span className={`rounded border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] ${
                   shopifyConnectionType === 'active'
                     ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300'
                     : 'border-blue-400/20 bg-blue-500/10 text-blue-300'
@@ -305,16 +305,16 @@ const SellerHome: React.FC = () => {
           </div>
 
           {shopifyLoading ? (
-            <div className="flex min-h-[16rem] items-center justify-center gap-3 text-white/35">
+            <div className="flex min-h-[10rem] items-center justify-center gap-2 text-sm text-neutral-500">
               <Loader size={16} className="animate-spin" />
               <span className="text-sm">Checking store status...</span>
             </div>
           ) : shopifyConnected ? (
             <div className="mt-5">
-              <div className="rounded-[1.3rem] border border-emerald-400/20 bg-emerald-500/10 p-4">
-                <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-emerald-300">Connected</p>
-                <p className="mt-3 text-lg font-black uppercase tracking-[0.03em] text-white">{shopifyShop ?? 'Store Connected'}</p>
-                <p className="mt-2 text-sm text-white/60">
+              <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-4">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-emerald-300">Connected</p>
+                <p className="mt-2 text-base font-semibold text-neutral-100">{shopifyShop ?? 'Store Connected'}</p>
+                <p className="mt-2 text-xs text-neutral-400">
                   {shopifyConnectionType === 'active' 
                     ? 'OAuth-based connection. Use sync to refresh your draft queue.' 
                     : 'Public connection via scraping. Use scrape to import products.'}
@@ -330,7 +330,7 @@ const SellerHome: React.FC = () => {
                   <button
                     onClick={handleShopifySync}
                     disabled={shopifyActionLoading}
-                    className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded border border-primary/40 bg-primary px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
                   >
                     {shopifyActionLoading ? <Loader size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                     Sync Products
@@ -340,7 +340,7 @@ const SellerHome: React.FC = () => {
                   <button
                     onClick={() => setShopifyTab('scrape')}
                     disabled={shopifyActionLoading}
-                    className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded border border-primary/40 bg-primary px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
                   >
                     <Zap size={15} />
                     Scrape Products
@@ -349,7 +349,7 @@ const SellerHome: React.FC = () => {
                 <button
                   onClick={handleShopifyDisconnect}
                   disabled={shopifyActionLoading}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white/75"
+                  className="inline-flex items-center gap-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100"
                 >
                   <Link2Off size={15} />
                   Disconnect
@@ -359,13 +359,13 @@ const SellerHome: React.FC = () => {
           ) : (
             <div className="mt-5">
               {/* Tab selector */}
-              <div className="mb-4 flex gap-2 rounded-full border border-white/10 bg-black/20 p-1">
+              <div className="mb-3 flex gap-2 rounded border border-white/10 bg-[#0e0e0e] p-1">
                 <button
                   onClick={() => setShopifyTab('scrape')}
-                  className={`flex-1 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+                  className={`flex-1 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
                     shopifyTab === 'scrape'
                       ? 'bg-primary text-white'
-                      : 'text-white/50 hover:text-white/75'
+                      : 'text-neutral-400 hover:text-neutral-100'
                   }`}
                 >
                   <Zap size={14} className="inline mr-1 -mt-0.5" />
@@ -373,10 +373,10 @@ const SellerHome: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setShopifyTab('oauth')}
-                  className={`flex-1 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+                  className={`flex-1 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
                     shopifyTab === 'oauth'
                       ? 'bg-primary text-white'
-                      : 'text-white/50 hover:text-white/75'
+                      : 'text-neutral-400 hover:text-neutral-100'
                   }`}
                 >
                   <Link2 size={14} className="inline mr-1 -mt-0.5" />
@@ -399,17 +399,17 @@ const SellerHome: React.FC = () => {
                 }} />
               ) : (
                 <div className="mt-4">
-                  <p className="max-w-xl text-sm leading-relaxed text-white/60">
+                  <p className="max-w-xl text-xs leading-relaxed text-neutral-400">
                     Connect Shopify via OAuth for automatic sync and inventory updates.
                   </p>
                   {shopifyAuthUrl ? (
-                    <div className="mt-4 rounded-[1.3rem] border border-primary/20 bg-primary/10 p-4">
-                      <p className="text-sm text-white/75">Your auth link is ready. Open it and approve the connection.</p>
+                    <div className="mt-3 rounded-lg border border-primary/20 bg-primary/10 p-4">
+                      <p className="text-xs text-neutral-300">Your auth link is ready. Open it and approve the connection.</p>
                       <a
                         href={shopifyAuthUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white"
+                        className="mt-3 inline-flex items-center gap-2 rounded border border-primary/40 bg-primary px-3 py-2 text-xs font-medium text-white"
                       >
                         <ArrowRight size={15} />
                         Open Shopify Auth
@@ -418,7 +418,7 @@ const SellerHome: React.FC = () => {
                   ) : (
                     <div className="mt-4 flex flex-col gap-3">
                       <div className="relative">
-                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase tracking-[0.22em] text-white/25">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] uppercase tracking-[0.12em] text-neutral-500">
                           https://
                         </span>
                         <input
@@ -427,13 +427,13 @@ const SellerHome: React.FC = () => {
                           value={shopifyShopInput}
                           onChange={(e) => setShopifyShopInput(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleShopifyConnect()}
-                          className="w-full rounded-[1.2rem] border border-white/10 bg-black/30 py-4 pl-[5.5rem] pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/18 focus:border-primary/35"
+                          className="w-full rounded border border-white/20 bg-[#080808] py-2 pl-[4.5rem] pr-3 text-xs text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-primary/40"
                         />
                       </div>
                       <button
                         onClick={handleShopifyConnect}
                         disabled={!shopifyShopInput.trim()}
-                        className="inline-flex items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white/80 disabled:opacity-45"
+                        className="inline-flex items-center justify-center gap-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100 disabled:opacity-40"
                       >
                         <Link2 size={15} />
                         Generate Connect Link
@@ -451,20 +451,20 @@ const SellerHome: React.FC = () => {
         <motion.section
           {...fadeUp}
           transition={{ duration: 0.45, delay: 0.06 }}
-          className="mt-6 rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-5"
+          className="rounded-lg border border-white/10 bg-[#121212] p-4"
         >
-          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.25em] text-white/30">
+          <div className="flex items-center gap-2 text-xs font-medium text-neutral-200">
             <Trophy size={12} />
             Juno Events
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
             {liveTournaments.map((event) => (
-              <div key={event.id} className="rounded-[1.1rem] border border-white/10 bg-black/25 p-4">
-                <p className="text-sm font-black uppercase tracking-[0.02em] text-white">{event.name}</p>
-                <p className="mt-2 text-xs text-white/45 uppercase">
+              <div key={event.id} className="rounded-lg border border-white/10 bg-[#0e0e0e] p-4">
+                <p className="text-sm font-medium text-neutral-100">{event.name}</p>
+                <p className="mt-2 text-xs uppercase text-neutral-500">
                   {event.status} · {event.participant_count ?? 0} joined
                 </p>
-                <p className="mt-2 text-xs text-white/50">
+                <p className="mt-2 text-xs text-neutral-500">
                   Ends {new Date(event.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                 </p>
               </div>
@@ -476,35 +476,35 @@ const SellerHome: React.FC = () => {
       <motion.section
         {...fadeUp}
         transition={{ duration: 0.45, delay: 0.08 }}
-        className="mt-6 overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03]"
+        className="overflow-hidden rounded-lg border border-white/10 bg-[#121212]"
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
-            <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30">Recent Orders</p>
-            <h3 className="mt-1 text-xl font-black uppercase tracking-[-0.04em] text-white">Order Queue</h3>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Recent Orders</p>
+            <h3 className="mt-1 text-base font-semibold text-neutral-100">Order Queue</h3>
           </div>
           <Link
             to={`${prefix}/dashboard/orders`}
-            className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.22em] text-white/40 transition-colors hover:text-primary"
+            className="inline-flex items-center gap-2 text-xs text-neutral-400 transition-colors hover:text-primary"
           >
             View All
             <ArrowRight size={14} />
           </Link>
         </div>
 
-        <div className="px-5 py-4">
+        <div className="p-4">
           {isLoadingOrders ? (
-            <div className="flex items-center justify-center gap-3 py-16 text-white/35">
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-neutral-500">
               <Loader size={16} className="animate-spin" />
               <span className="text-sm">Loading recent orders...</span>
             </div>
           ) : recentOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-              <div className="rounded-full border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <div className="rounded-full border border-white/10 bg-[#0e0e0e] p-3">
                 <Sparkles size={18} className="text-primary" />
               </div>
-              <h4 className="text-lg font-black uppercase tracking-[0.04em] text-white">No orders yet.</h4>
-              <p className="max-w-md text-sm leading-relaxed text-white/50">New orders will appear here as soon as buyers checkout.</p>
+              <h4 className="text-sm font-medium text-neutral-100">No orders yet.</h4>
+              <p className="max-w-md text-xs leading-relaxed text-neutral-500">New orders will appear here as soon as buyers checkout.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -514,26 +514,26 @@ const SellerHome: React.FC = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.06 * index }}
-                  className="grid gap-4 rounded-[1.4rem] border border-white/10 bg-black/25 p-4 md:grid-cols-[1.4fr_0.85fr_0.85fr_0.7fr]"
+                  className="grid gap-4 rounded-lg border border-white/10 bg-[#0e0e0e] p-3 md:grid-cols-[1.4fr_0.85fr_0.85fr_0.7fr]"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-black uppercase tracking-[0.03em] text-white">#{order.order_number}</p>
-                    <p className="mt-1 truncate text-sm text-white/50">{order.shipping_address?.name || 'Juno Buyer'}</p>
-                    <p className="mt-1 text-xs text-white/35">{order.shipping_address?.city || 'Pakistan'}</p>
+                    <p className="text-sm font-medium text-neutral-100">#{order.order_number}</p>
+                    <p className="mt-1 truncate text-xs text-neutral-400">{order.shipping_address?.name || 'Juno Buyer'}</p>
+                    <p className="mt-1 text-xs text-neutral-500">{order.shipping_address?.city || 'Pakistan'}</p>
                   </div>
                   <div className="flex items-center">
                     <OrderStatusBadge status={order.status} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/25">Amount</p>
-                    <p className="mt-2 text-sm font-semibold text-white">Rs. {order.total.toLocaleString()}</p>
-                    <p className="mt-1 text-xs text-white/35">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Amount</p>
+                    <p className="mt-2 text-sm font-medium text-neutral-100">Rs. {order.total.toLocaleString()}</p>
+                    <p className="mt-1 text-xs text-neutral-500">
                       {order.order_items?.length || 0} item{(order.order_items?.length || 0) === 1 ? '' : 's'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/25">Date</p>
-                    <p className="mt-2 text-sm text-white/60">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Date</p>
+                    <p className="mt-2 text-xs text-neutral-400">
                       {new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
                     </p>
                   </div>
@@ -543,7 +543,7 @@ const SellerHome: React.FC = () => {
           )}
         </div>
       </motion.section>
-    </>
+    </div>
   );
 };
 

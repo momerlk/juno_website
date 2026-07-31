@@ -148,22 +148,22 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
     <motion.div
       {...fadeUp}
       transition={{ duration: 0.45 }}
-      className="rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-5"
+      className="rounded-lg border border-white/10 bg-[#121212] p-5"
     >
-      <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.25em] text-white/30">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-neutral-500">
         <Globe size={12} />
         Quick Product Import
       </div>
 
       <div className="mt-5">
-        <div className="rounded-[1.3rem] border border-primary/20 bg-primary/10 p-4">
+        <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
           <div className="flex items-start gap-3">
             <div className="mt-1 rounded-full bg-primary/20 p-2">
               <Zap size={16} className="text-primary" />
             </div>
             <div>
               <p className="text-sm font-semibold text-white">No OAuth Required</p>
-              <p className="mt-1 text-xs leading-relaxed text-white/60">
+              <p className="mt-1 text-xs leading-relaxed text-neutral-300">
                 Just enter your Shopify store URL and we'll import all your published products instantly. 
                 No app installation or permissions needed.
               </p>
@@ -172,7 +172,7 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
         </div>
 
         {message && (
-          <div className={`mt-4 rounded-[1.2rem] border p-4 ${
+          <div className={`mt-4 rounded-lg border p-4 ${
             message.type === 'success' 
               ? 'border-emerald-400/20 bg-emerald-500/10' 
               : message.type === 'info'
@@ -192,7 +192,7 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
 
         <div className="mt-4 flex flex-col gap-3">
           <div className="relative">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase tracking-[0.22em] text-white/25">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[10px] uppercase tracking-[0.12em] text-neutral-500">
               https://
             </span>
             <input
@@ -202,14 +202,14 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
               onChange={(e) => setShopUrl(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isScraping || isSyncing}
-              className="w-full rounded-[1.2rem] border border-white/10 bg-black/30 py-4 pl-[5.5rem] pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/18 focus:border-primary/35 disabled:opacity-50"
+              className="w-full rounded-lg border border-white/10 bg-[#080808] py-4 pl-[5.5rem] pr-4 text-sm text-white outline-none transition-colors placeholder:text-neutral-500 focus:border-primary/35 disabled:opacity-50"
             />
           </div>
           
           <button
             onClick={handleScrape}
             disabled={isScraping || isSyncing || !shopUrl.trim()}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-4 text-sm font-black uppercase tracking-[0.07em] text-white disabled:opacity-45"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-4 text-sm font-semibold text-white disabled:opacity-45"
           >
             {isScraping || isSyncing ? (
               <>
@@ -225,9 +225,9 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
           </button>
         </div>
 
-        <div className="mt-6 rounded-[1.2rem] border border-white/10 bg-black/20 p-4">
-          <p className="text-xs font-semibold text-white/70">How it works:</p>
-          <ul className="mt-2 space-y-2 text-xs text-white/50">
+        <div className="mt-6 rounded-lg border border-white/10 bg-black/20 p-4">
+          <p className="text-xs font-semibold text-neutral-300">How it works:</p>
+          <ul className="mt-2 space-y-2 text-xs text-neutral-400">
             <li className="flex items-start gap-2">
               <span className="mt-0.5 text-primary">1.</span>
               <span>We fetch all published products from your public Shopify store</span>
@@ -243,7 +243,7 @@ const ShopifyScrape: React.FC<ShopifyScrapeProps> = ({ onScrapeComplete }) => {
           </ul>
         </div>
 
-        <div className="mt-4 rounded-[1.2rem] border border-amber-400/20 bg-amber-500/10 p-4">
+        <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/10 p-4">
           <p className="text-xs text-amber-300">
             <strong>Note:</strong> Your store must be publicly accessible (not password-protected). 
             If you're using Shopify's password page, disable it temporarily before scraping.

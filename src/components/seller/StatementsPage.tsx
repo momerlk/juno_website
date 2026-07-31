@@ -31,46 +31,63 @@ const StatementsPage: React.FC = () => {
   useEffect(() => { void load(); }, [seller?.token]);
 
   return (
-    <section className="glass-panel mt-6 p-6">
-      <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/10 pb-5">
-        <div>
-          <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/40">Finance</p>
-          <h2 className="mt-1 text-2xl font-black uppercase text-white">Brand statements</h2>
-          <p className="mt-2 text-sm text-white/55">Payout status and transfer references for your brand.</p>
+    <div className="mt-4 space-y-4 text-neutral-100">
+      <section className="rounded-lg border border-white/10 bg-[#121212] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FileText size={16} className="text-primary" />
+            <div>
+              <h2 className="text-base font-semibold">Brand statements</h2>
+              <p className="text-xs text-neutral-500">Payout status and transfer references for your brand.</p>
+            </div>
+          </div>
+          <button onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100 disabled:opacity-40">
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
         </div>
-        <button onClick={() => void load()} disabled={loading} className="rounded-xl border border-white/10 p-2.5 text-white/70 hover:bg-white/10 disabled:opacity-50" aria-label="Refresh statements">
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-        </button>
-      </div>
+      </section>
 
-      {error && <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
-      {loading ? <p className="py-10 text-center text-sm text-white/45">Loading statements…</p> : statements.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center">
-          <FileText className="mx-auto text-white/25" size={28} />
-          <p className="mt-3 text-sm font-semibold text-white">No statements yet</p>
-          <p className="mt-1 text-xs text-white/45">Statements appear here after Juno receives DEX payment and completes settlement.</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
-            <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.16em] text-white/40">
-              <tr><th className="pb-3">Statement</th><th className="pb-3">Created</th><th className="pb-3">Status</th><th className="pb-3 text-right">Transfer</th><th className="pb-3">Reference</th></tr>
-            </thead>
-            <tbody>
-              {statements.map((statement) => (
-                <tr key={statement.id} className="border-b border-white/5 text-white/75">
-                  <td className="py-4 font-mono text-xs text-white">{statement.id}</td>
-                  <td className="py-4">{statement.created_at ? new Date(statement.created_at).toLocaleDateString('en-PK') : '-'}</td>
-                  <td className="py-4"><span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${statement.status === 'paid' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/30 bg-amber-400/10 text-amber-200'}`}>{statement.status}</span></td>
-                  <td className="py-4 text-right font-semibold text-white">{money(statement.transfer_amount ?? statement.amount)}</td>
-                  <td className="py-4 font-mono text-xs text-white/50">{statement.bank_reference || '-'}</td>
+      {error ? <section className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</section> : null}
+
+      <section className="rounded-lg border border-white/10 bg-[#121212] p-2">
+        {loading ? (
+          <div className="p-6 text-sm text-neutral-400">Loading statements...</div>
+        ) : statements.length === 0 ? (
+          <div className="p-10 text-center">
+            <FileText className="mx-auto text-neutral-600" size={24} />
+            <p className="mt-3 text-sm font-medium text-neutral-200">No statements yet</p>
+            <p className="mt-1 text-xs text-neutral-500">Statements appear here after Juno receives DEX payment and completes settlement.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-[#0f0f0f] text-neutral-400">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Statement</th>
+                  <th className="px-3 py-2 font-medium">Created</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 text-right font-medium">Transfer</th>
+                  <th className="px-3 py-2 font-medium">Reference</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
+              </thead>
+              <tbody>
+                {statements.map((statement) => (
+                  <tr key={statement.id} className="border-t border-white/5 text-neutral-300">
+                    <td className="px-3 py-2 font-mono text-neutral-100">{statement.id}</td>
+                    <td className="px-3 py-2">{statement.created_at ? new Date(statement.created_at).toLocaleDateString('en-PK') : '-'}</td>
+                    <td className="px-3 py-2">
+                      <span className={`rounded border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] ${statement.status === 'paid' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/30 bg-amber-400/10 text-amber-200'}`}>{statement.status}</span>
+                    </td>
+                    <td className="px-3 py-2 text-right font-medium text-neutral-100">{money(statement.transfer_amount ?? statement.amount)}</td>
+                    <td className="px-3 py-2 font-mono text-neutral-500">{statement.bank_reference || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 };
 

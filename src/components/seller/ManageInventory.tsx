@@ -110,9 +110,9 @@ const QueueItemCard: React.FC<{
     const isOutOfStock = totalStock <= 0;
 
     return (
-        <motion.div layout className={`relative flex h-full flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/[0.03] transition-all duration-300 hover:border-primary/25 hover:bg-white/[0.05] ${selected ? 'ring-2 ring-primary/70' : ''}`}>
+        <motion.div layout className={`relative flex h-full flex-col overflow-hidden rounded-lg border border-white/10 bg-[#121212] transition-all duration-300 hover:border-primary/25 hover:bg-white/[0.05] ${selected ? 'ring-2 ring-primary/70' : ''}`}>
              <div className="absolute top-3 right-3 z-10">
-                <button onClick={() => onSelect(item.id, false)} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
+                <button onClick={() => onSelect(item.id, false)} className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
                     {selected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
                 </button>
             </div>
@@ -129,22 +129,22 @@ const QueueItemCard: React.FC<{
                 </div>
             </div>
             <div className="p-4 flex-grow flex flex-col">
-                <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">Draft Item</p>
-                <h3 className="mt-2 font-black text-white truncate text-lg uppercase tracking-[-0.03em]">{product.title || 'Untitled Product'}</h3>
+                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Draft Item</p>
+                <h3 className="mt-2 truncate text-base font-semibold text-neutral-100">{product.title || 'Untitled Product'}</h3>
                 
                 {hasErrors && (
-                    <div className="mb-3 mt-3 rounded-[1rem] border border-red-500/20 bg-red-500/10 p-3">
+                    <div className="mb-3 mt-3 rounded-lg border border-red-500/20 bg-red-500/10 p-3">
                         <div className="mb-2 flex items-center gap-2 text-red-400 text-xs font-semibold uppercase tracking-[0.08em]">
                             <AlertTriangle size={12} />
                             <span>Attention Needed</span>
                         </div>
                         {missingFields.length > 0 && (
-                            <p className="text-xs text-white/70">
+                            <p className="text-xs text-neutral-300">
                                 Missing: {missingFields.join(', ')}
                             </p>
                         )}
                         {apiErrors.length > 0 && (
-                            <p className="mt-2 text-xs text-white/60">
+                            <p className="mt-2 text-xs text-neutral-300">
                                 API: {apiErrors.slice(0, 2).join(' · ')}
                                 {apiErrors.length > 2 ? ` · +${apiErrors.length - 2} more` : ''}
                             </p>
@@ -152,18 +152,18 @@ const QueueItemCard: React.FC<{
                     </div>
                 )}
 
-                <div className="mt-1 grid grid-cols-3 gap-2 text-xs text-white/52">
-                    <div className="rounded-[0.95rem] border border-white/10 bg-black/25 px-3 py-2">
-                        <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Type</p>
-                        <p className="mt-1 text-white/70">{product.product_type || 'Unset'}</p>
+                <div className="mt-1 grid grid-cols-3 gap-2 text-xs text-neutral-400">
+                    <div className="rounded border border-white/10 bg-[#0e0e0e] px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Type</p>
+                        <p className="mt-1 text-neutral-300">{product.product_type || 'Unset'}</p>
                     </div>
-                    <div className="rounded-[0.95rem] border border-white/10 bg-black/25 px-3 py-2">
-                        <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Variants</p>
-                        <p className="mt-1 text-white/70">{product.variants?.length || 0}</p>
+                    <div className="rounded border border-white/10 bg-[#0e0e0e] px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Variants</p>
+                        <p className="mt-1 text-neutral-300">{product.variants?.length || 0}</p>
                     </div>
-                    <div className={`rounded-[0.95rem] border px-3 py-2 ${isOutOfStock ? 'border-red-500/30 bg-red-500/10' : 'border-white/10 bg-black/25'}`}>
-                        <p className={`text-[10px] font-mono uppercase tracking-[0.18em] ${isOutOfStock ? 'text-red-300' : 'text-white/25'}`}>Stock</p>
-                        <p className={`mt-1 ${isOutOfStock ? 'text-red-300 font-semibold' : 'text-white/70'}`}>{totalStock}</p>
+                    <div className={`rounded border px-3 py-2 ${isOutOfStock ? 'border-red-500/30 bg-red-500/10' : 'border-white/10 bg-[#0e0e0e]'}`}>
+                        <p className={`text-[10px] uppercase tracking-[0.12em] ${isOutOfStock ? 'text-red-300' : 'text-neutral-500'}`}>Stock</p>
+                        <p className={`mt-1 ${isOutOfStock ? 'text-red-300 font-semibold' : 'text-neutral-300'}`}>{totalStock}</p>
                     </div>
                 </div>
 
@@ -217,15 +217,15 @@ const QueueItemListItem: React.FC<{
     const isOutOfStock = totalStock <= 0;
 
     return (
-        <motion.div layout className={`rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5 border-primary/25' : 'hover:bg-white/[0.05] hover:border-primary/20'}`}>
+        <motion.div layout className={`rounded-lg border border-white/10 bg-[#121212] p-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5 border-primary/25' : 'hover:bg-white/[0.05] hover:border-primary/20'}`}>
             <div className="flex items-center gap-4 flex-grow min-w-0">
                  <button onClick={(e) => { e.stopPropagation(); onSelect(item.id, e.shiftKey); }} className="text-neutral-400 hover:text-white">
                     {selected ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
                 </button>
                 <img src={getShopifyThumbnail(product.images?.[0], '100x100')} alt={product.title} loading="lazy" decoding="async" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
                 <div className="min-w-0">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Draft Item</p>
-                    <p className="font-black text-white truncate text-lg uppercase tracking-[-0.03em]">{product.title || 'Untitled Product'}</p>
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Draft Item</p>
+                    <p className="truncate text-base font-semibold text-neutral-100">{product.title || 'Untitled Product'}</p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md uppercase tracking-wider ${
                         item.status === 'ready' ? 'bg-green-500 text-white' : 
                         item.status === 'failed' ? 'bg-red-500 text-white' : 
@@ -237,7 +237,7 @@ const QueueItemListItem: React.FC<{
             </div>
 
             {hasIssues && (
-                <div className="max-w-sm rounded-[1rem] border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-white/70">
+                <div className="max-w-sm rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-neutral-300">
                     <div className="flex items-center gap-2 text-red-400 text-xs font-semibold uppercase tracking-[0.08em]">
                         <AlertTriangle size={12} />
                         <span>Resolve Before Publish</span>
@@ -248,7 +248,7 @@ const QueueItemListItem: React.FC<{
             )}
 
             <div className="flex items-center gap-2 self-start sm:self-center mt-4 sm:mt-0 sm:border-l sm:border-white/10 sm:pl-4">
-                <div className={`rounded-lg border px-2 py-1 text-xs ${isOutOfStock ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-white/10 bg-black/20 text-white/55'}`}>
+                <div className={`rounded-lg border px-2 py-1 text-xs ${isOutOfStock ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-white/10 bg-black/20 text-neutral-400'}`}>
                     Stock: <span className="font-semibold">{totalStock}</span>
                 </div>
                 <button
@@ -308,9 +308,9 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
   };
 
   return (
-    <motion.div layout className={`relative flex flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/[0.03] transition-all duration-300 hover:border-primary/25 hover:bg-white/[0.05] ${selected ? 'ring-2 ring-primary/70' : ''}`}>
+    <motion.div layout className={`relative flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[#121212] transition-all duration-300 hover:border-primary/25 hover:bg-white/[0.05] ${selected ? 'ring-2 ring-primary/70' : ''}`}>
       <div className="absolute top-3 right-12 z-10">
-          <button onClick={(e) => onSelect(product.id, e.shiftKey)} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
+          <button onClick={(e) => onSelect(product.id, e.shiftKey)} className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors">
               {selected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
           </button>
       </div>
@@ -319,10 +319,10 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
         <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-md ${currentStatus.className}`}>{currentStatus.text}</span>
         <div className="absolute top-3 right-3">
           <div className="relative">
-            <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(prev => !prev); }} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"><MoreVertical size={18} /></button>
+            <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(prev => !prev); }} className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"><MoreVertical size={18} /></button>
             <AnimatePresence>
               {isMenuOpen && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-48 rounded-[1.2rem] border border-white/10 bg-[#090909] z-10 p-1 shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-48 rounded-lg border border-white/10 bg-[#090909] z-10 p-1 shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
                   <button onClick={() => { onEdit(product); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-white/10 rounded-lg">Edit</button>
                   <button onClick={() => { onDuplicate(product); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-white/10 rounded-lg">Duplicate</button>
                   <button onClick={() => { onDelete(product.id); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg">Delete</button>
@@ -333,14 +333,14 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
         </div>
       </div>
       <div className="p-5 flex-grow flex flex-col">
-        <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Catalog Item</p>
-        <h3 className="mt-2 font-black text-white truncate group-hover:text-primary transition-colors text-lg uppercase tracking-[-0.03em]">{product.title}</h3>
+        <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Catalog Item</p>
+        <h3 className="mt-2 truncate text-base font-semibold text-neutral-100 transition-colors group-hover:text-primary">{product.title}</h3>
         <div className="flex items-center gap-2 mt-3 text-xs">
-          <select value={product.product_type || ''} onChange={(e) => onUpdateProduct(product.id, { product_type: e.target.value })} onClick={(e) => e.stopPropagation()} className="glass-input py-1 px-2 text-xs w-full bg-white/5 border-white/10">
+          <select value={product.product_type || ''} onChange={(e) => onUpdateProduct(product.id, { product_type: e.target.value })} onClick={(e) => e.stopPropagation()} className="w-full rounded border border-white/20 bg-[#080808] px-2 py-1 text-xs text-neutral-100 [color-scheme:dark]">
             <option value="" className="bg-neutral-900">Type</option>
             {productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}
           </select>
-          <select value={currentGender} onChange={handleGenderChange} onClick={(e) => e.stopPropagation()} className="glass-input py-1 px-2 text-xs w-full bg-white/5 border-white/10">
+          <select value={currentGender} onChange={handleGenderChange} onClick={(e) => e.stopPropagation()} className="w-full rounded border border-white/20 bg-[#080808] px-2 py-1 text-xs text-neutral-100 [color-scheme:dark]">
             <option value="" className="bg-neutral-900">Gender</option>
             <option value="male" className="bg-neutral-900">Male</option>
             <option value="female" className="bg-neutral-900">Female</option>
@@ -348,11 +348,11 @@ const ProductCard: React.FC<{ product: Product; selected: boolean; onSelect: (id
           </select>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 flex-grow pt-4 border-t border-white/5">
-          <div className="rounded-[1rem] border border-white/10 bg-black/25 p-3">
+          <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-3">
             <p className="text-xs text-neutral-500 mb-1">Price</p>
-            <p className="text-lg font-semibold text-white">Rs. {price.toLocaleString()}</p>
+            <p className="text-lg font-semibold text-neutral-100">Rs. {price.toLocaleString()}</p>
           </div>
-          <div className="rounded-[1rem] border border-white/10 bg-black/25 p-3 text-right">
+          <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-3 text-right">
             <p className="text-xs text-neutral-500 mb-1">Stock</p>
             <p className={`text-lg font-semibold ${totalInventory > 0 ? 'text-green-400' : 'text-red-400'}`}>{totalInventory}</p>
           </div>
@@ -386,27 +386,27 @@ const ProductListItem: React.FC<{ product: Product; selected: boolean; onSelect:
     };
 
     return (
-        <motion.div layout className={`rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5 border-primary/25' : 'hover:bg-white/[0.05] hover:border-primary/20'}`}>
+        <motion.div layout className={`rounded-lg border border-white/10 bg-[#121212] p-4 flex flex-col sm:flex-row sm:items-center sm:gap-6 transition-colors ${selected ? 'ring-1 ring-primary bg-primary/5 border-primary/25' : 'hover:bg-white/[0.05] hover:border-primary/20'}`}>
             <div className="flex items-center gap-4 flex-grow min-w-0">
                  <button onClick={(e) => onSelect(product.id, e.shiftKey)} className="text-neutral-400 hover:text-white">
                     {selected ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
                 </button>
                 <img src={getShopifyThumbnail(product.images[0], '100x100')} alt={product.title} loading="lazy" decoding="async" className="w-16 h-16 rounded-lg object-cover bg-neutral-800 border border-white/10" />
                 <div className="min-w-0">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/25">Catalog Item</p>
-                    <p className="font-black text-white truncate text-lg uppercase tracking-[-0.03em]">{product.title}</p>
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Catalog Item</p>
+                    <p className="truncate text-base font-semibold text-neutral-100">{product.title}</p>
                     <p className="text-sm text-neutral-400">Rs. {price.toLocaleString()}</p>
                 </div>
             </div>
             <div className="flex-shrink-0 flex items-center justify-between sm:justify-end gap-3 mt-4 sm:mt-0 flex-wrap sm:flex-nowrap">
                 <div className="w-32">
-                    <select value={product.product_type || ''} onChange={(e) => onUpdateProduct(product.id, { product_type: e.target.value })} className="glass-input py-1 px-2 text-xs w-full bg-white/5 border-white/10 h-8">
+                    <select value={product.product_type || ''} onChange={(e) => onUpdateProduct(product.id, { product_type: e.target.value })} className="h-8 w-full rounded border border-white/20 bg-[#080808] px-2 py-1 text-xs text-neutral-100 [color-scheme:dark]">
                         <option value="" className="bg-neutral-900">Type</option>
                         {productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}
                     </select>
                 </div>
                 <div className="w-24">
-                    <select value={currentGender} onChange={handleGenderChange} className="glass-input py-1 px-2 text-xs w-full bg-white/5 border-white/10 h-8">
+                    <select value={currentGender} onChange={handleGenderChange} className="h-8 w-full rounded border border-white/20 bg-[#080808] px-2 py-1 text-xs text-neutral-100 [color-scheme:dark]">
                         <option value="" className="bg-neutral-900">Gender</option>
                         <option value="male" className="bg-neutral-900">Male</option>
                         <option value="female" className="bg-neutral-900">Female</option>
@@ -504,7 +504,7 @@ const BulkSizingGuideModal: React.FC<{
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="glass-panel w-full max-w-3xl max-h-[90vh] flex flex-col"
+                className="rounded-lg border border-white/10 bg-[#121212] w-full max-w-3xl max-h-[90vh] flex flex-col"
             >
                 <div className="flex justify-between items-center p-6 border-b border-white/10">
                     <h3 className="text-xl font-bold text-white">Bulk Update Sizing Guide</h3>
@@ -527,7 +527,7 @@ const BulkSizingGuideModal: React.FC<{
                     <button 
                         onClick={handleSave} 
                         disabled={isSaving}
-                        className="glass-button bg-primary text-white flex items-center gap-2"
+                        className="inline-flex items-center gap-2 rounded border border-primary/40 bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary/90"
                     >
                         {isSaving ? 'Saving...' : <><Save size={18} /> Apply to Selected</>}
                     </button>
@@ -565,7 +565,7 @@ const BulkAttributesModal: React.FC<{
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="glass-panel w-full max-w-md flex flex-col"
+                className="rounded-lg border border-white/10 bg-[#121212] w-full max-w-md flex flex-col"
             >
                 <div className="flex justify-between items-center p-6 border-b border-white/10">
                     <h3 className="text-xl font-bold text-white">Bulk Update Attributes</h3>
@@ -581,7 +581,7 @@ const BulkAttributesModal: React.FC<{
                         <select 
                             value={productType} 
                             onChange={(e) => setProductType(e.target.value)}
-                            className="glass-input w-full p-2.5 bg-neutral-900/50"
+                            className="w-full rounded border border-white/20 bg-[#080808] p-2 text-xs text-neutral-100"
                         >
                             <option value="">No Change</option>
                             {productTypes.map(type => (
@@ -595,7 +595,7 @@ const BulkAttributesModal: React.FC<{
                         <select 
                             value={gender} 
                             onChange={(e) => setGender(e.target.value)}
-                            className="glass-input w-full p-2.5 bg-neutral-900/50"
+                            className="w-full rounded border border-white/20 bg-[#080808] p-2 text-xs text-neutral-100"
                         >
                             <option value="">No Change</option>
                             <option value="male" className="bg-neutral-900">Male</option>
@@ -609,7 +609,7 @@ const BulkAttributesModal: React.FC<{
                     <button 
                         onClick={handleSave} 
                         disabled={isSaving}
-                        className="glass-button bg-primary text-white flex items-center gap-2"
+                        className="inline-flex items-center gap-2 rounded border border-primary/40 bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary/90"
                     >
                         {isSaving ? 'Saving...' : <><Save size={18} /> Update Products</>}
                     </button>
@@ -1080,13 +1080,13 @@ const ManageInventory: React.FC = () => {
     }
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div className="mb-5 rounded-[1.9rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,24,24,0.16),transparent_35%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 space-y-4 text-neutral-100">
+            <div className="rounded-lg border border-white/10 bg-[#121212] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                        <p className="text-[10px] font-mono uppercase tracking-[0.26em] text-primary/75">Inventory</p>
-                        <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.04em] text-white">Product Workspace</h2>
-                        <p className="mt-2 max-w-2xl text-sm text-white/58">
+                        <p className="text-[10px] uppercase tracking-[0.12em] text-primary/75">Inventory</p>
+                        <h2 className="mt-2 text-2xl font-semibold text-neutral-100">Product Workspace</h2>
+                        <p className="mt-2 max-w-2xl text-sm text-neutral-400">
                             Run catalog work from one place: clean products, fix queue issues, and publish only what is ready.
                         </p>
                     </div>
@@ -1098,10 +1098,10 @@ const ManageInventory: React.FC = () => {
                         ].map(stat => (
                             <div
                                 key={stat.label}
-                                className={`rounded-xl border px-3 py-2.5 ${stat.pulse ? 'border-primary/40 bg-primary/15 shadow-[0_0_24px_rgba(255,24,24,0.15)]' : 'border-white/10 bg-black/25'}`}
+                                className={`rounded-xl border px-3 py-2.5 ${stat.pulse ? 'border-primary/40 bg-primary/15 shadow-[0_0_24px_rgba(255,24,24,0.15)]' : 'border-white/10 bg-[#0e0e0e]'}`}
                             >
-                                <p className={`text-[10px] font-mono uppercase tracking-[0.18em] ${stat.pulse ? 'text-primary' : 'text-white/35'}`}>{stat.label}</p>
-                                <p className="mt-1 text-lg font-black uppercase tracking-[-0.03em] text-white">{stat.value}</p>
+                                <p className={`text-[10px] uppercase tracking-[0.12em] ${stat.pulse ? 'text-primary' : 'text-neutral-400'}`}>{stat.label}</p>
+                                <p className="mt-1 text-lg font-semibold text-neutral-100">{stat.value}</p>
                             </div>
                         ))}
                     </div>
@@ -1109,38 +1109,38 @@ const ManageInventory: React.FC = () => {
             </div>
 
             <div className="mb-4 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-                <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-lg border border-white/10 bg-[#121212] p-4">
                     <div className="flex items-center justify-between gap-3">
                         <div>
-                            <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">Workspace Debug</p>
-                            <h3 className="mt-2 text-lg font-black uppercase tracking-[-0.03em] text-white">Inventory Feed State</h3>
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Workspace Debug</p>
+                            <h3 className="mt-2 text-lg font-semibold text-neutral-100">Inventory Feed State</h3>
                         </div>
-                        <div className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.2em] text-primary">
+                        <div className="rounded border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-primary">
                             {diagnostics?.source ?? activeTab}
                         </div>
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-4">
-                        <div className="rounded-[1.1rem] border border-white/10 bg-black/25 p-3">
-                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">API Rows</p>
-                            <p className="mt-2 text-lg font-black uppercase tracking-[-0.03em] text-white">{diagnostics?.apiCount ?? 0}</p>
+                        <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-3">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">API Rows</p>
+                            <p className="mt-2 text-lg font-semibold text-neutral-100">{diagnostics?.apiCount ?? 0}</p>
                         </div>
-                        <div className="rounded-[1.1rem] border border-white/10 bg-black/25 p-3">
-                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">Unique Rows</p>
-                            <p className="mt-2 text-lg font-black uppercase tracking-[-0.03em] text-white">{diagnostics?.uniqueCount ?? 0}</p>
+                        <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-3">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Unique Rows</p>
+                            <p className="mt-2 text-lg font-semibold text-neutral-100">{diagnostics?.uniqueCount ?? 0}</p>
                         </div>
-                        <div className="rounded-[1.1rem] border border-white/10 bg-black/25 p-3">
-                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">Duplicates</p>
-                            <p className={`mt-2 text-lg font-black uppercase tracking-[-0.03em] ${diagnostics && diagnostics.duplicateIds.length > 0 ? 'text-red-300' : 'text-white'}`}>
+                        <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-3">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Duplicates</p>
+                            <p className={`mt-2 text-lg font-semibold ${diagnostics && diagnostics.duplicateIds.length > 0 ? 'text-red-300' : 'text-white'}`}>
                                 {diagnostics?.duplicateIds.length ?? 0}
                             </p>
                         </div>
-                        <div className="rounded-[1.1rem] border border-white/10 bg-black/25 p-3">
-                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">Pages</p>
-                            <p className="mt-2 text-lg font-black uppercase tracking-[-0.03em] text-white">{diagnostics?.pagesLoaded ?? 1}</p>
+                        <div className="rounded-lg border border-white/10 bg-[#0e0e0e] p-3">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Pages</p>
+                            <p className="mt-2 text-lg font-semibold text-neutral-100">{diagnostics?.pagesLoaded ?? 1}</p>
                         </div>
                     </div>
                     {diagnostics && (
-                        <div className="mt-3 rounded-[1.1rem] border border-white/10 bg-black/25 p-3 text-xs text-white/55">
+                        <div className="mt-3 rounded-lg border border-white/10 bg-[#0e0e0e] p-3 text-xs text-neutral-400">
                             <p>Sample IDs: {(diagnostics.sampleIds || []).join(', ') || 'none'}</p>
                             {diagnostics.duplicateIds.length > 0 && (
                                 <p className="mt-2 text-red-300">Duplicate IDs: {diagnostics.duplicateIds.join(', ')}</p>
@@ -1149,18 +1149,18 @@ const ManageInventory: React.FC = () => {
                     )}
                 </div>
 
-                <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">Mode</p>
-                    <div className="mt-4 flex bg-black/30 p-1 rounded-[1.1rem] border border-white/10">
+                <div className="rounded-lg border border-white/10 bg-[#121212] p-4">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Mode</p>
+                    <div className="mt-4 flex bg-[#080808] p-1 rounded-lg border border-white/10">
                     <button 
                         onClick={() => setActiveTab('active')}
-                        className={`flex-1 px-4 py-3 rounded-[0.95rem] text-sm font-black uppercase tracking-[0.08em] transition-all ${activeTab === 'active' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-neutral-400 hover:text-white'}`}
+                        className={`flex-1 px-4 py-3 rounded text-sm font-semibold transition-all ${activeTab === 'active' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-neutral-400 hover:text-white'}`}
                     >
                         Active Products
                     </button>
                     <button
                         onClick={() => setActiveTab('queue')}
-                        className={`flex-1 px-4 py-3 rounded-[0.95rem] text-sm font-black uppercase tracking-[0.08em] transition-all flex items-center justify-center gap-2 ${activeTab === 'queue' ? 'bg-primary text-white shadow-lg shadow-primary/20' : queuePendingCount > 0 ? 'bg-primary/15 text-primary ring-1 ring-primary/30 animate-pulse' : 'text-neutral-400 hover:text-white'}`}
+                        className={`flex-1 px-4 py-3 rounded text-sm font-semibold transition-all flex items-center justify-center gap-2 ${activeTab === 'queue' ? 'bg-primary text-white shadow-lg shadow-primary/20' : queuePendingCount > 0 ? 'bg-primary/15 text-primary ring-1 ring-primary/30 animate-pulse' : 'text-neutral-400 hover:text-white'}`}
                     >
                         Drafts & Queue
                         {queuePendingCount > 0 && (
@@ -1173,31 +1173,31 @@ const ManageInventory: React.FC = () => {
                 </div>
             </div>
 
-            <div className="mb-6 rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-4">
+            <div className="mb-6 rounded-lg border border-white/10 bg-[#121212] p-4">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div>
-                        <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/30">
+                        <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">
                             {activeTab === 'active' ? 'Catalog' : 'Queue'}
                         </p>
-                        <h3 className="mt-2 text-xl font-black uppercase tracking-[-0.03em] text-white">
+                        <h3 className="mt-2 text-xl font-semibold text-neutral-100">
                             {activeTab === 'active' ? 'Manage Live Catalog' : 'Fix Drafts Before Publish'}
                         </h3>
                     </div>
                     <div className="flex items-center gap-2 md:gap-4 w-full xl:w-auto">
                     {activeTab === 'active' ? (
                         <>
-                        <div className="relative flex-grow"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search products..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full rounded-[1.1rem] border border-white/10 bg-black/30 py-3 pl-10 pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/35" /></div>
+                        <div className="relative flex-grow"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search products..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full rounded-lg border border-white/10 bg-[#080808] py-2 pl-9 pr-3 text-xs text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-primary/40" /></div>
                         <div className="relative">
-                            <button onClick={() => setIsFilterOpen(prev => !prev)} className="inline-flex items-center space-x-2 rounded-[1.05rem] border border-white/10 bg-black/25 px-4 py-3 text-sm font-semibold text-white/75 transition-colors hover:bg-white/10"><Filter size={16} /><span className="hidden sm:inline">Filters</span></button>
-                            <AnimatePresence>{isFilterOpen && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-72 rounded-[1.4rem] border border-white/10 bg-[#090909] z-20 p-4 space-y-4 shadow-[0_30px_80px_rgba(0,0,0,0.4)]">
-                                <h4 className="font-semibold text-white">Filter By</h4>
-                                <div><label className="text-sm text-neutral-400">Status</label><select value={filters.status} onChange={e => handleFilterChange('status', e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 p-2 text-sm text-white outline-none"><option value="all" className="bg-neutral-900">All Statuses</option><option value="active" className="bg-neutral-900">Active</option><option value="draft" className="bg-neutral-900">Draft</option><option value="inactive" className="bg-neutral-900">Inactive</option></select></div>
-                                <div><label className="text-sm text-neutral-400">Stock</label><select value={filters.stock} onChange={e => handleFilterChange('stock', e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 p-2 text-sm text-white outline-none"><option value="all" className="bg-neutral-900">All Stock</option><option value="inStock" className="bg-neutral-900">In Stock</option><option value="outOfStock" className="bg-neutral-900">Out of Stock</option></select></div>
-                                <div><label className="text-sm text-neutral-400">Product Type</label><select value={filters.productType} onChange={e => handleFilterChange('productType', e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 p-2 text-sm text-white outline-none"><option value="all" className="bg-neutral-900">All Types</option>{productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}</select></div>
-                                <div className="flex justify-end gap-2 pt-2 border-t border-white/10"><button onClick={clearFilters} className="text-sm text-neutral-400 hover:text-white px-3 py-1 rounded">Clear</button><button onClick={() => setIsFilterOpen(false)} className="text-sm bg-primary text-white px-4 py-1 rounded-lg hover:bg-primary/90">Done</button></div>
+                            <button onClick={() => setIsFilterOpen(prev => !prev)} className="inline-flex items-center space-x-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100 hover:bg-white/10"><Filter size={16} /><span className="hidden sm:inline">Filters</span></button>
+                            <AnimatePresence>{isFilterOpen && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-72 rounded-lg border border-white/10 bg-[#090909] z-20 p-4 space-y-4 shadow-[0_30px_80px_rgba(0,0,0,0.4)]">
+                                <h4 className="font-semibold text-neutral-100">Filter By</h4>
+                                <div><label className="text-sm text-neutral-400">Status</label><select value={filters.status} onChange={e => handleFilterChange('status', e.target.value)} className="mt-1 w-full rounded border border-white/20 bg-[#080808] p-2 text-xs text-neutral-100 outline-none [color-scheme:dark]"><option value="all" className="bg-neutral-900">All Statuses</option><option value="active" className="bg-neutral-900">Active</option><option value="draft" className="bg-neutral-900">Draft</option><option value="inactive" className="bg-neutral-900">Inactive</option></select></div>
+                                <div><label className="text-sm text-neutral-400">Stock</label><select value={filters.stock} onChange={e => handleFilterChange('stock', e.target.value)} className="mt-1 w-full rounded border border-white/20 bg-[#080808] p-2 text-xs text-neutral-100 outline-none [color-scheme:dark]"><option value="all" className="bg-neutral-900">All Stock</option><option value="inStock" className="bg-neutral-900">In Stock</option><option value="outOfStock" className="bg-neutral-900">Out of Stock</option></select></div>
+                                <div><label className="text-sm text-neutral-400">Product Type</label><select value={filters.productType} onChange={e => handleFilterChange('productType', e.target.value)} className="mt-1 w-full rounded border border-white/20 bg-[#080808] p-2 text-xs text-neutral-100 outline-none [color-scheme:dark]"><option value="all" className="bg-neutral-900">All Types</option>{productTypes.map(type => <option key={type} value={type} className="bg-neutral-900">{type}</option>)}</select></div>
+                                <div className="flex justify-end gap-2 pt-2 border-t border-white/10"><button onClick={clearFilters} className="text-sm text-neutral-400 hover:text-white px-3 py-1 rounded">Clear</button><button onClick={() => setIsFilterOpen(false)} className="rounded border border-primary/40 bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90">Done</button></div>
                             </motion.div>)}</AnimatePresence>
                         </div>
-                        <div className="flex items-center overflow-hidden rounded-[1.05rem] border border-white/10 bg-black/25"><button onClick={() => setViewMode('grid')} className={`p-3 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-3 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
+                        <div className="flex items-center overflow-hidden rounded-lg border border-white/10 bg-[#0e0e0e]"><button onClick={() => setViewMode('grid')} className={`p-3 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-3 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
                         </>
                     ) : (
                         <>
@@ -1211,7 +1211,7 @@ const ManageInventory: React.FC = () => {
                                         setQueueSearchQuery(e.target.value);
                                         setCurrentPage(1);
                                     }}
-                                    className="w-full rounded-[1.1rem] border border-white/10 bg-black/30 py-3 pl-10 pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-primary/35"
+                                    className="w-full rounded-lg border border-white/10 bg-[#080808] py-2 pl-9 pr-3 text-xs text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-primary/40"
                                 />
                             </div>
                             <select
@@ -1220,7 +1220,7 @@ const ManageInventory: React.FC = () => {
                                     setQueueStatusFilter(e.target.value as 'all' | 'queued' | 'synced' | 'enrichment_pending' | 'embedding_pending' | 'ready' | 'promoted' | 'failed');
                                     setCurrentPage(1);
                                 }}
-                                className="min-w-[11rem] rounded-[1.1rem] border border-white/10 bg-black/30 py-3 px-4 text-sm text-white outline-none"
+                                className="min-w-[11rem] rounded-lg border border-white/10 bg-[#080808] px-3 py-2 text-xs text-neutral-100 outline-none [color-scheme:dark]"
                             >
                                 <option value="all" className="bg-neutral-900">All Draft Statuses</option>
                                 <option value="queued" className="bg-neutral-900">Queued</option>
@@ -1231,11 +1231,11 @@ const ManageInventory: React.FC = () => {
                                 <option value="promoted" className="bg-neutral-900">Promoted</option>
                                 <option value="failed" className="bg-neutral-900">Failed</option>
                             </select>
-                            <div className="flex items-center overflow-hidden rounded-[1.05rem] border border-white/10 bg-black/25"><button onClick={() => setViewMode('grid')} className={`p-3 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-3 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
+                            <div className="flex items-center overflow-hidden rounded-lg border border-white/10 bg-[#0e0e0e]"><button onClick={() => setViewMode('grid')} className={`p-3 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><Grid size={18}/></button><button onClick={() => setViewMode('list')} className={`p-3 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'hover:bg-white/10 text-neutral-400'}`}><List size={18}/></button></div>
                         </>
                     )}
                     
-                    <button onClick={handleOpenEditorForCreate} className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.07em] text-white transition-colors hover:bg-primary/90"><Plus size={18} /><span className="hidden sm:inline">Add Product</span></button>
+                    <button onClick={handleOpenEditorForCreate} className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border border-primary/30 bg-primary px-5 py-3 text-sm font-semibold text-neutral-100 transition-colors hover:bg-primary/90"><Plus size={18} /><span className="hidden sm:inline">Add Product</span></button>
                     </div>
                 </div>
             </div>
@@ -1297,10 +1297,10 @@ const ManageInventory: React.FC = () => {
                     )}
 
                     {filteredProducts.length === 0 && (
-                        <div className="text-center py-20 glass-panel border-dashed border-white/20 mt-4">
-                            <h3 className="mt-4 text-xl font-semibold text-white">No products match your filters</h3>
+                        <div className="rounded-lg border border-dashed border-white/15 bg-[#121212] py-16 text-center mt-4">
+                            <h3 className="mt-4 text-xl font-semibold text-neutral-100">No products match your filters</h3>
                             <p className="mt-1 text-neutral-400">Try adjusting your search or filters.</p>
-                            <button onClick={clearFilters} className="mt-6 text-sm bg-primary text-white px-6 py-2 rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20">Clear Filters</button>
+                            <button onClick={clearFilters} className="mt-6 rounded border border-primary/40 bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90">Clear Filters</button>
                         </div>
                     )}
 
@@ -1321,10 +1321,10 @@ const ManageInventory: React.FC = () => {
                                     onReject={(id, reason) => handleRejectQueueItemWithReason(id, reason)}
                                 />
                             )) : (
-                                <div className="col-span-full text-center py-20 glass-panel border-dashed border-white/20">
-                                    <h3 className="text-xl font-semibold text-white">No drafts match your query</h3>
+                                <div className="col-span-full rounded-lg border border-dashed border-white/15 bg-[#121212] py-16 text-center">
+                                    <h3 className="text-xl font-semibold text-neutral-100">No drafts match your query</h3>
                                     <p className="mt-1 text-neutral-400">Try changing the status filter or search text.</p>
-                                    <button onClick={handleOpenEditorForCreate} className="mt-6 text-sm bg-primary text-white px-6 py-2 rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20">Upload Product</button>
+                                    <button onClick={handleOpenEditorForCreate} className="mt-6 rounded border border-primary/40 bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90">Upload Product</button>
                                 </div>
                             )}
                         </div>
@@ -1341,10 +1341,10 @@ const ManageInventory: React.FC = () => {
                                     onReject={(id, reason) => handleRejectQueueItemWithReason(id, reason)}
                                 />
                             )) : (
-                                <div className="text-center py-20 glass-panel border-dashed border-white/20 mt-4">
-                                    <h3 className="text-xl font-semibold text-white">No drafts match your query</h3>
+                                <div className="rounded-lg border border-dashed border-white/15 bg-[#121212] py-16 text-center mt-4">
+                                    <h3 className="text-xl font-semibold text-neutral-100">No drafts match your query</h3>
                                     <p className="mt-1 text-neutral-400">Try changing the status filter or search text.</p>
-                                    <button onClick={handleOpenEditorForCreate} className="mt-6 text-sm bg-primary text-white px-6 py-2 rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20">Upload Product</button>
+                                    <button onClick={handleOpenEditorForCreate} className="mt-6 rounded border border-primary/40 bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90">Upload Product</button>
                                 </div>
                             )}
                         </div>
