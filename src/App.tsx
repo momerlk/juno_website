@@ -34,6 +34,7 @@ const AdminAuth = React.lazy(() => import("./components/admin/AdminAuth"));
 const AdminDashboard = React.lazy(() => import("./components/admin/AdminDashboard"));
 const AdminProtectedRoute = React.lazy(() => import("./components/admin/ProtectedRoute"));
 const SellerManageOrders = React.lazy(() => import('./components/seller/ManageOrders'));
+const SellerOrderProcessingGuide = React.lazy(() => import('./components/seller/OrderProcessingGuide'));
 const ShopifySuccess = React.lazy(() => import('./components/seller/ShopifySuccess'));
 const ManageSellers = React.lazy(() => import('./components/admin/ManageSellers'));
 const ManageInvites = React.lazy(() => import('./components/admin/ManageInvites'));
@@ -210,6 +211,7 @@ function RoutedApp() {
                     <Route index element={<SellerHome />} />
                     <Route path="inventory" element={<ManageInventory />} />
                     <Route path="orders" element={<SellerManageOrders />} />
+                    <Route path="order-processing" element={<SellerOrderProcessingGuide />} />
                     <Route path="orders/:orderId" element={<SellerOrderDetailPage />} />
                     <Route path="statements" element={<SellerStatementsPage />} />
                     <Route path="analytics" element={<Analytics />} />
@@ -220,6 +222,7 @@ function RoutedApp() {
                     <Route index element={<SellerHome />} />
                     <Route path="inventory" element={<ManageInventory />} />
                     <Route path="orders" element={<SellerManageOrders />} />
+                    <Route path="order-processing" element={<SellerOrderProcessingGuide />} />
                     <Route path="orders/:orderId" element={<SellerOrderDetailPage />} />
                     <Route path="statements" element={<SellerStatementsPage />} />
                     <Route path="analytics" element={<Analytics />} />

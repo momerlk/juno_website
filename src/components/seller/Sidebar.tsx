@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, FileText, LayoutDashboard, LogOut, MessageCircle, Package, ShoppingCart, Store, User } from 'lucide-react';
+import { BarChart3, BookOpen, FileText, LayoutDashboard, LogOut, MessageCircle, Package, ShoppingCart, Store, User } from 'lucide-react';
 import { Button } from '@astryxdesign/core/Button';
 import { Divider } from '@astryxdesign/core/Divider';
 import { NavIcon } from '@astryxdesign/core/NavIcon';
@@ -13,6 +13,7 @@ export const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, subtitle: 'Your daily brand overview.' },
   { name: 'Inventory', href: '/dashboard/inventory', icon: Package, subtitle: 'Products, drafts, and stock.' },
   { name: 'Orders', href: '/dashboard/orders', icon: ShoppingCart, subtitle: 'Fulfillment for your customers.' },
+  { name: 'Order processing guide', href: '/dashboard/order-processing', icon: BookOpen, subtitle: 'Visual packing workflow.' },
   { name: 'Statements', href: '/dashboard/statements', icon: FileText, subtitle: 'Payouts and settlement history.' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, subtitle: 'Demand and audience signals.' },
   { name: 'Profile', href: '/dashboard/profile', icon: User, subtitle: 'Your brand storefront.' },
