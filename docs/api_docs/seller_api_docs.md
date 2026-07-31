@@ -10,6 +10,17 @@ Route groups and auth:
 - `GET /api/v2/seller/auth/register/draft` — public
 - All other `/api/v2/seller/*` endpoints require seller auth: `Authorization: Bearer <seller_token>`
 
+## Settlement statements
+
+Seller settlement reads are under `/api/v2/commerce/seller/statements` and always derive the seller from the bearer token; do not send a seller ID.
+
+- `GET /api/v2/commerce/seller/statements` lists safe settlement summaries.
+- `GET /api/v2/commerce/seller/statements/{id}` returns the statement's orders, DEX deductions, commission, transfer amount, payment date/reference, and `proof_available`.
+- `GET /api/v2/commerce/seller/statements/{id}/invoice` returns the existing printable HTML invoice after ownership verification.
+- `GET /api/v2/commerce/seller/statements/{id}/payment-proof` returns `{ "url": "..." }` only for a paid statement with a proof object. The URL is signed for 15 minutes.
+
+Statements belonging to another seller return `404`; the portal should show no action rather than retrying with a browser-supplied seller ID.
+
 ---
 
 ## Shared Response Schemas

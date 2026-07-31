@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, RefreshCw } from 'lucide-react';
+import { ExternalLink, FileText, Paperclip, RefreshCw } from 'lucide-react';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import { Seller } from '../../api/sellerApi';
 import type { SellerStatement } from '../../api/api.types';
@@ -10,6 +10,7 @@ const StatementsPage: React.FC = () => {
   const { seller } = useSellerAuth();
   const [statements, setStatements] = useState<SellerStatement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [opening, setOpening] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
@@ -29,6 +30,40 @@ const StatementsPage: React.FC = () => {
   };
 
   useEffect(() => { void load(); }, [seller?.token]);
+
+  const openInvoice = async (statementId: string) => {
+    if (!seller?.token) return;
+    const popup = window.open('', '_blank');
+    if (!popup) return setError('Allow pop-ups to view the invoice.');
+    setOpening(`invoice-${statementId}`);
+    setError(null);
+    try {
+      const response = await Seller.getStatementInvoice(statementId, seller.token);
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Could not load invoice');
+      popup.document.write(response.body.html);
+      popup.document.close();
+    } catch (cause) {
+      popup.close();
+      setError(cause instanceof Error ? cause.message : 'Could not load invoice');
+    } finally {
+      setOpening(null);
+    }
+  };
+
+  const openPaymentProof = async (statementId: string) => {
+    if (!seller?.token) return;
+    setOpening(`proof-${statementId}`);
+    setError(null);
+    try {
+      const response = await Seller.getStatementPaymentProof(statementId, seller.token);
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Payment proof is not available');
+      window.open(response.body.url, '_blank', 'noopener,noreferrer');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Payment proof is not available');
+    } finally {
+      setOpening(null);
+    }
+  };
 
   return (
     <div className="mt-4 space-y-4 text-neutral-100">
@@ -68,6 +103,7 @@ const StatementsPage: React.FC = () => {
                   <th className="px-3 py-2 font-medium">Status</th>
                   <th className="px-3 py-2 text-right font-medium">Transfer</th>
                   <th className="px-3 py-2 font-medium">Reference</th>
+                  <th className="px-3 py-2 text-right font-medium">Documents</th>
                 </tr>
               </thead>
               <tbody>
@@ -80,6 +116,16 @@ const StatementsPage: React.FC = () => {
                     </td>
                     <td className="px-3 py-2 text-right font-medium text-neutral-100">{money(statement.transfer_amount ?? statement.amount)}</td>
                     <td className="px-3 py-2 font-mono text-neutral-500">{statement.bank_reference || '-'}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => void openInvoice(statement.id)} disabled={opening !== null} className="inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 text-[10px] text-neutral-200 disabled:opacity-40">
+                          <ExternalLink size={11} /> {opening === `invoice-${statement.id}` ? 'Opening...' : 'Invoice'}
+                        </button>
+                        {statement.status === 'paid' ? <button onClick={() => void openPaymentProof(statement.id)} disabled={opening !== null} className="inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 text-[10px] text-neutral-200 disabled:opacity-40">
+                          <Paperclip size={11} /> {opening === `proof-${statement.id}` ? 'Opening...' : 'Proof'}
+                        </button> : null}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

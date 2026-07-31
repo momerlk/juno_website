@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { AlertTriangle, ChevronDown, Eye, RefreshCw, Search, ShoppingCart, Truck } from 'lucide-react';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
 import * as api from '../../api/sellerApi';
 import { useSellerAuth } from '../../contexts/SellerAuthContext';
 import { Order } from '../../constants/orders';
@@ -21,7 +22,28 @@ const STATUS_FILTERS = [
   'returned',
 ] as const;
 
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
 const formatCurrency = (value?: number) => `Rs ${(value ?? 0).toLocaleString()}`;
+
+const statusClass = (status?: string) => {
+  switch ((status || '').toLowerCase()) {
+    case 'delivered':
+    case 'fulfilled':
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+    case 'pending':
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+    case 'cancelled':
+    case 'returned':
+      return 'border-red-500/30 bg-red-500/10 text-red-300';
+    case 'out_for_delivery':
+    case 'handed_to_rider':
+    case 'at_warehouse':
+      return 'border-blue-500/30 bg-blue-500/10 text-blue-300';
+    default:
+      return 'border-white/20 bg-white/5 text-neutral-300';
+  }
+};
 
 const getAllowedTransitions = (status?: string) => {
   const normalized = String(status || '').toLowerCase();
@@ -32,6 +54,8 @@ const getAllowedTransitions = (status?: string) => {
 };
 
 const toLabel = (value: string) => value.replace(/_/g, ' ');
+
+const dateOnly = (value?: string) => value ? new Date(value).toLocaleDateString('en-PK') : '-';
 
 const getItemImage = (item: any) => item?.product_image || item?.image || item?.product?.image || 'https://via.placeholder.com/80x80?text=No+Image';
 
@@ -49,7 +73,7 @@ const ManageOrders: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [expandedLoadingOrderId, setExpandedLoadingOrderId] = useState<string | null>(null);
@@ -118,6 +142,28 @@ const ManageOrders: React.FC = () => {
     });
   }, [orders, searchTerm]);
 
+  const metrics = useMemo(() => {
+    const closed = ['delivered', 'fulfilled', 'cancelled', 'returned'];
+    return {
+      open: filteredOrders.filter((order) => !closed.includes(String(order.status).toLowerCase())).length,
+      pending: pendingOrders.length,
+      gmv: filteredOrders.reduce((sum, order) => sum + (order.total || 0), 0),
+      delivered: filteredOrders.filter((order) => ['delivered', 'fulfilled'].includes(String(order.status).toLowerCase())).length,
+    };
+  }, [filteredOrders, pendingOrders]);
+
+  const views = useMemo(() => ([
+    { id: 'all' as StatusFilter, label: 'All', count: statusFilter === 'all' ? orders.length : undefined },
+    { id: 'pending' as StatusFilter, label: 'Pending', count: statusFilter === 'all' ? pendingOrders.length : undefined },
+    { id: 'confirmed' as StatusFilter, label: 'Confirmed' },
+    { id: 'packed' as StatusFilter, label: 'Packed' },
+    { id: 'handed_to_rider' as StatusFilter, label: 'Handed to rider' },
+    { id: 'out_for_delivery' as StatusFilter, label: 'Out for delivery' },
+    { id: 'delivered' as StatusFilter, label: 'Delivered' },
+    { id: 'cancelled' as StatusFilter, label: 'Cancelled' },
+    { id: 'returned' as StatusFilter, label: 'Returned' },
+  ]), [orders.length, pendingOrders.length, statusFilter]);
+
   const openStatusPanel = (order: Order) => {
     const transitions = getAllowedTransitions(order.status);
     setStatusPanelOrderId((prev) => (prev === order.id ? null : order.id || null));
@@ -171,205 +217,225 @@ const ManageOrders: React.FC = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45 }}
-      className="mt-4 space-y-4 text-neutral-100"
-    >
-      <section className="rounded-lg border border-white/10 bg-[#121212] p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={16} className="text-primary" />
-            <div>
-              <h2 className="text-base font-semibold">Order Management</h2>
-              <p className="text-xs text-neutral-500">Fulfilment queue for your brand&apos;s customer orders.</p>
+    <div className="space-y-4">
+      <Card padding={0}>
+        <div className="flex flex-col gap-4 border-b border-white/10 p-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShoppingCart size={18} className="text-primary" />
+              <h2 className="text-lg font-semibold text-white">Orders</h2>
             </div>
+            <p className="mt-1 text-xs text-neutral-400">
+              Your fulfillment desk for confirming, packing, and handing orders to the rider.
+            </p>
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as (typeof STATUS_FILTERS)[number])}
-              className="rounded border border-white/20 bg-[#080808] px-2 py-2 text-xs text-neutral-100 [color-scheme:dark]"
-            >
-              {STATUS_FILTERS.map((status) => (
-                <option key={status} value={status}>
-                  {toLabel(status)}
-                </option>
-              ))}
-            </select>
-            <span className="rounded border border-white/15 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-neutral-400">
-              {orders.length} orders
-            </span>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-500" size={14} />
-              <input
-                type="text"
-                placeholder="Search by customer, phone, order id..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded border border-white/20 bg-[#080808] py-2 pl-7 pr-3 text-xs text-neutral-100 placeholder:text-neutral-500"
-              />
-            </div>
-            <button
+            <Button
+              label="Refresh"
+              variant="secondary"
+              size="sm"
+              icon={<RefreshCw size={14} />}
               onClick={() => void fetchOrders()}
-              className="inline-flex items-center gap-2 rounded border border-white/15 bg-[#1a1a1a] px-3 py-2 text-xs text-neutral-100"
-            >
-              <RefreshCw size={13} /> Refresh
-            </button>
+              isLoading={isLoading}
+            />
           </div>
         </div>
-      </section>
 
-      {pendingOrders.length > 0 && (
-        <section className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-4">
-          <div className="flex items-start gap-2">
-            <AlertTriangle size={14} className="mt-0.5 text-amber-300" />
-            <div>
-              <p className="text-sm font-medium text-amber-200">Pending orders require immediate action</p>
-              <p className="mt-1 text-xs text-amber-300/80">
-                {pendingOrders.length} pending order(s) are pinned at the top until confirmed or cancelled.
-              </p>
-            </div>
+        <div className="grid grid-cols-2 gap-px border-b border-white/10 bg-white/10 text-xs md:grid-cols-4">
+          <div className="bg-[#111] p-3">
+            <p className="text-neutral-500">Open orders</p>
+            <p className="mt-1 text-lg font-semibold text-white">{metrics.open}</p>
           </div>
-        </section>
-      )}
+          <div className="bg-[#111] p-3">
+            <p className="text-neutral-500">Needs action</p>
+            <p className="mt-1 text-lg font-semibold text-amber-300">{metrics.pending}</p>
+          </div>
+          <div className="bg-[#111] p-3">
+            <p className="text-neutral-500">Total value in view</p>
+            <p className="mt-1 text-lg font-semibold text-white">{formatCurrency(metrics.gmv)}</p>
+          </div>
+          <div className="bg-[#111] p-3">
+            <p className="text-neutral-500">Delivered</p>
+            <p className="mt-1 text-lg font-semibold text-white">{metrics.delivered}</p>
+          </div>
+        </div>
 
-      {error ? <section className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</section> : null}
+        <div className="flex flex-wrap gap-1 border-b border-white/10 px-3 py-2">
+          {views.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium ${statusFilter === tab.id ? 'bg-white text-black' : 'text-neutral-300 hover:bg-white/10'}`}
+            >
+              {tab.label}
+              {typeof tab.count === 'number' ? ` ${tab.count}` : ''}
+            </button>
+          ))}
+        </div>
 
-      <section className="rounded-lg border border-white/10 bg-[#121212] p-2">
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-xs">
-          <thead className="bg-[#0f0f0f] text-neutral-400">
-            <tr>
-              <th className="px-3 py-2 font-medium">Order</th>
-              <th className="px-3 py-2 font-medium">Customer</th>
-              <th className="px-3 py-2 font-medium">Financials</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Actions</th>
-            </tr>
-          </thead>
+        <div className="flex flex-col gap-3 border-b border-white/10 p-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="relative w-full xl:max-w-lg">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search order, customer, phone, city"
+              className="w-full rounded-md border border-white/10 bg-black/30 py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-primary/60"
+            />
+          </div>
+          <span className="text-xs text-neutral-400">{filteredOrders.length} orders in view</span>
+        </div>
 
-          <tbody>
-            {isLoading ? (
+        {pendingOrders.length > 0 && (
+          <div className="flex items-start gap-2 border-b border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            <span>
+              {pendingOrders.length} pending order(s) are pinned at the top until confirmed or cancelled.
+            </span>
+          </div>
+        )}
+
+        {error && (
+          <div className="border-b border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1060px] text-left text-sm">
+            <thead className="border-b border-white/10 text-xs uppercase text-neutral-500">
               <tr>
-                <td colSpan={5} className="p-6 text-sm text-neutral-400">
-                  Loading seller orders...
-                </td>
+                <th className="p-3">Order</th>
+                <th className="p-3">Customer</th>
+                <th className="p-3">Juno status</th>
+                <th className="p-3">DEX shipping</th>
+                <th className="p-3 text-right">Financials</th>
+                <th className="w-24 p-3">City</th>
+                <th className="p-3">Created</th>
+                <th className="p-3 text-right">Actions</th>
               </tr>
-            ) : filteredOrders.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-6 text-sm text-neutral-500">No orders found.</td>
-              </tr>
-            ) : (
-              filteredOrders.flatMap((order) => {
-                const isExpanded = expandedOrderId === order.id;
-                const isStatusPanelOpen = statusPanelOrderId === order.id;
-                const detail = (order.id && orderDetailsById[order.id]) || order;
-                const transitions = getAllowedTransitions(order.status);
-                const items = detail.order_items || [];
-                const financials = (detail as any).financials || {};
+            </thead>
 
-                const rows: React.ReactNode[] = [
-                  <tr key={order.id} className="border-t border-white/5 align-top hover:bg-white/[0.03]">
-                    <td className="px-3 py-2">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-white font-mono text-xs">#{order.order_number || order.id}</span>
-                        <span className="text-neutral-500 font-mono text-[10px]">ID: {order.id}</span>
-                        <span className="text-xs text-neutral-300">{new Date(order.created_at).toLocaleString()}</span>
-                      </div>
-                    </td>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="p-10 text-center text-neutral-400">Loading orders...</td>
+                </tr>
+              ) : filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-10 text-center text-neutral-500">No orders match this view.</td>
+                </tr>
+              ) : (
+                filteredOrders.flatMap((order) => {
+                  const isExpanded = expandedOrderId === order.id;
+                  const isStatusPanelOpen = statusPanelOrderId === order.id;
+                  const detail = (order.id && orderDetailsById[order.id]) || order;
+                  const transitions = getAllowedTransitions(order.status);
+                  const items = detail.order_items || [];
+                  const financials = (detail as any).financials || {};
+                  const booking = detail.delivery_booking;
+                  const dexStatus = booking?.status ? String(booking.status).toLowerCase() : '';
 
-                    <td className="px-3 py-2 text-neutral-300">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium text-white">{order.shipping_address?.name || (order.shipping_address as any)?.full_name || 'Customer'}</span>
-                        <span className="text-xs text-neutral-500">{order.shipping_address?.phone_number || 'No phone'}</span>
-                        <span className="text-xs text-neutral-500">
-                          {order.shipping_address?.city || 'N/A'}{order.shipping_address?.province ? `, ${order.shipping_address.province}` : ''}
-                        </span>
-                      </div>
-                    </td>
+                  const rows: React.ReactNode[] = [
+                    <tr key={order.id} className="border-b border-white/5 align-top hover:bg-white/[0.03]">
+                      <td className="p-3">
+                        <p className="font-mono text-xs text-white">{order.order_number || order.id}</p>
+                        <p className="mt-1 font-mono text-[10px] text-neutral-500">{order.id}</p>
+                      </td>
 
-                    <td className="px-3 py-2 text-neutral-300">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-bold text-white">Total: {formatCurrency(order.total)}</span>
-                        <span className="text-xs text-neutral-500">Commission: {formatCurrency(financials.commission)}</span>
-                        <span className="text-xs text-neutral-500">Payout: {formatCurrency(financials.seller_payout)}</span>
-                      </div>
-                    </td>
+                      <td className="p-3">
+                        <p className="font-medium text-white">
+                          {order.shipping_address?.name || (order.shipping_address as any)?.full_name || 'Customer'}
+                        </p>
+                        <p className="text-xs text-neutral-500">{order.shipping_address?.phone_number || '-'}</p>
+                      </td>
 
-                    <td className="px-3 py-2">
-                      <div className="flex flex-col gap-2">
+                      <td className="p-3">
                         <OrderStatusBadge status={order.status} />
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-3 py-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          onClick={() => navigate(`${prefix}/dashboard/orders/${order.id}`)}
-                          className="inline-flex items-center gap-1.5 rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
-                        >
-                          <Eye size={12} /> View
-                        </button>
+                      <td className="p-3">
+                        {dexStatus ? (
+                          <span className={`rounded-full border px-2 py-1 text-[11px] ${statusClass(dexStatus)}`}>
+                            {toLabel(dexStatus)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-neutral-500">Not booked</span>
+                        )}
+                      </td>
 
-                        <button
-                          onClick={() => { void handleToggleItems(order); }}
-                          className="inline-flex items-center gap-1.5 rounded border border-white/15 bg-[#1a1a1a] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-neutral-100"
-                        >
-                          <ChevronDown size={12} className={isExpanded ? 'rotate-180 transition-transform' : 'transition-transform'} />
-                          Order Items
-                        </button>
+                      <td className="p-3 text-right">
+                        <p className="font-medium text-white">{formatCurrency(order.total)}</p>
+                        <p className="text-xs text-neutral-500">Commission {formatCurrency(financials.commission)}</p>
+                        <p className="text-xs text-neutral-500">Payout {formatCurrency(financials.seller_payout)}</p>
+                      </td>
 
-                        <button
-                          onClick={() => openStatusPanel(order)}
-                          disabled={transitions.length === 0}
-                          className="inline-flex items-center gap-1.5 rounded border border-primary/40 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-primary hover:bg-primary/10 disabled:opacity-40"
-                        >
-                          <Truck size={12} /> Update Status
-                        </button>
-                      </div>
-                    </td>
-                  </tr>,
-                ];
+                      <td className="w-24 max-w-24 truncate p-3 text-neutral-300">
+                        {order.shipping_address?.city || '-'}
+                      </td>
 
-                if (isExpanded) {
-                  const isDetailsLoading = expandedLoadingOrderId === order.id;
-                  rows.push(
-                    <tr key={`${order.id}-items`} className="border-t border-white/5 bg-[#0e0e0e]">
-                      <td colSpan={5} className="p-4">
-                        <div className="rounded-lg border border-white/10 bg-[#121212] p-4">
-                          <h4 className="mb-3 text-xs font-medium text-neutral-200">Order Items</h4>
+                      <td className="p-3 text-neutral-400">{dateOnly(order.created_at)}</td>
+
+                      <td className="p-3">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => navigate(`${prefix}/dashboard/orders/${order.id}`)}
+                            className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10"
+                            title="View order"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            onClick={() => { void handleToggleItems(order); }}
+                            className="rounded-md border border-white/10 p-2 text-neutral-300 hover:bg-white/10"
+                            title="Order items"
+                          >
+                            <ChevronDown size={14} className={isExpanded ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                          </button>
+                          <button
+                            onClick={() => openStatusPanel(order)}
+                            disabled={transitions.length === 0}
+                            className="rounded-md border border-primary/30 p-2 text-primary hover:bg-primary/10 disabled:opacity-40"
+                            title="Update status"
+                          >
+                            <Truck size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>,
+                  ];
+
+                  if (isExpanded) {
+                    const isDetailsLoading = expandedLoadingOrderId === order.id;
+                    rows.push(
+                      <tr key={`${order.id}-items`} className="border-b border-white/5 bg-black/20">
+                        <td colSpan={8} className="p-3">
+                          <p className="mb-3 text-xs uppercase tracking-wide text-neutral-500">Order items</p>
                           {isDetailsLoading ? (
-                            <p className="text-xs text-neutral-400 animate-pulse">Loading order item details...</p>
+                            <p className="text-xs text-neutral-400">Loading order item details...</p>
                           ) : items.length > 0 ? (
-                            <div className="space-y-3">
+                            <div className="grid gap-2 md:grid-cols-2">
                               {items.map((item: any, idx) => (
-                                <div key={`${order.id}-${item.product_id}-${item.variant_id}-${idx}`} className="rounded-lg border border-white/10 bg-[#080808] p-2.5">
-                                  <div className="flex gap-2.5">
-                                    <img
-                                      src={getItemImage(item)}
-                                      alt={getItemTitle(item)}
-                                      className="h-14 w-14 rounded-md object-cover border border-white/10"
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-xs font-bold text-white truncate">{getItemTitle(item)}</p>
-                                      <p className="text-[11px] text-primary mt-0.5">Variant: {item.variant_label || item.variant_id || 'N/A'}</p>
-                                      {item.variant_options && (
-                                        <div className="mt-1.5 flex flex-wrap gap-1">
-                                          {Object.entries(item.variant_options).map(([key, value]) => (
-                                            <span key={key} className="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-white/80">
-                                              {key}: {String(value)}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="text-[11px] text-white">Qty: {item.quantity || 0}</p>
-                                      <p className="text-[11px] text-neutral-400">{formatCurrency(item.line_total ?? item.total_price ?? 0)}</p>
-                                    </div>
+                                <div key={`${order.id}-${item.product_id}-${item.variant_id}-${idx}`} className="flex gap-3 rounded-md border border-white/10 bg-black/30 p-3">
+                                  <img
+                                    src={getItemImage(item)}
+                                    alt={getItemTitle(item)}
+                                    className="h-14 w-14 rounded-md border border-white/10 object-cover"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-xs font-medium text-white">{getItemTitle(item)}</p>
+                                    <p className="mt-0.5 text-[11px] text-primary">Variant: {item.variant_label || item.variant_id || 'N/A'}</p>
+                                    {item.variant_options && (
+                                      <div className="mt-1.5 flex flex-wrap gap-1">
+                                        {Object.entries(item.variant_options).map(([key, value]) => (
+                                          <span key={key} className="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-neutral-300">
+                                            {key}: {String(value)}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="shrink-0 text-right">
+                                    <p className="text-[11px] text-white">Qty: {item.quantity || 0}</p>
+                                    <p className="text-[11px] text-neutral-400">{formatCurrency(item.line_total ?? item.total_price ?? 0)}</p>
                                   </div>
                                 </div>
                               ))}
@@ -377,23 +443,21 @@ const ManageOrders: React.FC = () => {
                           ) : (
                             <p className="text-xs text-neutral-400">No order items available.</p>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                }
+                        </td>
+                      </tr>
+                    );
+                  }
 
-                if (isStatusPanelOpen) {
-                  rows.push(
-                    <tr key={`${order.id}-status-panel`} className="border-t border-white/5 bg-[#0e0e0e]">
-                      <td colSpan={5} className="p-4">
-                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                          <h4 className="mb-3 text-xs font-medium text-primary">Inline Status Update</h4>
-                          <div className="grid gap-3 lg:grid-cols-3">
+                  if (isStatusPanelOpen) {
+                    rows.push(
+                      <tr key={`${order.id}-status-panel`} className="border-b border-white/5 bg-black/20">
+                        <td colSpan={8} className="p-3">
+                          <p className="mb-3 text-xs uppercase tracking-wide text-neutral-500">Inline status update</p>
+                          <div className="grid gap-2 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto]">
                             <select
                               value={selectedStatus}
                               onChange={(e) => setSelectedStatus(e.target.value)}
-                              className="rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 outline-none focus:border-primary [color-scheme:dark]"
+                              className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary/60"
                             >
                               {transitions.length === 0 ? (
                                 <option value={order.status}>No transition available</option>
@@ -408,31 +472,35 @@ const ManageOrders: React.FC = () => {
                               value={statusNote}
                               onChange={(e) => setStatusNote(e.target.value)}
                               placeholder="Status note (optional)"
-                              className="rounded border border-white/20 bg-[#080808] px-3 py-2 text-xs text-neutral-100 outline-none focus:border-primary [color-scheme:dark]"
+                              className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary/60"
                             />
 
-                            <button
+                            <Button
+                              label="Push status"
+                              variant="primary"
+                              size="sm"
                               onClick={() => void handleStatusUpdate(order)}
-                              disabled={isUpdating || transitions.length === 0}
-                              className="rounded border border-primary/40 bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-40"
-                            >
-                              {isUpdating ? 'Updating...' : 'Apply'}
-                            </button>
+                              isLoading={isUpdating}
+                              isDisabled={transitions.length === 0}
+                            />
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                }
+                        </td>
+                      </tr>
+                    );
+                  }
 
-                return rows;
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-      </section>
-    </motion.div>
+                  return rows;
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-between border-t border-white/10 p-3 text-xs text-neutral-400">
+          <span>{filteredOrders.length} orders • {pendingOrders.length} awaiting action</span>
+        </div>
+      </Card>
+    </div>
   );
 };
 
