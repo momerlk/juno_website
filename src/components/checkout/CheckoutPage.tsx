@@ -796,8 +796,7 @@ const CheckoutPage: React.FC = () => {
                                 </button>
                             </div>
                             {paymentMethod === 'bank_deposit' && <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-                                <p className="text-sm text-white/75">Pay via Bank Transfer – After making the payment upload the screenshot and confirm your order.</p>
-                                <p className="mt-3 text-sm text-white/65">Please transfer the total order amount to the following bank account:</p>
+                                <p className="text-sm text-white/75">Pay via Bank Transfer – After making the payment upload the screenshot and place your order.</p>
                                 <p className="mt-2 text-sm text-white/75">Bank: {bank?.bank_name || 'Bank deposit'}</p>
                                 <p className="mt-1 text-sm text-white/75">Account Title: {bank?.account_title}</p>
                                 <p className="mt-3 text-sm text-white/75">Amount to transfer: {orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}</p>
