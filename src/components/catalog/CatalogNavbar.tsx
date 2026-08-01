@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, Smartphone, X } from 'lucide-react';
+import { SlidersHorizontal, X } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Catalog } from '../../api/catalogApi';
 import { trackTikTokSearch } from '../../utils/tiktokPixel';
@@ -217,9 +217,8 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                         <div className="ml-auto flex items-center gap-2">
                             <Link
                                 to="/download"
-                                className="inline-flex h-11 items-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 sm:px-4"
+                                className="inline-flex h-9 items-center rounded-full border border-white/10 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:border-white/20 hover:bg-white/[0.05] sm:px-4"
                             >
-                                <Smartphone size={15} />
                                 <span className="sm:hidden">App</span>
                                 <span className="hidden sm:inline">Download app</span>
                             </Link>
