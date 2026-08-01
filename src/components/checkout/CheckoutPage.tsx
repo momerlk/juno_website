@@ -131,6 +131,8 @@ const CheckoutPage: React.FC = () => {
     const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
     const [paymentProof, setPaymentProof] = useState<File | null>(null);
     const [paymentProofPreview, setPaymentProofPreview] = useState('');
+    const [paymentProofUrl, setPaymentProofUrl] = useState('');
+    const [isUploadingProof, setIsUploadingProof] = useState(false);
     const [copiedBankDetail, setCopiedBankDetail] = useState<string | null>(null);
     const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
     const hasTrackedCheckoutStart = React.useRef(false);
@@ -318,6 +320,9 @@ const CheckoutPage: React.FC = () => {
             if (paymentMethod === 'bank_deposit' && !paymentProof) {
                 throw new Error('Upload your bank-deposit receipt to place this order.');
             }
+            if (paymentMethod === 'bank_deposit' && !paymentProofUrl) {
+                throw new Error('Your payment screenshot is still uploading. Please try again in a moment.');
+            }
             const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(estimateResponse.body.subtotal * 0.05) : 0;
             const confirmationSummary = {
                 subtotal: estimateResponse.body.subtotal,
@@ -336,7 +341,7 @@ const CheckoutPage: React.FC = () => {
 
             const checkoutResponse = await GuestCommerce.checkoutDirect({
                 payment_method: paymentMethod,
-                ...(paymentProof ? { payment_proof_url: await uploadFileAndGetUrl(paymentProof) } : {}),
+                ...(paymentProofUrl ? { payment_proof_url: paymentProofUrl } : {}),
                 items,
                 customer: formData,
             });
@@ -401,6 +406,20 @@ const CheckoutPage: React.FC = () => {
                 delete next[field];
                 return next;
             });
+        }
+    };
+
+    const handlePaymentProofChange = async (file: File | null) => {
+        setPaymentProof(file);
+        setPaymentProofUrl('');
+        if (!file) return;
+        setIsUploadingProof(true);
+        try {
+            setPaymentProofUrl(await uploadFileAndGetUrl(file));
+        } catch (error) {
+            setErrors((current) => ({ ...current, general: error instanceof Error ? error.message : 'Could not upload payment screenshot. Please try again.' }));
+        } finally {
+            setIsUploadingProof(false);
         }
     };
 
@@ -805,8 +824,8 @@ const CheckoutPage: React.FC = () => {
                                     {bank?.iban && <button type="button" onClick={() => void copyBankDetail('iban', bank.iban!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">IBAN</span><span className="font-mono text-sm font-bold text-white">{bank.iban}</span></span>{copiedBankDetail === 'iban' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
                                 </div>
                                 <label className="mt-4 block cursor-pointer rounded-xl border border-dashed border-white/20 bg-black/20 p-4 text-center active:bg-black/35">
-                                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPaymentProof(event.target.files?.[0] || null)} className="sr-only" />
-                                    <span className="block text-sm font-semibold text-white">{paymentProof ? 'Payment screenshot selected' : 'Upload payment screenshot'}</span>
+                                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void handlePaymentProofChange(event.target.files?.[0] || null)} className="sr-only" />
+                                    <span className="block text-sm font-semibold text-white">{isUploadingProof ? 'Uploading payment screenshot…' : paymentProofUrl ? 'Payment screenshot uploaded' : paymentProof ? 'Payment screenshot selected' : 'Upload payment screenshot'}</span>
                                     <span className="mt-1 block text-xs text-white/50">{paymentProof ? paymentProof.name : 'Tap to take or choose a screenshot'}</span>
                                 </label>
                                 {paymentProofPreview && <img src={paymentProofPreview} alt="Payment screenshot preview" className="mt-3 max-h-64 w-full rounded-xl border border-white/10 object-contain" />}
