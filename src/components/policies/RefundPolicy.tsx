@@ -1,72 +1,54 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
-const RefundPolicy: React.FC = () => {
-  return (
-    <div className="container mx-auto py-12 px-4">
-              <div style={{paddingTop : 50}}/>
+const SUPPORT_URL = 'https://wa.me/923158972405?text=I%20need%20help%20with%20a%20refund.';
 
-      <h1 className="text-3xl font-bold mb-8">Refund Policy</h1>
-      
-      <div className="space-y-6 text-neutral-300">
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Refund Eligibility</h2>
-          <p>Refunds are available for:</p>
-          <ul className="list-disc pl-6 mt-2 space-y-2">
-            <li>Defective products</li>
-            <li>Incorrect items received</li>
-            <li>Unused items returned within 30 days</li>
-            <li>Cancelled orders before shipping</li>
-          </ul>
-        </section>
+const RefundPolicy: React.FC = () => (
+  <main className="container mx-auto max-w-4xl px-4 py-16 sm:py-24">
+    <article className="space-y-10 text-neutral-300">
+      <header className="border-b border-white/10 pb-8">
+        <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-primary">Customer care</p>
+        <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl">Refund Policy</h1>
+        <p className="mt-4 leading-7">This explains what happens after Juno approves a refund. Approval and the payment instruction are separate steps.</p>
+      </header>
 
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Refund Process</h2>
-          <p>To request a refund:</p>
-          <ol className="list-decimal pl-6 mt-2 space-y-2">
-            <li>Log into your account and submit a refund request</li>
-            <li>Include order number and reason for refund</li>
-            <li>Return item if required (see Return Policy)</li>
-            <li>Wait for refund approval and processing</li>
-          </ol>
-        </section>
+      <section>
+        <h2 className="text-2xl font-bold text-white">When a refund may be approved</h2>
+        <p className="mt-3 leading-7">A refund may follow an eligible return, seller cancellation, unavailable item, duplicate or extra payment, failed order, lost parcel, agreed partial refund, or another remedy required by law.</p>
+      </section>
 
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Refund Timeline</h2>
-          <p>Our refund processing times:</p>
-          <ul className="list-disc pl-6 mt-2 space-y-2">
-            <li>3-5 business days for approval</li>
-            <li>5-10 business days for credit card refunds</li>
-            <li>1-3 business days for store credit</li>
-            <li>Up to 30 days for international orders</li>
-          </ul>
-        </section>
+      <section>
+        <h2 className="text-2xl font-bold text-white">How we calculate it</h2>
+        <p className="mt-3 leading-7">The approved amount can include the affected item price, applicable shipping, and charges or taxes attributable to the refunded item. For a customer-choice partial return, original delivery shipping may not be refundable if it was clearly disclosed and the delivery was completed. We use the prices, discounts, and charges saved when the order was placed—not today&apos;s prices—and show the calculation before the case closes.</p>
+      </section>
 
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Non-Refundable Items</h2>
-          <p>The following are not eligible for refunds:</p>
-          <ul className="list-disc pl-6 mt-2 space-y-2">
-            <li>Digital products once accessed</li>
-            <li>Customized or personalized items</li>
-            <li>Items marked as final sale</li>
-            <li>Gift cards and promotional credits</li>
-          </ul>
-        </section>
+      <section>
+        <h2 className="text-2xl font-bold text-white">How you receive it</h2>
+        <ul className="mt-3 list-disc space-y-2 pl-6 leading-7">
+          <li>Prepaid orders are refunded to the original payment method where possible.</li>
+          <li>COD orders are refunded to a verified Pakistani bank account or supported mobile wallet provided through Juno&apos;s secure process.</li>
+          <li>Store credit is only used with your agreement when money is due.</li>
+        </ul>
+        <p className="mt-3 leading-7">Juno will never ask for your password, OTP, PIN, or full card details to issue a refund.</p>
+      </section>
 
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
-          <p>
-            For refund inquiries, please contact us at:
-            <br />
-            Email: refunds@juno.com.pk
-            <br />
-            Address: Vogue Towers, MM Alam Road, Block C2, Gulberg III, Lahore, Pakistan
-            <br />
-            Phone: +92 300 0856955
-          </p>
-        </section>
-      </div>
-    </div>
-  );
-};
+      <section>
+        <h2 className="text-2xl font-bold text-white">Timing</h2>
+        <p className="mt-3 leading-7">We aim to issue an approved refund within 7 business days after any required return inspection, or after approval where no return is needed. Your bank, wallet, or payment provider may take additional time to show the funds. We will confirm the payment reference and issue date when the payment instruction is sent.</p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-bold text-white">Cancelled orders</h2>
+        <p className="mt-3 leading-7">An order cancelled before dispatch is refunded after payment or booking reversal checks. After a parcel has been handed to the carrier, cancellation may be handled as a return and can wait for carrier confirmation and parcel recovery.</p>
+      </section>
+
+      <section className="border-t border-white/10 pt-8">
+        <h2 className="text-2xl font-bold text-white">Questions about a refund?</h2>
+        <p className="mt-3 leading-7">Message us with your order or case number and payment reference. <a href={SUPPORT_URL} target="_blank" rel="noreferrer" className="font-bold text-primary hover:text-secondary">Contact Juno support on WhatsApp</a>.</p>
+        <p className="mt-4 text-sm"><Link to="/return-policy" className="text-white underline hover:text-primary">Return Policy</Link> · <Link to="/exchange-policy" className="text-white underline hover:text-primary">Exchange Policy</Link></p>
+      </section>
+    </article>
+  </main>
+);
 
 export default RefundPolicy;

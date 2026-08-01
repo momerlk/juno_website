@@ -20,7 +20,9 @@ import { SellerAuthProvider } from './contexts/SellerAuthContext';
 import { JunoStudioProvider } from './contexts/JunoStudioContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
 const PrivacyPolicy = React.lazy(() => import('./components/policies/PrivacyPolicy'));
+const ReturnPolicy = React.lazy(() => import('./components/policies/ReturnPolicy'));
 const RefundPolicy = React.lazy(() => import('./components/policies/RefundPolicy'));
+const ExchangePolicy = React.lazy(() => import('./components/policies/ExchangePolicy'));
 const ShippingServicePolicy = React.lazy(() => import('./components/policies/ShippingServicePolicy'));
 const TermsConditions = React.lazy(() => import('./components/policies/TermsConditions'));
 
@@ -176,9 +178,11 @@ function RoutedApp() {
                 <Route path="/track/:token" element={<InteractiveTrackingPage />} />
                 <Route path="/size-quiz/:token" element={<SharedSizeQuizPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                  <Route path="/refund-policy" element={<RefundPolicy />} />
-                  <Route path="/service-policy" element={<ShippingServicePolicy />} />
-                  <Route path="/terms-and-conditions" element={<TermsConditions />} />
+                <Route path="/return-policy" element={<ReturnPolicy />} />
+                <Route path="/refund-policy" element={<RefundPolicy />} />
+                <Route path="/exchange-policy" element={<ExchangePolicy />} />
+                <Route path="/service-policy" element={<ShippingServicePolicy />} />
+                <Route path="/terms-and-conditions" element={<TermsConditions />} />
 
                   {/* Juno Studio (Seller) Routes */}
                   <Route path="/studio" element={<JunoStudioLanding />} />
