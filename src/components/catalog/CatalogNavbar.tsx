@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, Smartphone, X } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Catalog } from '../../api/catalogApi';
 import { trackTikTokSearch } from '../../utils/tiktokPixel';
@@ -215,14 +215,25 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                         {desktopSearch}
 
                         <div className="ml-auto flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setSearchOpen(true)}
-                                className={iconButtonClass}
-                                aria-label="Search"
+                            <Link
+                                to="/download"
+                                className="inline-flex h-11 items-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 sm:px-4"
                             >
-                                <img src="/images/icons/search.png" alt="" className="h-5 w-5 opacity-90" />
-                            </button>
+                                <Smartphone size={15} />
+                                <span className="sm:hidden">App</span>
+                                <span className="hidden sm:inline">Download app</span>
+                            </Link>
+
+                            {!showInlineSearch ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchOpen(true)}
+                                    className={iconButtonClass}
+                                    aria-label="Search"
+                                >
+                                    <img src="/images/icons/search.png" alt="" className="h-5 w-5 opacity-90" />
+                                </button>
+                            ) : null}
 
                             <button
                                 type="button"

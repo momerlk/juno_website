@@ -1,15 +1,9 @@
 import React, { Suspense, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Hero from './components/landing/Hero';
 import Footer from './components/Footer';
 import { GuestCartProvider } from './contexts/GuestCartContext';
 import CartDrawer from './components/cart/CartDrawer';
 import CartStockLimitToast from './components/cart/CartStockLimitToast';
-const JunoApp = React.lazy(() => import('./components/landing/JunoApp'));
-const Mission = React.lazy(() => import('./components/landing/Mission'));
-const DownloadSection = React.lazy(() => import('./components/landing/DownloadSection'));
-const ScreenshotsSection = React.lazy(() => import('./components/landing/ScreenshotsSection'));
 const SellerAuth = React.lazy(() => import('./components/seller/SellerAuth'));
 const SellerDashboard = React.lazy(() => import('./components/seller/SellerDashboard'));
 const SellerOnboarding = React.lazy(() => import('./components/seller/SellerOnboarding'));
@@ -45,10 +39,6 @@ const CreateProductPage = React.lazy(() => import('./components/admin/CreateProd
 const ProductImportsPage = React.lazy(() => import('./components/admin/ProductImportsPage'));
 const OrderDetailPage = React.lazy(() => import('./components/admin/OrderDetailPage'));
 const AdminGuidePage = React.lazy(() => import('./components/admin/AdminGuidePage'));
-const BrandsSection = React.lazy(() => import('./components/landing/BrandsSection'));
-const BrandShowcase = React.lazy(() => import('./components/landing/BrandShowcase'));
-const CatchyProducts = React.lazy(() => import('./components/landing/CatchyProducts'));
-const TestimonialsSection = React.lazy(() => import('./components/landing/TestimonialsSection'));
 const CatalogProductPage = React.lazy(() => import('./components/catalog/CatalogProductPage'));
 const CatalogBrowsePage = React.lazy(() => import('./components/catalog/CatalogBrowsePage'));
 const DownloadRedirect = React.lazy(() => import('./components/DownloadRedirect'));
@@ -58,7 +48,6 @@ const OrderTrackingPage = React.lazy(() => import('./components/checkout/OrderTr
 const InteractiveTrackingPage = React.lazy(() => import('./components/checkout/InteractiveTrackingPage'));
 const SharedSizeQuizPage = React.lazy(() => import('./components/checkout/SharedSizeQuizPage'));
 const WishlistPage = React.lazy(() => import('./components/catalog/WishlistPage'));
-const ResponsiveDownloadBanner = React.lazy(() => import('./components/shared/ResponsiveDownloadBanner'));
 
 import { useFunnelPageView } from './hooks/useFunnelAnalytics';
 import {
@@ -104,6 +93,7 @@ function RoutedApp() {
   const isExcludedPath = location.pathname.startsWith('/seller') || 
                          location.pathname.startsWith('/studio') || 
                          location.pathname.startsWith('/admin') || 
+                         location.pathname === '/' ||
                          location.pathname.startsWith('/catalog') || 
                          location.pathname.startsWith('/checkout') || 
                          location.pathname.startsWith('/track') || 
@@ -166,27 +156,9 @@ function RoutedApp() {
                   Free shipping on every order
                 </div>
               )}
-              {!isExcludedPath && <Navbar />}
               <Suspense fallback={<AppShellFallback />}>
               <Routes>
-                  <Route path="/" element={
-                    <main>
-                      <Hero />
-                      <section className="bg-black px-4 py-6 md:px-6 md:py-8">
-                        <div className="mx-auto max-w-7xl">
-                          <ResponsiveDownloadBanner />
-                        </div>
-                      </section>
-                      <CatchyProducts />
-                      <BrandShowcase />
-                      <BrandsSection />
-                      <TestimonialsSection />
-                      <JunoApp />
-                      <ScreenshotsSection />
-                      <Mission />
-                      <DownloadSection />
-                    </main>
-                  } />
+                  <Route path="/" element={<CatalogBrowsePage />} />
 
                 <Route path="/download" element={<DownloadRedirect />} />
                 
