@@ -805,12 +805,13 @@ const CheckoutPage: React.FC = () => {
                                     {bank?.iban && <button type="button" onClick={() => void copyBankDetail('iban', bank.iban!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">IBAN</span><span className="font-mono text-sm font-bold text-white">{bank.iban}</span></span>{copiedBankDetail === 'iban' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
                                 </div>
                                 <label className="mt-4 block cursor-pointer rounded-xl border border-dashed border-white/20 bg-black/20 p-4 text-center active:bg-black/35">
-                                    <input type="file" accept="image/png,image/jpeg,image/webp" capture="environment" onChange={(event) => setPaymentProof(event.target.files?.[0] || null)} className="sr-only" />
+                                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPaymentProof(event.target.files?.[0] || null)} className="sr-only" />
                                     <span className="block text-sm font-semibold text-white">{paymentProof ? 'Payment screenshot selected' : 'Upload payment screenshot'}</span>
                                     <span className="mt-1 block text-xs text-white/50">{paymentProof ? paymentProof.name : 'Tap to take or choose a screenshot'}</span>
                                 </label>
                                 {paymentProofPreview && <img src={paymentProofPreview} alt="Payment screenshot preview" className="mt-3 max-h-64 w-full rounded-xl border border-white/10 object-contain" />}
-                                <p className="mt-4 text-xs leading-5 text-white/50">In case of any queries or errors message <a href="https://wa.me/923158972405" target="_blank" rel="noreferrer" className="text-white underline">+92 315 8972405 on WhatsApp</a>.</p>
+                                <p className="mt-4 text-xs leading-5 text-white/50">In case of any queries or errors message</p>
+                                <a href="https://wa.me/923158972405" target="_blank" rel="noreferrer" className="mt-1 block text-xs leading-5 text-white underline">+92 315 8972405 on WhatsApp</a>
                             </div>}
 
                             {errors.general && (
