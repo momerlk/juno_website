@@ -792,7 +792,7 @@ const CheckoutPage: React.FC = () => {
                                     <p className="font-bold text-white">Cash on Delivery (COD)</p>
                                 </button>
                                 <button type="button" disabled={paymentMethodsLoading || !bankMethod} onClick={() => setPaymentMethod('bank_deposit')} className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-45 ${paymentMethod === 'bank_deposit' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
-                                    <p className="font-bold text-white">Bank Deposit</p>
+                                    <p className="font-bold text-white">Bank Deposit - 5% Off</p>
                                 </button>
                             </div>
                             {paymentMethod === 'bank_deposit' && <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
