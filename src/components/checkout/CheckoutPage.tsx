@@ -797,9 +797,9 @@ const CheckoutPage: React.FC = () => {
                             </div>
                             {paymentMethod === 'bank_deposit' && <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
                                 <p className="text-sm text-white/75">Pay via Bank Transfer – After making the payment upload the screenshot and place your order.</p>
-                                <p className="mt-2 text-sm text-white/75">Bank: {bank?.bank_name || 'Bank deposit'}</p>
-                                <p className="mt-1 text-sm text-white/75">Account Title: {bank?.account_title}</p>
-                                <p className="mt-3 text-sm text-white/75">Amount to transfer: {orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}</p>
+                                <p className="mt-4 text-sm text-white/75">Bank: {bank?.bank_name || 'Bank deposit'}</p>
+                                <p className="mt-2 text-sm text-white/75">Account Title: {bank?.account_title}</p>
+                                <p className="mt-4 text-sm text-white/75">Amount to transfer: {orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}</p>
                                 <div className="mt-4 space-y-2">
                                     {bank?.account_number && <button type="button" onClick={() => void copyBankDetail('account_number', bank.account_number!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">Account number</span><span className="font-mono text-sm font-bold text-white">{bank.account_number}</span></span>{copiedBankDetail === 'account_number' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
                                     {bank?.iban && <button type="button" onClick={() => void copyBankDetail('iban', bank.iban!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">IBAN</span><span className="font-mono text-sm font-bold text-white">{bank.iban}</span></span>{copiedBankDetail === 'iban' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
