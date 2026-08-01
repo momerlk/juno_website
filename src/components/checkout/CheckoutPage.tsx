@@ -823,9 +823,9 @@ const CheckoutPage: React.FC = () => {
                                     {bank?.account_number && <button type="button" onClick={() => void copyBankDetail('account_number', bank.account_number!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">Account number</span><span className="font-mono text-sm font-bold text-white">{bank.account_number}</span></span>{copiedBankDetail === 'account_number' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
                                     {bank?.iban && <button type="button" onClick={() => void copyBankDetail('iban', bank.iban!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">IBAN</span><span className="font-mono text-sm font-bold text-white">{bank.iban}</span></span>{copiedBankDetail === 'iban' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
                                 </div>
-                                <label className="mt-4 block cursor-pointer rounded-xl border border-dashed border-white/20 bg-black/20 p-4 text-center active:bg-black/35">
+                                <label className={`mt-4 block cursor-pointer rounded-xl border border-dashed p-4 text-center active:bg-black/35 ${isUploadingProof ? 'border-primary/60 bg-primary/10' : 'border-white/20 bg-black/20'}`}>
                                     <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void handlePaymentProofChange(event.target.files?.[0] || null)} className="sr-only" />
-                                    <span className="block text-sm font-semibold text-white">{isUploadingProof ? 'Uploading payment screenshot…' : paymentProofUrl ? 'Payment screenshot uploaded' : paymentProof ? 'Payment screenshot selected' : 'Upload payment screenshot'}</span>
+                                    <span className="flex items-center justify-center gap-2 text-sm font-semibold text-white">{isUploadingProof && <Loader2 size={18} className="animate-spin text-primary" />}{isUploadingProof ? 'Uploading payment screenshot…' : paymentProofUrl ? 'Payment screenshot uploaded' : paymentProof ? 'Payment screenshot selected' : 'Upload payment screenshot'}</span>
                                     <span className="mt-1 block text-xs text-white/50">{paymentProof ? paymentProof.name : 'Tap to take or choose a screenshot'}</span>
                                 </label>
                                 {paymentProofPreview && <img src={paymentProofPreview} alt="Payment screenshot preview" className="mt-3 max-h-64 w-full rounded-xl border border-white/10 object-contain" />}
@@ -843,7 +843,7 @@ const CheckoutPage: React.FC = () => {
                             <motion.button
                                 whileTap={{ scale: 0.985 }}
                                 onClick={handleSubmit}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || (paymentMethod === 'bank_deposit' && isUploadingProof)}
                                 className="relative hidden md:flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-secondary px-6 py-5 text-white shadow-[0_10px_40px_-10px_rgba(220,10,40,0.45)] transition-all disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <span className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -852,7 +852,7 @@ const CheckoutPage: React.FC = () => {
                                         style={{ animation: 'shimmer 2.6s linear infinite' }}
                                     />
                                 </span>
-                                {isSubmitting ? (
+                                {isSubmitting || (paymentMethod === 'bank_deposit' && isUploadingProof) ? (
                                     <>
                                         <Loader2 size={18} className="animate-spin" />
                                         <span
@@ -864,7 +864,7 @@ const CheckoutPage: React.FC = () => {
                                                 textTransform: 'uppercase',
                                             }}
                                         >
-                                            Placing order…
+                                            {isUploadingProof ? 'Uploading payment…' : 'Placing order…'}
                                         </span>
                                     </>
                                 ) : (
@@ -1007,7 +1007,7 @@ const CheckoutPage: React.FC = () => {
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         onClick={handleSubmit}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || (paymentMethod === 'bank_deposit' && isUploadingProof)}
                         className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-secondary py-4 text-white shadow-[0_10px_30px_-10px_rgba(220,10,40,0.5)] disabled:opacity-60"
                     >
                         <span className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -1016,7 +1016,7 @@ const CheckoutPage: React.FC = () => {
                                 style={{ animation: 'shimmer 2.4s linear infinite' }}
                             />
                         </span>
-                        {isSubmitting ? (
+                        {isSubmitting || (paymentMethod === 'bank_deposit' && isUploadingProof) ? (
                             <>
                                 <Loader2 size={16} className="animate-spin" />
                                 <span
@@ -1028,7 +1028,7 @@ const CheckoutPage: React.FC = () => {
                                         textTransform: 'uppercase',
                                     }}
                                 >
-                                    Placing…
+                                    {isUploadingProof ? 'Uploading payment…' : 'Placing…'}
                                 </span>
                             </>
                         ) : (
