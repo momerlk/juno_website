@@ -493,6 +493,8 @@ export namespace AdminPortal {
         address_line1?: string;
         address_line2?: string;
         city?: string;
+        district?: string;
+        province?: string;
         formatted_address?: string;
         missing_fields?: string[];
         customer_message?: string;
@@ -565,6 +567,10 @@ export namespace AdminPortal {
 
     export async function cancelOrder(orderId: string, reason: string): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/cancel`, 'POST', { reason }, getToken());
+    }
+
+    export async function verifyOrderPayment(orderId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/payment/verify`, 'POST', undefined, getToken());
     }
 
     export async function listCarts(): Promise<APIResponse<any>> {

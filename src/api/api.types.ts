@@ -962,6 +962,7 @@ export interface ShippingEstimateResponse {
 export interface CheckoutRequest {
     address_id: string;
     payment_method: string;
+    payment_proof_url?: string;
 }
 
 export interface DirectCheckoutItem {
@@ -974,16 +975,43 @@ export interface CheckoutDirectRequest {
     address_id: string;
     payment_method: string;
     items: DirectCheckoutItem[];
+    payment_proof_url?: string;
 }
 
 export interface GuestCheckoutRequest {
     payment_method: string;
+    payment_proof_url?: string;
 }
 
 export interface GuestCheckoutDirectRequest {
     payment_method: string;
     items: DirectCheckoutItem[];
     customer: GuestCheckoutDetails;
+    payment_proof_url?: string;
+}
+
+export interface PaymentMethod {
+    id?: string;
+    code?: string;
+    payment_method?: string;
+    name?: string;
+    title?: string;
+    instructions?: string;
+    bank_name?: string;
+    account_title?: string;
+    account_number?: string;
+    iban?: string;
+    bank?: {
+        bank_name?: string;
+        account_title?: string;
+        account_number?: string;
+        iban?: string;
+    };
+}
+
+export interface PaymentMethodsResponse {
+    payment_methods?: PaymentMethod[];
+    methods?: PaymentMethod[];
 }
 
 export interface GuestOrderLookupRequest {
@@ -1035,7 +1063,7 @@ export interface OrderTracking {
 
 export interface Order {
     id: string;
-    parent_order_id: string;
+    parent_order_id?: string;
     order_number: string;
     seller_id: string;
     user_id: string;
@@ -1044,6 +1072,11 @@ export interface Order {
     customer_name?: string;
     customer_phone?: string;
     customer_email?: string;
+    payment_method?: string;
+    payment_status?: string;
+    payment_proof_url?: string;
+    payment_proof_note?: string;
+    dex_order_number?: string;
     order_items: {
         id: string;
         product_id: string;
@@ -1060,6 +1093,7 @@ export interface Order {
     financials?: {
         subtotal: number;
         shipping_fee: number;
+        discount_amount?: number;
         commission_rate: number;
         commission: number;
         seller_payout: number;
@@ -1093,6 +1127,8 @@ export interface CheckoutResult {
 export interface AddressReview {
     original_address: string;
     formatted_address?: string;
+    district?: string;
+    province?: string;
     missing_fields: string[];
     customer_message: string;
     format_status: 'manual_review' | 'ready' | 'failed' | string;

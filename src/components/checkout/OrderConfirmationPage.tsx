@@ -35,6 +35,7 @@ interface ReceiptItem {
 interface CheckoutSummary {
     subtotal: number;
     shipping_fee: number;
+    discount_amount?: number;
     total: number;
     currency?: string;
 }
@@ -45,6 +46,7 @@ interface LocationState {
     customer?: GuestCheckoutDetails;
     receiptItems?: ReceiptItem[];
     summary?: CheckoutSummary;
+    paymentMethod?: string;
 }
 
 const toAmount = (value: unknown): number | undefined =>
@@ -59,7 +61,7 @@ const getOrderSubtotal = (order: CheckoutResult['orders'][number]) =>
 const getOrderShipping = (order: CheckoutResult['orders'][number]) =>
     toAmount(order.financials?.shipping_fee) ?? 0;
 
-const buildConfirmationOrder = (checkout: CheckoutResult, customer?: GuestCheckoutDetails, summary?: CheckoutSummary): ParentOrder => {
+const buildConfirmationOrder = (checkout: CheckoutResult, customer?: GuestCheckoutDetails, summary?: CheckoutSummary, paymentMethod = 'cod'): ParentOrder => {
     const firstOrder = checkout.orders[0];
     const subtotal = summary?.subtotal ?? checkout.orders.reduce((sum, item) => sum + getOrderSubtotal(item), 0);
     const shippingFee = summary?.shipping_fee ?? checkout.orders.reduce((sum, item) => sum + getOrderShipping(item), 0);
@@ -76,7 +78,7 @@ const buildConfirmationOrder = (checkout: CheckoutResult, customer?: GuestChecko
         shipping_fee: shippingFee,
         subtotal,
         status: 'confirmed',
-        payment_method: 'cod',
+        payment_method: paymentMethod,
         shipping_address: customer,
         child_order_ids: checkout.orders.map((item) => item.id),
         created_at: new Date().toISOString(),
@@ -130,7 +132,7 @@ const OrderConfirmationPage: React.FC = () => {
         const state = location.state as LocationState;
         if (state?.checkout?.orders?.length) {
             setCheckout(state.checkout);
-            setOrder(buildConfirmationOrder(state.checkout, state.customer, state.summary));
+            setOrder(buildConfirmationOrder(state.checkout, state.customer, state.summary, state.paymentMethod));
             setReceiptItems(Array.isArray(state.receiptItems) ? state.receiptItems : []);
             return;
         }

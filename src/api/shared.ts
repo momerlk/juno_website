@@ -50,7 +50,7 @@ async function compressImage(
         } else if (typeof options === 'object' && options !== null) {
             settings = options;
         } else {
-            settings = COMPRESSION_PRESETS.ultra_fast;
+            settings = COMPRESSION_PRESETS.high_quality;
         }
 
         const image = new Image();

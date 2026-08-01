@@ -24,6 +24,7 @@ import type {
     GuestOrderLookupRequest,
     OrderTracking,
     Order,
+    PaymentMethodsResponse,
 } from "./api.types";
 
 // ============================================================================
@@ -80,6 +81,11 @@ export namespace Commerce {
             undefined,
             token || getUserToken()
         );
+    }
+
+    /** Public checkout payment options and bank-deposit instructions. */
+    export async function getPaymentMethods(): Promise<APIResponse<PaymentMethodsResponse>> {
+        return request(`${BASE_PATH}/payment-methods`, 'GET', undefined, undefined, true);
     }
 
     /**

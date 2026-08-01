@@ -2,7 +2,7 @@
 
 ## DEX manual rows and manual booking
 
-`GET /api/v2/admin/logistics/orders/{orderID}/booking-data?delivery_note=...` and `POST /api/v2/admin/logistics/booking-data/bulk` return one staff-copyable row per product in `rows`. The rows contain: order number, sender address, recipient name and 10-digit phone, province, district, wards, specific address, product name, unit price, quantity, weight, length, width, height, COD, COD amount, failed-delivery storage, and delivery note. Sender address is deliberately `""` so staff select it in DEX; default weight/length/width/height are `0.2` kg, `15` cm, `20` cm and `0.5` cm. Specific address uses the ready ChatGPT-formatted address where available, otherwise the complete saved address, always including city. The first product row contains full COD and every later row contains `0`. The default delivery note is `Call before delivery`; pass `delivery_note` to override it. DEX order numbers contain digits only; a trailing `-A`/`-B`/`-C` becomes `1`/`2`/`3`. There is no DEX/Smartlane export, location-resolution, dispatch/SLA, pickup-threshold, parcel, or carrier-payload system. Manual booking is DEX-only and requires exactly the DEX tracking number plus the `airway_bill_url` returned by the existing `POST /api/v2/files/upload` media upload. The API fills the DEX tracking URL and booking time itself.
+`GET /api/v2/admin/logistics/orders/{orderID}/booking-data?delivery_note=...` and `POST /api/v2/admin/logistics/booking-data/bulk` return one staff-copyable row per product in `rows`. The rows contain: order number, sender address, recipient name and 10-digit phone, province, district, wards, specific address, product name, unit price, quantity, weight, length, width, height, COD, COD amount, failed-delivery storage, and delivery note. Sender address is deliberately `""` so staff select it in DEX; default weight/length/width/height are `0.2` kg, `15` cm, `20` cm and `0.5` cm. Specific address uses the ready ChatGPT-formatted address where available, otherwise the complete saved address, always including city. COD orders put the full COD amount on the first product row and `0` on later rows. Bank-deposit orders put `COD: N` and leave the COD amount blank on every row. The default delivery note is `Call before delivery`; pass `delivery_note` to override it. DEX order numbers contain digits only; a trailing `-A`/`-B`/`-C` becomes `1`/`2`/`3`. There is no DEX/Smartlane export, location-resolution, dispatch/SLA, pickup-threshold, parcel, or carrier-payload system. Manual booking is DEX-only and requires exactly the DEX tracking number plus the `airway_bill_url` returned by the existing `POST /api/v2/files/upload` media upload. The API fills the DEX tracking URL and booking time itself.
 
 ## DEX statement imports and brand payments
 
@@ -39,7 +39,9 @@ body. Returns `200` with the `address_review` object documented in the Commerce 
 ### `PATCH /api/v2/admin/orders/{orderID}/customer`
 
 This existing admin-only endpoint accepts the existing optional customer/address fields plus ChatGPT output:
-`formatted_address`, `missing_fields`, and `customer_message`, plus `customer_confirmed` (optional boolean).
+`formatted_address`, `district`, `province`, `missing_fields`, and `customer_message`, plus
+`customer_confirmed` (optional boolean). The prompt is Pakistan COD-aware: it may normalize supported locality
+facts, but must leave unknown district/province/address details blank rather than invent them.
 It saves the structured correction and returns the updated seller order. Confirmation is saved only when a
 ready review has no missing fields, with the admin ID/time in `address_review`. Frontend: refresh from this
 response and keep confirmation disabled while fields remain. Rollback: omit the optional review fields;
@@ -946,6 +948,10 @@ Hard-removes the queue record.
 
 ## Order Management
 
+Bank-deposit orders appear in the regular admin order list/detail with `payment_method: "bank_deposit"`, `payment_status: "pending_verification"`, `payment_proof_url`, its shared-proof note, and the server-calculated `financials.discount_amount`. Review the proof, then verify it with the endpoint below; use the existing cancel-order action if payment is invalid. DEX/manual-booking exports set their `cod_amount` to zero for these prepaid orders.
+
+Regular admin order responses include a derived `dex_order_number` for quick DEX entry. It keeps numeric characters from `order_number` and converts a final `-A` through `-I` suffix to `1` through `9`: `ORD-010826-1234-A` becomes `01082612341`.
+
 ### List Orders
 `GET /api/v2/admin/orders`
 
@@ -955,6 +961,11 @@ Returns all child orders across the platform.
 `GET /api/v2/admin/orders/{orderID}`
 
 Returns the full child order including tracking snapshot and shipping address.
+
+### Verify Bank-Deposit Payment
+`POST /api/v2/admin/orders/{orderID}/payment/verify`
+
+Marks a bank-deposit order with a stored payment proof as `payment_status: "verified"`. Admin authentication is required; COD orders and orders without a proof return `400`.
 
 ### Update Order Status (Legacy)
 `PUT /api/v2/admin/orders/{orderID}`

@@ -79,7 +79,7 @@ const parentFromChild = (child: Order): ParentOrder => ({
   subtotal: child.financials?.subtotal ?? 0,
   status: child.status || 'pending',
   rollup_status: child.status || 'pending',
-  payment_method: 'N/A',
+  payment_method: child.payment_method || 'cod',
   shipping_address: child.shipping_address,
   child_order_ids: [child.id],
   child_summaries: [{
@@ -282,7 +282,7 @@ const OrderDetailPage: React.FC = () => {
       setParent(payload.parent);
       setChildren(payload.children);
       const address = payload.parent.shipping_address || {};
-      setDetailsDraft({ payment_method: payload.parent.payment_method || 'cod', full_name: payload.parent.customer_name || address.full_name || '', phone_number: payload.parent.customer_phone || address.phone_number || '', email: payload.parent.customer_email || address.email || '', address_line1: address.address_line1 || '', address_line2: address.address_line2 || '', city: address.city || '', province: address.province || '', postal_code: address.postal_code || '', country: address.country || 'Pakistan' });
+      setDetailsDraft({ payment_method: child.payment_method || 'cod', full_name: payload.parent.customer_name || address.full_name || '', phone_number: payload.parent.customer_phone || address.phone_number || '', email: payload.parent.customer_email || address.email || '', address_line1: address.address_line1 || '', address_line2: address.address_line2 || '', city: address.city || '', province: address.province || '', postal_code: address.postal_code || '', country: address.country || 'Pakistan' });
 
       const linkedChild = payload.children.find((candidate) => candidate.id === child.id) || payload.children[0];
       setSelectedChildId(linkedChild?.id || '');
@@ -400,6 +400,11 @@ const OrderDetailPage: React.FC = () => {
       () => AdminPortal.cancelOrder(selectedChildId, 'Cancelled by admin'),
       'Seller order cancelled.'
     );
+  };
+
+  const handleVerifyPayment = async () => {
+    if (!selectedChildId || !window.confirm('Verify this bank-deposit payment?')) return;
+    await runUpdate(() => AdminPortal.verifyOrderPayment(selectedChildId), 'Bank-deposit payment verified.');
   };
 
   const handleSetWarehouse = async () => {
@@ -538,6 +543,8 @@ const OrderDetailPage: React.FC = () => {
     try {
       const res = await AdminPortal.updateOrderCustomer(selectedChildId, {
         formatted_address: addressReview.formatted_address,
+        district: addressReview.district,
+        province: addressReview.province,
         missing_fields: missingFields,
         customer_message: addressReview.customer_message,
         ...(confirmed ? { customer_confirmed: true } : {}),
@@ -672,7 +679,13 @@ const OrderDetailPage: React.FC = () => {
               </h3>
               <div className="space-y-2 text-sm">
                 <p className="text-neutral-300">Payment Method: <span className="text-white">{(parent.payment_method || '').replace(/_/g, ' ')}</span></p>
+                {selectedChild?.payment_status && <p className="text-neutral-300">Payment Status: <span className="text-amber-300">{selectedChild.payment_status.replace(/_/g, ' ')}</span></p>}
+                {selectedChild?.payment_proof_url && <p><a href={selectedChild.payment_proof_url} target="_blank" rel="noreferrer" className="text-primary underline">Open payment proof</a></p>}
+                {selectedChild?.payment_proof_note && <p className="text-xs text-neutral-400">{selectedChild.payment_proof_note}</p>}
+                {selectedChild?.payment_method === 'bank_deposit' && selectedChild.payment_status === 'pending_verification' && selectedChild.payment_proof_url && <Button label="Verify payment" size="sm" variant="primary" onClick={() => void handleVerifyPayment()} isLoading={isUpdating} />}
+                {selectedChild?.dex_order_number && <p className="text-neutral-300">DEX order no.: <span className="font-mono text-white">{selectedChild.dex_order_number}</span></p>}
                 <p className="text-neutral-300">Subtotal: <span className="text-white">{formatCurrency(parent.subtotal)}</span></p>
+                {(selectedChild?.financials?.discount_amount ?? 0) > 0 && <p className="text-neutral-300">Bank discount: <span className="text-emerald-300">−{formatCurrency(selectedChild?.financials?.discount_amount)}</span></p>}
                 <p className="text-neutral-300">Shipping: <span className="text-white">{formatCurrency(parent.shipping_fee)}</span></p>
                 <p className="text-neutral-300">Total: <span className="text-white font-black">{formatCurrency(parent.total_amount)}</span></p>
                 <p className="text-neutral-300">Seller order: <span className="text-white">{selectedChild?.order_number || selectedChildId}</span></p>
@@ -705,6 +718,7 @@ const OrderDetailPage: React.FC = () => {
                   <label className="text-xs text-neutral-400">Formatted address<textarea value={addressReview.formatted_address || ''} onChange={(event) => setAddressReview((current) => current ? { ...current, formatted_address: event.target.value, format_status: 'ready' } : current)} className="mt-1 h-24 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-primary" /></label>
                   <label className="text-xs text-neutral-400">Missing fields (comma separated)<input value={addressReview.missing_fields.join(', ')} onChange={(event) => setAddressReview((current) => current ? { ...current, missing_fields: event.target.value.split(',').map((field) => field.trim()).filter(Boolean), format_status: 'ready' } : current)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary" /><span className="mt-1 block text-[10px] text-neutral-500">{ADDRESS_FIELDS.join(', ')}</span></label>
                 </div>
+                <div className="grid gap-3 md:grid-cols-2"><label className="text-xs text-neutral-400">District<input value={addressReview.district || ''} onChange={(event) => setAddressReview((current) => current ? { ...current, district: event.target.value, format_status: 'ready' } : current)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary" /></label><label className="text-xs text-neutral-400">Province<input value={addressReview.province || ''} onChange={(event) => setAddressReview((current) => current ? { ...current, province: event.target.value, format_status: 'ready' } : current)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-primary" /></label></div>
                 <div><div className="mb-2 flex items-center justify-between"><p className="text-xs text-neutral-400">Customer message</p><button onClick={() => void copyText(addressReview.customer_message)} className="inline-flex items-center gap-1 text-xs font-semibold text-primary"><Copy size={13} /> Copy message</button></div><textarea value={addressReview.customer_message || ''} onChange={(event) => setAddressReview((current) => current ? { ...current, customer_message: event.target.value, format_status: 'ready' } : current)} className="h-20 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-primary" /></div>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4"><p className="text-xs text-neutral-400">{addressReview.missing_fields.length ? `${addressReview.missing_fields.length} field(s) still needed` : 'No missing fields'}</p><div className="flex gap-2"><Button label="Save review" size="sm" onClick={() => void saveAddressReview()} isLoading={isUpdating} /><Button label="Customer confirmed address" size="sm" variant="primary" onClick={() => void saveAddressReview(true)} isDisabled={isUpdating || addressReview.customer_confirmed || addressReview.format_status !== 'ready' || addressReview.missing_fields.length > 0} /></div></div>
               </div>
@@ -880,7 +894,7 @@ const OrderDetailPage: React.FC = () => {
               ].map(([key, label]) => (
                 <TextInput key={key} label={label} value={detailsDraft[key] || ''} onChange={(value) => setDetailsDraft((current) => ({ ...current, [key]: value }))} isRequired={['full_name', 'phone_number', 'address_line1', 'city'].includes(key)} />
               ))}
-              <label className="text-sm text-neutral-300">Payment method<select value={detailsDraft.payment_method || 'cod'} onChange={(event) => setDetailsDraft((current) => ({ ...current, payment_method: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"><option value="cod">Cash on delivery</option><option value="easypaisa">Easypaisa</option><option value="bank_transfer">Bank transfer</option></select></label>
+              <label className="text-sm text-neutral-300">Payment method<select value={detailsDraft.payment_method || 'cod'} onChange={(event) => setDetailsDraft((current) => ({ ...current, payment_method: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"><option value="cod">Cash on delivery</option><option value="bank_deposit">Bank deposit</option></select></label>
               <Button label="Save all order details" variant="primary" onClick={() => void saveOrderDetails()} isLoading={isUpdating} width="100%" />
             </VStack>
           </Card>

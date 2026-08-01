@@ -1138,6 +1138,9 @@ const ManageOrders: React.FC = () => {
                           <p className="font-mono text-xs text-white">
                             {order.order_number || id}
                           </p>
+                          <p className={`mt-1 text-[10px] uppercase ${order.payment_method === 'bank_deposit' && order.payment_status === 'pending_verification' ? 'text-amber-300' : 'text-neutral-500'}`}>
+                            {(order.payment_method || 'cod').replace(/_/g, ' ')}{order.payment_status ? ` · ${String(order.payment_status).replace(/_/g, ' ')}` : ''}
+                          </p>
                         </td>
                         <td className="p-3">
                           <p className="font-medium text-white">
@@ -1243,6 +1246,7 @@ const ManageOrders: React.FC = () => {
                                     {(detail.order_items || []).length ? detail.order_items.map((item: any, index: number) => <p key={item.id || index} className="text-xs text-neutral-300"><span className="font-medium text-white">{item.product_name || item.product_id || 'Product'}</span>{item.variant_label || item.variant_id ? ` · ${item.variant_label || item.variant_id}` : ''} · Qty {item.quantity || 0}</p>) : <p className="text-xs text-neutral-500">No order items available.</p>}
                                   </div>
                                 </section>
+                                {detail.payment_method === 'bank_deposit' && <section className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-amber-200">Bank deposit</p><p className="mt-3 text-xs text-neutral-300">{String(detail.payment_status || 'pending verification').replace(/_/g, ' ')}</p>{detail.payment_proof_url && <a href={detail.payment_proof_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-primary underline">Open payment proof</a>}{detail.payment_proof_note && <p className="mt-2 text-[11px] text-neutral-400">{detail.payment_proof_note}</p>}{detail.financials?.discount_amount ? <p className="mt-2 text-xs text-emerald-300">Discount: −{money(detail.financials.discount_amount)}</p> : null}</section>}
                                 <section className="rounded-lg border border-white/10 bg-black/30 p-3">
                                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Packing evidence</p>
                                   {evidence ? <div className="mt-3 grid grid-cols-2 gap-2">{[...(evidence.item_photos || []).map((photo: any) => ({ label: 'Item', object: photo.url })), { label: 'Parcel', object: evidence.packed_parcel_photo_url }].map((photo: any, index: number) => expandedPackingPhotos[`${id}:${photo.object}`] ? <button key={`${photo.object}-${index}`} type="button" onClick={() => setPreviewPackingPhoto({ src: expandedPackingPhotos[`${id}:${photo.object}`], alt: `${photo.label} packing evidence` })} className="rounded-md focus:outline-none focus:ring-2 focus:ring-primary"><img src={expandedPackingPhotos[`${id}:${photo.object}`]} alt={`${photo.label} packing evidence`} className="h-24 w-full rounded-md object-cover transition-transform hover:scale-[1.03]" /></button> : <p key={`${photo.object}-${index}`} className="rounded-md border border-white/10 p-2 text-[11px] text-neutral-500">Loading {photo.label.toLowerCase()} photo…</p>)}</div> : <p className="mt-3 text-xs text-neutral-500">Seller has not submitted evidence.</p>}

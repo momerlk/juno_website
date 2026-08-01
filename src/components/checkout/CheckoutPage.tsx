@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, Loader2, Zap, Truck } from 'lucide-react';
+import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, Copy, Loader2, Zap, Truck } from 'lucide-react';
 import { useGuestCart } from '../../contexts/GuestCartContext';
-import { GuestCommerce } from '../../api/commerceApi';
-import type { GuestCheckoutDetails, ShippingEstimateResponse } from '../../api/api.types';
+import { Commerce, GuestCommerce } from '../../api/commerceApi';
+import { uploadFileAndGetUrl } from '../../api/shared';
+import type { GuestCheckoutDetails, PaymentMethod, ShippingEstimateResponse } from '../../api/api.types';
 import { Funnel } from '../../api/analyticsApi';
 import {
     identifyTikTokUser,
@@ -34,8 +35,6 @@ const STORAGE_KEYS = {
     LAST_DETECTED_CITY: 'juno_last_detected_city',
 };
 
-const DEFAULT_FREE_SHIPPING_THRESHOLD = 5900;
-const DEFAULT_SHIPPING_FEE = 199;
 const SHOW_FREE_SHIPPING_UI = false;
 
 const sanitizeCity = (value: unknown): string => {
@@ -127,6 +126,12 @@ const CheckoutPage: React.FC = () => {
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [shippingEstimate, setShippingEstimate] = useState<ShippingEstimateResponse | null>(null);
     const [shippingState, setShippingState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+    const [paymentMethod, setPaymentMethod] = useState('cod');
+    const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+    const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
+    const [paymentProof, setPaymentProof] = useState<File | null>(null);
+    const [paymentProofPreview, setPaymentProofPreview] = useState('');
+    const [copiedBankDetail, setCopiedBankDetail] = useState<string | null>(null);
     const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
     const hasTrackedCheckoutStart = React.useRef(false);
     const hasTrackedInitiateCheckout = React.useRef(false);
@@ -156,6 +161,25 @@ const CheckoutPage: React.FC = () => {
             }));
         }
     }, []);
+
+    useEffect(() => {
+        Commerce.getPaymentMethods().then((response) => {
+            if (!response.ok) return;
+            const body = response.body;
+            const methods = Array.isArray(body) ? body : body.payment_methods || body.methods || [];
+            if (methods.length) setPaymentMethods(methods);
+        }).catch(() => undefined).finally(() => setPaymentMethodsLoading(false));
+    }, []);
+
+    useEffect(() => {
+        if (!paymentProof) {
+            setPaymentProofPreview('');
+            return;
+        }
+        const preview = URL.createObjectURL(paymentProof);
+        setPaymentProofPreview(preview);
+        return () => URL.revokeObjectURL(preview);
+    }, [paymentProof]);
 
     useEffect(() => {
         if (hasTrackedCheckoutStart.current || checkoutItemCount <= 0) return;
@@ -291,10 +315,15 @@ const CheckoutPage: React.FC = () => {
             if (!estimateResponse.ok) {
                 throw new Error('Could not verify your order total. Please try again.');
             }
+            if (paymentMethod === 'bank_deposit' && !paymentProof) {
+                throw new Error('Upload your bank-deposit receipt to place this order.');
+            }
+            const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(estimateResponse.body.subtotal * 0.05) : 0;
             const confirmationSummary = {
                 subtotal: estimateResponse.body.subtotal,
                 shipping_fee: estimateResponse.body.shipping_total,
-                total: estimateResponse.body.subtotal + estimateResponse.body.shipping_total,
+                discount_amount: discountAmount,
+                total: estimateResponse.body.subtotal + estimateResponse.body.shipping_total - discountAmount,
                 currency: estimateResponse.body.currency,
             };
 
@@ -306,7 +335,8 @@ const CheckoutPage: React.FC = () => {
             trackTikTokAddPaymentInfo(checkoutItems);
 
             const checkoutResponse = await GuestCommerce.checkoutDirect({
-                payment_method: 'cod',
+                payment_method: paymentMethod,
+                ...(paymentProof ? { payment_proof_url: await uploadFileAndGetUrl(paymentProof) } : {}),
                 items,
                 customer: formData,
             });
@@ -349,7 +379,7 @@ const CheckoutPage: React.FC = () => {
             // Buy Now never added to the cart, so leave it intact.
             if (!isBuyNow) clearCart();
 
-            navigate('/checkout/confirmation', { state: { checkout, receiptItems, customer: formData, summary: confirmationSummary } });
+            navigate('/checkout/confirmation', { state: { checkout, receiptItems, customer: formData, summary: confirmationSummary, paymentMethod } });
         } catch (error: unknown) {
             setErrors({
                 general: error instanceof Error ? error.message : 'Failed to place order. Please try again.',
@@ -374,23 +404,25 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
+    const copyBankDetail = async (key: string, value: string) => {
+        await navigator.clipboard.writeText(value);
+        setCopiedBankDetail(key);
+    };
+
     const canEstimateShipping = checkoutItemCount > 0 && Boolean(formData.city.trim()) && checkoutItems.length > 0;
     const shouldUseFallbackEstimate = canEstimateShipping && shippingState === 'error';
     const hasResolvedEstimate = shippingState === 'ready' && shippingEstimate !== null;
 
-    const freeShippingThreshold = hasResolvedEstimate
-        ? shippingEstimate.free_shipping_threshold
-        : DEFAULT_FREE_SHIPPING_THRESHOLD;
+    const freeShippingThreshold = hasResolvedEstimate ? shippingEstimate.free_shipping_threshold : 0;
     const displaySubtotal = hasResolvedEstimate ? shippingEstimate.subtotal : checkoutSubtotal;
     const shippingFee = hasResolvedEstimate
         ? shippingEstimate.shipping_total
-        : shouldUseFallbackEstimate
-            ? (displaySubtotal >= freeShippingThreshold ? 0 : DEFAULT_SHIPPING_FEE)
-            : null;
+        : shouldUseFallbackEstimate ? 0 : null;
     const isFreeShippingApplied = hasResolvedEstimate
         ? shippingEstimate.free_shipping_applied
         : shippingFee === 0;
-    const orderTotal = shippingFee === null ? null : displaySubtotal + shippingFee;
+    const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(displaySubtotal * 0.05) : 0;
+    const orderTotal = shippingFee === null ? null : displaySubtotal + shippingFee - discountAmount;
     const progressPct = freeShippingThreshold > 0
         ? Math.min(100, Math.round((displaySubtotal / freeShippingThreshold) * 100))
         : 0;
@@ -399,6 +431,8 @@ const CheckoutPage: React.FC = () => {
     const today = new Date();
     const deliveryStart = addDays(today, 2);
     const deliveryEnd = addDays(today, 4);
+    const bankMethod = paymentMethods.find((method) => [method.id, method.code, method.payment_method].includes('bank_deposit'));
+    const bank = bankMethod?.bank || bankMethod;
 
     if (!isHydrated) {
         return (
@@ -753,25 +787,32 @@ const CheckoutPage: React.FC = () => {
                                 </p>
                             </div>
 
-                            <div className="mb-6 flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary">
-                                    <CheckCircle size={18} className="text-white" />
-                                </div>
-                                <div>
-                                    <p
-                                        className="text-white"
-                                        style={{
-                                            fontFamily: 'Montserrat, sans-serif',
-                                            fontWeight: 800,
-                                            fontSize: '0.9rem',
-                                            letterSpacing: '-0.02em',
-                                        }}
-                                    >
-                                        Cash on delivery
-                                    </p>
-                                    <p className="text-xs text-white/45">Pay when you receive your order</p>
-                                </div>
+                            <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                                <button type="button" onClick={() => setPaymentMethod('cod')} className={`rounded-xl border p-4 text-left ${paymentMethod === 'cod' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                                    <p className="font-bold text-white">Cash on Delivery (COD)</p>
+                                </button>
+                                <button type="button" disabled={paymentMethodsLoading || !bankMethod} onClick={() => setPaymentMethod('bank_deposit')} className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-45 ${paymentMethod === 'bank_deposit' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                                    <p className="font-bold text-white">Bank Deposit</p>
+                                </button>
                             </div>
+                            {paymentMethod === 'bank_deposit' && <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                                <p className="text-sm text-white/75">Pay via Bank Transfer – After making the payment upload the screenshot and confirm your order.</p>
+                                <p className="mt-3 text-sm text-white/65">Please transfer the total order amount to the following bank account:</p>
+                                <p className="mt-2 text-sm text-white/75">Bank: {bank?.bank_name || 'Bank deposit'}</p>
+                                <p className="mt-1 text-sm text-white/75">Account Title: {bank?.account_title}</p>
+                                <p className="mt-3 text-sm text-white/75">Amount to transfer: {orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}</p>
+                                <div className="mt-4 space-y-2">
+                                    {bank?.account_number && <button type="button" onClick={() => void copyBankDetail('account_number', bank.account_number!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">Account number</span><span className="font-mono text-sm font-bold text-white">{bank.account_number}</span></span>{copiedBankDetail === 'account_number' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
+                                    {bank?.iban && <button type="button" onClick={() => void copyBankDetail('iban', bank.iban!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">IBAN</span><span className="font-mono text-sm font-bold text-white">{bank.iban}</span></span>{copiedBankDetail === 'iban' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
+                                </div>
+                                <label className="mt-4 block cursor-pointer rounded-xl border border-dashed border-white/20 bg-black/20 p-4 text-center active:bg-black/35">
+                                    <input type="file" accept="image/png,image/jpeg,image/webp" capture="environment" onChange={(event) => setPaymentProof(event.target.files?.[0] || null)} className="sr-only" />
+                                    <span className="block text-sm font-semibold text-white">{paymentProof ? 'Payment screenshot selected' : 'Upload payment screenshot'}</span>
+                                    <span className="mt-1 block text-xs text-white/50">{paymentProof ? paymentProof.name : 'Tap to take or choose a screenshot'}</span>
+                                </label>
+                                {paymentProofPreview && <img src={paymentProofPreview} alt="Payment screenshot preview" className="mt-3 max-h-64 w-full rounded-xl border border-white/10 object-contain" />}
+                                <p className="mt-4 text-xs leading-5 text-white/50">In case of any queries or errors message <a href="https://wa.me/923158972405" target="_blank" rel="noreferrer" className="text-white underline">+92 315 8972405 on WhatsApp</a>.</p>
+                            </div>}
 
                             {errors.general && (
                                 <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-xs text-red-300">
@@ -854,6 +895,7 @@ const CheckoutPage: React.FC = () => {
                                             isFreeShippingApplied={isFreeShippingApplied}
                                         />
                                     </Row>
+                                    {discountAmount > 0 && <Row label="Bank deposit discount">−{formatCurrency(discountAmount)}</Row>}
 
                                     {SHOW_FREE_SHIPPING_UI && remainingForFreeShip > 0 && (
                                         <div className="pt-1">

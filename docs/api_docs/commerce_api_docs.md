@@ -4,15 +4,15 @@ Shopping cart, checkout, order management, and order tracking.
 
 ## Day 1 operational order contract
 
-Seller `Order` records are the working orders for checkout confirmation, customer/guest lookup,
-receipts, tracking, admin detail, and cancellation. `ParentOrder` remains an analytics/correlation
-record only; its list/detail routes are read-only and the parent cascade-cancel route is no longer registered.
+Seller `Order` records are the only records created for checkout confirmation, customer/guest lookup,
+receipts, tracking, admin detail, and cancellation. New checkouts do not create a `parent_orders` document
+or set `parent_order_id`. Historical parent records remain readable for backwards compatibility.
 
 All checkout endpoints return `201` with:
 
 ```json
 {
-  "checkout_id": "analytics-correlation-id",
+  "checkout_id": "seller-order-id",
   "orders": [{ "id": "seller-order-id", "order_number": "ORD-300726-0001-A" }]
 }
 ```
@@ -33,8 +33,10 @@ cascade cancellation route exists.
 
 Every new seller order receives a `manual_review` with a ready-to-copy `formatter_prompt` for ChatGPT and
 a safe customer message. No AI key, external formatter, or automated address invention is required.
-Staff paste ChatGPT's JSON result back through the existing admin customer endpoint; accepted missing-field
-names are `house_or_building`, `area`, `city`, `province`, and `postal_code`.
+The Pakistan COD-aware prompt instructs ChatGPT to normalize only supported locality facts and never invent
+delivery details. Staff paste its `formatted_address`, `district`, `province`, `missing_fields`, and
+`customer_message` back through the existing admin customer endpoint; accepted missing-field names are
+`house_or_building`, `area`, `city`, `province`, and `postal_code`.
 
 The review is returned as `order.address_review`:
 
@@ -42,6 +44,8 @@ The review is returned as `order.address_review`:
 {
   "original_address": "12 Main Street, Karachi",
   "formatted_address": "12 Main Street, Karachi",
+  "district": "Karachi",
+  "province": "Sindh",
   "missing_fields": [],
   "customer_message": "Hi, to deliver your order, please reply with your house_or_building.",
   "format_status": "manual_review",
@@ -54,7 +58,7 @@ The review is returned as `order.address_review`:
 ```
 
 **Frontend notes:** display copy buttons for `formatter_prompt` and `customer_message`. Paste ChatGPT's
-three JSON fields (`formatted_address`, `missing_fields`, `customer_message`) into the existing admin
+five JSON fields (`formatted_address`, `district`, `province`, `missing_fields`, `customer_message`) into the existing admin
 customer endpoint; its response becomes `ready`. Submit customer corrections without those fields to
 generate a fresh prompt. Only allow confirmation when a `ready` review has no missing fields.
 
@@ -72,6 +76,7 @@ Auth:
 - `GET /api/v2/commerce/orders/{id}/receipt` and `/invoice` — user/seller/admin auth required
 - `POST /api/v2/commerce/orders/{id}/receipt/resend` — user/seller/admin auth required
 - `POST /api/v2/commerce/shipping/estimate` — public
+- `GET /api/v2/commerce/payment-methods` — public; COD and bank-deposit instructions
 - `GET /api/v2/support/link` — public
 - `GET /api/v2/track/{token}` — public route
 - `GET /api/v2/commerce/guest/cart` — public guest cart route
@@ -254,7 +259,7 @@ to resend the current order details to the customer and all relevant sellers.
 }
 ```
 
-### `ParentOrder`
+### `ParentOrder` (legacy)
 ```json
 {
   "id": "uuid",
@@ -264,7 +269,7 @@ to resend the current order details to the customer and all relevant sellers.
   "customer_phone": "+923001234567",
   "customer_email": "sara@example.com",
   "total_amount": 7599,
-  "shipping_fee": 99,
+  "shipping_fee": 0,
   "subtotal": 7500,
   "status": "pending",
   "rollup_status": "pending",
@@ -330,7 +335,6 @@ to resend the current order details to the customer and all relevant sellers.
 ```json
 {
   "id": "uuid",
-  "parent_order_id": "parent-1",
   "order_number": "ORD-00123",
   "seller_id": "seller-1",
   "user_id": "user-1",
@@ -339,6 +343,10 @@ to resend the current order details to the customer and all relevant sellers.
   "customer_name": "Sara Ahmed",
   "customer_phone": "+923001234567",
   "customer_email": "sara@example.com",
+  "payment_method": "bank_deposit",
+  "payment_proof_url": "https://storage.googleapis.com/.../payment-proof.png",
+  "payment_status": "pending_verification",
+  "payment_proof_note": "This payment proof also covers order(s): ORD-00123-B",
   "order_items": [
     {
       "id": "item-1",
@@ -356,13 +364,13 @@ to resend the current order details to the customer and all relevant sellers.
   "status": "at_warehouse",
   "financials": {
     "subtotal": 3500,
-    "shipping_fee": 99,
+    "shipping_fee": 0,
     "commission_rate": 0.175,
     "commission": 612.5,
     "seller_payout": 2887.5,
-    "total": 3599,
+    "total": 3500,
     "currency": "PKR",
-    "free_shipping_applied": false
+    "free_shipping_applied": true
   },
   "shipping_address": {
     "full_name": "Sara Ahmed",
@@ -500,9 +508,9 @@ Returns shipping fee breakdown for the authenticated user's current cart.
 ```json
 {
   "subtotal": 7500,
-  "shipping_total": 99,
-  "free_shipping_applied": false,
-  "free_shipping_threshold": 5900,
+  "shipping_total": 0,
+  "free_shipping_applied": true,
+  "free_shipping_threshold": 0,
   "currency": "PKR",
   "breakdown": [
     {
@@ -516,7 +524,7 @@ Returns shipping fee breakdown for the authenticated user's current cart.
 }
 ```
 
-**Allocation Note:** Shipping fees are allocated proportionally per-seller using `seller_id` to prevent collisions if multiple sellers ship from the same city.
+**Shipping:** Customer shipping is free on every order. Per-seller breakdown entries remain present with `fee: 0`.
 
 **Common errors**
 - `400` — missing `buyer_city` query param
@@ -526,12 +534,21 @@ Returns shipping fee breakdown for the authenticated user's current cart.
 
 ## Checkout Endpoint
 
+### Payment Methods
+`GET /api/v2/commerce/payment-methods`
+
+Auth: none
+
+Returns Cash on Delivery and Bank Deposit instructions. For `bank_deposit`, show the returned Bank Alfalah account details, calculate the checkout summary with `payment_method: "bank_deposit"`, upload the payment screenshot through the existing `POST /api/v2/files/upload`, then send its `file.url` as `payment_proof_url` when placing the order.
+
+Bank deposits receive a server-calculated 5% discount. The proof is required and is stored on every split seller order with `payment_status: "pending_verification"`. When one checkout splits, each order includes the same `payment_proof_url` and a `payment_proof_note` naming every other order covered by that proof. Admins review the proof and call `POST /api/v2/admin/orders/{orderID}/payment/verify` to set that order's payment status to `verified`; they can cancel an invalid payment instead.
+
 ### Checkout
 `POST /api/v2/commerce/checkout`
 
 Auth: user token required
 
-Creates a parent transaction from the current cart and splits it into seller-specific child orders.
+Creates one seller order per seller from the current cart. No parent order is created.
 
 **Body**
 ```json
@@ -543,14 +560,19 @@ Creates a parent transaction from the current cart and splits it into seller-spe
 
 `address_id` and `payment_method` are required.
 
-**Shipping fee calculation:** The `shipping_fee` in the response is computed using the city-aware Juno shipping formula:
-1. Each brand's shipment is classified as within-city (Rs. 130) or outside-city (Rs. 220) by comparing the seller's city vs the buyer's delivery address city.
-2. A subsidy pool of Rs. 99 × total quantity is subtracted from total logistics cost.
-3. The net cost is mapped to a fixed bucket: ≤100→99 | ≤200→149 | ≤300→199 | >300→249.
-4. A Rs. 60 surcharge is added per additional brand beyond the first.
-5. If any product in the cart lacks `seller_city` (legacy products), the old flat formula (`200 × brand_count`) is used instead to avoid overcharging.
+Supported methods are `cod` and `bank_deposit`. A `bank_deposit` checkout must include `payment_proof_url`; the same fields apply to direct and guest checkout endpoints.
 
-**Response `201`**: `ParentOrder`
+```json
+{
+  "address_id": "uuid",
+  "payment_method": "bank_deposit",
+  "payment_proof_url": "https://storage.googleapis.com/.../payment-proof.png"
+}
+```
+
+**Shipping fee:** Customer shipping is free for every checkout (`shipping_fee: 0`), regardless of city, order subtotal, or seller count.
+
+**Response `201`**: `CheckoutResponse` containing regular seller orders; `checkout_id` is the first order ID.
 
 **Common errors**
 - `400 INVALID_BODY` — malformed JSON
@@ -584,9 +606,9 @@ Creates an order directly from request `items` and does not read server cart ite
 
 `address_id`, `payment_method`, and non-empty `items` are required. Each item requires `product_id`, `variant_id`, `quantity >= 1`.
 
-**Shipping fee:** Computed using the same city-aware formula as Checkout (based on buyer city from `address_id`).
+**Shipping fee:** Free for every order (`shipping_fee: 0`). Bank Deposit receives an additional 5% discount.
 
-**Response `201`**: `ParentOrder`
+**Response `201`**: `CheckoutResponse` containing regular seller orders.
 
 **Common errors**
 - `400 INVALID_BODY` — malformed JSON
@@ -720,7 +742,7 @@ Header:
 
 `X-Guest-Cart-Id: guest:uuid`
 
-The guest cart must already contain saved guest checkout details. The buyer's city from `guest_checkout_details.city` is used for the city-aware shipping formula.
+The guest cart must already contain saved guest checkout details.
 
 **Body**
 ```json
@@ -729,9 +751,9 @@ The guest cart must already contain saved guest checkout details. The buyer's ci
 }
 ```
 
-**Shipping fee:** Computed using the same city-aware formula as authenticated checkout (see Checkout endpoint above). Buyer city comes from the saved `guest_checkout_details.city`.
+**Shipping fee:** Free for every order (`shipping_fee: 0`). Bank Deposit receives an additional 5% discount.
 
-**Response `201`**: `ParentOrder`
+**Response `201`**: `CheckoutResponse` containing regular seller orders.
 
 **Common errors**
 - `400 INVALID_BODY` — malformed JSON
@@ -772,9 +794,9 @@ Creates a guest order directly from request `items` and inline customer details.
 
 `payment_method`, non-empty `items`, and required `customer` fields are mandatory.
 
-**Shipping fee:** Computed using the same city-aware formula as checkout. Buyer city comes from `customer.city`.
+**Shipping fee:** Free for every order (`shipping_fee: 0`).
 
-**Response `201`**: `ParentOrder`
+**Response `201`**: `CheckoutResponse` containing regular seller orders.
 
 **Common errors**
 - `400 INVALID_BODY` — malformed JSON
@@ -924,15 +946,15 @@ Calculates shipping fee for a given list of items without requiring a cart.
 ```json
 {
   "subtotal": 7500,
-  "shipping_total": 99,
-  "free_shipping_applied": false,
-  "free_shipping_threshold": 5900,
+  "shipping_total": 0,
+  "free_shipping_applied": true,
+  "free_shipping_threshold": 0,
   "currency": "PKR",
   "breakdown": [...]
 }
 ```
 
-**Free Shipping:** Applied when `subtotal >= 5900` PKR. All shipping fees waived.
+**Free Shipping:** Applied to every order. All shipping fees are zero.
 
 ---
 
@@ -1165,12 +1187,12 @@ Sellers do not update delivery statuses. Their only order mutation is `POST /api
 
 ## Admin Order Management
 
-### List Admin Parent Orders
+### List Admin Parent Orders (historical)
 `GET /api/v2/commerce/admin/orders?status={status}&limit=20&offset=0`
 
 Auth: admin token required
 
-Returns paginated parent orders with child summaries.
+Returns historical parent orders with child summaries. New checkouts are regular seller orders and should use the regular admin order view.
 
 **Query params:**
 - `status` (optional): filter by rollup status
@@ -1187,12 +1209,12 @@ Returns paginated parent orders with child summaries.
 
 ---
 
-### Get Admin Parent Order Detail
+### Get Admin Parent Order Detail (historical)
 `GET /api/v2/commerce/admin/orders/{id}`
 
 Auth: admin token required
 
-Returns the parent order and all child orders.
+Returns a historical parent order and its child orders.
 
 **Response `200`**:
 ```json
@@ -1208,12 +1230,12 @@ Returns the parent order and all child orders.
 
 ---
 
-### Cancel Parent Order
+### Cancel Parent Order (historical)
 `POST /api/v2/commerce/admin/orders/{id}/cancel`
 
 Auth: admin token required
 
-Cancels a parent order and all child orders.
+Cancels a historical parent order and all child orders.
 
 **Body** (optional):
 ```json
