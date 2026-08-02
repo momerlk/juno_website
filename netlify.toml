@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "/catalog/:productId"
+  to = "https://api.juno.com.pk/catalog/:productId"
+  status = 200
+  force = true

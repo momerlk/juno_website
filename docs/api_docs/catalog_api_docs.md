@@ -244,6 +244,33 @@ Returns full details for a single product.
 
 ---
 
+### Product Share Preview
+`GET /catalog/{productId}`
+
+Public product-page route for browsers and social crawlers. Its body is the
+current SPA entry document, while active products receive a product-specific
+head. The response contains `og:title`, `og:description`, `og:image`,
+`og:url`, `og:type=product`, and matching `summary_large_image` Twitter tags.
+
+| Metadata | Source |
+|----------|--------|
+| title | `${product.title} | Juno` |
+| description | `short_description`, then `description` |
+| image | First public absolute HTTPS `images[]` value; otherwise the Juno app icon |
+| canonical URL | `${FRONTEND_URL}/catalog/${product.id}` |
+| seller | `seller_name` is emitted as `product:brand` when present |
+
+Generated pages are held in the process-local cache for 10 minutes (maximum
+1,000 entries). Missing, unpublished, inactive, or unavailable products serve
+the unchanged normal Juno site metadata. The public-site proxy must forward
+`/catalog/*` to this API route; otherwise the SPA host will return its generic
+entry page before this handler runs.
+
+After deployment or a product title/image change, use Meta Sharing Debugger's
+re-scrape action and send the product URL in WhatsApp to refresh its preview.
+
+---
+
 ### Search Products
 `GET /api/v2/catalog/products/search`
 
