@@ -223,16 +223,14 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                                 <span className="hidden sm:inline">Download app</span>
                             </Link>
 
-                            {!showInlineSearch ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setSearchOpen(true)}
-                                    className={iconButtonClass}
-                                    aria-label="Search"
-                                >
-                                    <img src="/images/icons/search.png" alt="" className="h-5 w-5 opacity-90" />
-                                </button>
-                            ) : null}
+                            <button
+                                type="button"
+                                onClick={() => setSearchOpen(true)}
+                                className={`${iconButtonClass} ${showInlineSearch ? 'md:hidden' : ''}`}
+                                aria-label="Search"
+                            >
+                                <img src="/images/icons/search.png" alt="" className="h-5 w-5 opacity-90" />
+                            </button>
 
                             <button
                                 type="button"

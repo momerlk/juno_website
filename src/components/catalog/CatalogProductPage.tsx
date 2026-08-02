@@ -85,7 +85,7 @@ const getCatalogBadges = (product: CatalogProduct | null) => ({
 // Independence-day badge: the flag itself, miniaturised. White hoist stripe,
 // bottle green field, crescent and star, and a sheen that reads as fabric
 // catching light rather than a generic shimmer.
-const AzaadiSaleBadge: React.FC<{ savings?: string }> = ({ savings }) => (
+const AzaadiSaleBadge: React.FC = () => (
     <span className="relative inline-flex items-stretch overflow-hidden rounded-md shadow-[0_6px_20px_rgba(1,65,28,0.5)]">
         <span className="w-1.5 shrink-0 bg-white" aria-hidden="true" />
         <span className="flex items-center gap-1.5 bg-[#01411C] py-1.5 pl-2 pr-3">
@@ -95,10 +95,6 @@ const AzaadiSaleBadge: React.FC<{ savings?: string }> = ({ savings }) => (
             </svg>
             <span className="text-[11px] font-black uppercase tracking-[0.18em] text-white">
                 {SALE_LABEL}
-            </span>
-            <span className="h-3 w-px bg-white/30" aria-hidden="true" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
-                {savings || '14 August'}
             </span>
         </span>
     </span>
@@ -162,7 +158,10 @@ const CatalogProductPage: React.FC = () => {
     const [showImageLightbox, setShowImageLightbox] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
     const [sizeError, setSizeError] = useState(false);
+    // Furthest slide the customer has reached; nothing past it is requested.
+    const [maxSlideLoaded, setMaxSlideLoaded] = useState(1);
     const [reviews, setReviews] = useState<ProductReview[]>([]);
+    const [reviewsLoaded, setReviewsLoaded] = useState(false);
     const [showReviewsModal, setShowReviewsModal] = useState(false);
     const sizeSectionRef = useRef<HTMLDivElement>(null);
     const [sizing, setSizing] = useState<ProductSizing | null>(null);
@@ -242,11 +241,17 @@ const CatalogProductPage: React.FC = () => {
     useEffect(() => {
         let cancelled = false;
         setReviews([]);
+        setReviewsLoaded(false);
         setShowReviewsModal(false);
         if (!actualProductId) return undefined;
         void Catalog.getProductReviews(actualProductId).then((response) => {
-            if (!cancelled && response.ok) setReviews(asArray(response.body as ProductReview[]));
-        }).catch(() => undefined);
+            if (!cancelled) {
+                if (response.ok) setReviews(asArray(response.body as ProductReview[]));
+                setReviewsLoaded(true);
+            }
+        }).catch(() => {
+            if (!cancelled) setReviewsLoaded(true);
+        });
         return () => { cancelled = true; };
     }, [actualProductId]);
 
@@ -416,7 +421,17 @@ const CatalogProductPage: React.FC = () => {
 
     useEffect(() => {
         setSelectedImageIdx(0);
+        setMaxSlideLoaded(1);
     }, [selectedVariant?.image_url]);
+
+    useEffect(() => {
+        if (!showImageLightbox) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setShowImageLightbox(false);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [showImageLightbox]);
 
     useEffect(() => {
         if (imageGallery.length === 0) {
@@ -632,8 +647,10 @@ const CatalogProductPage: React.FC = () => {
                             <div
                                 onScroll={(event) => {
                                     const strip = event.currentTarget;
-                                    const index = Math.round(strip.scrollLeft / (strip.scrollWidth / Math.max(imageGallery.length, 1)));
-                                    setSelectedImageIdx(Math.min(Math.max(index, 0), Math.max(imageGallery.length - 1, 0)));
+                                    const raw = Math.round(strip.scrollLeft / (strip.scrollWidth / Math.max(imageGallery.length, 1)));
+                                    const index = Math.min(Math.max(raw, 0), Math.max(imageGallery.length - 1, 0));
+                                    setSelectedImageIdx(index);
+                                    setMaxSlideLoaded((current) => Math.max(current, index + 1));
                                 }}
                                 className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 scrollbar-none"
                                 style={{ scrollPaddingLeft: '1rem' }}
@@ -648,17 +665,21 @@ const CatalogProductPage: React.FC = () => {
                                             aria-label={`Zoom image ${index + 1}`}
                                             className="relative aspect-[4/5] w-[86%] shrink-0 snap-start overflow-hidden rounded-2xl bg-[#0d0d0e]"
                                         >
-                                            <img
-                                                src={slide.src}
-                                                srcSet={slide.srcSet}
-                                                sizes="86vw"
-                                                alt={`${product.title} ${index + 1}`}
-                                                loading={index === 0 ? 'eager' : 'lazy'}
-                                                fetchpriority={index === 0 ? 'high' : 'auto'}
-                                                decoding="async"
-                                                draggable={false}
-                                                className="h-full w-full select-none object-cover"
-                                            />
+                                            {/* Slides past the scroll frontier stay unmounted, so an
+                                                eight-image product costs two requests, not eight. */}
+                                            {index <= maxSlideLoaded ? (
+                                                <img
+                                                    src={slide.src}
+                                                    srcSet={slide.srcSet}
+                                                    sizes="86vw"
+                                                    alt={`${product.title} ${index + 1}`}
+                                                    loading={index === 0 ? 'eager' : 'lazy'}
+                                                    fetchpriority={index === 0 ? 'high' : 'auto'}
+                                                    decoding="async"
+                                                    draggable={false}
+                                                    className="h-full w-full select-none object-cover"
+                                                />
+                                            ) : null}
                                         </button>
                                     );
                                 })}
@@ -829,11 +850,13 @@ const CatalogProductPage: React.FC = () => {
                                         ))}
                                     </div>
                                     <span className="text-sm font-bold text-white">{product.rating.toFixed(1)}</span>
-                                    {product.review_count ? (
+                                    {!reviewsLoaded ? (
+                                        <span className="h-4 w-16 animate-pulse rounded bg-white/[0.12]" aria-label="Loading reviews" />
+                                    ) : reviews.length ? (
                                         <>
                                             <span className="text-white/20">|</span>
                                             <a href="#ratings" className="text-sm font-semibold text-white/60 underline-offset-4 hover:text-white hover:underline">
-                                                {product.review_count} reviews
+                                                {reviews.length} reviews
                                             </a>
                                         </>
                                     ) : null}
@@ -850,7 +873,7 @@ const CatalogProductPage: React.FC = () => {
 
                             {discountPercentage > 0 ? (
                                 <div className="mt-4">
-                                    <AzaadiSaleBadge savings={`Independence offer · -${discountPercentage}%`} />
+                                    <AzaadiSaleBadge />
                                 </div>
                             ) : null}
 
@@ -1356,7 +1379,7 @@ const CatalogProductPage: React.FC = () => {
                                 if (event.key !== 'Tab') return;
                                 const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled])'));
                                 const first = focusable[0];
-                                const last = focusable.at(-1);
+                                const last = focusable[focusable.length - 1];
                                 if (!first || !last) return;
                                 if (event.shiftKey && document.activeElement === first) {
                                     event.preventDefault();
