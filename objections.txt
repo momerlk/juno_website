@@ -1,0 +1,15 @@
+I agree with journey_id. 
+
+- creating new event for add to cart doesn't make sense because I just tested it and when I clicked add to bag it immediately showed up as an event 
+
+- checkout form started already exists as checkout started as the event starts as soon as /checkout page is entered 
+
+- checkout completed is same as purchase so not needed
+
+- checkout failed should be added and submit attempt as well to see if ther are any technical errors
+
+- campaign fields are not needed at the moment 
+
+- we need more checkout field events to track it like information fill start, information filled, etc. to say where the gap is. 
+
+I think to extend this system instead of rebuilding the funnel we have the same main funnel events and we have these small events within the main funnel events as sub events. so subevents within checkout and subevents in product view and subevents in add to bag.

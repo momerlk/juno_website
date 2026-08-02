@@ -9,6 +9,7 @@
  */
 
 import { request, APIResponse, API_BASE_URL } from "./core";
+import { getFunnelJourneyId } from './analyticsApi';
 import type {
     Cart,
     ShippingEstimateResponse,
@@ -312,9 +313,10 @@ export namespace GuestCommerce {
      * Creates guest order directly from items + inline customer details.
      */
     export async function checkoutDirect(payload: GuestCheckoutDirectRequest): Promise<APIResponse<CheckoutResult>> {
+        const journeyId = getFunnelJourneyId();
         const resp = await fetch(`${API_BASE_URL}${BASE_PATH}/checkout/direct`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(journeyId ? { 'X-Juno-Journey-Id': journeyId } : {}) },
             body: JSON.stringify(payload),
         });
         return handleGuestResponse<CheckoutResult>(resp);

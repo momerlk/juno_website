@@ -18,6 +18,29 @@ the app funnel; `app_install` is a first-launch proxy because app stores do not
 report installs to this API.
 `product_id` and a small `properties` object may be included. Do not send PII.
 
+## Journey diagnostics
+
+The broad funnel remains the source for the five main stages. Diagnostic events
+are additional records in the same `funnel_events` collection and never change
+those counts. A website creates one random UUID in session storage and sends it
+as `journey_id` with client events and `X-Juno-Journey-Id` with checkout
+requests. This is an anonymous visit key, not a customer profile.
+
+Only these sub-events are accepted:
+
+| Main event | Sub-event | Safe detail, when needed |
+| --- | --- | --- |
+| `view_item` | `variant_selected` | — |
+| `add_to_cart` | `blocked` | `variant_required`, `out_of_stock`, `quantity_limit` |
+| `begin_checkout` | `form_started`, `form_ready`, `payment_method_selected`, `submit_clicked` | — |
+| `begin_checkout` | `field_completed` | `name`, `phone`, `address`, `city` |
+| `begin_checkout` | `preflight_failed` | `shipping_estimate`, `payment_proof` |
+| `begin_checkout` | `request_received`, `failed` | server-only; failures use a safe enum such as `empty_cart`, `item_unavailable`, or `internal_error` |
+
+Never send field values, contact details, raw errors, addresses, IPs, or
+payment data. `purchase` remains the one server-owned successful completion
+event; no `checkout_completed` sub-event exists.
+
 ## API
 
 This module owns both routes. The `admin` module defines no analytics routes.
@@ -57,6 +80,22 @@ event: `user_id`, `seller_id`, `product_id`, `campaign_id`, `source`, and
 empty array when no event matches. The website endpoint includes `web` events
 (and legacy events with no source); the app endpoint includes only `app`
 events.
+
+### Fast diagnostic reads
+
+These admin-only website endpoints perform grouping and timeline lookups in
+MongoDB, so the portal does not download and group the full event log:
+
+- `GET /api/v2/admin/analytics/funnel/diagnostics?from=<RFC3339>&to=<RFC3339>`
+  returns grouped `{event, sub_event, detail, count}` rows.
+- `GET /api/v2/admin/analytics/journeys?from=<RFC3339>&to=<RFC3339>&after=<RFC3339>&limit=50`
+  returns up to 100 anonymous journeys which reached the base `begin_checkout`
+  event. Use `next_after` as the cursor when present.
+- `GET /api/v2/admin/analytics/journeys/{journeyID}` returns that journey's
+  ordered, timestamped events.
+
+`funnel_events` retains its existing 90-day TTL. It also has a
+`source + journey_id + created_at` index for the journey list and timeline.
 
 `add_to_cart` is client-owned so optimistic cart syncing does not inflate the
 funnel. `sign_up` and `purchase` remain server-owned. The app must send

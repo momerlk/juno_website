@@ -260,9 +260,10 @@ const CatalogProductPage: React.FC = () => {
     const selectRecommendedSize = useCallback((size: string) => {
         const sizeOption = asArray(product?.options).find((option) => option.name.toLowerCase().includes('size'));
         if (sizeOption && asArray(sizeOption.values).includes(size)) {
+            Funnel.trackSubEvent('view_item', 'variant_selected', undefined, { product_id: product?.id });
             setSelectedOptions((current) => ({ ...current, [sizeOption.name]: size }));
         }
-    }, [product?.options]);
+    }, [product?.id, product?.options]);
 
     useEffect(() => {
         if (typeof maxAvailableQuantity === 'number' && maxAvailableQuantity > 0 && quantity > maxAvailableQuantity) {
@@ -300,9 +301,16 @@ const CatalogProductPage: React.FC = () => {
     }, []);
 
     const handleAddToCart = useCallback(() => {
-        if (!product || !selectedVariant) return;
-        if (!canPurchase) return;
+        if (!product || !selectedVariant) {
+            if (product) Funnel.trackSubEvent('add_to_cart', 'blocked', 'variant_required', { product_id: product.id });
+            return;
+        }
+        if (!canPurchase) {
+            Funnel.trackSubEvent('add_to_cart', 'blocked', 'out_of_stock', { product_id: product.id });
+            return;
+        }
         if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
+            Funnel.trackSubEvent('add_to_cart', 'blocked', 'quantity_limit', { product_id: product.id });
             setQuantity(Math.max(1, maxAvailableQuantity));
             return;
         }
@@ -771,6 +779,7 @@ const CatalogProductPage: React.FC = () => {
                                                         whileTap={{ scale: 0.93 }}
                                                         onClick={() => {
                                                             if (!isValueAvailable) return;
+                                                            if (!isActive) Funnel.trackSubEvent('view_item', 'variant_selected', undefined, { product_id: product.id });
                                                             setSelectedOptions((current) => ({ ...current, [option.name]: value }));
                                                         }}
                                                         disabled={!isValueAvailable}

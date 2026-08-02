@@ -98,6 +98,9 @@ export interface AdminFunnelStage {
 export interface AdminFunnelEvent {
     type: FunnelStageEvent;
     created_at: string;
+    journey_id?: string;
+    sub_event?: string;
+    detail?: string;
     user_id?: string;
     seller_id?: string;
     product_id?: string;
@@ -110,6 +113,36 @@ export interface AdminFunnelResponse {
     from: string;
     to: string;
     stages: AdminFunnelStage[];
+    events: AdminFunnelEvent[];
+}
+
+export interface AdminFunnelDiagnostic {
+    event: FunnelStageEvent;
+    sub_event: string;
+    detail?: string;
+    count: number;
+}
+
+export interface AdminFunnelDiagnosticsResponse {
+    from: string;
+    to: string;
+    details: AdminFunnelDiagnostic[];
+}
+
+export interface AdminCheckoutJourneySummary {
+    journey_id: string;
+    started_at: string;
+}
+
+export interface AdminCheckoutJourneysResponse {
+    from: string;
+    to: string;
+    journeys: AdminCheckoutJourneySummary[];
+    next_after?: string;
+}
+
+export interface AdminCheckoutJourneyResponse {
+    journey_id: string;
     events: AdminFunnelEvent[];
 }
 
@@ -128,6 +161,28 @@ export namespace AdminAnalytics {
         if (params?.to) search.set('to', params.to);
         const query = search.toString();
         return request(`/admin/analytics/app-funnel${query ? `?${query}` : ''}`, 'GET', undefined, getToken());
+    }
+
+    export async function getFunnelDiagnostics(params?: { from?: string; to?: string }): Promise<APIResponse<AdminFunnelDiagnosticsResponse>> {
+        const search = new URLSearchParams();
+        if (params?.from) search.set('from', params.from);
+        if (params?.to) search.set('to', params.to);
+        const query = search.toString();
+        return request(`/admin/analytics/funnel/diagnostics${query ? `?${query}` : ''}`, 'GET', undefined, getToken());
+    }
+
+    export async function getCheckoutJourneys(params?: { from?: string; to?: string; after?: string; limit?: number }): Promise<APIResponse<AdminCheckoutJourneysResponse>> {
+        const search = new URLSearchParams();
+        if (params?.from) search.set('from', params.from);
+        if (params?.to) search.set('to', params.to);
+        if (params?.after) search.set('after', params.after);
+        if (params?.limit) search.set('limit', String(params.limit));
+        const query = search.toString();
+        return request(`/admin/analytics/journeys${query ? `?${query}` : ''}`, 'GET', undefined, getToken());
+    }
+
+    export async function getJourney(journeyId: string): Promise<APIResponse<AdminCheckoutJourneyResponse>> {
+        return request(`/admin/analytics/journeys/${encodeURIComponent(journeyId)}`, 'GET', undefined, getToken());
     }
 }
 

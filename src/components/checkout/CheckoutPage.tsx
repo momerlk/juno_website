@@ -137,6 +137,9 @@ const CheckoutPage: React.FC = () => {
     const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
     const hasTrackedCheckoutStart = React.useRef(false);
     const hasTrackedInitiateCheckout = React.useRef(false);
+    const hasTrackedFormStart = React.useRef(false);
+    const hasTrackedFormReady = React.useRef(false);
+    const completedFields = React.useRef(new Set<'name' | 'phone' | 'address' | 'city'>());
     const isSubmittingRef = useRef(false);
 
     useEffect(() => {
@@ -294,7 +297,9 @@ const CheckoutPage: React.FC = () => {
     };
 
     const handleSubmit = async () => {
-        if (isSubmittingRef.current || !validateForm()) return;
+        if (isSubmittingRef.current) return;
+        Funnel.trackSubEvent('begin_checkout', 'submit_clicked', undefined, { item_count: checkoutItemCount });
+        if (!validateForm()) return;
 
         isSubmittingRef.current = true;
         setIsSubmitting(true);
@@ -315,12 +320,15 @@ const CheckoutPage: React.FC = () => {
                 items,
             });
             if (!estimateResponse.ok) {
+                Funnel.trackSubEvent('begin_checkout', 'preflight_failed', 'shipping_estimate');
                 throw new Error('Could not verify your order total. Please try again.');
             }
             if (paymentMethod === 'bank_deposit' && !paymentProof) {
+                Funnel.trackSubEvent('begin_checkout', 'preflight_failed', 'payment_proof');
                 throw new Error('Upload your bank-deposit receipt to place this order.');
             }
             if (paymentMethod === 'bank_deposit' && !paymentProofUrl) {
+                Funnel.trackSubEvent('begin_checkout', 'preflight_failed', 'payment_proof');
                 throw new Error('Your payment screenshot is still uploading. Please try again in a moment.');
             }
             const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(estimateResponse.body.subtotal * 0.05) : 0;
@@ -399,7 +407,32 @@ const CheckoutPage: React.FC = () => {
         if (field === 'city') {
             setHasUserEditedCity(true);
         }
-        setFormData((prev) => ({ ...prev, [field]: value }));
+        const trackedField = ({ full_name: 'name', phone_number: 'phone', address_line1: 'address', city: 'city' } as const)[field as 'full_name' | 'phone_number' | 'address_line1' | 'city'];
+        const nextFormData = { ...formData, [field]: value };
+        if (trackedField) {
+            if (!hasTrackedFormStart.current) {
+                Funnel.trackSubEvent('begin_checkout', 'form_started');
+                hasTrackedFormStart.current = true;
+            }
+            const isComplete = trackedField === 'phone'
+                ? /^\+?[\d\s-()]+$/.test(value) && value.trim().length > 0
+                : value.trim().length > 0;
+            if (isComplete && !completedFields.current.has(trackedField)) {
+                Funnel.trackSubEvent('begin_checkout', 'field_completed', trackedField);
+                completedFields.current.add(trackedField);
+            }
+            if (
+                !hasTrackedFormReady.current &&
+                nextFormData.full_name.trim() &&
+                /^\+?[\d\s-()]+$/.test(nextFormData.phone_number) &&
+                nextFormData.address_line1.trim() &&
+                nextFormData.city.trim()
+            ) {
+                Funnel.trackSubEvent('begin_checkout', 'form_ready');
+                hasTrackedFormReady.current = true;
+            }
+        }
+        setFormData(nextFormData);
         if (errors[field]) {
             setErrors((prev) => {
                 const next = { ...prev };
@@ -807,10 +840,10 @@ const CheckoutPage: React.FC = () => {
                             </div>
 
                             <div className="mb-4 grid gap-3 sm:grid-cols-2">
-                                <button type="button" onClick={() => setPaymentMethod('cod')} className={`rounded-xl border p-4 text-left ${paymentMethod === 'cod' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                                <button type="button" onClick={() => { if (paymentMethod !== 'cod') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected'); setPaymentMethod('cod'); }} className={`rounded-xl border p-4 text-left ${paymentMethod === 'cod' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
                                     <p className="font-bold text-white">Cash on Delivery (COD)</p>
                                 </button>
-                                <button type="button" disabled={paymentMethodsLoading || !bankMethod} onClick={() => setPaymentMethod('bank_deposit')} className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-45 ${paymentMethod === 'bank_deposit' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                                <button type="button" disabled={paymentMethodsLoading || !bankMethod} onClick={() => { if (paymentMethod !== 'bank_deposit') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected'); setPaymentMethod('bank_deposit'); }} className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-45 ${paymentMethod === 'bank_deposit' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
                                     <p className="font-bold text-white">Bank Deposit</p>
                                 </button>
                             </div>
