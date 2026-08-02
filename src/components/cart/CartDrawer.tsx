@@ -9,7 +9,9 @@ import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
 
-const FREE_SHIPPING_THRESHOLD = 5900;
+const DEFAULT_DELIVERY_DAYS = 7;
+const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
+const fmtDay = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const getCardImage = (url?: string) =>
     getResponsiveShopifyImageSet(url || '/images/misc/juno_app_icon.png', [120, 160, 240]);
 
@@ -24,9 +26,30 @@ const CartDrawer: React.FC = () => {
                 setRelatedProducts([]);
                 return;
             }
-            const firstItem = optimisticCart[0];
-            const response = await Catalog.getRelatedProducts(firstItem.product_id, 3);
-            if (response.ok) setRelatedProducts(response.body);
+            const inCart = new Set(optimisticCart.map((item) => item.product_id));
+            const anchorId = optimisticCart[0].product_id;
+            const anchorResponse = await Catalog.getProduct(anchorId);
+            const anchor = anchorResponse.ok ? (anchorResponse.body as CatalogProduct) : null;
+            // "Complete the look" means something that goes WITH the item, so pair by
+            // brand and rule out anything from the same product group (top with top).
+            const anchorGroup = anchor?.metadata?.product_group || anchor?.product_type;
+            if (anchor?.seller_id) {
+                const brandResponse = await Catalog.getProducts({ seller_id: anchor.seller_id, in_stock: true, limit: 24 });
+                const complements = brandResponse.ok
+                    ? asArray(brandResponse.body as CatalogProduct[]).filter((candidate) => {
+                          if (!candidate?.id || inCart.has(candidate.id)) return false;
+                          const group = candidate.metadata?.product_group || candidate.product_type;
+                          return !anchorGroup || !group || group !== anchorGroup;
+                      })
+                    : [];
+                if (complements.length > 0) {
+                    setRelatedProducts(complements.slice(0, 6));
+                    return;
+                }
+            }
+            // No other category from this brand: fall back to the similarity set.
+            const response = await Catalog.getRelatedProducts(anchorId, 6);
+            if (response.ok) setRelatedProducts(asArray(response.body as CatalogProduct[]).filter((item) => !inCart.has(item?.id)).slice(0, 6));
         };
         if (isCartOpen) loadRelated();
     }, [optimisticCart, isCartOpen]);
@@ -41,8 +64,12 @@ const CartDrawer: React.FC = () => {
         navigate('/catalog');
     };
 
-    const remainingForFreeShip = Math.max(0, FREE_SHIPPING_THRESHOLD - cartTotal);
-    const freeShipProgress = Math.min((cartTotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
+    // The whole bag lands on the slowest item's date, so quote that one.
+    const cartDeliveryDays = optimisticCart.reduce(
+        (slowest, item) => Math.max(slowest, item.delivery_days || DEFAULT_DELIVERY_DAYS),
+        DEFAULT_DELIVERY_DAYS
+    );
+    const cartDeliveryDate = new Date(Date.now() + cartDeliveryDays * 24 * 60 * 60 * 1000);
 
     return (
         <AnimatePresence>
@@ -128,8 +155,8 @@ const CartDrawer: React.FC = () => {
                                     <div className="px-5 py-4">
                                         {/* Delivery promise */}
                                         <div className="mb-4 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3.5 py-2.5">
-                                            <p className="text-[11px] text-white/70">
-                                                Delivery timing is confirmed at checkout.
+                                            <p className="text-[12px] text-white/70">
+                                                Estimated delivery by <span className="font-bold text-white">{fmtDay(cartDeliveryDate)}</span>
                                             </p>
                                         </div>
 
@@ -270,33 +297,6 @@ const CartDrawer: React.FC = () => {
                             {/* Footer */}
                             {optimisticCart.length > 0 && (
                                 <div className="relative z-10 border-t border-white/[0.08] bg-[#050505]/90 px-5 pt-4 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur-xl">
-
-                                    {/* Free shipping progress */}
-                                    {remainingForFreeShip > 0 ? (
-                                        <div className="mb-4">
-                                            <div className="mb-1.5 flex items-center justify-between text-[10px]">
-                                                <span className="font-bold uppercase tracking-[0.18em] text-white/55">
-                                                    Add {formatCurrency(remainingForFreeShip)} for free shipping
-                                                </span>
-                                                <span className="font-mono font-bold text-white/40">
-                                                    {Math.round(freeShipProgress)}%
-                                                </span>
-                                            </div>
-                                            <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${freeShipProgress}%` }}
-                                                    transition={{ duration: 0.5, ease: 'easeOut' }}
-                                                    className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
-                                                />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="mb-4 flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white">
-                                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                            Free shipping unlocked
-                                        </div>
-                                    )}
 
                                     {/* Subtotal */}
                                     <div className="mb-3 flex items-baseline justify-between">

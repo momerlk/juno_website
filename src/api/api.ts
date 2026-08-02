@@ -68,6 +68,7 @@ export type {
     
     // Catalog types
     CatalogProduct,
+    ProductReview,
     ProductPricing,
     ProductVariant,
     ProductOption,

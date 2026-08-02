@@ -19,7 +19,7 @@ import {
     ZoomIn,
     Zap,
 } from 'lucide-react';
-import { Catalog, Sizing, type CatalogProduct, type ProductSizing, type ProductVariant } from '../../api/api';
+import { Catalog, Sizing, type CatalogProduct, type ProductReview, type ProductSizing, type ProductVariant } from '../../api/api';
 import { Funnel } from '../../api/analyticsApi';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useFunnelAnalytics';
@@ -32,10 +32,10 @@ import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
 
-const DEFAULT_DELIVERY_DAYS = 8;
+const DEFAULT_DELIVERY_DAYS = 7;
 // Platform policy copy. Update these two in one place when the policy changes.
 const RETURN_WINDOW_DAYS = 7;
-const SALE_LABEL = 'Juno Sale';
+const SALE_LABEL = 'Azaadi Sale';
 
 const humanize = (value?: string) =>
     value ? value.replace(/[_-]/g, ' ').replace(/^\w/, (character) => character.toUpperCase()) : '';
@@ -107,6 +107,22 @@ const ProductSkeleton: React.FC = () => (
     </div>
 );
 
+const ReviewCard: React.FC<{ review: ProductReview }> = ({ review }) => (
+    <div className="rounded-2xl border border-white/[0.09] bg-white/[0.025] p-4">
+        <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                    key={star}
+                    size={13}
+                    className={star <= Math.round(review.rating) ? 'fill-amber-300 text-amber-300' : 'text-white/15'}
+                />
+            ))}
+        </div>
+        <p className="mt-2 text-[12px] font-bold text-white">{review.reviewer_name || 'Anonymous'}</p>
+        {review.comment ? <p className="mt-2 text-[14px] leading-6 text-white/70">{review.comment}</p> : null}
+    </div>
+);
+
 const CatalogProductPage: React.FC = () => {
     const { productId, genderOrId } = useParams<{ productId?: string; genderOrId?: string }>();
     const actualProductId = productId || genderOrId || '';
@@ -124,6 +140,9 @@ const CatalogProductPage: React.FC = () => {
     const [showSizeGuide, setShowSizeGuide] = useState(false);
     const [showImageLightbox, setShowImageLightbox] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
+    const [sizeError, setSizeError] = useState(false);
+    const [reviews, setReviews] = useState<ProductReview[]>([]);
+    const [showReviewsModal, setShowReviewsModal] = useState(false);
     const sizeSectionRef = useRef<HTMLDivElement>(null);
     const [sizing, setSizing] = useState<ProductSizing | null>(null);
     const [imageAspectRatios, setImageAspectRatios] = useState<Record<string, number>>({});
@@ -201,6 +220,17 @@ const CatalogProductPage: React.FC = () => {
 
     useEffect(() => {
         let cancelled = false;
+        setReviews([]);
+        setShowReviewsModal(false);
+        if (!actualProductId) return undefined;
+        void Catalog.getProductReviews(actualProductId).then((response) => {
+            if (!cancelled && response.ok) setReviews(asArray(response.body as ProductReview[]));
+        }).catch(() => undefined);
+        return () => { cancelled = true; };
+    }, [actualProductId]);
+
+    useEffect(() => {
+        let cancelled = false;
         setRelatedProducts([]);
 
         if (!actualProductId) return undefined;
@@ -264,12 +294,15 @@ const CatalogProductPage: React.FC = () => {
     const compareAt = product?.pricing.compare_at_price;
     const discountPercentage =
         compareAt && currentPrice ? Math.round(((compareAt - currentPrice) / compareAt) * 100) : 0;
-    const description = product?.short_description || product?.description;
+    // Full text first: short_description is a truncated teaser meant for cards.
+    const description = product?.description || product?.short_description;
     const inStock = isAvailable;
     const stockCount = product?.inventory?.available_quantity ?? product?.inventory?.quantity ?? null;
     const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
     const catalogBadges = getCatalogBadges(product);
     const hasApprovedSizing = sizing?.availability === 'normalized';
+    // Read the real length so the copy can never drift from the quiz again.
+    const quizQuestionCount = asArray(sizing?.quiz?.questions ?? sizing?.questionnaire?.questions).length;
     const sourceSizingGuide = getSourceSizingGuide(product?.sizing_guide ?? product?.enrichment?.sizing_guide);
     const hasOriginalSizingGuide = Boolean(sourceSizingGuide?.image_url || sourceSizingGuide?.html_table);
     const hasSizingGuide = hasApprovedSizing || hasOriginalSizingGuide;
@@ -285,15 +318,19 @@ const CatalogProductPage: React.FC = () => {
             ['Fit', humanize(meta.fit)],
             ['Silhouette', humanize(meta.silhouette)],
             ['Sleeve length', humanize(meta.sleeve_length)],
-            ['Neckline', humanize(meta.neckline)],
-            ['Pattern', asArray(meta.pattern).map(humanize).join(', ')],
-            ['Colour', humanize(meta.primary_color) || asArray(meta.color_families).map(humanize).join(', ')],
             ['Occasion', asArray(meta.occasions).map(humanize).join(', ')],
             ['Season', asArray(meta.seasonality).map(humanize).join(', ')],
-            ['Gender', humanize(meta.gender || product?.gender)],
-            ['Product ID', product?.handle || product?.raw_id || ''],
         ] as [string, string][]).filter(([, value]) => Boolean(value));
-    }, [product?.gender, product?.handle, product?.metadata, product?.product_type, product?.raw_id]);
+    }, [product?.metadata, product?.product_type]);
+
+    const orderedReviews = useMemo(
+        () => [...reviews].sort((a, b) => {
+            const score = (review: ProductReview) =>
+                (review.comment?.trim() ? 2 : 0) + (review.reviewer_name?.trim() && review.reviewer_name.toLowerCase() !== 'anonymous' ? 1 : 0);
+            return score(b) - score(a);
+        }),
+        [reviews]
+    );
 
     const scrollToSize = useCallback(() => {
         sizeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -339,6 +376,7 @@ const CatalogProductPage: React.FC = () => {
         const sizeOption = asArray(product?.options).find((option) => option.name.toLowerCase().includes('size'));
         if (sizeOption && asArray(sizeOption.values).includes(size)) {
             Funnel.trackSubEvent('view_item', 'variant_selected', undefined, { product_id: product?.id });
+            setSizeError(false);
             setSelectedOptions((current) => ({ ...current, [sizeOption.name]: size }));
         }
     }, [product?.id, product?.options]);
@@ -382,6 +420,9 @@ const CatalogProductPage: React.FC = () => {
         if (product) Funnel.trackSubEvent('add_to_cart', 'clicked', undefined, { product_id: product.id });
         if (!product || !selectedVariant || !hasSelectedSize) {
             if (product) Funnel.trackSubEvent('add_to_cart', 'blocked', 'variant_required', { product_id: product.id });
+            // Say why instead of sitting there dead: flag the picker and scroll to it.
+            setSizeError(true);
+            scrollToSize();
             return;
         }
         if (!canPurchase) {
@@ -403,6 +444,8 @@ const CatalogProductPage: React.FC = () => {
             image_url: selectedVariant.image_url || selectedVariant.images?.[0] || currentImage,
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
+            free_shipping: !!product.shipping_details?.free_shipping,
+            delivery_days: product.shipping_details?.estimated_delivery_days || DEFAULT_DELIVERY_DAYS,
             source: 'catalog',
         });
         setShowAddedFeedback(true);
@@ -423,7 +466,13 @@ const CatalogProductPage: React.FC = () => {
 
     // Opens the confirm-selection popup after validating stock/quantity.
     const handleBuyNow = useCallback(() => {
-        if (!product || !selectedVariant || !hasSelectedSize) return;
+        if (!product || !selectedVariant) return;
+        if (!hasSelectedSize) {
+            Funnel.trackSubEvent('add_to_cart', 'blocked', 'variant_required', { product_id: product.id });
+            setSizeError(true);
+            scrollToSize();
+            return;
+        }
         if (!canPurchase) return;
         if (typeof maxAvailableQuantity === 'number' && quantity > maxAvailableQuantity) {
             setQuantity(Math.max(1, maxAvailableQuantity));
@@ -513,40 +562,6 @@ const CatalogProductPage: React.FC = () => {
     const estimatedDeliveryDays = product.shipping_details?.estimated_delivery_days || DEFAULT_DELIVERY_DAYS;
     const deliveryDate = addDays(today, estimatedDeliveryDays);
 
-    const badgeOverlay = (discountPercentage > 0 || lowStock || catalogBadges.bestSeller || catalogBadges.thrifted) ? (
-        <div className="pointer-events-none absolute left-3 top-3 z-20 flex flex-col items-start gap-1.5">
-            {discountPercentage > 0 ? (
-                <span className="rounded-md bg-primary px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-[0_4px_12px_rgba(220,10,40,0.35)]">
-                    -{discountPercentage}%
-                </span>
-            ) : null}
-            {catalogBadges.bestSeller ? (
-                <span className="inline-flex items-center gap-1.5 border border-white/20 bg-black/65 py-1 pl-1 pr-2.5 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-md">
-                    <span className="flex h-4 w-4 items-center justify-center bg-primary text-white">
-                        <Star size={10} className="fill-current" />
-                    </span>
-                    Juno Best Seller
-                </span>
-            ) : null}
-            {catalogBadges.thrifted ? (
-                <>
-                    <span className="rounded-md bg-emerald-300 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black shadow-[0_8px_20px_rgba(40,190,120,0.28)]">
-                        Pre-Loved
-                    </span>
-                    <span className="rounded-md border border-white/15 bg-black/55 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-sm">
-                        One of One
-                    </span>
-                </>
-            ) : null}
-            {lowStock ? (
-                <span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-black">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                    Only {stockCount} left
-                </span>
-            ) : null}
-        </div>
-    ) : null;
-
     const deliveryAndReturns = (
         <div className="divide-y divide-white/[0.07] overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025]">
             <div className="flex items-center gap-3 px-4 py-3.5">
@@ -593,7 +608,6 @@ const CatalogProductPage: React.FC = () => {
                         {/* Mobile: every image in one horizontal snap strip, no thumbnail row
                             eating vertical space. Desktop keeps the main image + thumbnails. */}
                         <div className="relative -mx-4 lg:hidden">
-                            {badgeOverlay}
                             <div
                                 onScroll={(event) => {
                                     const strip = event.currentTarget;
@@ -628,22 +642,9 @@ const CatalogProductPage: React.FC = () => {
                                     );
                                 })}
                             </div>
-                            {imageGallery.length > 1 ? (
-                                <div className="pointer-events-none absolute right-6 top-3 z-20 rounded-md bg-black/50 px-2 py-1 font-mono text-[10px] font-bold tracking-wider text-white/90 backdrop-blur-sm">
-                                    {selectedImageIdx + 1} / {imageGallery.length}
-                                </div>
-                            ) : null}
                         </div>
 
                         <div className="group relative hidden w-full overflow-hidden rounded-2xl bg-[#0d0d0e] lg:block">
-                            {badgeOverlay}
-
-                            {imageGallery.length > 1 ? (
-                                <div className="pointer-events-none absolute right-3 top-3 z-20 rounded-md bg-black/45 px-2 py-1 text-[10px] font-mono font-bold tracking-wider text-white/90 backdrop-blur-sm">
-                                    {selectedImageIdx + 1} / {imageGallery.length}
-                                </div>
-                            ) : null}
-
                             {imageGallery.length > 1 ? (
                                 <>
                                     <button
@@ -868,15 +869,6 @@ const CatalogProductPage: React.FC = () => {
 
                         {deliveryAndReturns}
 
-                        <a
-                            href={product.seller_id ? `/catalog?seller_id=${encodeURIComponent(product.seller_id)}` : '/catalog'}
-                            className="group flex items-center gap-3 rounded-2xl border border-white/[0.09] bg-white/[0.025] p-4 transition-colors hover:border-primary/50"
-                        >
-                            {product.seller_logo ? <img src={product.seller_logo} alt="" className="h-11 w-11 rounded-full object-cover" /> : <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/15 text-sm font-black text-primary">{product.seller_name?.slice(0, 1)}</span>}
-                            <span className="min-w-0 flex-1"><span className="block text-[9px] font-black uppercase tracking-[0.18em] text-white/40">From the label</span><span className="mt-1 block truncate text-sm font-black uppercase tracking-[-0.02em] text-white">{product.seller_name || 'Juno Label'}</span></span>
-                            <span className="text-xs font-black text-primary transition-transform group-hover:translate-x-0.5">Explore →</span>
-                        </a>
-
                         {asArray(product.options).length > 0 ? (
                             <div ref={sizeSectionRef} className="scroll-mt-24 space-y-4">
                                 {asArray(product.options).map((option) => (
@@ -887,8 +879,7 @@ const CatalogProductPage: React.FC = () => {
                                                     {option.name}
                                                 </p>
                                                 <p
-                                                    className="text-sm text-white/60"
-                                                    style={{ fontFamily: 'Instrument Serif, serif' }}
+                                                    className={`text-[15px] font-semibold ${sizeError && !selectedOptions[option.name] && option.name.toLowerCase().includes('size') ? 'text-primary' : 'text-white/70'}`}
                                                 >
                                                     {selectedOptions[option.name] || 'Not selected'}
                                                 </p>
@@ -918,7 +909,7 @@ const CatalogProductPage: React.FC = () => {
                                                         Take the size quiz
                                                         <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[8px] tracking-[0.1em]">AI</span>
                                                     </span>
-                                                    <span className="mt-0.5 block text-[11px] text-white/60">Two questions and we pick your size in this brand</span>
+                                                    <span className="mt-0.5 block text-[11px] text-white/60">{quizQuestionCount ? `${quizQuestionCount} quick questions` : 'A few quick questions'} and we pick your size in this brand</span>
                                                 </span>
                                                 <ChevronRight size={17} className="text-white/45 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
                                             </button>
@@ -958,6 +949,7 @@ const CatalogProductPage: React.FC = () => {
                                                         onClick={() => {
                                                             if (!isValueAvailable) return;
                                                             if (!isActive) Funnel.trackSubEvent('view_item', 'variant_selected', undefined, { product_id: product.id });
+                                                            setSizeError(false);
                                                             setSelectedOptions((current) => ({ ...current, [option.name]: value }));
                                                         }}
                                                         disabled={!isValueAvailable}
@@ -1041,12 +1033,12 @@ const CatalogProductPage: React.FC = () => {
                             <motion.button
                                 whileTap={{ scale: 0.985 }}
                                 onClick={handleBuyNow}
-                                disabled={!canPurchase || isBuyingNow}
+                                disabled={!inStock || isBuyingNow}
                                 className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-secondary py-5 text-base font-black uppercase tracking-[0.2em] text-white shadow-[0_18px_48px_rgba(220,10,40,0.38)] transition-all hover:shadow-[0_22px_56px_rgba(220,10,40,0.5)] disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 <span className="relative z-10 inline-flex items-center justify-center gap-2.5">
                                     <Zap size={18} className="fill-white" />
-                                    {isBuyingNow ? 'Going to checkout...' : !hasSelectedSize ? 'Select size to buy' : `Buy now · ${formatCurrency(currentPrice * quantity)}`}
+                                    {isBuyingNow ? 'Going to checkout...' : `Buy now · ${formatCurrency(currentPrice * quantity)}`}
                                 </span>
                                 <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-[shimmer_2.8s_ease-in-out_infinite]" />
                             </motion.button>
@@ -1054,12 +1046,18 @@ const CatalogProductPage: React.FC = () => {
                             <motion.button
                                 whileTap={{ scale: 0.985 }}
                                 onClick={handleAddToCart}
-                                disabled={!canPurchase || isAdding}
+                                disabled={!inStock || isAdding}
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] py-4 text-xs font-bold uppercase tracking-[0.22em] text-white transition-all hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 <ShoppingBag size={14} />
-                                {isAdding ? 'Adding...' : !hasSelectedSize ? 'Select size first' : 'Add to bag'}
+                                {isAdding ? 'Adding...' : 'Add to bag'}
                             </motion.button>
+
+                            {sizeError && !hasSelectedSize ? (
+                                <p className="text-center text-[15px] font-bold text-primary">
+                                    Select a size first
+                                </p>
+                            ) : null}
 
                             {!inStock ? (
                                 <p className="text-center text-xs font-bold uppercase tracking-[0.18em] text-red-400">
@@ -1102,7 +1100,7 @@ const CatalogProductPage: React.FC = () => {
                                 {description ? (
                                     <div className="mt-6">
                                         <p className="text-[13px] font-black uppercase tracking-[0.14em] text-white">Description</p>
-                                        <p className="mt-2 text-[15px] leading-7 text-white/70" style={{ fontFamily: 'Instrument Serif, serif' }}>
+                                        <p className="mt-2 whitespace-pre-line text-[15px] leading-7 text-white/75">
                                             {description}
                                         </p>
                                     </div>
@@ -1131,32 +1129,53 @@ const CatalogProductPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {product.rating ? (
+                        {rating || reviews.length ? (
                             <div id="ratings" className="scroll-mt-24 border-t border-white/[0.08] pt-6">
                                 <h2 className="text-lg font-black uppercase tracking-[-0.02em] text-white md:text-xl">Ratings and reviews</h2>
-                                <div className="mt-4 flex items-center gap-5">
-                                    <div className="text-center">
+                                <div className="mt-4 flex items-start gap-5">
+                                    <div className="shrink-0 text-center">
                                         <p className="flex items-baseline gap-1 text-4xl font-black text-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-                                            {product.rating.toFixed(1)}
+                                            {(rating ?? 0).toFixed(1)}
                                             <Star size={18} className="fill-amber-300 text-amber-300" />
                                         </p>
-                                        {product.review_count ? <p className="mt-1 text-[11px] text-white/40">{product.review_count} ratings</p> : null}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-0.5">
-                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                <Star
-                                                    key={star}
-                                                    size={16}
-                                                    className={star <= Math.round(rating ?? 0) ? 'fill-amber-300 text-amber-300' : 'text-white/15'}
-                                                />
-                                            ))}
-                                        </div>
-                                        <p className="mt-2 text-[12px] leading-5 text-white/45">
-                                            Rating carried over from this label’s verified orders.
+                                        <p className="mt-1 text-[11px] text-white/40">
+                                            {new Intl.NumberFormat("en-PK").format(product.review_count ?? reviews.length)} ratings
                                         </p>
                                     </div>
+                                    {/* Bars come from the loaded reviews, so they always match the list below. */}
+                                    <div className="min-w-0 flex-1 space-y-1">
+                                        {[5, 4, 3, 2, 1].map((star) => {
+                                            const count = reviews.filter((review) => Math.round(review.rating) === star).length;
+                                            const width = reviews.length ? (count / reviews.length) * 100 : 0;
+                                            return (
+                                                <div key={star} className="flex items-center gap-2">
+                                                    <span className="w-3 text-right text-[11px] font-semibold text-white/50">{star}</span>
+                                                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
+                                                        <span className="block h-full rounded-full bg-gradient-to-r from-primary to-secondary" style={{ width: `${width}%` }} />
+                                                    </span>
+                                                    <span className="w-6 text-[11px] text-white/35">{count}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
+
+                                {reviews.length ? (
+                                    <div className="mt-5 space-y-3">
+                                        {orderedReviews.slice(0, 3).map((review) => <ReviewCard key={review.id} review={review} />)}
+                                        {reviews.length > 3 ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowReviewsModal(true)}
+                                                className="w-full rounded-2xl border border-white/15 bg-white/[0.03] py-3 text-[13px] font-bold text-white transition-colors hover:border-white/30 hover:bg-white/[0.06]"
+                                            >
+                                                Read all {new Intl.NumberFormat("en-PK").format(reviews.length)} reviews
+                                            </button>
+                                        ) : null}
+                                    </div>
+                                ) : (
+                                    <p className="mt-4 text-[13px] text-white/45">No written reviews for this piece yet.</p>
+                                )}
                             </div>
                         ) : null}
 
@@ -1209,7 +1228,11 @@ const CatalogProductPage: React.FC = () => {
                     {inStock ? (
                     <>
                         <div className="mb-2.5 text-center text-[10px] text-white/55">
-                            Arrives <span className="font-bold text-white">{fmtDay(deliveryDate)}</span>
+                            {sizeError && !hasSelectedSize ? (
+                                <span className="text-[13px] font-bold text-primary">Select a size first</span>
+                            ) : (
+                                <>Arrives <span className="font-bold text-white">{fmtDay(deliveryDate)}</span></>
+                            )}
                         </div>
 
                         {/* Unselected size keeps both buttons live: tapping scrolls to the
@@ -1217,16 +1240,16 @@ const CatalogProductPage: React.FC = () => {
                         <div className="mx-auto flex max-w-lg items-stretch gap-2">
                             <motion.button
                                 whileTap={{ scale: 0.97 }}
-                                onClick={hasSelectedSize ? handleBuyNow : scrollToSize}
+                                onClick={handleBuyNow}
                                 disabled={!inStock || isBuyingNow}
                                 className="flex h-14 flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/[0.05] text-[13px] font-black uppercase tracking-[0.14em] text-white transition-all hover:bg-white/[0.1] disabled:opacity-40"
                             >
-                                {!hasSelectedSize ? 'Select size' : `Buy now · ${formatCurrency(currentPrice * quantity)}`}
+                                Buy now
                             </motion.button>
 
                             <motion.button
                                 whileTap={{ scale: 0.97 }}
-                                onClick={hasSelectedSize ? handleAddToCart : scrollToSize}
+                                onClick={handleAddToCart}
                                 disabled={!inStock || isAdding}
                                 className="relative flex h-14 flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-secondary text-[13px] font-black uppercase tracking-[0.14em] text-white shadow-[0_10px_28px_rgba(220,10,40,0.4)] disabled:opacity-40"
                             >
@@ -1259,6 +1282,35 @@ const CatalogProductPage: React.FC = () => {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal="true" aria-label="Product image zoom" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4" onClick={() => setShowImageLightbox(false)}>
                         <img src={currentImage} alt={`${product.title} enlarged`} className="max-h-full max-w-full object-contain" onClick={(event) => event.stopPropagation()} />
                         <button type="button" className="absolute right-5 top-5 rounded-full border border-white/20 px-4 py-2 text-xs font-bold text-white" onClick={() => setShowImageLightbox(false)}>Close</button>
+                    </motion.div>
+                ) : null}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showReviewsModal ? (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="All reviews"
+                        className="fixed inset-0 z-[70] flex items-end bg-black/75 p-4 backdrop-blur-sm sm:items-center sm:justify-center"
+                        onClick={() => setShowReviewsModal(false)}
+                    >
+                        <motion.div
+                            initial={{ y: 24 }}
+                            animate={{ y: 0 }}
+                            exit={{ y: 24 }}
+                            className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0a0a0b] p-5 shadow-2xl"
+                            onClick={(event) => event.stopPropagation()}
+                        >
+                            <div className="mb-5 flex items-center justify-between gap-4">
+                                <h2 className="text-lg font-black uppercase tracking-[-0.02em] text-white">All reviews</h2>
+                                <button type="button" onClick={() => setShowReviewsModal(false)} className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/[0.06]">Close</button>
+                            </div>
+                            <div className="space-y-3">{orderedReviews.map((review) => <ReviewCard key={review.id} review={review} />)}</div>
+                        </motion.div>
                     </motion.div>
                 ) : null}
             </AnimatePresence>

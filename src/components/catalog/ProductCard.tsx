@@ -122,6 +122,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 image_url: variant.image_url || variant.images?.[0] || productImage,
                 max_quantity: maxVariantQuantity,
                 is_available: variant.available && !!product.inventory?.in_stock,
+                free_shipping: !!product.shipping_details?.free_shipping,
+                delivery_days: product.shipping_details?.estimated_delivery_days || 7,
             }
         );
 

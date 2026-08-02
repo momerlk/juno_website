@@ -588,6 +588,17 @@ export interface CatalogPagination {
     next_cursor?: string;
 }
 
+/** Public product review. `user_id` is never exposed by the API. */
+export interface ProductReview {
+    id: string;
+    product_id: string;
+    reviewer_name: string;
+    rating: number;
+    comment?: string;
+    created_at: string;
+    updated_at?: string;
+}
+
 export interface CatalogQueryParams {
     category?: string;
     category_id?: string;

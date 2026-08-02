@@ -11,6 +11,8 @@ interface OptimisticCartItem extends CartItem {
     image_url?: string;
     max_quantity?: number;
     is_available?: boolean;
+    free_shipping?: boolean;
+    delivery_days?: number;
 }
 
 type StoredCartItem = CartItem & {
@@ -21,6 +23,8 @@ type StoredCartItem = CartItem & {
     image_url?: string;
     max_quantity?: number;
     is_available?: boolean;
+    free_shipping?: boolean;
+    delivery_days?: number;
 };
 
 interface GuestCartContextValue {
@@ -106,6 +110,8 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
                 image_url: stored.image_url,
                 max_quantity: stored.max_quantity,
                 is_available: stored.is_available,
+                free_shipping: stored.free_shipping,
+                delivery_days: stored.delivery_days,
             };
         }));
         setIsHydrated(true);

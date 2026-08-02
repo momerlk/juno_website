@@ -51,6 +51,60 @@ the response is `[]` (never `null`).
 
 ---
 
+## Product Reviews
+
+### List Product Reviews
+`GET /api/v2/catalog/products/{id}/reviews`
+
+Public. Returns up to the 100 newest reviews, or `[]` when the product has none.
+Returns `404` when the product does not exist.
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "campaign-import-347982",
+      "reviewer_name": "Saba Kazmi",
+      "product_id": "d0f1831d-f95c-4179-86a3-fd4e441e507f",
+      "rating": 5,
+      "comment": "Beautiful as always Thankyou Juno",
+      "created_at": "2025-12-24T17:07:46Z",
+      "updated_at": "2025-12-24T17:07:46Z"
+    }
+  ]
+}
+```
+
+`user_id` is never exposed. Imported reviews that have no source display name
+use `Anonymous`; an empty `comment` is a valid rating-only review.
+
+### Catalog Display
+
+Catalog product responses already expose `rating` (average rating) and
+`review_count` (total reviews). Use these fields for product-card and PDP
+summary UI, then request this endpoint on a product detail page to display
+individual reviews. Both summary fields are recalculated whenever a review is
+created or imported.
+
+### Create or Update a Review
+`POST /api/v2/reviews` _(user auth required)_
+
+Each user has one review per product; posting again replaces its rating and comment.
+
+```json
+{
+  "product_id": "uuid",
+  "rating": 5,
+  "comment": "Great fit and fabric."
+}
+```
+
+`rating` must be an integer from 1 through 5. `comment` is optional and limited to 2,000 characters.
+
+---
+
 ## Admin Endpoint _(admin auth required)_
 
 ### Get All Interactions
