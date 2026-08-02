@@ -217,6 +217,10 @@ const CatalogProductPage: React.FC = () => {
         );
     }, [product]);
 
+    useEffect(() => {
+        if (product?.title) document.title = `${product.title} | Juno`;
+    }, [product?.title]);
+
     const selectedVariant = useMemo<ProductVariant | undefined>(() => {
         if (!product) return undefined;
         const variants = asArray(product.variants);
