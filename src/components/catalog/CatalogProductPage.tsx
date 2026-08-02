@@ -650,11 +650,17 @@ const CatalogProductPage: React.FC = () => {
                                 </span>
                                 {compareAt ? (
                                     <>
-                                        <span className="text-xl text-white/25 line-through">
+                                        <span className="text-xl font-semibold text-white/35 line-through decoration-primary/70 decoration-2">
                                             {formatCurrency(compareAt)}
                                         </span>
-                                        <span className="rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-                                            Save {formatCurrency(compareAt - currentPrice)}
+                                        <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-3.5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-white shadow-[0_8px_24px_rgba(220,10,40,0.4)] md:text-[15px]">
+                                            {discountPercentage > 0 ? (
+                                                <>
+                                                    <span>-{discountPercentage}%</span>
+                                                    <span className="h-3 w-px bg-white/40" />
+                                                </>
+                                            ) : null}
+                                            <span>Save {formatCurrency(compareAt - currentPrice)}</span>
                                         </span>
                                     </>
                                 ) : null}
