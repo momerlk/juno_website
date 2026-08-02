@@ -100,6 +100,18 @@ type FunnelType = 'website' | 'app';
 type EventFilter = FunnelStageEvent | 'all';
 type OutcomeFilter = 'all' | 'incomplete' | 'purchased';
 
+const normalizeJourney = (journey: Partial<AdminCheckoutJourneySummary>): AdminCheckoutJourneySummary => ({
+  journey_id: journey.journey_id || '',
+  started_at: journey.started_at || '',
+  last_at: journey.last_at || journey.started_at || '',
+  last_event: journey.last_event || 'begin_checkout',
+  last_sub_event: journey.last_sub_event,
+  last_detail: journey.last_detail,
+  outcome: journey.outcome === 'purchased' ? 'purchased' : 'incomplete',
+  event_count: typeof journey.event_count === 'number' ? journey.event_count : 0,
+  product_ids: Array.isArray(journey.product_ids) ? journey.product_ids : [],
+});
+
 const dayLabelFormatter = new Intl.DateTimeFormat('en-PK', { timeZone: 'Asia/Karachi', month: 'short', day: 'numeric' });
 const hourFormatter = new Intl.DateTimeFormat('en-PK', { timeZone: 'Asia/Karachi', hour: 'numeric', hour12: true });
 const hourKeyFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', hourCycle: 'h23' });
@@ -173,7 +185,7 @@ const AnalyticsFunnelPage: React.FC = () => {
     void Promise.all([diagnosticsRequest, journeysRequest]).then(([diagnosticsResponse, journeysResponse]) => {
       if (currentRequest !== requestId.current) return;
       setDiagnostics(diagnosticsResponse?.ok && Array.isArray(diagnosticsResponse.body.details) ? diagnosticsResponse.body.details : []);
-      setJourneys(journeysResponse?.ok && Array.isArray(journeysResponse.body.journeys) ? journeysResponse.body.journeys : []);
+      setJourneys(journeysResponse?.ok && Array.isArray(journeysResponse.body.journeys) ? journeysResponse.body.journeys.map(normalizeJourney) : []);
       setNextJourneyAfter(journeysResponse?.ok ? journeysResponse.body.next_after : undefined);
     }).catch(() => undefined);
   }, [funnelType, range?.end, range?.start]);
@@ -323,7 +335,7 @@ const AnalyticsFunnelPage: React.FC = () => {
     setIsLoadingMoreJourneys(true);
     const response = await AdminAnalytics.getCheckoutJourneys({ from: asISOString(range?.start), to: asISOString(range?.end), after: nextJourneyAfter, limit: 50 });
     if (response.ok) {
-      const additional = Array.isArray(response.body.journeys) ? response.body.journeys : [];
+      const additional = Array.isArray(response.body.journeys) ? response.body.journeys.map(normalizeJourney) : [];
       setJourneys((current) => {
         const known = new Set(current.map((journey) => journey.journey_id));
         const unique = additional.filter((journey) => !known.has(journey.journey_id));

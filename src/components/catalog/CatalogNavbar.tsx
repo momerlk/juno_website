@@ -27,7 +27,7 @@ interface CatalogNavbarProps {
 }
 
 const iconButtonClass =
-    'relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] transition-colors hover:border-white/20 hover:bg-white/[0.06]';
+    'relative flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] transition-colors hover:border-white/20 hover:bg-white/[0.06] md:h-11 md:w-11';
 
 const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
     homeHref = '/',
@@ -179,7 +179,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
         <>
             <nav className="sticky top-8 z-50 border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur-xl">
                 <div className="mx-auto max-w-7xl px-4 md:px-6">
-                    <div className="flex min-h-20 items-center gap-3 py-3">
+                    <div className="flex min-h-14 items-center gap-3 py-2 md:min-h-20 md:py-3">
                         {/* On filterable pages the Filters button replaces the logo on mobile. */}
                         {showMobileFiltersButton ? (
                             <button
@@ -208,7 +208,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                             <img
                                 src="/images/juno-logos/icon+text_white.png"
                                 alt="Juno"
-                                className="h-8 w-auto object-contain md:h-9"
+                                className="h-6 w-auto object-contain md:h-9"
                             />
                         </Link>
 
@@ -217,7 +217,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                         <div className="ml-auto flex items-center gap-2">
                             <Link
                                 to="/download"
-                                className="inline-flex h-9 items-center rounded-full border border-white/10 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:border-white/20 hover:bg-white/[0.05] sm:px-4"
+                                className="inline-flex h-8 items-center rounded-full border border-white/10 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:border-white/20 hover:bg-white/[0.05] sm:px-4 md:h-9"
                             >
                                 <span className="sm:hidden">App</span>
                                 <span className="hidden sm:inline">Download app</span>
@@ -264,7 +264,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+                            className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm"
                             onClick={() => {
                                 setSearchOpen(false);
                                 setSuggestions([]);
@@ -276,7 +276,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -8 }}
                             transition={{ duration: 0.18 }}
-                            className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[#0A0A0A] px-4 py-4 md:px-6"
+                            className="fixed left-0 right-0 top-0 z-[80] border-b border-white/10 bg-[#0A0A0A] px-4 py-4 md:px-6"
                         >
                             <div className="mx-auto max-w-2xl">
                                 <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 focus-within:border-white/25">

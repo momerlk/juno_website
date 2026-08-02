@@ -9,13 +9,6 @@ import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
 
-const addDays = (date: Date, days: number) => {
-    const d = new Date(date);
-    d.setDate(d.getDate() + days);
-    return d;
-};
-const fmtDay = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
 const FREE_SHIPPING_THRESHOLD = 5900;
 const getCardImage = (url?: string) =>
     getResponsiveShopifyImageSet(url || '/images/misc/juno_app_icon.png', [120, 160, 240]);
@@ -48,9 +41,6 @@ const CartDrawer: React.FC = () => {
         navigate('/catalog');
     };
 
-    const today = new Date();
-    const deliveryStart = addDays(today, 2);
-    const deliveryEnd = addDays(today, 4);
     const remainingForFreeShip = Math.max(0, FREE_SHIPPING_THRESHOLD - cartTotal);
     const freeShipProgress = Math.min((cartTotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
 
@@ -65,7 +55,7 @@ const CartDrawer: React.FC = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm"
+                        className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm"
                         onClick={() => setCartOpen(false)}
                     />
 
@@ -76,7 +66,7 @@ const CartDrawer: React.FC = () => {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-                        className="fixed right-0 top-0 z-[61] h-full w-full max-w-md"
+                        className="fixed right-0 top-0 z-[81] h-full w-full max-w-md"
                     >
                         <div className="relative flex h-full flex-col overflow-hidden bg-[#050505] text-white shadow-[0_0_80px_rgba(0,0,0,0.9)]">
 
@@ -139,10 +129,7 @@ const CartDrawer: React.FC = () => {
                                         {/* Delivery promise */}
                                         <div className="mb-4 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3.5 py-2.5">
                                             <p className="text-[11px] text-white/70">
-                                                Order will arrive on{' '}
-                                                <span className="font-bold text-white">
-                                                    {fmtDay(deliveryStart)} — {fmtDay(deliveryEnd)}
-                                                </span>
+                                                Delivery timing is confirmed at checkout.
                                             </p>
                                         </div>
 
