@@ -51,7 +51,7 @@ const InteractiveTrackingPage = React.lazy(() => import('./components/checkout/I
 const SharedSizeQuizPage = React.lazy(() => import('./components/checkout/SharedSizeQuizPage'));
 const WishlistPage = React.lazy(() => import('./components/catalog/WishlistPage'));
 
-import { useFunnelPageView } from './hooks/useFunnelAnalytics';
+import { getLegacyCatalogProductRedirect, useFunnelPageView } from './hooks/useFunnelAnalytics';
 import {
   consentClarityV2,
   getClarityCustomIdFromIdentity,
@@ -75,6 +75,13 @@ const AppShellFallback = () => (
 const LegacyProductRedirect = () => {
   const { productId } = useParams<{ productId: string }>();
   return <Navigate to={productId ? `/catalog/${productId}` : '/catalog'} replace />;
+};
+
+const CatalogProductRedirect = () => {
+  const { productId } = useParams<{ productId: string }>();
+  const location = useLocation();
+  const redirectProductId = getLegacyCatalogProductRedirect(productId);
+  return redirectProductId ? <Navigate to={`/catalog/${redirectProductId}${location.search}`} replace /> : <CatalogProductPage />;
 };
 
 const ScrollToTop: React.FC = () => {
@@ -168,7 +175,7 @@ function RoutedApp() {
                 <Route path="/catalog/all" element={<Navigate to="/catalog" replace />} />
                 <Route path="/catalog/women" element={<Navigate to="/catalog?genders=women" replace />} />
                 <Route path="/catalog/men" element={<Navigate to="/catalog?genders=men" replace />} />
-                <Route path="/catalog/:productId" element={<CatalogProductPage />} />
+                <Route path="/catalog/:productId" element={<CatalogProductRedirect />} />
                 
                 <Route path="/wishlist" element={<WishlistPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
