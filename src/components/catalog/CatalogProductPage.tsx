@@ -14,7 +14,6 @@ import {
     Star,
     Truck,
     RotateCcw,
-    Share2,
     ShieldCheck,
     ZoomIn,
     Zap,
@@ -82,6 +81,28 @@ const getCatalogBadges = (product: CatalogProduct | null) => ({
     thrifted: Boolean(product?.badges?.thrifted),
     bestSeller: Boolean(product?.badges?.best_seller),
 });
+
+// Independence-day badge: the flag itself, miniaturised. White hoist stripe,
+// bottle green field, crescent and star, and a sheen that reads as fabric
+// catching light rather than a generic shimmer.
+const AzaadiSaleBadge: React.FC<{ savings?: string }> = ({ savings }) => (
+    <span className="relative inline-flex items-stretch overflow-hidden rounded-md shadow-[0_6px_20px_rgba(1,65,28,0.5)]">
+        <span className="w-1.5 shrink-0 bg-white" aria-hidden="true" />
+        <span className="flex items-center gap-1.5 bg-[#01411C] py-1.5 pl-2 pr-3">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 text-white" fill="currentColor" aria-hidden="true">
+                <path d="M15.6 3.2a9 9 0 1 0 5 16.1A7.4 7.4 0 0 1 15.6 3.2Z" />
+                <path d="m19.6 7.4.8 1.9 2 .2-1.5 1.4.4 2-1.7-1.1-1.8 1 .5-2-1.5-1.4 2-.1Z" />
+            </svg>
+            <span className="text-[11px] font-black uppercase tracking-[0.18em] text-white">
+                {SALE_LABEL}
+            </span>
+            <span className="h-3 w-px bg-white/30" aria-hidden="true" />
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
+                {savings || '14 August'}
+            </span>
+        </span>
+    </span>
+);
 
 const ProductSkeleton: React.FC = () => (
     <div className="relative min-h-screen bg-[#050505] text-white">
@@ -789,9 +810,9 @@ const CatalogProductPage: React.FC = () => {
                                     type="button"
                                     onClick={() => void handleShare()}
                                     aria-label="Share this product"
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] text-white/70 transition-colors hover:border-white/30 hover:text-white"
+                                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)] transition-all hover:scale-105 hover:border-white/30 hover:bg-white/[0.1]"
                                 >
-                                    <Share2 size={16} />
+                                    <img src="/images/icons/share.png" alt="" className="h-full w-full object-contain" />
                                 </button>
                             </div>
                             {shareCopied ? <p className="mt-1 text-right text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-400">Link copied</p> : null}
@@ -829,10 +850,7 @@ const CatalogProductPage: React.FC = () => {
 
                             {discountPercentage > 0 ? (
                                 <div className="mt-4">
-                                    <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/12 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
-                                        <Sparkles size={11} />
-                                        {SALE_LABEL}
-                                    </span>
+                                    <AzaadiSaleBadge savings={`Independence offer · -${discountPercentage}%`} />
                                 </div>
                             ) : null}
 
