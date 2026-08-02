@@ -72,6 +72,49 @@ const AppShellFallback = () => (
   </div>
 );
 
+const getPageTitle = (pathname: string) => {
+  if (pathname === '/') return 'Juno - Home of Indie Brands';
+  if (pathname === '/catalog') return 'Shop | Juno';
+  if (pathname.startsWith('/catalog/')) return 'Product | Juno';
+  if (pathname === '/wishlist') return 'Wishlist | Juno';
+  if (pathname === '/checkout') return 'Checkout | Juno';
+  if (pathname === '/checkout/confirmation') return 'Order confirmed | Juno';
+  if (pathname.startsWith('/checkout/track/') || pathname.startsWith('/track')) return 'Track your order | Juno';
+  if (pathname.startsWith('/size-quiz/')) return 'Size quiz | Juno';
+  if (pathname === '/privacy-policy') return 'Privacy policy | Juno';
+  if (pathname === '/return-policy') return 'Return policy | Juno';
+  if (pathname === '/refund-policy') return 'Refund policy | Juno';
+  if (pathname === '/exchange-policy') return 'Exchange policy | Juno';
+  if (pathname === '/service-policy') return 'Shipping policy | Juno';
+  if (pathname === '/terms-and-conditions') return 'Terms and conditions | Juno';
+  if (pathname === '/download') return 'Download Juno | Juno';
+  if (pathname === '/shopify/success') return 'Shopify connected | Juno Studio';
+  if (pathname === '/studio') return 'Juno Studio | Juno';
+  if (pathname.endsWith('/auth')) return 'Seller sign in | Juno';
+  if (pathname.endsWith('/onboarding')) return 'Apply to sell | Juno';
+  if (pathname.includes('/dashboard/inventory')) return 'Inventory | Juno Studio';
+  if (pathname.includes('/dashboard/orders/')) return 'Order details | Juno Studio';
+  if (pathname.includes('/dashboard/orders')) return 'Orders | Juno Studio';
+  if (pathname.includes('/dashboard/order-processing')) return 'Order processing | Juno Studio';
+  if (pathname.includes('/dashboard/statements')) return 'Statements | Juno Studio';
+  if (pathname.includes('/dashboard/analytics')) return 'Analytics | Juno Studio';
+  if (pathname.includes('/dashboard/profile')) return 'Profile | Juno Studio';
+  if (pathname.includes('/dashboard')) return 'Dashboard | Juno Studio';
+  if (pathname === '/admin/login') return 'Admin sign in | Juno';
+  if (pathname.startsWith('/admin/orders/')) return 'Order details | Juno Admin';
+  if (pathname === '/admin/orders') return 'Orders | Juno Admin';
+  if (pathname === '/admin/sellers') return 'Sellers | Juno Admin';
+  if (pathname === '/admin/products/create') return 'Create product | Juno Admin';
+  if (pathname === '/admin/products/imports') return 'Product imports | Juno Admin';
+  if (pathname === '/admin/products') return 'Products | Juno Admin';
+  if (pathname === '/admin/invites') return 'Invites | Juno Admin';
+  if (pathname === '/admin/notifications') return 'Notifications | Juno Admin';
+  if (pathname === '/admin/analytics') return 'Analytics | Juno Admin';
+  if (pathname.startsWith('/admin/guides/')) return 'Guide | Juno Admin';
+  if (pathname.startsWith('/admin')) return 'Juno Admin';
+  return 'Juno - Home of Indie Brands';
+};
+
 const LegacyProductRedirect = () => {
   const { productId } = useParams<{ productId: string }>();
   return <Navigate to={productId ? `/catalog/${productId}` : '/catalog'} replace />;
@@ -113,12 +156,12 @@ function RoutedApp() {
                             location.pathname.startsWith('/admin');
 
   useEffect(() => {
-    document.title = 'Juno - Home of Indie Brands';
+    document.title = getPageTitle(location.pathname);
     const titleElement = document.querySelector('title');
     if (titleElement && titleElement.hasAttribute('data-default')) {
       titleElement.removeAttribute('data-default');
     }
-  }, []);
+  }, [location.pathname]);
 
   useEffect(() => {
     initClarity();
