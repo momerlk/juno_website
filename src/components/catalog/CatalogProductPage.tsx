@@ -305,6 +305,7 @@ const CatalogProductPage: React.FC = () => {
     }, []);
 
     const handleAddToCart = useCallback(() => {
+        if (product) Funnel.trackSubEvent('add_to_cart', 'clicked', undefined, { product_id: product.id });
         if (!product || !selectedVariant) {
             if (product) Funnel.trackSubEvent('add_to_cart', 'blocked', 'variant_required', { product_id: product.id });
             return;
@@ -382,7 +383,6 @@ const CatalogProductPage: React.FC = () => {
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
         };
-        Funnel.track('add_to_cart', { product_id: product.id, quantity });
         navigate('/checkout', { state: { buyNowItem } });
     }, [
         canPurchase,
@@ -816,7 +816,7 @@ const CatalogProductPage: React.FC = () => {
                                         </div>
                                         {option.name.toLowerCase().includes('size') && hasSizingGuide ? (
                                             <button
-                                                onClick={() => setShowSizeGuide(true)}
+                                                onClick={() => { Funnel.trackSubEvent('view_item', 'size_guide_opened', undefined, { product_id: product.id }); setShowSizeGuide(true); }}
                                                 className="group mt-4 flex w-full items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 to-secondary/[0.07] p-3.5 text-left transition-all hover:border-primary/60 hover:from-primary/15 hover:to-secondary/10"
                                             >
                                                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary text-white shadow-[0_8px_22px_rgba(220,10,40,0.25)]">

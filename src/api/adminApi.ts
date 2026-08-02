@@ -132,6 +132,13 @@ export interface AdminFunnelDiagnosticsResponse {
 export interface AdminCheckoutJourneySummary {
     journey_id: string;
     started_at: string;
+    last_at: string;
+    last_event: FunnelStageEvent;
+    last_sub_event?: string;
+    last_detail?: string;
+    outcome: 'purchased' | 'incomplete';
+    event_count: number;
+    product_ids: string[];
 }
 
 export interface AdminCheckoutJourneysResponse {

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Heart, ShoppingBag, Sparkles, Star } from 'lucide-react';
 import type { CatalogProduct } from '../../api/api';
 import { useGuestCart } from '../../contexts/GuestCartContext';
+import { Funnel } from '../../api/analyticsApi';
 import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 
 interface ProductCardProps {
@@ -86,16 +87,26 @@ const ProductCard: React.FC<ProductCardProps> = ({
     const handleQuickAdd = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        Funnel.trackSubEvent('add_to_cart', 'clicked', undefined, { product_id: product.id });
         if (onQuickAdd) {
             onQuickAdd(product);
             return;
         }
 
         const variant = product.variants?.[0];
-        if (!variant) return;
-        if (!variant.available || !product.inventory?.in_stock) return;
+        if (!variant) {
+            Funnel.trackSubEvent('add_to_cart', 'blocked', 'variant_required', { product_id: product.id });
+            return;
+        }
+        if (!variant.available || !product.inventory?.in_stock) {
+            Funnel.trackSubEvent('add_to_cart', 'blocked', 'out_of_stock', { product_id: product.id });
+            return;
+        }
         const maxVariantQuantity = getVariantAvailableQuantity(variant, product);
-        if (typeof maxVariantQuantity === 'number' && maxVariantQuantity <= 0) return;
+        if (typeof maxVariantQuantity === 'number' && maxVariantQuantity <= 0) {
+            Funnel.trackSubEvent('add_to_cart', 'blocked', 'quantity_limit', { product_id: product.id });
+            return;
+        }
 
         setAddedToCart(true);
         addItem(

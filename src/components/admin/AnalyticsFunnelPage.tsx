@@ -3,6 +3,7 @@ import { BarChart3, RefreshCw } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis } from 'recharts';
 import { AdminAnalytics, type AdminCheckoutJourneySummary, type AdminFunnelDiagnostic, type AdminFunnelEvent, type AdminFunnelStage, type FunnelStageEvent } from '../../api/adminApi';
 import { Banner } from '@astryxdesign/core/Banner';
+import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { ClickableCard } from '@astryxdesign/core/ClickableCard';
@@ -50,6 +51,7 @@ const hourKey = (value: string) => Number(hourKeyFormatter.format(new Date(value
 const chartColors = ['var(--color-border-red)', 'var(--color-border-orange)', 'var(--color-border-pink)', 'var(--color-border-purple)', 'var(--color-border-cyan)', 'var(--color-border-green)', 'var(--color-border-yellow)', 'var(--color-border-gray)'];
 const subEventLabel = (event: AdminFunnelEvent | AdminFunnelDiagnostic) => [event.sub_event.replace(/_/g, ' '), event.detail?.replace(/_/g, ' ')].filter(Boolean).join(' · ');
 const timelineLabel = (event: AdminFunnelEvent) => event.sub_event ? `${EVENT_LABELS[event.type]} · ${subEventLabel(event)}` : EVENT_LABELS[event.type];
+const journeyFriction = (journey: AdminCheckoutJourneySummary) => journey.last_sub_event ? [journey.last_sub_event.replace(/_/g, ' '), journey.last_detail?.replace(/_/g, ' ')].filter(Boolean).join(' · ') : EVENT_LABELS[journey.last_event];
 
 const AnalyticsFunnelPage: React.FC = () => {
   const [range, setRange] = useState<DateRange | null>(null);
@@ -255,8 +257,12 @@ const AnalyticsFunnelPage: React.FC = () => {
                   onClick={() => setSelectedJourneyId(journey.journey_id)}
                 >
                   <HStack hAlign="between" gap={3}>
-                    <Text type="code" wordBreak="break-all">{journey.journey_id}</Text>
-                    <Text type="supporting">{new Date(journey.started_at).toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}</Text>
+                    <VStack gap={1}>
+                      <Text type="label">{journey.outcome === 'purchased' ? 'Purchased' : journeyFriction(journey)}</Text>
+                      <Text type="supporting">{formatCount(journey.event_count)} events · {journey.product_ids.length} products · Last activity {new Date(journey.last_at).toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}</Text>
+                      <Text type="code" wordBreak="break-all">{journey.journey_id}</Text>
+                    </VStack>
+                    {journey.outcome === 'incomplete' && <Badge variant="warning" label="Incomplete" />}
                   </HStack>
                 </ClickableCard>
               ))}
@@ -271,7 +277,7 @@ const AnalyticsFunnelPage: React.FC = () => {
           <VStack gap={3}>
             <VStack gap={1}>
               <Heading level={3}>Journey timeline</Heading>
-              <Text type="supporting">{selectedJourneyId}</Text>
+              <Text type="supporting">Ordered events show the last known journey friction; no customer data is collected.</Text>
             </VStack>
             {isJourneyLoading ? (
               <Text type="supporting">Loading timeline…</Text>

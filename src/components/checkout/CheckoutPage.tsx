@@ -18,6 +18,8 @@ const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
 
 const CALCULATING_LABEL = 'Calculating…';
+const shippingQuoteKey = (city: string, items: Array<{ product_id: string; variant_id: string; quantity: number }>) =>
+    `${city.trim().toLowerCase()}|${items.map(({ product_id, variant_id, quantity }) => `${product_id}:${variant_id}:${quantity}`).join(',')}`;
 
 const addDays = (date: Date, days: number) => {
     const d = new Date(date);
@@ -135,11 +137,11 @@ const CheckoutPage: React.FC = () => {
     const [isUploadingProof, setIsUploadingProof] = useState(false);
     const [copiedBankDetail, setCopiedBankDetail] = useState<string | null>(null);
     const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
-    const hasTrackedCheckoutStart = React.useRef(false);
     const hasTrackedInitiateCheckout = React.useRef(false);
     const hasTrackedFormStart = React.useRef(false);
     const hasTrackedFormReady = React.useRef(false);
-    const completedFields = React.useRef(new Set<'name' | 'phone' | 'address' | 'city'>());
+    const trackedFieldValidity = React.useRef<Partial<Record<'name' | 'phone' | 'address' | 'city', boolean>>>({});
+    const shippingQuoteRef = useRef<{ key: string; estimate: ShippingEstimateResponse } | null>(null);
     const isSubmittingRef = useRef(false);
 
     useEffect(() => {
@@ -187,9 +189,8 @@ const CheckoutPage: React.FC = () => {
     }, [paymentProof]);
 
     useEffect(() => {
-        if (hasTrackedCheckoutStart.current || checkoutItemCount <= 0) return;
-        Funnel.track('begin_checkout', { item_count: checkoutItemCount });
-        hasTrackedCheckoutStart.current = true;
+        if (checkoutItemCount <= 0) return;
+        Funnel.trackOnce('begin_checkout', { item_count: checkoutItemCount });
     }, [checkoutItemCount]);
 
     useEffect(() => {
@@ -255,9 +256,12 @@ const CheckoutPage: React.FC = () => {
             setShippingState('idle');
             return;
         }
+        const quoteKey = shippingQuoteKey(buyerCity, items);
+        shippingQuoteRef.current = null;
 
         const timeoutId = setTimeout(async () => {
             setShippingState('loading');
+            Funnel.trackSubEvent('begin_checkout', 'shipping_estimate', 'requested');
             try {
                 const response = await GuestCommerce.estimateShipping({
                     buyer_city: buyerCity,
@@ -267,12 +271,15 @@ const CheckoutPage: React.FC = () => {
                     throw new Error('Unable to fetch shipping estimate');
                 }
                 if (cancelled) return;
+                shippingQuoteRef.current = { key: quoteKey, estimate: response.body };
                 setShippingEstimate(response.body);
                 setShippingState('ready');
+                Funnel.trackSubEvent('begin_checkout', 'shipping_estimate', 'ready');
             } catch {
                 if (cancelled) return;
                 setShippingEstimate(null);
                 setShippingState('error');
+                Funnel.trackSubEvent('begin_checkout', 'shipping_estimate', 'failed');
             }
         }, 350);
 
@@ -292,6 +299,13 @@ const CheckoutPage: React.FC = () => {
         }
         if (!formData.address_line1.trim()) newErrors.address_line1 = 'Address is required';
         if (!formData.city.trim()) newErrors.city = 'City is required';
+        (Object.keys(newErrors) as Array<keyof typeof newErrors>).forEach((field) => {
+            const trackedField = ({ full_name: 'name', phone_number: 'phone', address_line1: 'address', city: 'city' } as const)[field as 'full_name' | 'phone_number' | 'address_line1' | 'city'];
+            if (trackedField && trackedFieldValidity.current[trackedField] !== false) {
+                Funnel.trackSubEvent('begin_checkout', 'field_invalid', trackedField);
+                trackedFieldValidity.current[trackedField] = false;
+            }
+        });
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -315,11 +329,12 @@ const CheckoutPage: React.FC = () => {
                 throw new Error('Your bag is empty. Please add items to your cart first.');
             }
 
-            const estimateResponse = await GuestCommerce.estimateShipping({
-                buyer_city: formData.city.trim(),
-                items,
-            });
-            if (!estimateResponse.ok) {
+            const quoteKey = shippingQuoteKey(formData.city, items);
+            const cachedQuote = shippingQuoteRef.current;
+            const estimate = cachedQuote?.key === quoteKey
+                ? cachedQuote.estimate
+                : (await GuestCommerce.estimateShipping({ buyer_city: formData.city.trim(), items })).body;
+            if (!estimate || !('subtotal' in estimate)) {
                 Funnel.trackSubEvent('begin_checkout', 'preflight_failed', 'shipping_estimate');
                 throw new Error('Could not verify your order total. Please try again.');
             }
@@ -331,13 +346,13 @@ const CheckoutPage: React.FC = () => {
                 Funnel.trackSubEvent('begin_checkout', 'preflight_failed', 'payment_proof');
                 throw new Error('Your payment screenshot is still uploading. Please try again in a moment.');
             }
-            const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(estimateResponse.body.subtotal * 0.05) : 0;
+            const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(estimate.subtotal * 0.05) : 0;
             const confirmationSummary = {
-                subtotal: estimateResponse.body.subtotal,
-                shipping_fee: estimateResponse.body.shipping_total,
+                subtotal: estimate.subtotal,
+                shipping_fee: estimate.shipping_total,
                 discount_amount: discountAmount,
-                total: estimateResponse.body.subtotal + estimateResponse.body.shipping_total - discountAmount,
-                currency: estimateResponse.body.currency,
+                total: estimate.subtotal + estimate.shipping_total - discountAmount,
+                currency: estimate.currency,
             };
 
             await identifyTikTokUser({
@@ -417,9 +432,9 @@ const CheckoutPage: React.FC = () => {
             const isComplete = trackedField === 'phone'
                 ? /^\+?[\d\s-()]+$/.test(value) && value.trim().length > 0
                 : value.trim().length > 0;
-            if (isComplete && !completedFields.current.has(trackedField)) {
-                Funnel.trackSubEvent('begin_checkout', 'field_completed', trackedField);
-                completedFields.current.add(trackedField);
+            if (trackedFieldValidity.current[trackedField] !== isComplete) {
+                Funnel.trackSubEvent('begin_checkout', isComplete ? 'field_completed' : 'field_invalid', trackedField);
+                trackedFieldValidity.current[trackedField] = isComplete;
             }
             if (
                 !hasTrackedFormReady.current &&
@@ -449,6 +464,7 @@ const CheckoutPage: React.FC = () => {
         setIsUploadingProof(true);
         try {
             setPaymentProofUrl(await uploadFileAndGetUrl(file));
+            Funnel.trackSubEvent('begin_checkout', 'payment_proof_added');
         } catch (error) {
             setErrors((current) => ({ ...current, general: error instanceof Error ? error.message : 'Could not upload payment screenshot. Please try again.' }));
         } finally {
@@ -840,10 +856,10 @@ const CheckoutPage: React.FC = () => {
                             </div>
 
                             <div className="mb-4 grid gap-3 sm:grid-cols-2">
-                                <button type="button" onClick={() => { if (paymentMethod !== 'cod') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected'); setPaymentMethod('cod'); }} className={`rounded-xl border p-4 text-left ${paymentMethod === 'cod' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                                <button type="button" onClick={() => { if (paymentMethod !== 'cod') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected', 'cod'); setPaymentMethod('cod'); }} className={`rounded-xl border p-4 text-left ${paymentMethod === 'cod' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
                                     <p className="font-bold text-white">Cash on Delivery (COD)</p>
                                 </button>
-                                <button type="button" disabled={paymentMethodsLoading || !bankMethod} onClick={() => { if (paymentMethod !== 'bank_deposit') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected'); setPaymentMethod('bank_deposit'); }} className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-45 ${paymentMethod === 'bank_deposit' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                                <button type="button" disabled={paymentMethodsLoading || !bankMethod} onClick={() => { if (paymentMethod !== 'bank_deposit') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected', 'bank_deposit'); setPaymentMethod('bank_deposit'); }} className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-45 ${paymentMethod === 'bank_deposit' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
                                     <p className="font-bold text-white">Bank Deposit</p>
                                 </button>
                             </div>
@@ -856,7 +872,7 @@ const CheckoutPage: React.FC = () => {
                                     {bank?.account_number && <button type="button" onClick={() => void copyBankDetail('account_number', bank.account_number!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">Account number</span><span className="font-mono text-sm font-bold text-white">{bank.account_number}</span></span>{copiedBankDetail === 'account_number' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
                                     {bank?.iban && <button type="button" onClick={() => void copyBankDetail('iban', bank.iban!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">IBAN</span><span className="font-mono text-sm font-bold text-white">{bank.iban}</span></span>{copiedBankDetail === 'iban' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
                                 </div>
-                                <label className={`mt-4 block cursor-pointer rounded-xl border border-dashed p-4 text-center active:bg-black/35 ${isUploadingProof ? 'border-primary/60 bg-primary/10' : 'border-white/20 bg-black/20'}`}>
+                                <label onClick={() => Funnel.trackSubEvent('begin_checkout', 'payment_proof_opened')} className={`mt-4 block cursor-pointer rounded-xl border border-dashed p-4 text-center active:bg-black/35 ${isUploadingProof ? 'border-primary/60 bg-primary/10' : 'border-white/20 bg-black/20'}`}>
                                     <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void handlePaymentProofChange(event.target.files?.[0] || null)} className="sr-only" />
                                     <span className="flex items-center justify-center gap-2 text-sm font-semibold text-white">{isUploadingProof && <Loader2 size={18} className="animate-spin text-primary" />}{isUploadingProof ? 'Uploading payment screenshot…' : paymentProofUrl ? 'Payment screenshot uploaded' : paymentProof ? 'Payment screenshot selected' : 'Upload payment screenshot'}</span>
                                     <span className="mt-1 block text-xs text-white/50">{paymentProof ? paymentProof.name : 'Tap to take or choose a screenshot'}</span>
@@ -912,7 +928,7 @@ const CheckoutPage: React.FC = () => {
                                                 textTransform: 'uppercase',
                                             }}
                                         >
-                                            Place order · {orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}
+                                            Place order · {formatCurrency(orderTotal ?? (displaySubtotal - discountAmount))}
                                         </span>
                                     </>
                                 )}

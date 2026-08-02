@@ -1,8 +1,13 @@
 import { request } from './core';
 
 export type FunnelEvent = 'page_view' | 'download_page_view' | 'store_visit' | 'app_install' | 'view_item' | 'add_to_cart' | 'begin_checkout';
-export type FunnelSubEvent = 'variant_selected' | 'blocked' | 'form_started' | 'form_ready' | 'payment_method_selected' | 'submit_clicked' | 'field_completed' | 'preflight_failed';
-export type FunnelSubEventDetail = 'variant_required' | 'out_of_stock' | 'quantity_limit' | 'name' | 'phone' | 'address' | 'city' | 'shipping_estimate' | 'payment_proof';
+type FunnelSubEvents = {
+    view_item: 'variant_selected' | 'size_guide_opened' | 'unavailable_shown';
+    add_to_cart: 'clicked' | 'blocked';
+    begin_checkout: 'form_started' | 'form_ready' | 'submit_clicked' | 'payment_proof_opened' | 'payment_proof_added' | 'payment_method_selected' | 'field_completed' | 'field_invalid' | 'shipping_estimate' | 'preflight_failed';
+};
+export type FunnelSubEvent = FunnelSubEvents[keyof FunnelSubEvents];
+export type FunnelSubEventDetail = 'out_of_stock' | 'variant_unavailable' | 'variant_required' | 'quantity_limit' | 'cod' | 'bank_deposit' | 'name' | 'phone' | 'address' | 'city' | 'requested' | 'ready' | 'failed' | 'shipping_estimate' | 'payment_proof';
 
 type FunnelEventProperties = {
     product_id?: string;
@@ -39,7 +44,18 @@ export namespace Funnel {
         }, undefined, true, 30000, true).catch(() => undefined);
     }
 
-    export function trackSubEvent(type: FunnelEvent, subEvent: FunnelSubEvent, detail?: FunnelSubEventDetail, properties: FunnelEventProperties = {}, source?: 'app'): void {
+    export function trackOnce(type: FunnelEvent, properties: FunnelEventProperties = {}, source?: 'app'): void {
+        try {
+            const key = `${JOURNEY_STORAGE_KEY}:${type}`;
+            if (sessionStorage.getItem(key)) return;
+            sessionStorage.setItem(key, '1');
+        } catch {
+            // Analytics must not interfere when browser storage is unavailable.
+        }
+        track(type, properties, source);
+    }
+
+    export function trackSubEvent<T extends keyof FunnelSubEvents>(type: T, subEvent: FunnelSubEvents[T], detail?: FunnelSubEventDetail, properties: FunnelEventProperties = {}, source?: 'app'): void {
         const { product_id, ...eventProperties } = properties;
         void request<{ accepted: boolean }>('/analytics/events', 'POST', {
             type,
