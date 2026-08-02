@@ -343,6 +343,8 @@ Auth: public
 }
 ```
 
+`email` accepts either the seller email address or business name. Business-name matching is case-insensitive; the request field remains `email` for compatibility.
+
 **Response `200`**: `SellerAuthResponse`
 
 **Common errors**

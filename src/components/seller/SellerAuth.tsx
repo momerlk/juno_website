@@ -8,7 +8,7 @@ const SellerAuth: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isLoading } = useSellerAuth();
@@ -21,7 +21,7 @@ const SellerAuth: React.FC = () => {
     const nextEmail = stateEmail || queryEmail || '';
 
     if (nextEmail) {
-      setEmail(nextEmail);
+      setIdentifier(nextEmail);
     }
   }, [location.state, searchParams]);
 
@@ -29,10 +29,10 @@ const SellerAuth: React.FC = () => {
     e.preventDefault();
     setError('');
     try {
-      await login(email, password);
+      await login(identifier.trim(), password);
       navigate(`${prefix}/dashboard`);
     } catch {
-      setError('Invalid email or password. Please try again.');
+      setError('Invalid email, business name, or password. Please try again.');
     }
   };
 
@@ -61,12 +61,13 @@ const SellerAuth: React.FC = () => {
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
               <input
-                type="email"
+                type="text"
                 required
-                autoComplete="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="username"
+                aria-label="Email or business name"
+                placeholder="Email or business name"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full rounded-md border border-white/10 bg-white/[0.04] py-3.5 pl-10 pr-3 text-sm text-white placeholder-neutral-500 outline-none transition focus:border-primary/60 focus:bg-white/[0.06] focus:ring-1 focus:ring-primary/30"
               />
             </div>
