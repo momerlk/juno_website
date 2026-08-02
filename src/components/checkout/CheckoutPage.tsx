@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, Copy, Loader2, Zap, Truck } from 'lucide-react';
+import { ShoppingBag, User, Mail, CheckCircle, ChevronDown, ChevronRight, Copy, Loader2, ShieldAlert, Zap, Truck } from 'lucide-react';
+import CitySelectModal from './CitySelectModal';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Commerce, GuestCommerce } from '../../api/commerceApi';
 import { uploadFileAndGetUrl } from '../../api/shared';
@@ -38,6 +39,7 @@ const STORAGE_KEYS = {
 };
 
 const SHOW_FREE_SHIPPING_UI = false;
+const DEFAULT_DELIVERY_DAYS = 7;
 
 const sanitizeCity = (value: unknown): string => {
     if (typeof value !== 'string') return '';
@@ -137,6 +139,8 @@ const CheckoutPage: React.FC = () => {
     const [isUploadingProof, setIsUploadingProof] = useState(false);
     const [copiedBankDetail, setCopiedBankDetail] = useState<string | null>(null);
     const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
+    const [showCityModal, setShowCityModal] = useState(false);
+    const [isSummaryOpen, setIsSummaryOpen] = useState(true);
     const hasTrackedInitiateCheckout = React.useRef(false);
     const hasTrackedFormStart = React.useRef(false);
     const hasTrackedFormReady = React.useRef(false);
@@ -499,6 +503,11 @@ const CheckoutPage: React.FC = () => {
     const today = new Date();
     const deliveryStart = addDays(today, 2);
     const deliveryEnd = addDays(today, 4);
+    // Quote the slowest item, the same rule the bag uses, so the two agree.
+    const estimatedDeliveryDate = addDays(
+        today,
+        checkoutItems.reduce((slowest, item) => Math.max(slowest, item.delivery_days || DEFAULT_DELIVERY_DAYS), DEFAULT_DELIVERY_DAYS)
+    );
     const bankMethod = paymentMethods.find((method) => [method.id, method.code, method.payment_method].includes('bank_deposit'));
     const bank = bankMethod?.bank || bankMethod;
 
@@ -507,8 +516,8 @@ const CheckoutPage: React.FC = () => {
             <div className="flex min-h-screen items-center justify-center bg-[#050505] pt-24 text-white">
                 <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center">
                     <Loader2 size={28} className="mx-auto mb-4 animate-spin text-primary" />
-                    <p className="text-sm font-semibold text-white">Loading your bag…</p>
-                    <p className="mt-2 text-xs text-white/55">Restoring your checkout items.</p>
+                    <p className="text-[15px] font-semibold text-white">Loading your bag…</p>
+                    <p className="mt-2 text-[14px] text-white/55">Restoring your checkout items.</p>
                 </div>
             </div>
         );
@@ -519,8 +528,8 @@ const CheckoutPage: React.FC = () => {
             <div className="flex min-h-screen items-center justify-center bg-[#050505] pt-24 text-white">
                 <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center">
                     <Loader2 size={28} className="mx-auto mb-4 text-primary" />
-                    <p className="text-sm font-semibold text-white">Your bag is empty right now.</p>
-                    <p className="mt-2 text-xs text-white/55">Add items and come back to checkout.</p>
+                    <p className="text-[15px] font-semibold text-white">Your bag is empty right now.</p>
+                    <p className="mt-2 text-[14px] text-white/55">Add items and come back to checkout.</p>
                     <button
                         onClick={() => navigate('/catalog')}
                         className="mt-5 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-white"
@@ -553,14 +562,8 @@ const CheckoutPage: React.FC = () => {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
-                    className="mb-8 md:mb-10"
+                    className="mb-7 md:mb-9"
                 >
-                    <div className="mb-2 flex items-center gap-2.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                        <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/40">
-                            Final step
-                        </p>
-                    </div>
                     <h1
                         className="text-white"
                         style={{
@@ -578,7 +581,7 @@ const CheckoutPage: React.FC = () => {
 
                 <div className="grid gap-6 md:gap-8 lg:grid-cols-[1fr_0.8fr]">
                     {/* Left — Forms */}
-                    <div className="space-y-5 md:space-y-6">
+                    <div className="space-y-7">
                         {SHOW_FREE_SHIPPING_UI && (
                             <motion.section
                                 initial={{ opacity: 0, y: 16 }}
@@ -591,7 +594,7 @@ const CheckoutPage: React.FC = () => {
                                         <Truck size={18} className="text-white/80" />
                                     </div>
                                     <div>
-                                        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/40">
+                                        <p className="text-[14px] text-white/45">
                                             Free delivery over {formatCurrency(freeShippingThreshold)}
                                         </p>
                                         <p
@@ -599,17 +602,17 @@ const CheckoutPage: React.FC = () => {
                                             style={{
                                                 fontFamily: 'Montserrat, sans-serif',
                                                 fontWeight: 800,
-                                                fontSize: '0.95rem',
+                                                fontSize: '1.05rem',
                                                 letterSpacing: '-0.02em',
                                             }}
                                         >
                                             Order will arrive {fmtDay(deliveryStart)} — {fmtDay(deliveryEnd)}
                                         </p>
                                         {shippingState === 'loading' && (
-                                            <p className="mt-1 text-[11px] text-white/45">Estimating shipping for {formData.city || 'your city'}...</p>
+                                            <p className="mt-1 text-[14px] text-white/45">Estimating shipping for {formData.city || 'your city'}...</p>
                                         )}
                                         {shippingState === 'error' && formData.city.trim() && (
-                                            <p className="mt-1 text-[11px] text-white/45">Using fallback estimate. Final shipping confirmed on order placement.</p>
+                                            <p className="mt-1 text-[14px] text-white/45">Using fallback estimate. Final shipping confirmed on order placement.</p>
                                         )}
                                     </div>
                                 </div>
@@ -621,16 +624,31 @@ const CheckoutPage: React.FC = () => {
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 md:p-7"
+                            className=""
                         >
-                            <div className="mb-5 flex items-center gap-2.5">
-                                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/50">
-                                    {isBuyNow ? 'Buy now' : 'Your bag'} · {checkoutItemCount} {checkoutItemCount === 1 ? 'piece' : 'pieces'}
+                            <button
+                                type="button"
+                                onClick={() => setIsSummaryOpen((current) => !current)}
+                                aria-expanded={isSummaryOpen}
+                                className="mb-4 flex w-full items-center justify-between gap-3 text-left"
+                            >
+                                <span className="flex items-baseline gap-2">
+                                    <SectionTitle>{isBuyNow ? 'Buy now' : 'Order summary'}</SectionTitle>
+                                    <span className="text-[15px] text-white/45">
+                                        ({checkoutItemCount} {checkoutItemCount === 1 ? 'item' : 'items'})
+                                    </span>
+                                </span>
+                                <ChevronDown size={16} className={`shrink-0 text-white/45 transition-transform ${isSummaryOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5">
+                                <Truck size={15} className="shrink-0 text-primary" />
+                                <p className="text-[15px] text-white/70">
+                                    Estimated delivery by <span className="font-bold text-white">{fmtDay(estimatedDeliveryDate)}</span>
                                 </p>
                             </div>
 
-                            <div className="space-y-3.5">
+                            <div className={`space-y-3.5 ${isSummaryOpen ? '' : 'hidden'}`}>
                                 {checkoutItems.map((item, index) => (
                                     <motion.div
                                         key={`${item.product_id || 'product'}-${item.variant_id || 'variant'}-${index}`}
@@ -653,7 +671,7 @@ const CheckoutPage: React.FC = () => {
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-white/40">
+                                            <p className="text-[14px] text-white/45">
                                                 {item.seller_name || 'Juno Label'}
                                             </p>
                                             <h3
@@ -661,23 +679,23 @@ const CheckoutPage: React.FC = () => {
                                                 style={{
                                                     fontFamily: 'Montserrat, sans-serif',
                                                     fontWeight: 800,
-                                                    fontSize: '0.9rem',
+                                                    fontSize: '1rem',
                                                     letterSpacing: '-0.03em',
                                                 }}
                                             >
                                                 {item.product_title || 'Product'}
                                             </h3>
                                             {item.variant_title && (
-                                                <p className="mt-1 text-xs text-white/55">{item.variant_title}</p>
+                                                <p className="mt-1 text-[14px] text-white/55">{item.variant_title}</p>
                                             )}
-                                            <p className="mt-1 text-xs text-white/40">Qty · {item.quantity}</p>
+                                            <p className="mt-1 text-[14px] text-white/40">Qty · {item.quantity}</p>
                                         </div>
                                         <p
                                             className="text-white shrink-0"
                                             style={{
                                                 fontFamily: 'Montserrat, sans-serif',
                                                 fontWeight: 900,
-                                                fontSize: '0.9rem',
+                                                fontSize: '1rem',
                                                 letterSpacing: '-0.03em',
                                             }}
                                         >
@@ -689,11 +707,11 @@ const CheckoutPage: React.FC = () => {
 
                             {/* Breakdown — visible on mobile too */}
                             <div className="mt-5 border-t border-white/[0.08] pt-4 space-y-2.5 lg:hidden">
-                                <div className="flex justify-between text-[13px]">
+                                <div className="flex justify-between text-[15px]">
                                     <span className="text-white/55">Subtotal</span>
                                     <span className="font-semibold text-white">{formatCurrency(displaySubtotal)}</span>
                                 </div>
-                                <div className="flex justify-between text-[13px]">
+                                <div className="flex justify-between text-[15px]">
                                     <span className="text-white/55">Shipping</span>
                                     <ShippingAmount
                                         shippingFee={shippingFee}
@@ -710,13 +728,13 @@ const CheckoutPage: React.FC = () => {
                                                 className="h-full bg-gradient-to-r from-primary to-secondary"
                                             />
                                         </div>
-                                        <p className="mt-1.5 text-[11px] text-white/45">
+                                        <p className="mt-1.5 text-[14px] text-white/45">
                                             {formatCurrency(remainingForFreeShip)} away from free delivery
                                         </p>
                                     </div>
                                 )}
                                 <div className="border-t border-white/[0.08] pt-3 flex items-end justify-between">
-                                    <span className="text-[13px] font-semibold text-white/80">Total</span>
+                                    <span className="text-[15px] font-semibold text-white/80">Total</span>
                                     <span
                                         className="text-white"
                                         style={{
@@ -741,26 +759,12 @@ const CheckoutPage: React.FC = () => {
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.15 }}
-                            className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 md:p-7"
+                            className="border-t border-white/[0.08] pt-7"
                         >
                             <div className="mb-5 flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2.5">
-                                    <MapPin size={16} className="text-primary" />
-                                    <h2
-                                        className="text-white"
-                                        style={{
-                                            fontFamily: 'Montserrat, sans-serif',
-                                            fontWeight: 800,
-                                            fontSize: '1rem',
-                                            letterSpacing: '-0.02em',
-                                            textTransform: 'uppercase',
-                                        }}
-                                    >
-                                        Where should we ship?
-                                    </h2>
-                                </div>
+                                <SectionTitle>Contact info</SectionTitle>
                                 {saveStatus === 'saved' && (
-                                    <span className="flex items-center gap-1 text-[11px] text-white/50">
+                                    <span className="flex items-center gap-1 text-[14px] text-white/50">
                                         <CheckCircle size={11} />
                                         Saved
                                     </span>
@@ -784,26 +788,28 @@ const CheckoutPage: React.FC = () => {
                                     />
                                 </Field>
 
-                                <Field
-                                    label="Phone number"
-                                    required
-                                    error={errors.phone_number}
-                                    icon={<Phone size={16} className="text-white/40" />}
-                                >
-                                    <input
-                                        type="tel"
-                                        inputMode="tel"
-                                        value={formData.phone_number}
-                                        onChange={(e) => updateField('phone_number', e.target.value)}
-                                        className={inputClass(errors.phone_number, true)}
-                                        placeholder="0300 1234567"
-                                        autoComplete="tel"
-                                    />
+                                <Field label="Phone number" required error={errors.phone_number}>
+                                    {/* The country code is fixed, so it is furniture, not an input. */}
+                                    <div className="flex items-stretch gap-2">
+                                        <span className="flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.1] bg-black/40 px-3.5 text-[16px] font-semibold text-white/80">
+                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#01411C] text-[13px] text-white">☾</span>
+                                            +92
+                                        </span>
+                                        <input
+                                            type="tel"
+                                            inputMode="tel"
+                                            value={formData.phone_number}
+                                            onChange={(e) => updateField('phone_number', e.target.value)}
+                                            className={inputClass(errors.phone_number, false)}
+                                            placeholder="0300 1234567"
+                                            autoComplete="tel"
+                                        />
+                                    </div>
                                 </Field>
 
                                 <Field
                                     label="Email"
-                                    hint="for receipt"
+                                    hint="for your receipt"
                                     icon={<Mail size={16} className="text-white/40" />}
                                 >
                                     <input
@@ -816,28 +822,75 @@ const CheckoutPage: React.FC = () => {
                                         autoComplete="email"
                                     />
                                 </Field>
+                            </div>
+                        </motion.section>
 
-                                <Field label="Delivery address" required error={errors.address_line1}>
+                        {/* Shipping address */}
+                        <motion.section
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.18 }}
+                            className="border-t border-white/[0.08] pt-7"
+                        >
+                            <div className="mb-5">
+                                <SectionTitle>Shipping address</SectionTitle>
+                            </div>
+
+                            <div className="space-y-4">
+                                <Field label="Address" required error={errors.address_line1}>
                                     <input
                                         type="text"
                                         value={formData.address_line1}
                                         onChange={(e) => updateField('address_line1', e.target.value)}
                                         className={inputClass(errors.address_line1, false)}
-                                        placeholder="House no., street, area, apartment"
+                                        placeholder="House number, street number, area"
                                         autoComplete="street-address"
                                     />
                                 </Field>
 
-                                <Field label="City" required error={errors.city}>
+                                <Field label="Apartment, suite, floor" hint="optional">
                                     <input
                                         type="text"
-                                        value={formData.city}
-                                        onChange={(e) => updateField('city', e.target.value)}
-                                        className={inputClass(errors.city, false)}
-                                        placeholder="e.g., Karachi, Lahore"
-                                        autoComplete="address-level2"
+                                        value={formData.address_line2 || ''}
+                                        onChange={(e) => updateField('address_line2', e.target.value)}
+                                        className={inputClass(undefined, false)}
+                                        placeholder="Apartment, suite, floor"
+                                        autoComplete="address-line2"
                                     />
                                 </Field>
+
+                                <div className="grid gap-4 sm:grid-cols-[1.4fr_1fr]">
+                                    <Field label="City" required error={errors.city}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCityModal(true)}
+                                            className={`flex w-full items-center justify-between rounded-xl border bg-black/40 px-4 py-4 text-left text-[16px] transition-colors ${
+                                                errors.city ? 'border-red-500/50' : 'border-white/[0.1] hover:border-white/35'
+                                            }`}
+                                        >
+                                            <span className={formData.city ? 'text-white' : 'text-white/30'}>
+                                                {formData.city || 'Select city'}
+                                            </span>
+                                            <ChevronRight size={16} className="shrink-0 text-white/40" />
+                                        </button>
+                                    </Field>
+
+                                    <Field label="Postal code" hint="optional">
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={formData.postal_code || ''}
+                                            onChange={(e) => updateField('postal_code', e.target.value)}
+                                            className={inputClass(undefined, false)}
+                                            placeholder="e.g. 74000"
+                                            autoComplete="postal-code"
+                                        />
+                                    </Field>
+                                </div>
+
+                                {shippingState === 'loading' && formData.city ? (
+                                    <p className="text-[14px] text-white/45">Checking delivery for {formData.city}…</p>
+                                ) : null}
                             </div>
                         </motion.section>
 
@@ -846,36 +899,49 @@ const CheckoutPage: React.FC = () => {
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.2 }}
-                            className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 md:p-7"
+                            className="border-t border-white/[0.08] pt-7"
                         >
-                            <div className="mb-5 flex items-center gap-2.5">
-                                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/50">
-                                    Payment
-                                </p>
+                            <div className="mb-5">
+                                <SectionTitle>Payment method</SectionTitle>
                             </div>
 
-                            <div className="mb-4 grid gap-3 sm:grid-cols-2">
-                                <button type="button" onClick={() => { if (paymentMethod !== 'cod') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected', 'cod'); setPaymentMethod('cod'); }} className={`rounded-xl border p-4 text-left ${paymentMethod === 'cod' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
-                                    <p className="font-bold text-white">Cash on Delivery (COD)</p>
-                                </button>
-                                <button type="button" disabled={paymentMethodsLoading || !bankMethod} onClick={() => { if (paymentMethod !== 'bank_deposit') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected', 'bank_deposit'); setPaymentMethod('bank_deposit'); }} className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-45 ${paymentMethod === 'bank_deposit' ? 'border-primary bg-primary/10' : 'border-white/[0.08] bg-white/[0.02]'}`}>
-                                    <p className="font-bold text-white">Bank Deposit</p>
-                                </button>
+                            <div className="mb-4 space-y-3">
+                                <PaymentOption
+                                    isSelected={paymentMethod === 'cod'}
+                                    title="Cash on Delivery (COD)"
+                                    onSelect={() => { if (paymentMethod !== 'cod') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected', 'cod'); setPaymentMethod('cod'); }}
+                                >
+                                    {paymentMethod === 'cod' ? (
+                                        <div className="mt-3 flex gap-2.5 rounded-xl border border-amber-400/25 bg-amber-400/[0.07] p-3">
+                                            <ShieldAlert size={15} className="mt-0.5 shrink-0 text-amber-300" />
+                                            <p className="text-[14px] leading-5 text-amber-100/80">
+                                                Juno never asks for advance payment on COD orders. If anyone calls asking you to
+                                                transfer money first, it is a scam. Pay only when the parcel reaches you.
+                                            </p>
+                                        </div>
+                                    ) : null}
+                                </PaymentOption>
+
+                                <PaymentOption
+                                    isSelected={paymentMethod === 'bank_deposit'}
+                                    isDisabled={paymentMethodsLoading || !bankMethod}
+                                    title="Bank Deposit"
+                                    onSelect={() => { if (paymentMethod !== 'bank_deposit') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected', 'bank_deposit'); setPaymentMethod('bank_deposit'); }}
+                                />
                             </div>
                             {paymentMethod === 'bank_deposit' && <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-                                <p className="text-sm text-white/75">Pay via Bank Transfer – After making the payment upload the screenshot and place your order.</p>
-                                <p className="mt-4 text-sm text-white/75">Bank: {bank?.bank_name || 'Bank deposit'}</p>
-                                <p className="mt-2 text-sm text-white/75">Account Title: {bank?.account_title}</p>
-                                <p className="mt-4 text-sm text-white/75">Amount to transfer: {orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}</p>
+                                <p className="text-[15px] text-white/75">Pay via Bank Transfer – After making the payment upload the screenshot and place your order.</p>
+                                <p className="mt-4 text-[15px] text-white/75">Bank: {bank?.bank_name || 'Bank deposit'}</p>
+                                <p className="mt-2 text-[15px] text-white/75">Account Title: {bank?.account_title}</p>
+                                <p className="mt-4 text-[15px] text-white/75">Amount to transfer: {orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}</p>
                                 <div className="mt-4 space-y-2">
-                                    {bank?.account_number && <button type="button" onClick={() => void copyBankDetail('account_number', bank.account_number!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">Account number</span><span className="font-mono text-sm font-bold text-white">{bank.account_number}</span></span>{copiedBankDetail === 'account_number' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
-                                    {bank?.iban && <button type="button" onClick={() => void copyBankDetail('iban', bank.iban!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[10px] uppercase tracking-wider text-white/45">IBAN</span><span className="font-mono text-sm font-bold text-white">{bank.iban}</span></span>{copiedBankDetail === 'iban' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
+                                    {bank?.account_number && <button type="button" onClick={() => void copyBankDetail('account_number', bank.account_number!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[13px] uppercase tracking-wider text-white/45">Account number</span><span className="font-mono text-sm font-bold text-white">{bank.account_number}</span></span>{copiedBankDetail === 'account_number' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
+                                    {bank?.iban && <button type="button" onClick={() => void copyBankDetail('iban', bank.iban!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[13px] uppercase tracking-wider text-white/45">IBAN</span><span className="font-mono text-sm font-bold text-white">{bank.iban}</span></span>{copiedBankDetail === 'iban' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
                                 </div>
                                 <label onClick={() => Funnel.trackSubEvent('begin_checkout', 'payment_proof_opened')} className={`mt-4 block cursor-pointer rounded-xl border border-dashed p-4 text-center active:bg-black/35 ${isUploadingProof ? 'border-primary/60 bg-primary/10' : 'border-white/20 bg-black/20'}`}>
                                     <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void handlePaymentProofChange(event.target.files?.[0] || null)} className="sr-only" />
-                                    <span className="flex items-center justify-center gap-2 text-sm font-semibold text-white">{isUploadingProof && <Loader2 size={18} className="animate-spin text-primary" />}{isUploadingProof ? 'Uploading payment screenshot…' : paymentProofUrl ? 'Payment screenshot uploaded' : paymentProof ? 'Payment screenshot selected' : 'Upload payment screenshot'}</span>
-                                    <span className="mt-1 block text-xs text-white/50">{paymentProof ? paymentProof.name : 'Tap to take or choose a screenshot'}</span>
+                                    <span className="flex items-center justify-center gap-2 text-[15px] font-semibold text-white">{isUploadingProof && <Loader2 size={18} className="animate-spin text-primary" />}{isUploadingProof ? 'Uploading payment screenshot…' : paymentProofUrl ? 'Payment screenshot uploaded' : paymentProof ? 'Payment screenshot selected' : 'Upload payment screenshot'}</span>
+                                    <span className="mt-1 block text-[14px] text-white/50">{paymentProof ? paymentProof.name : 'Tap to take or choose a screenshot'}</span>
                                 </label>
                                 {paymentProofPreview && <img src={paymentProofPreview} alt="Payment screenshot preview" className="mt-3 max-h-64 w-full rounded-xl border border-white/10 object-contain" />}
                                 <p className="mt-4 text-xs leading-5 text-white/50">In case of any queries or errors message</p>
@@ -908,7 +974,7 @@ const CheckoutPage: React.FC = () => {
                                             style={{
                                                 fontFamily: 'Montserrat, sans-serif',
                                                 fontWeight: 900,
-                                                fontSize: '0.95rem',
+                                                fontSize: '1.05rem',
                                                 letterSpacing: '0.08em',
                                                 textTransform: 'uppercase',
                                             }}
@@ -923,7 +989,7 @@ const CheckoutPage: React.FC = () => {
                                             style={{
                                                 fontFamily: 'Montserrat, sans-serif',
                                                 fontWeight: 900,
-                                                fontSize: '0.95rem',
+                                                fontSize: '1.05rem',
                                                 letterSpacing: '0.08em',
                                                 textTransform: 'uppercase',
                                             }}
@@ -934,7 +1000,7 @@ const CheckoutPage: React.FC = () => {
                                 )}
                             </motion.button>
 
-                            <p className="mt-4 text-center font-mono text-[9px] uppercase tracking-[0.24em] text-white/30">
+                            <p className="mt-4 text-center text-[14px] text-white/35">
                                 By placing this order, you agree to our Terms & Conditions
                             </p>
                         </motion.section>
@@ -949,7 +1015,7 @@ const CheckoutPage: React.FC = () => {
                     >
                         <div className="sticky top-28 space-y-5">
                             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6">
-                                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/40 mb-4">
+                                <p className="mb-4 text-[16px] font-bold text-white">
                                     Order total
                                 </p>
 
@@ -968,10 +1034,10 @@ const CheckoutPage: React.FC = () => {
                                     {SHOW_FREE_SHIPPING_UI && remainingForFreeShip > 0 && (
                                         <div className="pt-1">
                                             <div className="flex items-center justify-between mb-1.5">
-                                                <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-white/40">
+                                                <p className="text-[14px] text-white/45">
                                                     Free shipping
                                                 </p>
-                                                <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-white/40">
+                                                <p className="text-[14px] text-white/45">
                                                     {progressPct}%
                                                 </p>
                                             </div>
@@ -983,14 +1049,14 @@ const CheckoutPage: React.FC = () => {
                                                     className="h-full bg-gradient-to-r from-primary to-secondary"
                                                 />
                                             </div>
-                                            <p className="mt-2 text-[11px] text-white/50">
+                                            <p className="mt-2 text-[14px] text-white/50">
                                                 {formatCurrency(remainingForFreeShip)} away from free delivery
                                             </p>
                                         </div>
                                     )}
 
                                     <div className="border-t border-white/[0.08] pt-4 flex items-end justify-between">
-                                        <span className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/50">
+                                        <span className="text-[16px] font-semibold text-white/80">
                                             Total
                                         </span>
                                         <span
@@ -1013,7 +1079,7 @@ const CheckoutPage: React.FC = () => {
                             </div>
 
                             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6">
-                                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/40 mb-4">
+                                <p className="mb-4 text-[16px] font-bold text-white">
                                     Why Juno
                                 </p>
                                 <div className="space-y-2.5">
@@ -1027,6 +1093,13 @@ const CheckoutPage: React.FC = () => {
                 </div>
             </div>
 
+            <CitySelectModal
+                isOpen={showCityModal}
+                selectedCity={formData.city}
+                onClose={() => setShowCityModal(false)}
+                onSelect={(city) => { updateField('city', city); setShowCityModal(false); }}
+            />
+
             {/* Sticky mobile Place Order bar */}
             <div
                 className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#050505]/95 backdrop-blur-xl md:hidden"
@@ -1034,7 +1107,7 @@ const CheckoutPage: React.FC = () => {
             >
                 <div className="px-4 py-3">
                     <div className="mb-2 flex items-center justify-between">
-                        <p className="font-mono text-[9px] uppercase tracking-[0.26em] text-white/40">
+                        <p className="text-[15px] text-white/55">
                             Total
                         </p>
                         <p
@@ -1104,7 +1177,7 @@ const CheckoutPage: React.FC = () => {
 };
 
 const inputClass = (error: string | undefined, hasIcon: boolean) =>
-    `w-full rounded-xl border bg-black/40 py-4 ${hasIcon ? 'pl-11 pr-4' : 'px-4'} text-[15px] text-white outline-none transition-colors placeholder:text-white/30 ${
+    `w-full rounded-xl border bg-black/40 py-4 ${hasIcon ? 'pl-11 pr-4' : 'px-4'} text-[16px] text-white outline-none transition-colors placeholder:text-white/30 ${
         error ? 'border-red-500/50 focus:border-red-400' : 'border-white/[0.1] focus:border-white/40'
     }`;
 
@@ -1117,7 +1190,7 @@ const Field: React.FC<{
     children: React.ReactNode;
 }> = ({ label, hint, required, error, icon, children }) => (
     <div>
-        <label className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-white/85">
+        <label className="mb-2 flex items-center gap-1.5 text-[15px] font-bold text-white">
             {label}
             {required && <span className="text-primary">*</span>}
             {hint && <span className="font-normal text-white/40">· {hint}</span>}
@@ -1128,7 +1201,7 @@ const Field: React.FC<{
             )}
             {children}
         </div>
-        {error && <p className="mt-1.5 text-[12px] text-red-400">{error}</p>}
+        {error && <p className="mt-1.5 text-[14px] text-red-400">{error}</p>}
     </div>
 );
 
@@ -1151,10 +1224,10 @@ const AnimatedEstimateAmount: React.FC<{
                     {loadingStyle === 'spinner' ? (
                         <>
                             <Loader2 size={13} className="animate-spin" />
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">{CALCULATING_LABEL}</span>
+                            <span className="text-[13px] font-semibold uppercase tracking-[0.06em]">{CALCULATING_LABEL}</span>
                         </>
                     ) : (
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] animate-pulse">
+                        <span className="text-[14px] font-semibold uppercase tracking-[0.08em] animate-pulse">
                             {CALCULATING_LABEL}
                         </span>
                     )}
@@ -1192,12 +1265,55 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, ch
     </div>
 );
 
+const PaymentOption: React.FC<{
+    isSelected: boolean;
+    isDisabled?: boolean;
+    title: string;
+    description?: string;
+    onSelect: () => void;
+    children?: React.ReactNode;
+}> = ({ isSelected, isDisabled, title, description, onSelect, children }) => (
+    <div
+        className={`rounded-xl border p-4 transition-colors ${
+            isSelected ? 'border-primary bg-primary/[0.08]' : 'border-white/[0.08] bg-white/[0.02]'
+        } ${isDisabled ? 'opacity-45' : ''}`}
+    >
+        <button
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            disabled={isDisabled}
+            onClick={onSelect}
+            className="flex w-full items-start gap-3 text-left disabled:cursor-not-allowed"
+        >
+            <span
+                className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${
+                    isSelected ? 'border-primary' : 'border-white/25'
+                }`}
+            >
+                {isSelected ? <span className="h-2 w-2 rounded-full bg-primary" /> : null}
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="block text-[16px] font-bold text-white">{title}</span>
+                {description ? <span className="mt-0.5 block text-[14px] leading-5 text-white/50">{description}</span> : null}
+            </span>
+        </button>
+        {children}
+    </div>
+);
+
+const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <h2 className="text-[17px] font-black tracking-[-0.02em] text-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+        {children}
+    </h2>
+);
+
 const TrustRow: React.FC<{ text: string }> = ({ text }) => (
     <div className="flex items-center gap-2.5">
         <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/[0.05]">
             <CheckCircle size={11} className="text-white/70" />
         </span>
-        <p className="text-[13px] text-white/70">{text}</p>
+        <p className="text-[15px] text-white/70">{text}</p>
     </div>
 );
 

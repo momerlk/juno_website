@@ -18,6 +18,9 @@ type FunnelEventProperties = {
 };
 
 const JOURNEY_STORAGE_KEY = 'juno_funnel_journey_id';
+// Analytics stays off for localhost by default. Set VITE_ANALYTICS_IN_DEV=true
+// in .env.local when intentionally testing the analytics pipeline.
+const analyticsEnabled = !import.meta.env.DEV || import.meta.env.VITE_ANALYTICS_IN_DEV === 'true';
 
 export const getFunnelJourneyId = (): string | undefined => {
     try {
@@ -34,6 +37,7 @@ export const getFunnelJourneyId = (): string | undefined => {
 
 export namespace Funnel {
     export function track(type: FunnelEvent, properties: FunnelEventProperties = {}, source?: 'app'): void {
+        if (!analyticsEnabled) return;
         const { product_id, ...eventProperties } = properties;
         void request<{ accepted: boolean }>('/analytics/events', 'POST', {
             type,
@@ -45,6 +49,7 @@ export namespace Funnel {
     }
 
     export function trackOnce(type: FunnelEvent, properties: FunnelEventProperties = {}, source?: 'app'): void {
+        if (!analyticsEnabled) return;
         try {
             const key = `${JOURNEY_STORAGE_KEY}:${type}`;
             if (sessionStorage.getItem(key)) return;
@@ -56,6 +61,7 @@ export namespace Funnel {
     }
 
     export function trackSubEvent<T extends keyof FunnelSubEvents>(type: T, subEvent: FunnelSubEvents[T], detail?: FunnelSubEventDetail, properties: FunnelEventProperties = {}, source?: 'app'): void {
+        if (!analyticsEnabled) return;
         const { product_id, ...eventProperties } = properties;
         void request<{ accepted: boolean }>('/analytics/events', 'POST', {
             type,
