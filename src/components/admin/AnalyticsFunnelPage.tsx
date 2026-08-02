@@ -74,25 +74,27 @@ const AnalyticsFunnelPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     const params = { from: asISOString(range?.start), to: asISOString(range?.end) };
-    const [response, diagnosticsResponse, journeysResponse] = await Promise.all([
-      funnelType === 'app' ? AdminAnalytics.getAppFunnel(params) : AdminAnalytics.getFunnel(params),
-      funnelType === 'website' ? AdminAnalytics.getFunnelDiagnostics(params) : Promise.resolve(null),
-      funnelType === 'website' ? AdminAnalytics.getCheckoutJourneys({ ...params, limit: 50 }) : Promise.resolve(null),
-    ]);
+    const diagnosticsRequest = funnelType === 'website' ? AdminAnalytics.getFunnelDiagnostics(params) : Promise.resolve(null);
+    const journeysRequest = funnelType === 'website' ? AdminAnalytics.getCheckoutJourneys({ ...params, limit: 50 }) : Promise.resolve(null);
+    const response = await (funnelType === 'app' ? AdminAnalytics.getAppFunnel(params) : AdminAnalytics.getFunnel(params));
     if (currentRequest !== requestId.current) return;
     if (!response.ok) {
       setError((response.body as { message?: string }).message || `Could not load the ${funnelType} funnel.`);
     } else {
       setStages(Array.isArray(response.body.stages) ? response.body.stages : []);
       setEvents(Array.isArray(response.body.events) ? response.body.events : []);
-      setDiagnostics(diagnosticsResponse?.ok && Array.isArray(diagnosticsResponse.body.details) ? diagnosticsResponse.body.details : []);
-      setJourneys(journeysResponse?.ok && Array.isArray(journeysResponse.body.journeys) ? journeysResponse.body.journeys : []);
-      setNextJourneyAfter(journeysResponse?.ok ? journeysResponse.body.next_after : undefined);
       setSelectedJourneyId(null);
       setSelectedJourneyEvents([]);
       setJourneyError(null);
     }
     setIsLoading(false);
+    if (!response.ok || funnelType !== 'website') return;
+    void Promise.all([diagnosticsRequest, journeysRequest]).then(([diagnosticsResponse, journeysResponse]) => {
+      if (currentRequest !== requestId.current) return;
+      setDiagnostics(diagnosticsResponse?.ok && Array.isArray(diagnosticsResponse.body.details) ? diagnosticsResponse.body.details : []);
+      setJourneys(journeysResponse?.ok && Array.isArray(journeysResponse.body.journeys) ? journeysResponse.body.journeys : []);
+      setNextJourneyAfter(journeysResponse?.ok ? journeysResponse.body.next_after : undefined);
+    }).catch(() => undefined);
   }, [funnelType, range?.end, range?.start]);
 
   useEffect(() => { void load(); }, [load]);
