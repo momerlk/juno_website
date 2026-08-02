@@ -115,6 +115,8 @@ const CatalogProductPage: React.FC = () => {
     const [sizing, setSizing] = useState<ProductSizing | null>(null);
     const [imageAspectRatios, setImageAspectRatios] = useState<Record<string, number>>({});
     const imageTouchStartXRef = useRef<number | null>(null);
+    const unavailableShownRef = useRef<string | null>(null);
+    const buyNowDialogRef = useRef<HTMLDivElement>(null);
     const { addItem, setCartOpen } = useGuestCart();
     const navigate = useNavigate();
 
@@ -245,8 +247,7 @@ const CatalogProductPage: React.FC = () => {
     const useContainedMainImage = typeof currentImageAspectRatio === 'number' && currentImageAspectRatio > 0.95;
     const variants = asArray(product?.variants);
     const maxAvailableQuantity = getVariantAvailableQuantity(selectedVariant, product);
-    const isVariantAvailable = selectedVariant?.available ?? true;
-    const canPurchase = !!product?.inventory?.in_stock && isVariantAvailable;
+    const canPurchase = !!product?.inventory?.in_stock && isPurchasableVariant(selectedVariant, product);
     const currentPrice = getBaseProductPrice(product);
     const compareAt = product?.pricing.compare_at_price;
     const discountPercentage =
@@ -260,6 +261,29 @@ const CatalogProductPage: React.FC = () => {
     const sourceSizingGuide = getSourceSizingGuide(product?.sizing_guide ?? product?.enrichment?.sizing_guide);
     const hasOriginalSizingGuide = Boolean(sourceSizingGuide?.image_url || sourceSizingGuide?.html_table);
     const hasSizingGuide = hasApprovedSizing || hasOriginalSizingGuide;
+
+    useEffect(() => {
+        if (!product || canPurchase) {
+            unavailableShownRef.current = null;
+            return;
+        }
+        const detail = selectedVariant?.available === false ? 'variant_unavailable' : 'out_of_stock';
+        const key = `${product.id}:${selectedVariant?.id || 'none'}:${detail}`;
+        if (unavailableShownRef.current === key) return;
+        unavailableShownRef.current = key;
+        Funnel.trackSubEvent('view_item', 'unavailable_shown', detail, { product_id: product.id });
+    }, [canPurchase, product, selectedVariant?.available, selectedVariant?.id]);
+
+    useEffect(() => {
+        if (!showBuyNowConfirm) return;
+        const dialog = buyNowDialogRef.current;
+        dialog?.querySelector<HTMLElement>('button:not([disabled])')?.focus();
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setShowBuyNowConfirm(false);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [showBuyNowConfirm]);
 
     const selectRecommendedSize = useCallback((size: string) => {
         const sizeOption = asArray(product?.options).find((option) => option.name.toLowerCase().includes('size'));
@@ -964,14 +988,15 @@ const CatalogProductPage: React.FC = () => {
             </div>
 
             <AnimatePresence>
-                {inStock ? (
-                    <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
-                        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-                        className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#050505]/96 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_40px_rgba(0,0,0,0.8)] backdrop-blur-2xl lg:hidden"
-                    >
+                <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+                    className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#050505]/96 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_40px_rgba(0,0,0,0.8)] backdrop-blur-2xl lg:hidden"
+                >
+                    {inStock ? (
+                    <>
                         <div className="mb-2.5 text-center text-[10px] text-white/55">
                             Arrives <span className="font-bold text-white">{fmtDay(deliveryDate)}</span>
                         </div>
@@ -1015,8 +1040,13 @@ const CatalogProductPage: React.FC = () => {
                                 <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-[shimmer_2.8s_ease-in-out_infinite]" />
                             </motion.button>
                         </div>
-                    </motion.div>
-                ) : null}
+                    </>
+                    ) : (
+                        <button type="button" disabled className="mx-auto flex h-14 w-full max-w-lg items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-xs font-black uppercase tracking-[0.2em] text-white/45">
+                            Currently sold out
+                        </button>
+                    )}
+                </motion.div>
             </AnimatePresence>
 
             <SizeGuideModal
@@ -1039,11 +1069,29 @@ const CatalogProductPage: React.FC = () => {
                         onClick={() => setShowBuyNowConfirm(false)}
                     >
                         <motion.div
+                            ref={buyNowDialogRef}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="buy-now-dialog-title"
                             initial={{ opacity: 0, y: 24, scale: 0.98 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 24, scale: 0.98 }}
                             transition={{ type: 'spring', damping: 26, stiffness: 300 }}
                             onClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => {
+                                if (event.key !== 'Tab') return;
+                                const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled])'));
+                                const first = focusable[0];
+                                const last = focusable.at(-1);
+                                if (!first || !last) return;
+                                if (event.shiftKey && document.activeElement === first) {
+                                    event.preventDefault();
+                                    last.focus();
+                                } else if (!event.shiftKey && document.activeElement === last) {
+                                    event.preventDefault();
+                                    first.focus();
+                                }
+                            }}
                             className="w-full max-w-sm rounded-t-3xl border border-white/10 bg-[#0b0b0d] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-20px_60px_rgba(0,0,0,0.6)] sm:rounded-3xl sm:pb-5"
                         >
                             <p className="font-mono text-[9px] uppercase tracking-[0.32em] text-white/40">Confirm selection</p>
@@ -1056,6 +1104,7 @@ const CatalogProductPage: React.FC = () => {
                                         {product.seller_name || 'Juno Label'}
                                     </p>
                                     <h3
+                                        id="buy-now-dialog-title"
                                         className="mt-1 line-clamp-2 uppercase text-white"
                                         style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.03em' }}
                                     >
