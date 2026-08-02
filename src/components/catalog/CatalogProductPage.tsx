@@ -383,6 +383,7 @@ const CatalogProductPage: React.FC = () => {
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
         };
+        Funnel.track('add_to_cart', { product_id: product.id, quantity });
         navigate('/checkout', { state: { buyNowItem } });
     }, [
         canPurchase,
