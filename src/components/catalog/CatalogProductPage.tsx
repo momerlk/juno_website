@@ -1307,7 +1307,9 @@ const CatalogProductPage: React.FC = () => {
             <AnimatePresence>
                 {showImageLightbox ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal="true" aria-label="Product image zoom" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4" onClick={() => setShowImageLightbox(false)}>
-                        <img src={currentImage} alt={`${product.title} enlarged`} className="max-h-full max-w-full object-contain" onClick={(event) => event.stopPropagation()} />
+                        {/* Bounded width, not the raw original. Seller uploads run several
+                            MB; decoding one full-size on a low-RAM Android kills the tab. */}
+                        <img src={getResponsiveShopifyImageSet(currentImage, [1080, 1440]).src} alt={`${product.title} enlarged`} decoding="async" className="max-h-full max-w-full object-contain" onClick={(event) => event.stopPropagation()} />
                         <button type="button" className="absolute right-5 top-5 rounded-full border border-white/20 px-4 py-2 text-xs font-bold text-white" onClick={() => setShowImageLightbox(false)}>Close</button>
                     </motion.div>
                 ) : null}

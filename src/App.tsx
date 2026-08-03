@@ -5,6 +5,7 @@ import { GuestCartProvider } from './contexts/GuestCartContext';
 import CartDrawer from './components/cart/CartDrawer';
 import CartStockLimitToast from './components/cart/CartStockLimitToast';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import AppErrorBoundary from './components/shared/AppErrorBoundary';
 const SellerAuth = lazyWithRetry(() => import('./components/seller/SellerAuth'));
 const SellerDashboard = lazyWithRetry(() => import('./components/seller/SellerDashboard'));
 const SellerOnboarding = lazyWithRetry(() => import('./components/seller/SellerOnboarding'));
@@ -209,6 +210,7 @@ function RoutedApp() {
                   Free shipping on every order
                 </div>
               )}
+              <AppErrorBoundary>
               <Suspense fallback={<AppShellFallback />}>
               <Routes>
                   <Route path="/" element={<CatalogBrowsePage />} />
@@ -289,6 +291,7 @@ function RoutedApp() {
                   <Route path="/brand-reel" element={<Navigate to="/catalog" replace />} />
               </Routes>
               </Suspense>
+              </AppErrorBoundary>
               <CartDrawer />
               <CartStockLimitToast />
               {!isExcludedPath && <Footer />}

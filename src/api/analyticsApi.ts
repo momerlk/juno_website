@@ -22,6 +22,21 @@ const JOURNEY_STORAGE_KEY = 'juno_funnel_journey_id';
 // in .env.local when intentionally testing the analytics pipeline.
 const analyticsEnabled = !import.meta.env.DEV || import.meta.env.VITE_ANALYTICS_IN_DEV === 'true';
 
+// Diagnostic sub-events fire on nearly every tap (each variant tap, each field
+// transition). On phones that is where the request volume and the instability
+// showed up, so mobile sends the five base funnel events only. Stage totals are
+// unaffected: they are computed from base events, never from sub-events.
+const isMobileClient = (): boolean => {
+    try {
+        if (typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) return true;
+        return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+            && window.matchMedia('(pointer: coarse)').matches;
+    } catch {
+        return false;
+    }
+};
+const subEventsEnabled = !isMobileClient();
+
 export const getFunnelJourneyId = (): string | undefined => {
     try {
         const existing = sessionStorage.getItem(JOURNEY_STORAGE_KEY);
@@ -44,16 +59,21 @@ const ANALYTICS_ENDPOINT = '/analytics/events';
 const ANALYTICS_TIMEOUT_MS = 5000;
 
 const sendAnalyticsEvent = (payload: Record<string, unknown>): void => {
+    // Whole body guarded: analytics is never allowed to break a customer action.
     try {
-        if (typeof navigator.sendBeacon === 'function') {
-            const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-            if (navigator.sendBeacon(`${API_BASE_URL}${ANALYTICS_ENDPOINT}`, blob)) return;
+        try {
+            if (typeof navigator.sendBeacon === 'function') {
+                const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                if (navigator.sendBeacon(`${API_BASE_URL}${ANALYTICS_ENDPOINT}`, blob)) return;
+            }
+        } catch {
+            // Some in-app browsers reject a JSON beacon; fall through to fetch.
         }
+        void request<{ accepted: boolean }>(ANALYTICS_ENDPOINT, 'POST', payload, undefined, true, ANALYTICS_TIMEOUT_MS, true)
+            .catch(() => undefined);
     } catch {
-        // Fall through to fetch.
+        // Swallow: a tracking failure must not surface to the customer.
     }
-    void request<{ accepted: boolean }>(ANALYTICS_ENDPOINT, 'POST', payload, undefined, true, ANALYTICS_TIMEOUT_MS, true)
-        .catch(() => undefined);
 };
 
 export namespace Funnel {
@@ -82,7 +102,7 @@ export namespace Funnel {
     }
 
     export function trackSubEvent<T extends keyof FunnelSubEvents>(type: T, subEvent: FunnelSubEvents[T], detail?: FunnelSubEventDetail, properties: FunnelEventProperties = {}, source?: 'app'): void {
-        if (!analyticsEnabled) return;
+        if (!analyticsEnabled || !subEventsEnabled) return;
         const { product_id, ...eventProperties } = properties;
         sendAnalyticsEvent({
             type,
