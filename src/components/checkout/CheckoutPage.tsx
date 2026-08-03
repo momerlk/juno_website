@@ -400,12 +400,6 @@ const CheckoutPage: React.FC = () => {
                 }
             `}</style>
 
-            {/* Ambient atmosphere */}
-            <div className="pointer-events-none fixed inset-0 z-0">
-                <div className="absolute -top-40 -left-32 h-[36rem] w-[36rem] rounded-full bg-primary/10 blur-[140px]" />
-                <div className="absolute bottom-0 right-0 h-[28rem] w-[28rem] rounded-full bg-secondary/10 blur-[160px]" />
-            </div>
-
             <div className="relative z-10 container mx-auto max-w-6xl px-4 md:px-6 pb-40 md:pb-16">
                 {/* Header */}
                 <motion.div

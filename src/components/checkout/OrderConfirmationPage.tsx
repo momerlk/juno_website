@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
     ArrowRight,
     Check,
@@ -125,7 +125,6 @@ const OrderConfirmationPage: React.FC = () => {
     const [order, setOrder] = useState<ParentOrder | null>(null);
     const [checkout, setCheckout] = useState<CheckoutResult | null>(null);
     const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
-    const [showParticles, setShowParticles] = useState(true);
     const [isOpeningSupport, setIsOpeningSupport] = useState(false);
 
     useEffect(() => {
@@ -175,8 +174,6 @@ const OrderConfirmationPage: React.FC = () => {
             sessionStorage.setItem('juno_last_order', JSON.stringify(order));
         }
 
-        const timeoutId = window.setTimeout(() => setShowParticles(false), 4200);
-        return () => window.clearTimeout(timeoutId);
     }, [checkout, order, receiptItems]);
 
     const orderTrackingPath = useMemo(() => {
@@ -266,29 +263,6 @@ const OrderConfirmationPage: React.FC = () => {
                 }
             `}</style>
 
-            <div className="pointer-events-none fixed inset-0 no-print">
-                <div className="absolute -top-28 -left-24 h-[34rem] w-[34rem] rounded-full bg-primary/10 blur-[150px]" />
-                <div className="absolute -bottom-24 -right-20 h-[28rem] w-[28rem] rounded-full bg-secondary/10 blur-[150px]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,24,24,0.06)_0%,transparent_34%),radial-gradient(circle_at_84%_84%,rgba(255,69,133,0.06)_0%,transparent_35%)]" />
-            </div>
-
-            <AnimatePresence>
-                {showParticles && (
-                    <div className="pointer-events-none fixed inset-0 z-30 overflow-hidden no-print">
-                        {Array.from({ length: 26 }).map((_, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, y: -24, x: Math.random() * window.innerWidth, scale: 0.8 }}
-                                animate={{ opacity: [0, 1, 0], y: window.innerHeight + 20, scale: [0.8, 1, 0.8] }}
-                                transition={{ duration: Math.random() * 1.2 + 2, delay: Math.random() * 0.5, ease: 'linear' }}
-                                className="absolute h-2.5 w-2.5 rounded-full"
-                                style={{ backgroundColor: ['#FF1818', '#FF4585', '#FFB800'][Math.floor(Math.random() * 3)] }}
-                            />
-                        ))}
-                    </div>
-                )}
-            </AnimatePresence>
-
             <div className="relative z-10 mx-auto max-w-6xl px-4 md:px-6 print-wrap">
                 <motion.section
                     initial={{ opacity: 0, y: 18 }}
@@ -308,10 +282,6 @@ const OrderConfirmationPage: React.FC = () => {
                             <h1 className="uppercase leading-[0.85] text-white print-text" style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 'clamp(2.1rem,4.8vw,4.2rem)', letterSpacing: '-0.05em' }}>
                                 Order Confirmed
                             </h1>
-
-                            <p className="mt-4 text-white/75 print-muted" style={{ fontFamily: 'Instrument Serif, serif', fontStyle: 'italic', fontSize: 'clamp(1.05rem,1.7vw,1.45rem)' }}>
-                                Your indie picks are now in motion.
-                            </p>
 
                             <div className="mt-6 flex flex-wrap items-center gap-3">
                                 <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-4 py-2 text-[11px] font-mono uppercase tracking-[0.2em] text-white/70 print-card print-muted">

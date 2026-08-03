@@ -602,11 +602,6 @@ const CatalogProductPage: React.FC = () => {
         <div className="relative min-h-screen bg-[#050505] pb-36 text-white lg:pb-12">
             <CatalogNavbar />
 
-            <div className="pointer-events-none fixed inset-0 z-0">
-                <div className="absolute -top-32 -left-32 h-[36rem] w-[36rem] rounded-full bg-primary/10 blur-[140px]" />
-                <div className="absolute bottom-0 right-0 h-[28rem] w-[28rem] rounded-full bg-secondary/10 blur-[160px]" />
-            </div>
-
             <div className="relative z-10 mx-auto max-w-7xl px-4 pt-6 md:px-6">
                 <button
                     onClick={() => (window.history.length > 2 ? navigate(-1) : navigate('/catalog'))}
