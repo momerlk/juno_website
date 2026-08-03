@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShoppingBag, User, Mail, CheckCircle, ChevronDown, ChevronRight, Copy, Loader2, ShieldAlert, Zap, Truck } from 'lucide-react';
+import { ShoppingBag, User, Mail, CheckCircle, ChevronDown, ChevronRight, Copy, Loader2, Zap, Truck } from 'lucide-react';
 import CitySelectModal from './CitySelectModal';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Commerce, GuestCommerce } from '../../api/commerceApi';
@@ -910,17 +910,7 @@ const CheckoutPage: React.FC = () => {
                                     isSelected={paymentMethod === 'cod'}
                                     title="Cash on Delivery (COD)"
                                     onSelect={() => { if (paymentMethod !== 'cod') Funnel.trackSubEvent('begin_checkout', 'payment_method_selected', 'cod'); setPaymentMethod('cod'); }}
-                                >
-                                    {paymentMethod === 'cod' ? (
-                                        <div className="mt-3 flex gap-2.5 rounded-xl border border-amber-400/25 bg-amber-400/[0.07] p-3">
-                                            <ShieldAlert size={15} className="mt-0.5 shrink-0 text-amber-300" />
-                                            <p className="text-[14px] leading-5 text-amber-100/80">
-                                                Juno never asks for advance payment on COD orders. If anyone calls asking you to
-                                                transfer money first, it is a scam. Pay only when the parcel reaches you.
-                                            </p>
-                                        </div>
-                                    ) : null}
-                                </PaymentOption>
+                                />
 
                                 <PaymentOption
                                     isSelected={paymentMethod === 'bank_deposit'}
