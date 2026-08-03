@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight, Zap, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -19,22 +19,31 @@ const CartDrawer: React.FC = () => {
     const navigate = useNavigate();
     const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, isHydrated } = useGuestCart();
     const [relatedProducts, setRelatedProducts] = useState<CatalogProduct[]>([]);
+    const cartRef = useRef(optimisticCart);
+    cartRef.current = optimisticCart;
+
+    // Keyed on the anchor product, not the whole cart: changing a quantity used to
+    // refire two catalog requests while the drawer was open.
+    const anchorProductId = optimisticCart[0]?.product_id;
 
     useEffect(() => {
+        if (!isCartOpen || !anchorProductId) {
+            if (!anchorProductId) setRelatedProducts([]);
+            return;
+        }
+        let cancelled = false;
+
         const loadRelated = async () => {
-            if (optimisticCart.length === 0) {
-                setRelatedProducts([]);
-                return;
-            }
-            const inCart = new Set(optimisticCart.map((item) => item.product_id));
-            const anchorId = optimisticCart[0].product_id;
-            const anchorResponse = await Catalog.getProduct(anchorId);
+            const inCart = new Set(cartRef.current.map((item) => item.product_id));
+            const anchorResponse = await Catalog.getProduct(anchorProductId);
+            if (cancelled) return;
             const anchor = anchorResponse.ok ? (anchorResponse.body as CatalogProduct) : null;
             // "Complete the look" means something that goes WITH the item, so pair by
             // brand and rule out anything from the same product group (top with top).
             const anchorGroup = anchor?.metadata?.product_group || anchor?.product_type;
             if (anchor?.seller_id) {
-                const brandResponse = await Catalog.getProducts({ seller_id: anchor.seller_id, in_stock: true, limit: 24 });
+                const brandResponse = await Catalog.getProducts({ seller_id: anchor.seller_id, in_stock: true, limit: 12 });
+                if (cancelled) return;
                 const complements = brandResponse.ok
                     ? asArray(brandResponse.body as CatalogProduct[]).filter((candidate) => {
                           if (!candidate?.id || inCart.has(candidate.id)) return false;
@@ -48,11 +57,14 @@ const CartDrawer: React.FC = () => {
                 }
             }
             // No other category from this brand: fall back to the similarity set.
-            const response = await Catalog.getRelatedProducts(anchorId, 6);
-            if (response.ok) setRelatedProducts(asArray(response.body as CatalogProduct[]).filter((item) => !inCart.has(item?.id)).slice(0, 6));
+            const response = await Catalog.getRelatedProducts(anchorProductId, 6);
+            if (cancelled || !response.ok) return;
+            setRelatedProducts(asArray(response.body as CatalogProduct[]).filter((item) => !inCart.has(item?.id)).slice(0, 6));
         };
-        if (isCartOpen) loadRelated();
-    }, [optimisticCart, isCartOpen]);
+
+        void loadRelated();
+        return () => { cancelled = true; };
+    }, [anchorProductId, isCartOpen]);
 
     const handleCheckout = () => {
         setCartOpen(false);

@@ -163,6 +163,7 @@ const CatalogProductPage: React.FC = () => {
     const [reviewsLoaded, setReviewsLoaded] = useState(false);
     const [showReviewsModal, setShowReviewsModal] = useState(false);
     const sizeSectionRef = useRef<HTMLDivElement>(null);
+    const galleryScrollFrame = useRef(0);
     const [sizing, setSizing] = useState<ProductSizing | null>(null);
     const [imageAspectRatios, setImageAspectRatios] = useState<Record<string, number>>({});
     const imageTouchStartXRef = useRef<number | null>(null);
@@ -411,6 +412,10 @@ const CatalogProductPage: React.FC = () => {
         setMaxSlideLoaded(1);
     }, [selectedVariant?.image_url]);
 
+    useEffect(() => () => {
+        if (galleryScrollFrame.current) window.cancelAnimationFrame(galleryScrollFrame.current);
+    }, []);
+
     useEffect(() => {
         if (!showImageLightbox) return;
         const onKeyDown = (event: KeyboardEvent) => {
@@ -620,11 +625,18 @@ const CatalogProductPage: React.FC = () => {
                         <div className="relative -mx-4 lg:hidden">
                             <div
                                 onScroll={(event) => {
-                                    const strip = event.currentTarget;
-                                    const raw = Math.round(strip.scrollLeft / (strip.scrollWidth / Math.max(imageGallery.length, 1)));
-                                    const index = Math.min(Math.max(raw, 0), Math.max(imageGallery.length - 1, 0));
-                                    setSelectedImageIdx(index);
-                                    setMaxSlideLoaded((current) => Math.max(current, index + 1));
+                                    // Scroll fires per frame on touch devices. Read geometry once,
+                                    // then coalesce to a single rAF so a flick cannot queue dozens
+                                    // of renders of this page.
+                                    const { scrollLeft, scrollWidth } = event.currentTarget;
+                                    if (galleryScrollFrame.current) return;
+                                    galleryScrollFrame.current = window.requestAnimationFrame(() => {
+                                        galleryScrollFrame.current = 0;
+                                        const raw = Math.round(scrollLeft / (scrollWidth / Math.max(imageGallery.length, 1)));
+                                        const index = Math.min(Math.max(raw, 0), Math.max(imageGallery.length - 1, 0));
+                                        setSelectedImageIdx(index);
+                                        setMaxSlideLoaded((current) => Math.max(current, index + 1));
+                                    });
                                 }}
                                 className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 scrollbar-none"
                                 style={{ scrollPaddingLeft: '1rem' }}

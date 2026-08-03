@@ -204,6 +204,9 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
     const requestIdRef = useRef(0);
+    // Ids already on screen. Dedupe happens against this instead of inside the
+    // state updater so the append guard below can trust the count.
+    const loadedIdsRef = useRef<Set<string>>(new Set());
 
     const query = searchParams.get('q') ?? '';
     const categoryId = searchParams.get('category') ?? '';
@@ -409,23 +412,38 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
             if (response.ok) {
                 let nextProducts = asArray(response.body);
 
-                if (!debouncedQuery && !categoryId && !collectionId && !sellerId && nextProducts.length === 0) {
+                // Only the first page may fall back to popular products; doing it
+                // while appending re-injects the same items on every scroll tick.
+                if (!append && !debouncedQuery && !categoryId && !collectionId && !sellerId && nextProducts.length === 0) {
                     const fallback = await Catalog.getPopularProducts(48);
                     if (fallback.ok) nextProducts = asArray(fallback.body);
                 }
 
+                const freshProducts = append
+                    ? nextProducts.filter((product) => product?.id && !loadedIdsRef.current.has(product.id))
+                    : nextProducts;
+                if (!append) loadedIdsRef.current = new Set();
+                freshProducts.forEach((product) => product?.id && loadedIdsRef.current.add(product.id));
+
                 setProducts((prev) => {
-                    if (!append) return nextProducts;
-                    const seen = new Set(prev.map((product) => product.id));
-                    return [...prev, ...nextProducts.filter((product) => !seen.has(product.id))];
+                    if (!append) return freshProducts;
+                    return freshProducts.length ? [...prev, ...freshProducts] : prev;
                 });
 
                 const pagination = response.meta?.pagination as CatalogPagination | undefined;
-                setLoadedProductsCount((prev) => (append ? prev + nextProducts.length : nextProducts.length));
+                const requestedCursor = append ? nextCursor : undefined;
+                // A cursor that does not move, or a page with nothing new on it,
+                // means the sentinel would stay in view and refetch forever.
+                const cursorStalled = Boolean(pagination?.next_cursor) && pagination?.next_cursor === requestedCursor;
+                setLoadedProductsCount((prev) => (append ? prev + freshProducts.length : freshProducts.length));
                 const paginationTotal = pagination?.total ?? null;
                 setMatchingProductsTotal((prev) => (append ? prev : paginationTotal));
                 setNextCursor(pagination?.next_cursor);
-                setHasMore(pagination ? pagination.has_more : nextProducts.length === 48);
+                if (append && (freshProducts.length === 0 || cursorStalled)) {
+                    setHasMore(false);
+                } else {
+                    setHasMore(pagination ? pagination.has_more : nextProducts.length === 48);
+                }
                 if (collectionId) setCollectionPage((value) => (append ? value + 1 : 2));
             } else if (!append) {
                 setProducts([]);

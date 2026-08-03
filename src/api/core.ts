@@ -375,6 +375,19 @@ function getOrQueueTokenRefresh(scope: AuthScope, refreshToken: string): Promise
  * @param timeout - Request timeout in ms (default: 30000)
  * @returns APIResponse<T> with unwrapped body
  */
+// AbortSignal.timeout only exists from iOS Safari 16 / Chrome 103. On an older
+// phone the bare call throws before fetch is ever reached, so every request in the
+// app fails at once and the page looks dead. Fall back to a controller + timer.
+const timeoutSignal = (ms: number): AbortSignal | undefined => {
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+        return AbortSignal.timeout(ms);
+    }
+    if (typeof AbortController === 'undefined') return undefined;
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new DOMException('TimeoutError', 'TimeoutError')), ms);
+    return controller.signal;
+};
+
 export async function request<T>(
     endpoint: string,
     method: string,
@@ -400,7 +413,7 @@ export async function request<T>(
         method,
         headers,
         body: data instanceof FormData ? data : JSON.stringify(data),
-        signal: AbortSignal.timeout(timeout),
+        signal: timeoutSignal(timeout),
         keepalive,
     };
 

@@ -1,4 +1,4 @@
-import { request } from './core';
+import { API_BASE_URL, request } from './core';
 
 export type FunnelEvent = 'page_view' | 'download_page_view' | 'store_visit' | 'app_install' | 'view_item' | 'add_to_cart' | 'begin_checkout';
 type FunnelSubEvents = {
@@ -35,17 +35,38 @@ export const getFunnelJourneyId = (): string | undefined => {
     }
 };
 
+// Analytics must never compete with the requests a customer is waiting on. Mobile
+// browsers allow ~6 concurrent connections per host and these events fire on every
+// tap, so a slow analytics response could starve product and checkout fetches for
+// up to the 30s default timeout — which reads as a frozen page. sendBeacon is queued
+// by the browser outside that pool; fetch is only a fallback, with a short timeout.
+const ANALYTICS_ENDPOINT = '/analytics/events';
+const ANALYTICS_TIMEOUT_MS = 5000;
+
+const sendAnalyticsEvent = (payload: Record<string, unknown>): void => {
+    try {
+        if (typeof navigator.sendBeacon === 'function') {
+            const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+            if (navigator.sendBeacon(`${API_BASE_URL}${ANALYTICS_ENDPOINT}`, blob)) return;
+        }
+    } catch {
+        // Fall through to fetch.
+    }
+    void request<{ accepted: boolean }>(ANALYTICS_ENDPOINT, 'POST', payload, undefined, true, ANALYTICS_TIMEOUT_MS, true)
+        .catch(() => undefined);
+};
+
 export namespace Funnel {
     export function track(type: FunnelEvent, properties: FunnelEventProperties = {}, source?: 'app'): void {
         if (!analyticsEnabled) return;
         const { product_id, ...eventProperties } = properties;
-        void request<{ accepted: boolean }>('/analytics/events', 'POST', {
+        sendAnalyticsEvent({
             type,
             source,
             journey_id: getFunnelJourneyId(),
             product_id,
             properties: Object.keys(eventProperties).length ? eventProperties : undefined,
-        }, undefined, true, 30000, true).catch(() => undefined);
+        });
     }
 
     export function trackOnce(type: FunnelEvent, properties: FunnelEventProperties = {}, source?: 'app'): void {
@@ -63,7 +84,7 @@ export namespace Funnel {
     export function trackSubEvent<T extends keyof FunnelSubEvents>(type: T, subEvent: FunnelSubEvents[T], detail?: FunnelSubEventDetail, properties: FunnelEventProperties = {}, source?: 'app'): void {
         if (!analyticsEnabled) return;
         const { product_id, ...eventProperties } = properties;
-        void request<{ accepted: boolean }>('/analytics/events', 'POST', {
+        sendAnalyticsEvent({
             type,
             source,
             journey_id: getFunnelJourneyId(),
@@ -71,6 +92,6 @@ export namespace Funnel {
             detail,
             product_id,
             properties: Object.keys(eventProperties).length ? eventProperties : undefined,
-        }, undefined, true, 30000, true).catch(() => undefined);
+        });
     }
 }
