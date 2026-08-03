@@ -478,7 +478,7 @@ const CatalogProductPage: React.FC = () => {
         });
         setShowAddedFeedback(true);
         setIsAdding(false);
-        window.setTimeout(() => setCartOpen(true), 350);
+        setCartOpen(true);
     }, [
         addItem,
         canPurchase,

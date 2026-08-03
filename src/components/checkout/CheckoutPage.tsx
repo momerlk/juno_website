@@ -6,7 +6,7 @@ import CitySelectModal from './CitySelectModal';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Commerce, GuestCommerce } from '../../api/commerceApi';
 import { uploadFileAndGetUrl } from '../../api/shared';
-import type { GuestCheckoutDetails, PaymentMethod, ShippingEstimateResponse } from '../../api/api.types';
+import type { GuestCheckoutDetails, PaymentMethod } from '../../api/api.types';
 import { Funnel } from '../../api/analyticsApi';
 import {
     identifyTikTokUser,
@@ -19,9 +19,6 @@ const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
 
 const CALCULATING_LABEL = 'Calculating…';
-const shippingQuoteKey = (city: string, items: Array<{ product_id: string; variant_id: string; quantity: number }>) =>
-    `${city.trim().toLowerCase()}|${items.map(({ product_id, variant_id, quantity }) => `${product_id}:${variant_id}:${quantity}`).join(',')}`;
-
 const addDays = (date: Date, days: number) => {
     const d = new Date(date);
     d.setDate(d.getDate() + days);
@@ -83,8 +80,6 @@ const CheckoutPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-    const [shippingEstimate, setShippingEstimate] = useState<ShippingEstimateResponse | null>(null);
-    const [shippingState, setShippingState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
     const [paymentMethod, setPaymentMethod] = useState('cod');
     const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
     const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
@@ -99,7 +94,6 @@ const CheckoutPage: React.FC = () => {
     const hasTrackedFormStart = React.useRef(false);
     const hasTrackedFormReady = React.useRef(false);
     const trackedFieldValidity = React.useRef<Partial<Record<'name' | 'phone' | 'address' | 'city', boolean>>>({});
-    const shippingQuoteRef = useRef<{ key: string; estimate: ShippingEstimateResponse } | null>(null);
     const isSubmittingRef = useRef(false);
 
     useEffect(() => {
@@ -163,59 +157,6 @@ const CheckoutPage: React.FC = () => {
         return () => clearTimeout(timeoutId);
     }, [formData]);
 
-    useEffect(() => {
-        const buyerCity = formData.city.trim();
-        let cancelled = false;
-
-        if (checkoutItemCount === 0 || !buyerCity) {
-            setShippingEstimate(null);
-            setShippingState('idle');
-            return;
-        }
-
-        const items = checkoutItems.map((item) => ({
-            product_id: item.product_id,
-            variant_id: item.variant_id,
-            quantity: item.quantity,
-        }));
-        if (items.length === 0) {
-            setShippingEstimate(null);
-            setShippingState('idle');
-            return;
-        }
-        const quoteKey = shippingQuoteKey(buyerCity, items);
-        shippingQuoteRef.current = null;
-
-        const timeoutId = setTimeout(async () => {
-            setShippingState('loading');
-            Funnel.trackSubEvent('begin_checkout', 'shipping_estimate', 'requested');
-            try {
-                const response = await GuestCommerce.estimateShipping({
-                    buyer_city: buyerCity,
-                    items,
-                });
-                if (!response.ok) {
-                    throw new Error('Unable to fetch shipping estimate');
-                }
-                if (cancelled) return;
-                shippingQuoteRef.current = { key: quoteKey, estimate: response.body };
-                setShippingEstimate(response.body);
-                setShippingState('ready');
-                Funnel.trackSubEvent('begin_checkout', 'shipping_estimate', 'ready');
-            } catch {
-                if (cancelled) return;
-                setShippingEstimate(null);
-                setShippingState('error');
-                Funnel.trackSubEvent('begin_checkout', 'shipping_estimate', 'failed');
-            }
-        }, 350);
-
-        return () => {
-            cancelled = true;
-            clearTimeout(timeoutId);
-        };
-    }, [formData.city, checkoutItemCount, checkoutItems]);
-
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
         if (!formData.full_name.trim()) newErrors.full_name = 'Full name is required';
@@ -256,15 +197,6 @@ const CheckoutPage: React.FC = () => {
                 throw new Error('Your bag is empty. Please add items to your cart first.');
             }
 
-            const quoteKey = shippingQuoteKey(formData.city, items);
-            const cachedQuote = shippingQuoteRef.current;
-            const estimate = cachedQuote?.key === quoteKey
-                ? cachedQuote.estimate
-                : (await GuestCommerce.estimateShipping({ buyer_city: formData.city.trim(), items })).body;
-            if (!estimate || !('subtotal' in estimate)) {
-                Funnel.trackSubEvent('begin_checkout', 'preflight_failed', 'shipping_estimate');
-                throw new Error('Could not verify your order total. Please try again.');
-            }
             if (paymentMethod === 'bank_deposit' && !paymentProof) {
                 Funnel.trackSubEvent('begin_checkout', 'preflight_failed', 'payment_proof');
                 throw new Error('Upload your bank-deposit receipt to place this order.');
@@ -273,13 +205,13 @@ const CheckoutPage: React.FC = () => {
                 Funnel.trackSubEvent('begin_checkout', 'preflight_failed', 'payment_proof');
                 throw new Error('Your payment screenshot is still uploading. Please try again in a moment.');
             }
-            const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(estimate.subtotal * 0.05) : 0;
+            const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(checkoutSubtotal * 0.05) : 0;
             const confirmationSummary = {
-                subtotal: estimate.subtotal,
-                shipping_fee: estimate.shipping_total,
+                subtotal: checkoutSubtotal,
+                shipping_fee: 0,
                 discount_amount: discountAmount,
-                total: estimate.subtotal + estimate.shipping_total - discountAmount,
-                currency: estimate.currency,
+                total: checkoutSubtotal - discountAmount,
+                currency: 'PKR',
             };
 
             await identifyTikTokUser({
@@ -401,20 +333,12 @@ const CheckoutPage: React.FC = () => {
         setCopiedBankDetail(key);
     };
 
-    const canEstimateShipping = checkoutItemCount > 0 && Boolean(formData.city.trim()) && checkoutItems.length > 0;
-    const shouldUseFallbackEstimate = canEstimateShipping && shippingState === 'error';
-    const hasResolvedEstimate = shippingState === 'ready' && shippingEstimate !== null;
-
-    const freeShippingThreshold = hasResolvedEstimate ? shippingEstimate.free_shipping_threshold : 0;
-    const displaySubtotal = hasResolvedEstimate ? shippingEstimate.subtotal : checkoutSubtotal;
-    const shippingFee = hasResolvedEstimate
-        ? shippingEstimate.shipping_total
-        : shouldUseFallbackEstimate ? 0 : null;
-    const isFreeShippingApplied = hasResolvedEstimate
-        ? shippingEstimate.free_shipping_applied
-        : shippingFee === 0;
+    const freeShippingThreshold = 0;
+    const displaySubtotal = checkoutSubtotal;
+    const shippingFee = 0;
+    const isFreeShippingApplied = true;
     const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(displaySubtotal * 0.05) : 0;
-    const orderTotal = shippingFee === null ? null : displaySubtotal + shippingFee - discountAmount;
+    const orderTotal = displaySubtotal - discountAmount;
     const progressPct = freeShippingThreshold > 0
         ? Math.min(100, Math.round((displaySubtotal / freeShippingThreshold) * 100))
         : 0;
@@ -433,11 +357,17 @@ const CheckoutPage: React.FC = () => {
 
     if (!isHydrated) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[#050505] pt-24 text-white">
-                <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center">
-                    <Loader2 size={28} className="mx-auto mb-4 animate-spin text-primary" />
-                    <p className="text-[15px] font-semibold text-white">Loading your bag…</p>
-                    <p className="mt-2 text-[14px] text-white/55">Restoring your checkout items.</p>
+            <div className="min-h-screen bg-[#050505] px-4 pt-24 text-white md:px-6">
+                <div className="mx-auto max-w-6xl animate-pulse">
+                    <div className="h-10 w-40 rounded-lg bg-white/[0.08]" />
+                    <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_0.8fr]">
+                        <div className="space-y-7">
+                            <div className="h-36 rounded-2xl bg-white/[0.05]" />
+                            <div className="h-64 rounded-2xl bg-white/[0.05]" />
+                            <div className="h-48 rounded-2xl bg-white/[0.05]" />
+                        </div>
+                        <div className="hidden h-72 rounded-2xl bg-white/[0.05] lg:block" />
+                    </div>
                 </div>
             </div>
         );
@@ -528,12 +458,6 @@ const CheckoutPage: React.FC = () => {
                                         >
                                             Order will arrive {fmtDay(deliveryStart)} — {fmtDay(deliveryEnd)}
                                         </p>
-                                        {shippingState === 'loading' && (
-                                            <p className="mt-1 text-[14px] text-white/45">Estimating shipping for {formData.city || 'your city'}...</p>
-                                        )}
-                                        {shippingState === 'error' && formData.city.trim() && (
-                                            <p className="mt-1 text-[14px] text-white/45">Using fallback estimate. Final shipping confirmed on order placement.</p>
-                                        )}
                                     </div>
                                 </div>
                             </motion.section>
@@ -665,8 +589,8 @@ const CheckoutPage: React.FC = () => {
                                         }}
                                     >
                                         <AnimatedEstimateAmount
-                                            isLoading={orderTotal === null}
-                                            value={orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}
+                                            isLoading={false}
+                                            value={formatCurrency(orderTotal)}
                                             loadingStyle="text"
                                         />
                                     </span>
@@ -808,9 +732,6 @@ const CheckoutPage: React.FC = () => {
                                     </Field>
                                 </div>
 
-                                {shippingState === 'loading' && formData.city ? (
-                                    <p className="text-[14px] text-white/45">Checking delivery for {formData.city}…</p>
-                                ) : null}
                             </div>
                         </motion.section>
 
@@ -843,7 +764,7 @@ const CheckoutPage: React.FC = () => {
                                 <p className="text-[15px] text-white/75">Pay via Bank Transfer – After making the payment upload the screenshot and place your order.</p>
                                 <p className="mt-4 text-[15px] text-white/75">Bank: {bank?.bank_name || 'Bank deposit'}</p>
                                 <p className="mt-2 text-[15px] text-white/75">Account Title: {bank?.account_title}</p>
-                                <p className="mt-4 text-[15px] text-white/75">Amount to transfer: {orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}</p>
+                                <p className="mt-4 text-[15px] text-white/75">Amount to transfer: {formatCurrency(orderTotal)}</p>
                                 <div className="mt-4 space-y-2">
                                     {bank?.account_number && <button type="button" onClick={() => void copyBankDetail('account_number', bank.account_number!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[13px] uppercase tracking-wider text-white/45">Account number</span><span className="font-mono text-sm font-bold text-white">{bank.account_number}</span></span>{copiedBankDetail === 'account_number' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
                                     {bank?.iban && <button type="button" onClick={() => void copyBankDetail('iban', bank.iban!)} className="flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-left hover:bg-black/30"><span><span className="block text-[13px] uppercase tracking-wider text-white/45">IBAN</span><span className="font-mono text-sm font-bold text-white">{bank.iban}</span></span>{copiedBankDetail === 'iban' ? <CheckCircle size={15} className="text-emerald-400" /> : <Copy size={15} className="text-white/70" />}</button>}
@@ -979,8 +900,8 @@ const CheckoutPage: React.FC = () => {
                                             }}
                                         >
                                             <AnimatedEstimateAmount
-                                                isLoading={orderTotal === null}
-                                                value={orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}
+                                                isLoading={false}
+                                                value={formatCurrency(orderTotal)}
                                                 loadingStyle="text"
                                             />
                                         </span>
@@ -1030,8 +951,8 @@ const CheckoutPage: React.FC = () => {
                             }}
                         >
                             <AnimatedEstimateAmount
-                                isLoading={orderTotal === null}
-                                value={orderTotal === null ? CALCULATING_LABEL : formatCurrency(orderTotal)}
+                                isLoading={false}
+                                value={formatCurrency(orderTotal)}
                                 loadingStyle="text"
                             />
                         </p>

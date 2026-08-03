@@ -1,16 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight, Zap, Loader2 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useGuestCart } from '../../contexts/GuestCartContext';
-import { Catalog, type CatalogProduct } from '../../api/api';
 import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 
 const formatCurrency = (value: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value)}`;
 
 const DEFAULT_DELIVERY_DAYS = 7;
-const asArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
 const fmtDay = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const getCardImage = (url?: string) =>
     getResponsiveShopifyImageSet(url || '/images/misc/juno_app_icon.png', [120, 160, 240]);
@@ -18,57 +16,9 @@ const getCardImage = (url?: string) =>
 const CartDrawer: React.FC = () => {
     const navigate = useNavigate();
     const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, isHydrated } = useGuestCart();
-    const [relatedProducts, setRelatedProducts] = useState<CatalogProduct[]>([]);
-    const cartRef = useRef(optimisticCart);
-    cartRef.current = optimisticCart;
-
-    // Keyed on the anchor product, not the whole cart: changing a quantity used to
-    // refire two catalog requests while the drawer was open.
-    const anchorProductId = optimisticCart[0]?.product_id;
-
-    useEffect(() => {
-        if (!isCartOpen || !anchorProductId) {
-            if (!anchorProductId) setRelatedProducts([]);
-            return;
-        }
-        let cancelled = false;
-
-        const loadRelated = async () => {
-            const inCart = new Set(cartRef.current.map((item) => item.product_id));
-            const anchorResponse = await Catalog.getProduct(anchorProductId);
-            if (cancelled) return;
-            const anchor = anchorResponse.ok ? (anchorResponse.body as CatalogProduct) : null;
-            // "Complete the look" means something that goes WITH the item, so pair by
-            // brand and rule out anything from the same product group (top with top).
-            const anchorGroup = anchor?.metadata?.product_group || anchor?.product_type;
-            if (anchor?.seller_id) {
-                const brandResponse = await Catalog.getProducts({ seller_id: anchor.seller_id, in_stock: true, limit: 12 });
-                if (cancelled) return;
-                const complements = brandResponse.ok
-                    ? asArray(brandResponse.body as CatalogProduct[]).filter((candidate) => {
-                          if (!candidate?.id || inCart.has(candidate.id)) return false;
-                          const group = candidate.metadata?.product_group || candidate.product_type;
-                          return !anchorGroup || !group || group !== anchorGroup;
-                      })
-                    : [];
-                if (complements.length > 0) {
-                    setRelatedProducts(complements.slice(0, 6));
-                    return;
-                }
-            }
-            // No other category from this brand: fall back to the similarity set.
-            const response = await Catalog.getRelatedProducts(anchorProductId, 6);
-            if (cancelled || !response.ok) return;
-            setRelatedProducts(asArray(response.body as CatalogProduct[]).filter((item) => !inCart.has(item?.id)).slice(0, 6));
-        };
-
-        void loadRelated();
-        return () => { cancelled = true; };
-    }, [anchorProductId, isCartOpen]);
-
     const handleCheckout = () => {
-        setCartOpen(false);
         navigate('/checkout');
+        window.requestAnimationFrame(() => setCartOpen(false));
     };
 
     const handleContinueShopping = () => {
@@ -263,45 +213,6 @@ const CartDrawer: React.FC = () => {
                                             ))}
                                         </div>
 
-                                        {/* Upsell */}
-                                        {relatedProducts.length > 0 && (
-                                            <div className="mt-5">
-                                                <p className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
-                                                    Complete the look
-                                                </p>
-                                                <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
-                                                    {relatedProducts.map((product, idx) => (
-                                                        (() => {
-                                                            const relatedImage = getCardImage(product.images?.[0]);
-                                                            return (
-                                                        <Link
-                                                            key={product.id || `related-${idx}`}
-                                                            to={`/catalog/${product.id}`}
-                                                            onClick={() => setCartOpen(false)}
-                                                            className="group w-28 shrink-0"
-                                                        >
-                                                            <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d0e] transition-all group-hover:border-white/20">
-                                                                <img
-                                                                    src={relatedImage.src}
-                                                                    srcSet={relatedImage.srcSet}
-                                                                    sizes="112px"
-                                                                    alt={product.title}
-                                                                    className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                                                    loading="lazy"
-                                                                    decoding="async"
-                                                                />
-                                                            </div>
-                                                            <p className="mt-1.5 line-clamp-1 text-[11px] font-bold text-white/80">{product.title}</p>
-                                                            <p className="text-[11px] font-black text-white">
-                                                                {formatCurrency(product.pricing.discounted_price || product.pricing.price)}
-                                                            </p>
-                                                        </Link>
-                                                            );
-                                                        })()
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 )}
                             </div>
