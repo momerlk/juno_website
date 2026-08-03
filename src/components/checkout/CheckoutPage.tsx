@@ -35,55 +35,10 @@ const STORAGE_KEYS = {
     CHECKOUT_DRAFT: 'juno_checkout_draft',
     LAST_CHECKOUT_PHONE: 'juno_last_checkout_phone',
     LAST_CHECKOUT_EMAIL: 'juno_last_checkout_email',
-    LAST_DETECTED_CITY: 'juno_last_detected_city',
 };
 
 const SHOW_FREE_SHIPPING_UI = false;
 const DEFAULT_DELIVERY_DAYS = 7;
-
-const sanitizeCity = (value: unknown): string => {
-    if (typeof value !== 'string') return '';
-    return value.trim().replace(/\s+/g, ' ');
-};
-
-type PublicIPResponse = { ip?: string };
-type CityLookupResponse = { city?: string };
-
-const fetchPublicIP = async (): Promise<string> => {
-    try {
-        const response = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
-        if (!response.ok) return '';
-        const body = (await response.json()) as PublicIPResponse;
-        const ip = typeof body.ip === 'string' ? body.ip.trim() : '';
-        return ip;
-    } catch {
-        return '';
-    }
-};
-
-const fetchCityFromIP = async (): Promise<string> => {
-    const ip = await fetchPublicIP();
-    if (!ip) return '';
-
-    const endpoints = [
-        `https://ipapi.co/${encodeURIComponent(ip)}/json/`,
-        `https://ipwho.is/${encodeURIComponent(ip)}`,
-    ];
-
-    for (const endpoint of endpoints) {
-        try {
-            const response = await fetch(endpoint, { signal: AbortSignal.timeout(3000) });
-            if (!response.ok) continue;
-            const body = (await response.json()) as CityLookupResponse;
-            const city = sanitizeCity(body.city);
-            if (city) return city;
-        } catch {
-            // Try next provider
-        }
-    }
-
-    return '';
-};
 
 type CheckoutLineItem = ReturnType<typeof useGuestCart>['optimisticCart'][number];
 
@@ -138,7 +93,6 @@ const CheckoutPage: React.FC = () => {
     const [paymentProofUrl, setPaymentProofUrl] = useState('');
     const [isUploadingProof, setIsUploadingProof] = useState(false);
     const [copiedBankDetail, setCopiedBankDetail] = useState<string | null>(null);
-    const [hasUserEditedCity, setHasUserEditedCity] = useState(false);
     const [showCityModal, setShowCityModal] = useState(false);
     const [isSummaryOpen, setIsSummaryOpen] = useState(true);
     const hasTrackedInitiateCheckout = React.useRef(false);
@@ -154,9 +108,6 @@ const CheckoutPage: React.FC = () => {
             try {
                 const parsed = JSON.parse(savedDraft);
                 setFormData(parsed);
-                if (sanitizeCity(parsed?.city)) {
-                    setHasUserEditedCity(true);
-                }
             } catch {
                 // ignore
             }
@@ -211,34 +162,6 @@ const CheckoutPage: React.FC = () => {
         }, 500);
         return () => clearTimeout(timeoutId);
     }, [formData]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        // Never override user-entered city.
-        if (hasUserEditedCity || sanitizeCity(formData.city)) return;
-
-        const applyDetectedCity = async () => {
-            const cachedCity = sanitizeCity(localStorage.getItem(STORAGE_KEYS.LAST_DETECTED_CITY));
-            if (cachedCity) {
-                if (!cancelled) {
-                    setFormData((prev) => (sanitizeCity(prev.city) ? prev : { ...prev, city: cachedCity }));
-                }
-                return;
-            }
-
-            const detectedCity = await fetchCityFromIP();
-            if (!detectedCity || cancelled) return;
-            localStorage.setItem(STORAGE_KEYS.LAST_DETECTED_CITY, detectedCity);
-            setFormData((prev) => (sanitizeCity(prev.city) ? prev : { ...prev, city: detectedCity }));
-        };
-
-        applyDetectedCity();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [formData.city, hasUserEditedCity]);
 
     useEffect(() => {
         const buyerCity = formData.city.trim();
@@ -423,9 +346,6 @@ const CheckoutPage: React.FC = () => {
     };
 
     const updateField = (field: keyof GuestCheckoutDetails, value: string) => {
-        if (field === 'city') {
-            setHasUserEditedCity(true);
-        }
         const trackedField = ({ full_name: 'name', phone_number: 'phone', address_line1: 'address', city: 'city' } as const)[field as 'full_name' | 'phone_number' | 'address_line1' | 'city'];
         const nextFormData = { ...formData, [field]: value };
         if (trackedField) {
