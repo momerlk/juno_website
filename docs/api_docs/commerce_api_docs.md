@@ -141,6 +141,8 @@ Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` 
 
 `POST /api/v2/admin/logistics/orders/{orderID}/refresh-tracking` checks the saved manual DEX tracking number and returns the updated booking. It is admin-only and requires `DEX_TRACKING_POLL_ENABLED=true`. By default it uses DEX's public `POST https://www.dex.com.pk/api/get_package_history` response with `{"trackingNumber":"..."}`; `DEX_TRACKING_BASE_URL` may override the `/api` base for tests or an approved replacement. No request body is required.
 
+For the admin portal's DEX manual-booking data, an order's optional `shipping_address.alternate_phone_number` automatically changes the delivery note to `Call before delivery. If customer not reachable call this alternate number {number}`, where `{number}` is an 11-digit local Pakistani number (`03...`). A staff-supplied `delivery_note` remains an explicit override.
+
 ```json
 {
   "id": "booking-id",
@@ -279,6 +281,7 @@ to resend the current order details to the customer and all relevant sellers.
   "shipping_address": {
     "full_name": "Sara Ahmed",
     "phone_number": "+923001234567",
+    "alternate_phone_number": "+923007654321",
     "email": "sara@example.com",
     "address_line1": "12 Main Gulberg",
     "city": "Lahore",
@@ -319,6 +322,7 @@ to resend the current order details to the customer and all relevant sellers.
     "guest_checkout_details": {
       "full_name": "Sara Ahmed",
       "phone_number": "+923001234567",
+      "alternate_phone_number": "+923007654321",
       "email": "sara@example.com",
       "address_line1": "12 Main Gulberg",
       "city": "Lahore",
@@ -376,6 +380,7 @@ to resend the current order details to the customer and all relevant sellers.
   "shipping_address": {
     "full_name": "Sara Ahmed",
     "phone_number": "+923001234567",
+    "alternate_phone_number": "+923007654321",
     "email": "sara@example.com",
     "address_line1": "12 Main Gulberg",
     "city": "Lahore",
@@ -583,6 +588,8 @@ Creates one seller order per seller from the current cart. No parent order is cr
 
 Supported methods are `cod` and `bank_deposit`. A `bank_deposit` checkout must include `payment_proof_url`; the same fields apply to direct and guest checkout endpoints.
 
+The selected saved address may include optional `alternate_phone_number`; its normalized value is copied into the parent and seller-order `shipping_address` snapshots. Frontends must treat it as a delivery fallback, not as a replacement for the required `phone_number`.
+
 ```json
 {
   "address_id": "uuid",
@@ -723,6 +730,7 @@ Minimal required fields are optimized for conversion:
 
 Optional fields:
 
+- `alternate_phone_number` (delivery fallback)
 - `email`
 - `address_line2`
 - `province`
@@ -731,13 +739,14 @@ Optional fields:
 - `latitude`
 - `longitude`
 
-If `country` is omitted it defaults to `Pakistan`.
+If `country` is omitted it defaults to `Pakistan`. `alternate_phone_number` is optional, must be a valid Pakistani mobile number when supplied, and is returned in shipping snapshots.
 
 **Body**
 ```json
 {
   "full_name": "Sara Ahmed",
   "phone_number": "+923001234567",
+  "alternate_phone_number": "+923007654321",
   "email": "sara@example.com",
   "address_line1": "12 Main Gulberg",
   "city": "Lahore",

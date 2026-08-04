@@ -627,7 +627,7 @@ const CheckoutPage: React.FC = () => {
                                     {/* The country code is fixed, so it is furniture, not an input. */}
                                     <div className="flex items-stretch gap-2">
                                         <span className="flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.1] bg-black/40 px-3.5 text-[16px] font-semibold text-white/80">
-                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#01411C] text-[13px] text-white">☾</span>
+                                            <img src="/images/icons/pakistan.png" alt="" className="h-5 w-5" />
                                             +92
                                         </span>
                                         <input
@@ -722,6 +722,24 @@ const CheckoutPage: React.FC = () => {
                                         />
                                     </Field>
                                 </div>
+
+                                <Field label="Alternate phone for delivery" hint="optional">
+                                    <div className="flex items-stretch gap-2">
+                                        <span className="flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.1] bg-black/40 px-3.5 text-[16px] font-semibold text-white/80">
+                                            <img src="/images/icons/pakistan.png" alt="" className="h-5 w-5" />
+                                            +92
+                                        </span>
+                                        <input
+                                            type="tel"
+                                            inputMode="tel"
+                                            value={formData.alternate_phone_number || ''}
+                                            onChange={(e) => updateField('alternate_phone_number', e.target.value)}
+                                            className={inputClass(undefined, false)}
+                                            placeholder="0300 1234567"
+                                            autoComplete="tel"
+                                        />
+                                    </div>
+                                </Field>
 
                             </div>
                         </motion.section>

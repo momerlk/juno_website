@@ -282,7 +282,7 @@ const OrderDetailPage: React.FC = () => {
       setParent(payload.parent);
       setChildren(payload.children);
       const address = payload.parent.shipping_address || {};
-      setDetailsDraft({ payment_method: child.payment_method || 'cod', full_name: payload.parent.customer_name || address.full_name || '', phone_number: payload.parent.customer_phone || address.phone_number || '', email: payload.parent.customer_email || address.email || '', address_line1: address.address_line1 || '', address_line2: address.address_line2 || '', city: address.city || '', province: address.province || '', postal_code: address.postal_code || '', country: address.country || 'Pakistan' });
+      setDetailsDraft({ payment_method: child.payment_method || 'cod', full_name: payload.parent.customer_name || address.full_name || '', phone_number: payload.parent.customer_phone || address.phone_number || '', alternate_phone_number: address.alternate_phone_number || '', email: payload.parent.customer_email || address.email || '', address_line1: address.address_line1 || '', address_line2: address.address_line2 || '', city: address.city || '', province: address.province || '', postal_code: address.postal_code || '', country: address.country || 'Pakistan' });
 
       const linkedChild = payload.children.find((candidate) => candidate.id === child.id) || payload.children[0];
       setSelectedChildId(linkedChild?.id || '');
@@ -662,6 +662,7 @@ const OrderDetailPage: React.FC = () => {
               <div className="space-y-1 text-sm text-neutral-300">
                 <p className="text-white font-bold">{parent.customer_name || customer?.full_name || 'Guest Customer'}</p>
                 <p>Phone: {parent.customer_phone || customer?.phone_number || 'N/A'}</p>
+                {customer?.alternate_phone_number ? <p>Alternate delivery phone: {customer.alternate_phone_number}</p> : null}
                 <p>Email: {parent.customer_email || customer?.email || 'N/A'}</p>
                 <p className="pt-2 text-white/80">Shipping Address</p>
                 <p>{customer?.address_line1 || 'N/A'}</p>
@@ -892,7 +893,7 @@ const OrderDetailPage: React.FC = () => {
               <Heading level={2}>Edit order details</Heading>
               <p className="text-sm text-neutral-400">Updates the customer and delivery address for this seller order.</p>
               {[
-                ['full_name', 'Name'], ['phone_number', 'Phone'], ['email', 'Email'], ['address_line1', 'Address line 1'], ['address_line2', 'Address line 2'], ['city', 'City'], ['province', 'Province'], ['postal_code', 'Postal code'], ['country', 'Country'],
+                ['full_name', 'Name'], ['phone_number', 'Phone'], ['alternate_phone_number', 'Alternate phone (delivery fallback)'], ['email', 'Email'], ['address_line1', 'Address line 1'], ['address_line2', 'Address line 2'], ['city', 'City'], ['province', 'Province'], ['postal_code', 'Postal code'], ['country', 'Country'],
               ].map(([key, label]) => (
                 <TextInput key={key} label={label} value={detailsDraft[key] || ''} onChange={(value) => setDetailsDraft((current) => ({ ...current, [key]: value }))} isRequired={['full_name', 'phone_number', 'address_line1', 'city'].includes(key)} />
               ))}

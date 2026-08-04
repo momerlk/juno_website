@@ -901,6 +901,7 @@ export interface Cart {
 export interface GuestCheckoutDetails {
     full_name: string;
     phone_number: string;
+    alternate_phone_number?: string;
     email?: string;
     address_line1: string;
     address_line2?: string;
