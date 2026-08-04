@@ -541,7 +541,27 @@ Auth: none
 
 Returns Cash on Delivery and Bank Deposit instructions. For `bank_deposit`, show the returned Bank Alfalah account details, calculate the checkout summary with `payment_method: "bank_deposit"`, upload the payment screenshot through the existing `POST /api/v2/files/upload`, then send its `file.url` as `payment_proof_url` when placing the order.
 
-Bank deposits receive a server-calculated 5% discount. The proof is required and is stored on every split seller order with `payment_status: "pending_verification"`. When one checkout splits, each order includes the same `payment_proof_url` and a `payment_proof_note` naming every other order covered by that proof. Admins review the proof and call `POST /api/v2/admin/orders/{orderID}/payment/verify` to set that order's payment status to `verified`; they can cancel an invalid payment instead.
+Bank deposits require a proof and are stored on every split seller order with `payment_status: "pending_verification"`; they receive no payment-method discount. When one checkout splits, each order includes the same `payment_proof_url` and a `payment_proof_note` naming every other order covered by that proof. Admins review the proof and call `POST /api/v2/admin/orders/{orderID}/payment/verify` to set that order's payment status to `verified`; they can cancel an invalid payment instead.
+
+**Frontend notes:** do not display a bank-deposit discount or apply one locally. The `bank_deposit` method no longer includes a `discount_rate`; render the checkout-summary `discount_amount` and `total` returned by the API.
+
+```json
+{
+  "methods": [
+    { "id": "cod", "name": "Cash on Delivery" },
+    {
+      "id": "bank_deposit",
+      "name": "Bank Deposit",
+      "bank": {
+        "bank_name": "Bank Alfalah",
+        "account_title": "Muhammad Omer Ali Malik",
+        "account_number": "00421010824133",
+        "iban": "PK77ALFH0042001010824133"
+      }
+    }
+  ]
+}
+```
 
 ### Checkout
 `POST /api/v2/commerce/checkout`
@@ -606,7 +626,7 @@ Creates an order directly from request `items` and does not read server cart ite
 
 `address_id`, `payment_method`, and non-empty `items` are required. Each item requires `product_id`, `variant_id`, `quantity >= 1`.
 
-**Shipping fee:** Free for every order (`shipping_fee: 0`). Bank Deposit receives an additional 5% discount.
+**Shipping fee:** Free for every order (`shipping_fee: 0`). Bank Deposit receives no payment-method discount.
 
 **Response `201`**: `CheckoutResponse` containing regular seller orders.
 
@@ -751,7 +771,7 @@ The guest cart must already contain saved guest checkout details.
 }
 ```
 
-**Shipping fee:** Free for every order (`shipping_fee: 0`). Bank Deposit receives an additional 5% discount.
+**Shipping fee:** Free for every order (`shipping_fee: 0`). Bank Deposit receives no payment-method discount.
 
 **Response `201`**: `CheckoutResponse` containing regular seller orders.
 

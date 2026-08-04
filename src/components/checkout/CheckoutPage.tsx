@@ -205,12 +205,10 @@ const CheckoutPage: React.FC = () => {
                 Funnel.trackSubEvent('begin_checkout', 'preflight_failed', 'payment_proof');
                 throw new Error('Your payment screenshot is still uploading. Please try again in a moment.');
             }
-            const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(checkoutSubtotal * 0.05) : 0;
             const confirmationSummary = {
                 subtotal: checkoutSubtotal,
                 shipping_fee: 0,
-                discount_amount: discountAmount,
-                total: checkoutSubtotal - discountAmount,
+                total: checkoutSubtotal,
                 currency: 'PKR',
             };
 
@@ -337,8 +335,7 @@ const CheckoutPage: React.FC = () => {
     const displaySubtotal = checkoutSubtotal;
     const shippingFee = 0;
     const isFreeShippingApplied = true;
-    const discountAmount = paymentMethod === 'bank_deposit' ? Math.round(displaySubtotal * 0.05) : 0;
-    const orderTotal = displaySubtotal - discountAmount;
+    const orderTotal = displaySubtotal;
     const progressPct = freeShippingThreshold > 0
         ? Math.min(100, Math.round((displaySubtotal / freeShippingThreshold) * 100))
         : 0;
@@ -819,7 +816,7 @@ const CheckoutPage: React.FC = () => {
                                                 textTransform: 'uppercase',
                                             }}
                                         >
-                                            Place order · {formatCurrency(orderTotal ?? (displaySubtotal - discountAmount))}
+                                            Place order · {formatCurrency(orderTotal)}
                                         </span>
                                     </>
                                 )}
@@ -854,8 +851,6 @@ const CheckoutPage: React.FC = () => {
                                             isFreeShippingApplied={isFreeShippingApplied}
                                         />
                                     </Row>
-                                    {discountAmount > 0 && <Row label="Bank deposit discount">−{formatCurrency(discountAmount)}</Row>}
-
                                     {SHOW_FREE_SHIPPING_UI && remainingForFreeShip > 0 && (
                                         <div className="pt-1">
                                             <div className="flex items-center justify-between mb-1.5">
