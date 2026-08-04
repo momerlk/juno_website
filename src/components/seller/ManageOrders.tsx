@@ -100,6 +100,9 @@ const ManageOrders: React.FC = () => {
   const [orderDetailsById, setOrderDetailsById] = useState<Record<string, Order>>({});
   const [bookingByOrderId, setBookingByOrderId] = useState<Record<string, NonNullable<Order['delivery_booking']> | null>>({});
   const [airwayBillByOrderId, setAirwayBillByOrderId] = useState<Record<string, string>>({});
+  const [selectedAirwayBillIds, setSelectedAirwayBillIds] = useState<string[]>([]);
+  const [checkingAirwayBillId, setCheckingAirwayBillId] = useState<string | null>(null);
+  const [isDownloadingAirwayBills, setIsDownloadingAirwayBills] = useState(false);
   const [packingDrafts, setPackingDrafts] = useState<Record<string, PackingDraft>>({});
   const [uploadingEvidence, setUploadingEvidence] = useState<string | null>(null);
   const [submittingPackingOrderId, setSubmittingPackingOrderId] = useState<string | null>(null);
@@ -132,6 +135,7 @@ const ManageOrders: React.FC = () => {
       setOrders(rows);
       setBookingByOrderId({});
       setAirwayBillByOrderId({});
+      setSelectedAirwayBillIds([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch orders');
     } finally {
@@ -281,6 +285,49 @@ const ManageOrders: React.FC = () => {
     }
   };
 
+  const toggleAirwayBill = async (orderId: string, selected: boolean) => {
+    if (!seller?.token) return;
+    if (!selected) {
+      setSelectedAirwayBillIds((current) => current.filter((id) => id !== orderId));
+      return;
+    }
+    if (selectedAirwayBillIds.length >= 50) {
+      setError('You can download up to 50 airway bills at a time.');
+      return;
+    }
+
+    setCheckingAirwayBillId(orderId);
+    setError(null);
+    try {
+      const response = await api.Seller.GetOrderAirwayBill(seller.token, orderId);
+      if (!response.ok || !response.body?.url) throw new Error((response.body as any)?.message || 'This order has no airway bill yet.');
+      setAirwayBillByOrderId((current) => ({ ...current, [orderId]: response.body.url }));
+      setSelectedAirwayBillIds((current) => current.includes(orderId) ? current : [...current, orderId]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'This order has no airway bill yet.');
+    } finally {
+      setCheckingAirwayBillId(null);
+    }
+  };
+
+  const downloadAirwayBills = async () => {
+    if (!seller?.token || !selectedAirwayBillIds.length) return;
+    setIsDownloadingAirwayBills(true);
+    setError(null);
+    try {
+      const url = URL.createObjectURL(await api.Seller.DownloadAirwayBills(seller.token, selectedAirwayBillIds));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'juno-airway-bills.pdf';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not download airway bills');
+    } finally {
+      setIsDownloadingAirwayBills(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card padding={0}>
@@ -295,6 +342,15 @@ const ManageOrders: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {selectedAirwayBillIds.length > 0 && (
+              <Button
+                label={`Download ${selectedAirwayBillIds.length} airway bill${selectedAirwayBillIds.length === 1 ? '' : 's'}`}
+                variant="primary"
+                size="sm"
+                onClick={() => void downloadAirwayBills()}
+                isLoading={isDownloadingAirwayBills}
+              />
+            )}
             <Button
               label="Refresh"
               variant="secondary"
@@ -364,6 +420,7 @@ const ManageOrders: React.FC = () => {
           <table className="w-full min-w-[1160px] text-left text-sm">
             <thead className="border-b border-white/10 text-xs uppercase text-neutral-500">
               <tr>
+                <th className="w-10 p-3"><span className="sr-only">Select airway bill</span></th>
                 <th className="p-3">Order</th>
                 <th className="p-3">Customer</th>
                 <th className="p-3">Juno status</th>
@@ -378,11 +435,11 @@ const ManageOrders: React.FC = () => {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="p-10 text-center text-neutral-400">Loading orders...</td>
+                  <td colSpan={9} className="p-10 text-center text-neutral-400">Loading orders...</td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-10 text-center text-neutral-500">No orders match this view.</td>
+                  <td colSpan={9} className="p-10 text-center text-neutral-500">No orders match this view.</td>
                 </tr>
               ) : (
                 filteredOrders.flatMap((order) => {
@@ -394,6 +451,16 @@ const ManageOrders: React.FC = () => {
 
                   const rows: React.ReactNode[] = [
                     <tr key={order.id} className="border-b border-white/5 align-top hover:bg-white/[0.03]">
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(order.id && selectedAirwayBillIds.includes(order.id))}
+                          disabled={!order.id || checkingAirwayBillId === order.id || isDownloadingAirwayBills}
+                          onChange={(event) => order.id && void toggleAirwayBill(order.id, event.target.checked)}
+                          aria-label={`Select airway bill for ${order.order_number || order.id}`}
+                          className="h-4 w-4 accent-primary"
+                        />
+                      </td>
                       <td className="p-3">
                         <p className="font-mono text-xs text-white">{order.order_number || order.id}</p>
                         <p className="mt-1 font-mono text-[10px] text-neutral-500">{order.id}</p>
@@ -470,7 +537,7 @@ const ManageOrders: React.FC = () => {
                     const allPhotosReady = items.length > 0 && items.every((item) => item.id && draft.itemPhotos[item.id]) && Boolean(draft.parcelPhoto);
                     rows.push(
                       <tr key={`${order.id}-items`} className="border-b border-white/5 bg-black/20">
-                        <td colSpan={8} className="p-3">
+                        <td colSpan={9} className="p-3">
                           <div className="mb-3 flex items-center justify-between gap-3">
                             <p className="text-xs uppercase tracking-wide text-neutral-500">Order items</p>
                             {order.id && airwayBillByOrderId[order.id] ? <a href={airwayBillByOrderId[order.id]} target="_blank" rel="noreferrer" download className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-white">Download airway bill</a> : null}

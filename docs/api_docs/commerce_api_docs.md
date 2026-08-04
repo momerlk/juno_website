@@ -93,6 +93,7 @@ Auth:
 - `GET /api/v2/commerce/seller/orders/{id}` — seller auth required
 - `GET /api/v2/commerce/seller/orders/{id}/booking` — seller auth required; DEX booking status, tracking number, and history
 - `GET /api/v2/commerce/seller/orders/{id}/airway-bill` — seller auth required; staff-uploaded DEX airway-bill URL
+- `POST /api/v2/commerce/seller/airway-bills/download` — seller auth required; combines selected seller-owned labels into one PDF
 - `POST /api/v2/commerce/seller/orders/{id}/packing` — seller auth required
 - `GET /api/v2/commerce/seller/statements` — seller auth required; statement list only
 - `POST /api/v2/admin/logistics/orders/{orderID}/refresh-tracking` — admin auth required
@@ -1194,6 +1195,14 @@ Returns full details of a specific child order.
 `GET /api/v2/commerce/seller/orders/{id}/booking` returns the owning seller's DEX booking, including its status, tracking number, DEX raw status, last check time, and tracking history.
 
 `GET /api/v2/commerce/seller/orders/{id}/airway-bill` returns `{ "url": "..." }` for the airway bill uploaded by Juno operations. Both endpoints return `404` when the booking or label does not exist and reject another seller's order. `GET /api/v2/commerce/orders/{id}/airway-bill` returns the same stored public URL without authentication for simple seller/admin downloads.
+
+`POST /api/v2/commerce/seller/airway-bills/download` accepts selected seller order IDs and returns a downloadable `application/pdf` with each matching airway bill in request order. It accepts 1–50 unique IDs, rejects another seller's order, and fails the whole request if any selected order lacks a valid PDF label.
+
+```json
+{"order_ids": ["order-1", "order-2"]}
+```
+
+**Frontend notes:** offer this only when one or more listed orders have an airway bill. Send the selected IDs, download the binary response as `juno-airway-bills.pdf`, and surface an error rather than silently omitting a missing label.
 
 ### Viewing all packing evidence
 

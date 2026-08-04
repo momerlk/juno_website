@@ -362,6 +362,18 @@ export namespace Seller {
     return request(`/commerce/seller/orders/${encodeURIComponent(order_id)}/airway-bill`, 'GET', undefined, token);
   }
 
+  export async function DownloadAirwayBills(token: string, orderIds: string[]): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/commerce/seller/airway-bills/download`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_ids: orderIds }),
+    });
+    if (response.ok) return response.blob();
+
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.message || body?.error?.message || 'Could not download airway bills');
+  }
+
   export async function GetOrderPackingPhoto(token: string, orderId: string, objectName: string): Promise<string> {
     return getPrivateImageUrl(`/commerce/seller/orders/${encodeURIComponent(orderId)}/packing-photo?object=${encodeURIComponent(objectName)}`, token);
   }
