@@ -160,8 +160,12 @@ const CatalogProductPage: React.FC = () => {
     // Furthest slide the customer has reached; nothing past it is requested.
     const [maxSlideLoaded, setMaxSlideLoaded] = useState(1);
     const [reviews, setReviews] = useState<ProductReview[]>([]);
+    const [reviewTotalCount, setReviewTotalCount] = useState<number | null>(null);
     const [reviewsLoaded, setReviewsLoaded] = useState(false);
     const [showReviewsModal, setShowReviewsModal] = useState(false);
+    const [modalReviews, setModalReviews] = useState<ProductReview[]>([]);
+    const [modalReviewPage, setModalReviewPage] = useState(0);
+    const [isLoadingMoreReviews, setIsLoadingMoreReviews] = useState(false);
     const sizeSectionRef = useRef<HTMLDivElement>(null);
     const galleryScrollFrame = useRef(0);
     const [sizing, setSizing] = useState<ProductSizing | null>(null);
@@ -240,12 +244,18 @@ const CatalogProductPage: React.FC = () => {
     useEffect(() => {
         let cancelled = false;
         setReviews([]);
+        setReviewTotalCount(null);
         setReviewsLoaded(false);
         setShowReviewsModal(false);
+        setModalReviews([]);
+        setModalReviewPage(0);
         if (!actualProductId) return undefined;
         void Catalog.getProductReviews(actualProductId).then((response) => {
             if (!cancelled) {
-                if (response.ok) setReviews(asArray(response.body as ProductReview[]));
+                if (response.ok) {
+                    setReviews(asArray(response.body.reviews));
+                    setReviewTotalCount(response.body.total_count);
+                }
                 setReviewsLoaded(true);
             }
         }).catch(() => {
@@ -348,14 +358,27 @@ const CatalogProductPage: React.FC = () => {
         ] as [string, string][]).filter(([, value]) => Boolean(value));
     }, [product?.metadata, product?.product_type]);
 
-    const orderedReviews = useMemo(
-        () => [...reviews].sort((a, b) => {
-            const score = (review: ProductReview) =>
-                (review.comment?.trim() ? 2 : 0) + (review.reviewer_name?.trim() && review.reviewer_name.toLowerCase() !== 'anonymous' ? 1 : 0);
-            return score(b) - score(a);
-        }),
-        [reviews]
-    );
+    const reviewCount = reviewTotalCount ?? product?.review_count ?? 0;
+    const ratingDistribution = product?.rating_distribution;
+
+    const loadModalReviews = useCallback(async (page: number) => {
+        if (!actualProductId || isLoadingMoreReviews) return;
+        setIsLoadingMoreReviews(true);
+        try {
+            const response = await Catalog.getProductReviews(actualProductId, { page, limit: 20 });
+            if (!response.ok) return;
+            setModalReviews((current) => page === 1 ? response.body.reviews : [...current, ...response.body.reviews]);
+            setModalReviewPage(page);
+            setReviewTotalCount(response.body.total_count);
+        } finally {
+            setIsLoadingMoreReviews(false);
+        }
+    }, [actualProductId, isLoadingMoreReviews]);
+
+    const openReviewsModal = useCallback(() => {
+        setShowReviewsModal(true);
+        void loadModalReviews(1);
+    }, [loadModalReviews]);
 
     const scrollToSize = useCallback(() => {
         sizeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1151,7 +1174,7 @@ const CatalogProductPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {rating || reviews.length ? (
+                        {rating || reviewCount ? (
                             <div id="ratings" className="scroll-mt-24 border-t border-white/[0.08] pt-6">
                                 <h2 className="text-lg font-black uppercase tracking-[-0.02em] text-white md:text-xl">Ratings and reviews</h2>
                                 <div className="mt-4 flex items-start gap-5">
@@ -1161,14 +1184,13 @@ const CatalogProductPage: React.FC = () => {
                                             <Star size={18} className="fill-amber-300 text-amber-300" />
                                         </p>
                                         <p className="mt-1 text-[11px] text-white/40">
-                                            {new Intl.NumberFormat("en-PK").format(product.review_count ?? reviews.length)} ratings
+                                            {new Intl.NumberFormat("en-PK").format(reviewCount)} ratings
                                         </p>
                                     </div>
-                                    {/* Bars come from the loaded reviews, so they always match the list below. */}
                                     <div className="min-w-0 flex-1 space-y-1">
                                         {[5, 4, 3, 2, 1].map((star) => {
-                                            const count = reviews.filter((review) => Math.round(review.rating) === star).length;
-                                            const width = reviews.length ? (count / reviews.length) * 100 : 0;
+                                            const count = ratingDistribution?.[String(star)] ?? 0;
+                                            const width = reviewCount ? (count / reviewCount) * 100 : 0;
                                             return (
                                                 <div key={star} className="flex items-center gap-2">
                                                     <span className="w-3 text-right text-[11px] font-semibold text-white/50">{star}</span>
@@ -1184,14 +1206,14 @@ const CatalogProductPage: React.FC = () => {
 
                                 {reviews.length ? (
                                     <div className="mt-5 space-y-3">
-                                        {orderedReviews.slice(0, 3).map((review) => <ReviewCard key={review.id} review={review} />)}
-                                        {reviews.length > 3 ? (
+                                        {reviews.map((review) => <ReviewCard key={review.id} review={review} />)}
+                                        {reviewCount > reviews.length ? (
                                             <button
                                                 type="button"
-                                                onClick={() => setShowReviewsModal(true)}
+                                                onClick={openReviewsModal}
                                                 className="w-full rounded-2xl border border-white/15 bg-white/[0.03] py-3 text-[13px] font-bold text-white transition-colors hover:border-white/30 hover:bg-white/[0.06]"
                                             >
-                                                Read all {new Intl.NumberFormat("en-PK").format(reviews.length)} reviews
+                                                Read all {new Intl.NumberFormat("en-PK").format(reviewCount)} reviews
                                             </button>
                                         ) : null}
                                     </div>
@@ -1333,7 +1355,21 @@ const CatalogProductPage: React.FC = () => {
                                 <h2 className="text-lg font-black uppercase tracking-[-0.02em] text-white">All reviews</h2>
                                 <button type="button" onClick={() => setShowReviewsModal(false)} className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/[0.06]">Close</button>
                             </div>
-                            <div className="space-y-3">{orderedReviews.map((review) => <ReviewCard key={review.id} review={review} />)}</div>
+                            {isLoadingMoreReviews && modalReviews.length === 0 ? (
+                                <p className="text-sm text-white/50">Loading reviews…</p>
+                            ) : (
+                                <div className="space-y-3">{modalReviews.map((review) => <ReviewCard key={review.id} review={review} />)}</div>
+                            )}
+                            {modalReviews.length < reviewCount ? (
+                                <button
+                                    type="button"
+                                    onClick={() => void loadModalReviews(modalReviewPage + 1)}
+                                    disabled={isLoadingMoreReviews}
+                                    className="mt-4 w-full rounded-2xl border border-white/15 bg-white/[0.03] py-3 text-[13px] font-bold text-white transition-colors hover:border-white/30 hover:bg-white/[0.06] disabled:opacity-50"
+                                >
+                                    {isLoadingMoreReviews ? 'Loading…' : 'Load more reviews'}
+                                </button>
+                            ) : null}
                         </motion.div>
                     </motion.div>
                 ) : null}

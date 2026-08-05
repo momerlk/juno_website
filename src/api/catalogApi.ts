@@ -10,6 +10,7 @@ import { request, APIResponse } from "./core";
 import type {
     CatalogProduct,
     ProductReview,
+    ProductReviewsResponse,
     FilterOptions,
     CatalogFacets,
     CatalogHierarchy,
@@ -179,11 +180,12 @@ export namespace Catalog {
     /**
      * Get product reviews
      *
-     * Public. Returns up to the 100 newest reviews, or [] when there are none.
-     * The shared request client unwraps the API envelope to the review array.
+     * Public. Returns backend-ranked reviews with summary aggregates.
+     * Defaults to the three-review PDP preview; page and limit load the full list.
      */
-    export async function getProductReviews(productId: string): Promise<APIResponse<ProductReview[]>> {
-        return request(`${BASE_PATH}/products/${productId}/reviews`, 'GET', undefined, undefined, true);
+    export async function getProductReviews(productId: string, params?: { page?: number; limit?: number }): Promise<APIResponse<ProductReviewsResponse>> {
+        const qp = toSearchParams(params);
+        return request(`${BASE_PATH}/products/${productId}/reviews${qp ? `?${qp}` : ''}`, 'GET', undefined, undefined, true);
     }
 
     /**

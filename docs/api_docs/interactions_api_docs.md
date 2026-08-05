@@ -56,15 +56,20 @@ the response is `[]` (never `null`).
 ### List Product Reviews
 `GET /api/v2/catalog/products/{id}/reviews`
 
-Public. Returns up to the 100 newest reviews, or `[]` when the product has none.
-Returns `404` when the product does not exist.
+Public. Reviews use a single backend ranking: reviews with a non-blank comment
+come first; within each group, a non-blank reviewer name other than
+`Anonymous` (case-insensitive) comes first; ties use newest `created_at`.
+
+Use `page` (default `1`) and `limit` (default `3`, maximum `100`). The default
+is the PDP preview; use the same endpoint with a larger limit or later page for
+“Read all reviews.” Returns `404` when the product does not exist.
 
 **Response `200`**
 ```json
 {
   "success": true,
-  "data": [
-    {
+  "data": {
+    "reviews": [{
       "id": "campaign-import-347982",
       "reviewer_name": "Saba Kazmi",
       "product_id": "d0f1831d-f95c-4179-86a3-fd4e441e507f",
@@ -72,8 +77,13 @@ Returns `404` when the product does not exist.
       "comment": "Beautiful as always Thankyou Juno",
       "created_at": "2025-12-24T17:07:46Z",
       "updated_at": "2025-12-24T17:07:46Z"
-    }
-  ]
+    }],
+    "page": 1,
+    "limit": 3,
+    "total_count": 23,
+    "average_rating": 4.5,
+    "rating_distribution": { "1": 0, "2": 1, "3": 2, "4": 5, "5": 15 }
+  }
 }
 ```
 
@@ -82,11 +92,12 @@ use `Anonymous`; an empty `comment` is a valid rating-only review.
 
 ### Catalog Display
 
-Catalog product responses already expose `rating` (average rating) and
-`review_count` (total reviews). Use these fields for product-card and PDP
-summary UI, then request this endpoint on a product detail page to display
-individual reviews. Both summary fields are recalculated whenever a review is
-created or imported.
+Catalog product responses expose `rating` (average rating), `review_count`
+(total reviews), and the denormalized `rating_distribution` counts for stars
+`1` through `5`. Use those fields for product-card and PDP header UI. The
+paginated reviews response carries the same summary for reviews imported before
+the product distribution was denormalized. Summaries are recalculated whenever
+a review is created or imported.
 
 ### Create or Update a Review
 `POST /api/v2/reviews` _(user auth required)_

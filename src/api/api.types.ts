@@ -409,6 +409,7 @@ export interface CatalogProduct {
     published_at?: string;
     rating?: number;
     review_count?: number;
+    rating_distribution?: Record<string, number>;
     is_trending?: boolean;
     is_featured?: boolean;
     badges?: {
@@ -597,6 +598,16 @@ export interface ProductReview {
     comment?: string;
     created_at: string;
     updated_at?: string;
+}
+
+/** Ranked, paginated public reviews for a catalog product. */
+export interface ProductReviewsResponse {
+    reviews: ProductReview[];
+    page: number;
+    limit: number;
+    total_count: number;
+    average_rating: number;
+    rating_distribution: Record<string, number>;
 }
 
 export interface CatalogQueryParams {
