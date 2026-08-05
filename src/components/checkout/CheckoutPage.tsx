@@ -39,6 +39,18 @@ const DEFAULT_DELIVERY_DAYS = 7;
 
 type CheckoutLineItem = ReturnType<typeof useGuestCart>['optimisticCart'][number];
 
+// The API accepts local and international Pakistan formats. Strip display/paste
+// formatting here and send one unambiguous E.164 value to checkout.
+const normalizePakistanMobile = (value?: string): string | undefined => {
+    const digits = (value ?? '')
+        .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06F0))
+        .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+        .replace(/\D/g, '');
+    const local = digits.startsWith('923') ? digits.slice(2) : digits;
+    const mobile = local.startsWith('0') ? local.slice(1) : local;
+    return /^3\d{9}$/.test(mobile) ? `+92${mobile}` : undefined;
+};
+
 const CheckoutPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -160,10 +172,14 @@ const CheckoutPage: React.FC = () => {
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
         if (!formData.full_name.trim()) newErrors.full_name = 'Full name is required';
+        const phoneNumber = normalizePakistanMobile(formData.phone_number);
         if (!formData.phone_number.trim()) {
             newErrors.phone_number = 'Phone number is required';
-        } else if (!/^\+?[\d\s-()]+$/.test(formData.phone_number)) {
-            newErrors.phone_number = 'Please enter a valid phone number';
+        } else if (!phoneNumber) {
+            newErrors.phone_number = 'Enter a valid Pakistani mobile number';
+        }
+        if (formData.alternate_phone_number?.trim() && !normalizePakistanMobile(formData.alternate_phone_number)) {
+            newErrors.alternate_phone_number = 'Enter a valid Pakistani mobile number';
         }
         if (!formData.address_line1.trim()) newErrors.address_line1 = 'Address is required';
         if (!formData.city.trim()) newErrors.city = 'City is required';
@@ -182,6 +198,12 @@ const CheckoutPage: React.FC = () => {
         if (isSubmittingRef.current) return;
         Funnel.trackSubEvent('begin_checkout', 'submit_clicked', undefined, { item_count: checkoutItemCount });
         if (!validateForm()) return;
+
+        const customer = {
+            ...formData,
+            phone_number: normalizePakistanMobile(formData.phone_number)!,
+            ...(formData.alternate_phone_number ? { alternate_phone_number: normalizePakistanMobile(formData.alternate_phone_number) } : {}),
+        };
 
         isSubmittingRef.current = true;
         setIsSubmitting(true);
@@ -213,9 +235,9 @@ const CheckoutPage: React.FC = () => {
             };
 
             await identifyTikTokUser({
-                email: formData.email,
-                phoneNumber: formData.phone_number,
-                externalId: formData.phone_number || formData.email,
+                email: customer.email,
+                phoneNumber: customer.phone_number,
+                externalId: customer.phone_number || customer.email,
             });
             trackTikTokAddPaymentInfo(checkoutItems);
 
@@ -223,7 +245,7 @@ const CheckoutPage: React.FC = () => {
                 payment_method: paymentMethod,
                 ...(paymentProofUrl ? { payment_proof_url: paymentProofUrl } : {}),
                 items,
-                customer: formData,
+                customer,
             });
             if (!checkoutResponse.ok) throw new Error((checkoutResponse.body as { message?: string })?.message || 'Failed to place order');
 
@@ -246,15 +268,15 @@ const CheckoutPage: React.FC = () => {
 
             if (checkout) {
                 await identifyTikTokUser({
-                    email: formData.email,
-                    phoneNumber: formData.phone_number,
-                    externalId: formData.phone_number || formData.email,
+                    email: customer.email,
+                    phoneNumber: customer.phone_number,
+                    externalId: customer.phone_number || customer.email,
                 });
                 trackTikTokPurchase(checkoutItems, checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
             }
 
-            if (formData.phone_number) {
-                localStorage.setItem(STORAGE_KEYS.LAST_CHECKOUT_PHONE, formData.phone_number);
+            if (customer.phone_number) {
+                localStorage.setItem(STORAGE_KEYS.LAST_CHECKOUT_PHONE, customer.phone_number);
             }
             if (formData.email) {
                 localStorage.setItem(STORAGE_KEYS.LAST_CHECKOUT_EMAIL, formData.email);
@@ -264,7 +286,7 @@ const CheckoutPage: React.FC = () => {
             // Buy Now never added to the cart, so leave it intact.
             if (!isBuyNow) clearCart();
 
-            navigate('/checkout/confirmation', { state: { checkout, receiptItems, customer: formData, summary: confirmationSummary, paymentMethod } });
+            navigate('/checkout/confirmation', { state: { checkout, receiptItems, customer, summary: confirmationSummary, paymentMethod } });
         } catch (error: unknown) {
             setErrors({
                 general: error instanceof Error ? error.message : 'Failed to place order. Please try again.',
@@ -284,7 +306,7 @@ const CheckoutPage: React.FC = () => {
                 hasTrackedFormStart.current = true;
             }
             const isComplete = trackedField === 'phone'
-                ? /^\+?[\d\s-()]+$/.test(value) && value.trim().length > 0
+                ? Boolean(normalizePakistanMobile(value))
                 : value.trim().length > 0;
             if (trackedFieldValidity.current[trackedField] !== isComplete) {
                 Funnel.trackSubEvent('begin_checkout', isComplete ? 'field_completed' : 'field_invalid', trackedField);
@@ -293,7 +315,7 @@ const CheckoutPage: React.FC = () => {
             if (
                 !hasTrackedFormReady.current &&
                 nextFormData.full_name.trim() &&
-                /^\+?[\d\s-()]+$/.test(nextFormData.phone_number) &&
+                normalizePakistanMobile(nextFormData.phone_number) &&
                 nextFormData.address_line1.trim() &&
                 nextFormData.city.trim()
             ) {
@@ -723,7 +745,7 @@ const CheckoutPage: React.FC = () => {
                                     </Field>
                                 </div>
 
-                                <Field label="Alternate phone for delivery" hint="optional">
+                                <Field label="Alternate phone for delivery" hint="optional" error={errors.alternate_phone_number}>
                                     <div className="flex items-stretch gap-2">
                                         <span className="flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.1] bg-black/40 px-3.5 text-[16px] font-semibold text-white/80">
                                             <img src="/images/icons/pakistan.png" alt="" className="h-5 w-5" />
