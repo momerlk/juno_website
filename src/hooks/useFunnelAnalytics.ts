@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Funnel } from '../api/analyticsApi';
 
 const LEGACY_CATALOG_PRODUCT_IDS: Record<string, string> = {
-    'b3ab7530-1899-4466-b3da-c345ee79669b': '78ad2964-07fd-4b09-9028-de014cbafce5',
+    'b3ab7530-1899-4466-b3da-c345ee79669b': '901e4522-18b8-46ad-9bc3-4f7899ec2e9a',
     '50ab1d94-7551-47ab-92db-bf8b518cba97': '9ccb66d0-3b30-4f47-bb49-dc9516e057ea',
 };
 
