@@ -860,7 +860,7 @@ const CatalogProductPage: React.FC = () => {
                                         <>
                                             <span className="text-white/20">|</span>
                                             <a href="#ratings" className="text-sm font-semibold text-white/60 underline-offset-4 hover:text-white hover:underline">
-                                                {reviews.length} reviews
+                                                {new Intl.NumberFormat("en-PK").format(reviewCount)} reviews
                                             </a>
                                         </>
                                     ) : null}
