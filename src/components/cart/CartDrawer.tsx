@@ -20,6 +20,7 @@ const CartDrawer: React.FC = () => {
     const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, isHydrated } = useGuestCart();
     const [recommendations, setRecommendations] = useState<CompleteTheLookRecommendation[]>([]);
     const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+    const [isStartingCheckout, setIsStartingCheckout] = useState(false);
     const recommendationsKeyRef = useRef<string | null>(null);
     const recommendationItemsRef = useRef<Array<{ product_id: string; variant_id: string; quantity: number }>>([]);
     const cartProductKey = useMemo(
@@ -63,9 +64,17 @@ const CartDrawer: React.FC = () => {
 
         return () => { cancelled = true; };
     }, [cartProductKey, isCartOpen]);
-    const handleCheckout = () => {
-        navigate('/checkout');
-        window.requestAnimationFrame(() => setCartOpen(false));
+    const handleCheckout = async () => {
+        if (isStartingCheckout) return;
+        setIsStartingCheckout(true);
+        try {
+            await import('../checkout/CheckoutPage');
+        } catch {
+            setIsStartingCheckout(false);
+            return;
+        }
+        navigate('/checkout', { flushSync: true });
+        setCartOpen(false);
     };
 
     const handleContinueShopping = () => {
@@ -325,11 +334,12 @@ const CartDrawer: React.FC = () => {
                                     <motion.button
                                         whileTap={{ scale: 0.985 }}
                                         onClick={handleCheckout}
+                                        disabled={isStartingCheckout}
                                         className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-primary to-secondary py-4 text-sm font-black uppercase tracking-[0.22em] text-white shadow-[0_14px_36px_rgba(220,10,40,0.36)] transition-all hover:shadow-[0_18px_44px_rgba(220,10,40,0.5)]"
                                     >
                                         <span className="relative z-10 inline-flex items-center justify-center gap-2.5">
-                                            <Zap size={15} className="fill-white" />
-                                            Checkout · {formatCurrency(cartTotal)}
+                                            {isStartingCheckout ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} className="fill-white" />}
+                                            {isStartingCheckout ? 'Opening checkout...' : `Checkout · ${formatCurrency(cartTotal)}`}
                                         </span>
                                         <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-[shimmer_2.8s_ease-in-out_infinite]" />
                                     </motion.button>
