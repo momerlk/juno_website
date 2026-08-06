@@ -3,7 +3,7 @@ import { API_BASE_URL, request } from './core';
 export type FunnelEvent = 'page_view' | 'download_page_view' | 'store_visit' | 'app_install' | 'view_item' | 'add_to_cart' | 'begin_checkout';
 type FunnelSubEvents = {
     view_item: 'variant_selected' | 'size_guide_opened' | 'unavailable_shown';
-    add_to_cart: 'clicked' | 'blocked';
+    add_to_cart: 'clicked' | 'blocked' | 'size_quiz_added' | 'size_chart_added';
     begin_checkout: 'form_started' | 'form_ready' | 'submit_clicked' | 'payment_proof_opened' | 'payment_proof_added' | 'payment_method_selected' | 'field_completed' | 'field_invalid' | 'shipping_estimate' | 'preflight_failed';
 };
 export type FunnelSubEvent = FunnelSubEvents[keyof FunnelSubEvents];

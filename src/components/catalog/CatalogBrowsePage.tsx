@@ -821,6 +821,7 @@ export const CatalogBrowsePageView: React.FC<CatalogBrowsePageProps> = ({ fixedQ
                                                 badges={product.badges}
                                                 pricing={product.pricing}
                                                 inventory={product.inventory}
+                                                sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, (max-width: 1280px) 31vw, 23vw"
                                                 index={index}
                                                 to={`/catalog/${product.id}`}
                                             />

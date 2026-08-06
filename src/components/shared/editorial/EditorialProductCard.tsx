@@ -27,6 +27,11 @@ type EditorialProductCardProps = {
     to: string;
     onClick?: () => void;
     index?: number;
+    /** Slot width per breakpoint. Default assumes the one-column mobile grid;
+     *  pass the two-column value wherever the card is rendered in pairs. */
+    sizes?: string;
+    /** Off for cards that mount while the page is scrolling past them. */
+    animateIn?: boolean;
 };
 
 const formatCurrency = (value?: number) =>
@@ -42,6 +47,8 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
     to,
     onClick,
     index = 0,
+    sizes = '(max-width: 640px) 92vw, (max-width: 1280px) 46vw, 30vw',
+    animateIn = true,
 }) => {
     const image = images?.[0] ?? '';
     const imageSet = getResponsiveShopifyImageSet(image, [240, 360, 540, 720]);
@@ -55,12 +62,19 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
     const inStock = inventory?.in_stock ?? true;
     const lowStock = typeof stockCount === 'number' && stockCount > 0 && stockCount <= 5;
 
+    // Plain div when there is no entrance to run: a card that mounts under the
+    // scroller should not pay for a motion component it never animates.
+    const Frame = animateIn ? motion.div : 'div';
+    const frameProps = animateIn
+        ? {
+            initial: { opacity: 0, y: 14 },
+            animate: { opacity: 1, y: 0 },
+            transition: { duration: 0.28, delay: Math.min(index * 0.035, 0.25) },
+        }
+        : {};
+
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, delay: Math.min(index * 0.035, 0.25) }}
-        >
+        <Frame {...frameProps}>
             <Link
                 to={to}
                 onClick={onClick}
@@ -71,7 +85,7 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
                         <img
                             src={imageSet.src}
                             srcSet={imageSet.srcSet}
-                            sizes="(max-width: 640px) 92vw, (max-width: 1280px) 46vw, 30vw"
+                            sizes={sizes}
                             alt={title}
                             loading="lazy"
                             decoding="async"
@@ -168,7 +182,7 @@ const EditorialProductCard: React.FC<EditorialProductCardProps> = ({
                     </div>
                 </div>
             </Link>
-        </motion.div>
+        </Frame>
     );
 };
 

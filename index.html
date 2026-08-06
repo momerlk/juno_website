@@ -11,10 +11,20 @@
     <meta name="keywords" content="Juno, indie fashion, Pakistani brands, fashion discovery, streetwear Pakistan, curated fashion, emerging designers, online shopping, e-commerce, Lahore, Karachi, Islamabad" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
 
+    <!-- The LCP image lives behind an API call: HTML -> JS -> product API ->
+         image host. Warming all three sockets up front takes the DNS+TLS
+         handshakes off that chain, which is most of the cost on mobile data. -->
+    <link rel="preconnect" href="https://apijuno-yjc3zwhbia-ew.a.run.app" crossorigin>
+    <link rel="preconnect" href="https://cdn.shopify.com" crossorigin>
+    <link rel="preconnect" href="https://storage.googleapis.com" crossorigin>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
+    <!-- Non-blocking: display=swap means text paints in the fallback anyway, so
+         there is nothing to gain from holding first render for this round trip. -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet"></noscript>
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -38,8 +48,13 @@
       ;n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
 
 
-        ttq.load('D7QUAKBC77U44OJIQCVG');
-        ttq.page();
+        // Stub stays installed at parse time, so every track/page call made
+        // before this point is queued and replayed. Only the pixel's own
+        // download waits for load, so it stops competing with the product
+        // image for mobile bandwidth.
+        var loadPixel = function () { ttq.load('D7QUAKBC77U44OJIQCVG'); ttq.page(); };
+        if (d.readyState === 'complete') setTimeout(loadPixel, 0);
+        else w.addEventListener('load', function () { setTimeout(loadPixel, 0); }, { once: true });
       }(window, document, 'ttq');
     </script>
     <!-- TikTok Pixel Code End -->

@@ -5,9 +5,12 @@
 const NETLIFY_RESIZABLE_HOSTS = ['storage.googleapis.com'];
 
 const isNetlifyResizable = (url: string) =>
-    import.meta.env.PROD &&
-    url.startsWith('https://') &&
-    NETLIFY_RESIZABLE_HOSTS.some((host) => url.startsWith(`https://${host}/`));
+    import.meta.env.PROD && (
+        // Site-relative assets (logos, icons) are resizable too, and several of
+        // them ship at 2000px for a 20px slot.
+        (url.startsWith('/') && !url.startsWith('//')) ||
+        (url.startsWith('https://') && NETLIFY_RESIZABLE_HOSTS.some((host) => url.startsWith(`https://${host}/`)))
+    );
 
 // webp, not avif: still ~30% under JPEG and safe back to Safari 14, and a
 // format the browser cannot decode is a blank product image, not a slow one.

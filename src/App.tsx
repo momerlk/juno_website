@@ -166,9 +166,29 @@ function RoutedApp() {
   }, [location.pathname]);
 
   useEffect(() => {
-    initClarity();
-    consentClarityV2({ ad_Storage: 'denied', analytics_Storage: 'granted' });
+    // Identity is local storage, cheap, and the route effect below needs it now.
     clarityIdentityRef.current = resolveClarityIdentityFromStorage();
+
+    // Clarity pulls its recorder script and starts observing the DOM. On a mid
+    // range phone that lands right on top of the first product image, so it
+    // waits for idle after load. Tags queued before this point still apply:
+    // every clarity helper no-ops until init and the route effect re-runs.
+    let idleHandle = 0;
+    const start = () => {
+      const schedule = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 1));
+      idleHandle = schedule(() => {
+        initClarity();
+        consentClarityV2({ ad_Storage: 'denied', analytics_Storage: 'granted' });
+      }, { timeout: 5000 });
+    };
+
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+
+    return () => {
+      window.removeEventListener('load', start);
+      if (idleHandle) (window.cancelIdleCallback ?? window.clearTimeout)(idleHandle);
+    };
   }, []);
 
   useEffect(() => {

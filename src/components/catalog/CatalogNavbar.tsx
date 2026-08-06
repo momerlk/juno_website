@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SlidersHorizontal, X } from 'lucide-react';
+import { getShopifySizedImage } from '../../utils/shopifyImage';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Catalog } from '../../api/catalogApi';
 import { trackTikTokSearch } from '../../utils/tiktokPixel';
@@ -147,7 +148,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                     handleSearchSubmit(searchQuery);
                 }}
             >
-                <img src="/images/icons/search.png" alt="" className="h-4 w-4 shrink-0 opacity-65" />
+                <img src={getShopifySizedImage('/images/icons/search.png', 64)} alt="" width={20} height={20} decoding="async" className="h-4 w-4 shrink-0 opacity-65" />
                 <input
                     type="search"
                     value={searchQuery}
@@ -177,7 +178,9 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
 
     return (
         <>
-            <nav className="sticky top-8 z-50 border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur-xl">
+            {/* Near-opaque instead of blurred: a sticky blur layer forces the phone
+                to re-composite what is behind it on every scroll frame. */}
+            <nav className="sticky top-8 z-50 border-b border-white/10 bg-[#0A0A0A]/[0.98]">
                 <div className="mx-auto max-w-7xl px-4 md:px-6">
                     <div className="flex min-h-14 items-center gap-3 py-2 md:min-h-20 md:py-3">
                         {/* On filterable pages the Filters button replaces the logo on mobile. */}
@@ -229,7 +232,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                                 className={`${iconButtonClass} ${showInlineSearch ? 'md:hidden' : ''}`}
                                 aria-label="Search"
                             >
-                                <img src="/images/icons/search.png" alt="" className="h-5 w-5 opacity-90" />
+                                <img src={getShopifySizedImage('/images/icons/search.png', 64)} alt="" width={20} height={20} decoding="async" className="h-5 w-5 opacity-90" />
                             </button>
 
                             <button
@@ -238,7 +241,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                                 className={iconButtonClass}
                                 aria-label="Cart"
                             >
-                                <img src="/images/icons/shopping_bag.png" alt="" className="h-5 w-5 opacity-90" />
+                                <img src={getShopifySizedImage('/images/icons/shopping_bag.png', 64)} alt="" width={20} height={20} decoding="async" className="h-5 w-5 opacity-90" />
                                 {itemCount > 0 ? (
                                     <motion.span
                                         initial={{ scale: 0 }}
@@ -278,7 +281,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                         >
                             <div className="mx-auto max-w-2xl">
                                 <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 focus-within:border-white/25">
-                                    <img src="/images/icons/search.png" alt="" className="h-4 w-4 shrink-0 opacity-65" />
+                                    <img src={getShopifySizedImage('/images/icons/search.png', 64)} alt="" width={20} height={20} decoding="async" className="h-4 w-4 shrink-0 opacity-65" />
                                     <input
                                         ref={searchInputRef}
                                         type="search"
@@ -318,7 +321,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                                                 onClick={() => handleSearchSubmit(suggestion.keyword)}
                                                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
                                             >
-                                                <img src="/images/icons/search.png" alt="" className="h-3.5 w-3.5 opacity-40" />
+                                                <img src={getShopifySizedImage('/images/icons/search.png', 64)} alt="" width={20} height={20} decoding="async" className="h-3.5 w-3.5 opacity-40" />
                                                 {suggestion.keyword}
                                             </button>
                                         ))}
@@ -333,7 +336,7 @@ const CatalogNavbar: React.FC<CatalogNavbarProps> = ({
                                                 onClick={() => handleSearchSubmit(recent)}
                                                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/5 hover:text-white"
                                             >
-                                                <img src="/images/icons/search.png" alt="" className="h-3.5 w-3.5 opacity-40" />
+                                                <img src={getShopifySizedImage('/images/icons/search.png', 64)} alt="" width={20} height={20} decoding="async" className="h-3.5 w-3.5 opacity-40" />
                                                 {recent}
                                             </button>
                                         ))}

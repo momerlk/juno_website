@@ -5,7 +5,6 @@ import { useInView } from 'react-intersection-observer';
 import {
     ArrowLeft,
     Check,
-    ChevronLeft,
     ChevronRight,
     Minus,
     Plus,
@@ -16,26 +15,27 @@ import {
     Truck,
     RotateCcw,
     ShieldCheck,
-    ZoomIn,
     Zap,
 } from 'lucide-react';
-import { Catalog, Sizing, type CatalogProduct, type ProductReview, type ProductSizing, type ProductVariant } from '../../api/api';
+import { Catalog, Sizing, type CatalogProduct, type ProductSizing, type ProductVariant } from '../../api/api';
 import { Funnel } from '../../api/analyticsApi';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useFunnelAnalytics';
 import CatalogNavbar from './CatalogNavbar';
 // Most shoppers never open it, so it leaves the product route's chunk.
 const SizeGuideModal = React.lazy(() => import('./SizeGuideModal'));
-import EditorialProductCard from '../shared/editorial/EditorialProductCard';
+import ProductGallery from './ProductGallery';
+import ProductReviewsSection from './ProductReviewsSection';
+import RelatedProductsSection from './RelatedProductsSection';
 import { toTikTokProductContent, trackTikTokViewContent } from '../../utils/tiktokPixel';
-import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
+import { getShopifySizedImage } from '../../utils/shopifyImage';
+import { takeProductPrefetch } from '../../utils/productPrefetch';
+import { runWhenIdle } from '../../utils/runWhenIdle';
 
 const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
 
 const DEFAULT_DELIVERY_DAYS = 7;
-// Roughly what fits in the desktop thumbnail rail; the rest load as it scrolls.
-const THUMBNAILS_LOADED_UPFRONT = 4;
 // Platform policy copy. Update these two in one place when the policy changes.
 const RETURN_WINDOW_DAYS = 7;
 const SALE_LABEL = 'Azaadi Sale';
@@ -128,21 +128,6 @@ const ProductSkeleton: React.FC = () => (
     </div>
 );
 
-const ReviewCard: React.FC<{ review: ProductReview }> = ({ review }) => (
-    <div className="rounded-2xl border border-white/[0.09] bg-white/[0.025] p-4">
-        <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                    key={star}
-                    size={13}
-                    className={star <= Math.round(review.rating) ? 'fill-amber-300 text-amber-300' : 'text-white/15'}
-                />
-            ))}
-        </div>
-        <p className="mt-2 text-[12px] font-bold text-white">{review.reviewer_name || 'Anonymous'}</p>
-        {review.comment ? <p className="mt-2 text-[14px] leading-6 text-white/70">{review.comment}</p> : null}
-    </div>
-);
 
 // Below-the-fold sections fetch a screen early: soon enough that the data is
 // there on arrival, late enough that first paint never pays for it.
@@ -152,8 +137,6 @@ const CatalogProductPage: React.FC = () => {
     const { productId, genderOrId } = useParams<{ productId?: string; genderOrId?: string }>();
     const actualProductId = productId || genderOrId || '';
     const [product, setProduct] = useState<CatalogProduct | null>(null);
-    const [relatedProducts, setRelatedProducts] = useState<CatalogProduct[]>([]);
-    const [selectedImageIdx, setSelectedImageIdx] = useState(0);
     const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
     const [quantity, setQuantity] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
@@ -162,28 +145,14 @@ const CatalogProductPage: React.FC = () => {
     const [isBuyingNow, setIsBuyingNow] = useState(false);
     const [showAddedFeedback, setShowAddedFeedback] = useState(false);
     const [showSizeGuide, setShowSizeGuide] = useState(false);
-    const [showImageLightbox, setShowImageLightbox] = useState(false);
+    const [sizeGuideView, setSizeGuideView] = useState<'quiz' | 'chart'>('quiz');
     const [shareCopied, setShareCopied] = useState(false);
     const [sizeError, setSizeError] = useState(false);
-    // Furthest slide the customer has reached; nothing past it is requested.
-    const [maxSlideLoaded, setMaxSlideLoaded] = useState(1);
-    const [reviews, setReviews] = useState<ProductReview[]>([]);
-    const [reviewTotalCount, setReviewTotalCount] = useState<number | null>(null);
-    const [reviewsLoaded, setReviewsLoaded] = useState(false);
-    const [showReviewsModal, setShowReviewsModal] = useState(false);
-    const [modalReviews, setModalReviews] = useState<ProductReview[]>([]);
-    const [modalReviewPage, setModalReviewPage] = useState(0);
-    const [isLoadingMoreReviews, setIsLoadingMoreReviews] = useState(false);
     const sizeSectionRef = useRef<HTMLDivElement>(null);
-    const galleryScrollFrame = useRef(0);
     const [sizing, setSizing] = useState<ProductSizing | null>(null);
-    const [imageAspectRatios, setImageAspectRatios] = useState<Record<string, number>>({});
-    const imageTouchStartXRef = useRef<number | null>(null);
     const unavailableShownRef = useRef<string | null>(null);
     const { addItem, setCartOpen } = useGuestCart();
     const navigate = useNavigate();
-    const { ref: reviewsAnchorRef, inView: reviewsNear } = useInView(NEAR_VIEWPORT);
-    const { ref: relatedAnchorRef, inView: relatedNear } = useInView(NEAR_VIEWPORT);
     const { ref: sizingAnchorRef, inView: sizingNear } = useInView(NEAR_VIEWPORT);
 
     useTrackProductView(actualProductId);
@@ -202,7 +171,9 @@ const CatalogProductPage: React.FC = () => {
             setError(null);
 
             try {
-                const productResponse = await Catalog.getProduct(actualProductId);
+                // Already in flight since the entry module on a cold product visit.
+                const productResponse =
+                    (await takeProductPrefetch(actualProductId)) ?? (await Catalog.getProduct(actualProductId));
                 if (cancelled) return;
 
                 if (!productResponse.ok) {
@@ -222,7 +193,6 @@ const CatalogProductPage: React.FC = () => {
                     variants[0];
 
                 setProduct(nextProduct);
-                setSelectedImageIdx(0);
                 setSelectedOptions(Object.fromEntries(
                     Object.entries(defaultVariant?.options ?? {}).filter(([name]) => !name.toLowerCase().includes('size'))
                 ));
@@ -243,54 +213,16 @@ const CatalogProductPage: React.FC = () => {
         };
     }, [actualProductId]);
 
-    // Reset separately from the fetch: the fetch now waits for the section to
-    // approach the viewport, so it must not drag the reset along with it.
-    useEffect(() => {
-        setReviews([]);
-        setReviewTotalCount(null);
-        setReviewsLoaded(false);
-        setShowReviewsModal(false);
-        setModalReviews([]);
-        setModalReviewPage(0);
-        setRelatedProducts([]);
-        setSizing(null);
-    }, [actualProductId]);
-
-    useEffect(() => {
-        let cancelled = false;
-        if (!actualProductId || !reviewsNear) return undefined;
-        void Catalog.getProductReviews(actualProductId).then((response) => {
-            if (!cancelled) {
-                if (response.ok) {
-                    setReviews(asArray(response.body.reviews));
-                    setReviewTotalCount(response.body.total_count);
-                }
-                setReviewsLoaded(true);
-            }
-        }).catch(() => {
-            if (!cancelled) setReviewsLoaded(true);
-        });
-        return () => { cancelled = true; };
-    }, [actualProductId, reviewsNear]);
-
-    useEffect(() => {
-        let cancelled = false;
-        if (!actualProductId || !relatedNear) return undefined;
-        void Catalog.getRelatedProducts(actualProductId, 4).then((response) => {
-            if (!cancelled && response.ok) setRelatedProducts(asArray(response.body).slice(0, 4));
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [actualProductId, relatedNear]);
-
     useEffect(() => {
         let cancelled = false;
         if (!actualProductId || !sizingNear) return undefined;
         // Sizing is optional. The product stays fully purchasable without it.
         void Sizing.getProductSizing(actualProductId)
-            .then((response) => { if (!cancelled && response.ok) setSizing(response.body); })
+            .then((response) => {
+                if (cancelled || !response.ok) return;
+                const next = response.body;
+                runWhenIdle(() => { if (!cancelled) setSizing(next); });
+            })
             .catch(() => undefined);
         return () => { cancelled = true; };
     }, [actualProductId, sizingNear]);
@@ -333,9 +265,10 @@ const CatalogProductPage: React.FC = () => {
         const variantImage = selectedVariant?.image_url;
         return variantImage ? [variantImage, ...productImages.filter((image) => image !== variantImage)] : productImages;
     }, [product?.images, selectedVariant?.image_url]);
-    const currentImage = imageGallery[selectedImageIdx] || '/images/misc/juno_app_icon.png';
-    const currentImageAspectRatio = imageAspectRatios[currentImage];
-    const useContainedMainImage = typeof currentImageAspectRatio === 'number' && currentImageAspectRatio > 0.95;
+    // Written by the gallery on every slide change. A ref, not state: the cart
+    // payload needs the current image, the rest of this page does not.
+    const currentImageRef = useRef<string>(imageGallery[0] ?? '/images/misc/juno_app_icon.png');
+    const handleGalleryImageChange = useCallback((url: string) => { currentImageRef.current = url; }, []);
     const variants = asArray(product?.variants);
     const maxAvailableQuantity = getVariantAvailableQuantity(selectedVariant, product);
     const requiresSizeSelection = asArray(product?.options).some((option) => option.name.toLowerCase().includes('size'));
@@ -358,7 +291,6 @@ const CatalogProductPage: React.FC = () => {
     const sourceSizingGuide = getSourceSizingGuide(product?.sizing_guide ?? product?.enrichment?.sizing_guide);
     const hasOriginalSizingGuide = Boolean(sourceSizingGuide?.image_url || sourceSizingGuide?.html_table);
     const hasSizingGuide = hasApprovedSizing || hasOriginalSizingGuide;
-    const mainImage = getResponsiveShopifyImageSet(currentImage, [480, 720, 960, 1280, 1600]);
 
     // Laam-style spec table. Everything here comes from enrichment metadata, so a
     // product with no metadata simply renders no rows instead of empty labels.
@@ -375,27 +307,14 @@ const CatalogProductPage: React.FC = () => {
         ] as [string, string][]).filter(([, value]) => Boolean(value));
     }, [product?.metadata, product?.product_type]);
 
-    const reviewCount = reviewTotalCount ?? product?.review_count ?? 0;
+    const reviewCount = product?.review_count ?? 0;
     const ratingDistribution = product?.rating_distribution;
 
-    const loadModalReviews = useCallback(async (page: number) => {
-        if (!actualProductId || isLoadingMoreReviews) return;
-        setIsLoadingMoreReviews(true);
-        try {
-            const response = await Catalog.getProductReviews(actualProductId, { page, limit: 20 });
-            if (!response.ok) return;
-            setModalReviews((current) => page === 1 ? response.body.reviews : [...current, ...response.body.reviews]);
-            setModalReviewPage(page);
-            setReviewTotalCount(response.body.total_count);
-        } finally {
-            setIsLoadingMoreReviews(false);
-        }
-    }, [actualProductId, isLoadingMoreReviews]);
-
-    const openReviewsModal = useCallback(() => {
-        setShowReviewsModal(true);
-        void loadModalReviews(1);
-    }, [loadModalReviews]);
+    const openSizeGuide = useCallback((view: 'quiz' | 'chart') => {
+        Funnel.trackSubEvent('view_item', 'size_guide_opened', undefined, { product_id: product?.id });
+        setSizeGuideView(view);
+        setShowSizeGuide(true);
+    }, [product?.id]);
 
     const scrollToSize = useCallback(() => {
         sizeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -426,15 +345,6 @@ const CatalogProductPage: React.FC = () => {
         Funnel.trackSubEvent('view_item', 'unavailable_shown', detail, { product_id: product.id });
     }, [isAvailable, product, selectedVariant?.available, selectedVariant?.id]);
 
-    const selectRecommendedSize = useCallback((size: string) => {
-        const sizeOption = asArray(product?.options).find((option) => option.name.toLowerCase().includes('size'));
-        if (sizeOption && asArray(sizeOption.values).includes(size)) {
-            Funnel.trackSubEvent('view_item', 'variant_selected', undefined, { product_id: product?.id });
-            setSizeError(false);
-            setSelectedOptions((current) => ({ ...current, [sizeOption.name]: size }));
-        }
-    }, [product?.id, product?.options]);
-
     useEffect(() => {
         if (typeof maxAvailableQuantity === 'number' && maxAvailableQuantity > 0 && quantity > maxAvailableQuantity) {
             setQuantity(maxAvailableQuantity);
@@ -447,42 +357,63 @@ const CatalogProductPage: React.FC = () => {
         return () => window.clearTimeout(timer);
     }, [showAddedFeedback]);
 
-    useEffect(() => {
-        setSelectedImageIdx(0);
-        setMaxSlideLoaded(1);
-    }, [selectedVariant?.image_url]);
 
-    useEffect(() => () => {
-        if (galleryScrollFrame.current) window.cancelAnimationFrame(galleryScrollFrame.current);
-    }, []);
 
-    useEffect(() => {
-        if (!showImageLightbox) return;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setShowImageLightbox(false);
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [showImageLightbox]);
 
-    useEffect(() => {
-        if (imageGallery.length === 0) {
-            if (selectedImageIdx !== 0) setSelectedImageIdx(0);
+
+
+    // One place that knows how a variant becomes a cart line, so the size guide
+    // and the main button cannot drift apart on payload or on analytics.
+    const addVariantToCart = useCallback((variant: ProductVariant, qty: number) => {
+        if (!product) return;
+        addItem(product.id, variant.id, qty, currentPrice, {
+            seller_name: product.seller_name,
+            product_title: product.title,
+            variant_title: variant.title,
+            variant_options: variant.options,
+            image_url: variant.image_url || variant.images?.[0] || currentImageRef.current,
+            max_quantity: getVariantAvailableQuantity(variant, product),
+            is_available: true,
+            free_shipping: !!product.shipping_details?.free_shipping,
+            delivery_days: product.shipping_details?.estimated_delivery_days || DEFAULT_DELIVERY_DAYS,
+            source: 'catalog',
+        });
+        // addItem already emits the add_to_cart funnel event, so nothing more here.
+        setShowAddedFeedback(true);
+        setCartOpen(true);
+    }, [addItem, currentPrice, product, setCartOpen]);
+
+    // A size chosen in the size guide is a decision, not a preference: select the
+    // variant and put it straight in the bag.
+    const handleUseSizeFromGuide = useCallback((size: string, source: 'quiz' | 'chart') => {
+        if (!product) return;
+        const guideEvent = source === 'quiz' ? 'size_quiz_added' : 'size_chart_added';
+        Funnel.trackSubEvent('add_to_cart', guideEvent, undefined, { product_id: product.id });
+        const sizeOption = asArray(product.options).find((option) => option.name.toLowerCase().includes('size'));
+        const isOfferedSize = Boolean(sizeOption && asArray(sizeOption.values).includes(size));
+        const nextOptions = sizeOption && isOfferedSize
+            ? { ...selectedOptions, [sizeOption.name]: size }
+            : selectedOptions;
+        const variant = asArray(product.variants).find((candidate) =>
+            Object.entries(nextOptions).every(([name, value]) => candidate.options?.[name] === value)
+        );
+
+        setShowSizeGuide(false);
+        // The chart can list a size this product never stocked, or one that just
+        // sold out. Land the shopper on the picker instead of failing silently.
+        if (!isOfferedSize || !variant || !isPurchasableVariant(variant, product)) {
+            Funnel.trackSubEvent('add_to_cart', 'blocked', isOfferedSize ? 'out_of_stock' : 'variant_unavailable', { product_id: product.id });
+            if (isOfferedSize && sizeOption) setSelectedOptions(nextOptions);
+            setSizeError(!isOfferedSize);
+            scrollToSize();
             return;
         }
-        if (selectedImageIdx >= imageGallery.length) {
-            setSelectedImageIdx(0);
-        }
-    }, [imageGallery.length, selectedImageIdx]);
 
-    const captureImageAspectRatio = useCallback((src: string, width: number, height: number) => {
-        if (!src || width <= 0 || height <= 0) return;
-        const ratio = width / height;
-        setImageAspectRatios((prev) => {
-            if (prev[src] === ratio) return prev;
-            return { ...prev, [src]: ratio };
-        });
-    }, []);
+        Funnel.trackSubEvent('view_item', 'variant_selected', undefined, { product_id: product.id });
+        setSelectedOptions(nextOptions);
+        setSizeError(false);
+        addVariantToCart(variant, quantity);
+    }, [addVariantToCart, product, quantity, selectedOptions]);
 
     const handleAddToCart = useCallback(() => {
         if (product) Funnel.trackSubEvent('add_to_cart', 'clicked', undefined, { product_id: product.id });
@@ -504,32 +435,16 @@ const CatalogProductPage: React.FC = () => {
         }
 
         setIsAdding(true);
-        addItem(product.id, selectedVariant.id, quantity, currentPrice, {
-            seller_name: product.seller_name,
-            product_title: product.title,
-            variant_title: selectedVariant.title,
-            variant_options: selectedVariant.options,
-            image_url: selectedVariant.image_url || selectedVariant.images?.[0] || currentImage,
-            max_quantity: maxAvailableQuantity,
-            is_available: canPurchase,
-            free_shipping: !!product.shipping_details?.free_shipping,
-            delivery_days: product.shipping_details?.estimated_delivery_days || DEFAULT_DELIVERY_DAYS,
-            source: 'catalog',
-        });
-        setShowAddedFeedback(true);
+        addVariantToCart(selectedVariant, quantity);
         setIsAdding(false);
-        setCartOpen(true);
     }, [
-        addItem,
+        addVariantToCart,
         canPurchase,
-        currentPrice,
-        currentImage,
         maxAvailableQuantity,
         product,
         quantity,
         hasSelectedSize,
         selectedVariant,
-        setCartOpen,
     ]);
 
     const handleBuyNow = useCallback(() => {
@@ -558,7 +473,7 @@ const CatalogProductPage: React.FC = () => {
             product_title: product.title,
             variant_title: selectedVariant.title,
             variant_options: selectedVariant.options,
-            image_url: selectedVariant.image_url || selectedVariant.images?.[0] || currentImage,
+            image_url: selectedVariant.image_url || selectedVariant.images?.[0] || currentImageRef.current,
             max_quantity: maxAvailableQuantity,
             is_available: canPurchase,
         };
@@ -567,7 +482,6 @@ const CatalogProductPage: React.FC = () => {
     }, [
         canPurchase,
         currentPrice,
-        currentImage,
         maxAvailableQuantity,
         navigate,
         product,
@@ -575,15 +489,6 @@ const CatalogProductPage: React.FC = () => {
         selectedVariant,
         hasSelectedSize,
     ]);
-
-    const cycleImage = (dir: 1 | -1) => {
-        if (imageGallery.length < 2) return;
-        setSelectedImageIdx((current) => {
-            const next = (current + dir + imageGallery.length) % imageGallery.length;
-            setMaxSlideLoaded((frontier) => Math.max(frontier, next + 1));
-            return next;
-        });
-    };
 
     if (isLoading) {
         return <ProductSkeleton />;
@@ -695,175 +600,11 @@ const CatalogProductPage: React.FC = () => {
                 </button>
 
                 <div className="grid gap-10 xl:grid-cols-[1.1fr_0.9fr] xl:items-start xl:gap-16">
-                    <div className="min-w-0 space-y-3 xl:sticky xl:top-24">
-                        {/* Mobile: every image in one horizontal snap strip, no thumbnail row
-                            eating vertical space. Desktop keeps the main image + thumbnails. */}
-                        <div className="relative -mx-4 lg:hidden">
-                            <div
-                                onScroll={(event) => {
-                                    // Scroll fires per frame on touch devices. Read geometry once,
-                                    // then coalesce to a single rAF so a flick cannot queue dozens
-                                    // of renders of this page.
-                                    const { scrollLeft, scrollWidth } = event.currentTarget;
-                                    if (galleryScrollFrame.current) return;
-                                    galleryScrollFrame.current = window.requestAnimationFrame(() => {
-                                        galleryScrollFrame.current = 0;
-                                        const raw = Math.round(scrollLeft / (scrollWidth / Math.max(imageGallery.length, 1)));
-                                        const index = Math.min(Math.max(raw, 0), Math.max(imageGallery.length - 1, 0));
-                                        setSelectedImageIdx(index);
-                                        setMaxSlideLoaded((current) => Math.max(current, index + 1));
-                                    });
-                                }}
-                                className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 scrollbar-none"
-                                style={{ scrollPaddingLeft: '1rem' }}
-                            >
-                                {(imageGallery.length ? imageGallery : [currentImage]).map((image, index) => {
-                                    const slide = getResponsiveShopifyImageSet(image, [480, 720, 960]);
-                                    return (
-                                        <button
-                                            key={`slide-${index}`}
-                                            type="button"
-                                            onClick={() => { setSelectedImageIdx(index); setShowImageLightbox(true); }}
-                                            aria-label={`Zoom image ${index + 1}`}
-                                            className="relative aspect-[4/5] w-[86%] shrink-0 snap-start overflow-hidden rounded-2xl bg-[#0d0d0e]"
-                                        >
-                                            {/* Slides past the scroll frontier stay unmounted, so an
-                                                eight-image product costs two requests, not eight. */}
-                                            {index <= maxSlideLoaded ? (
-                                                <img
-                                                    src={slide.src}
-                                                    srcSet={slide.srcSet}
-                                                    sizes="86vw"
-                                                    alt={`${product.title} ${index + 1}`}
-                                                    loading={index === 0 ? 'eager' : 'lazy'}
-                                                    fetchpriority={index === 0 ? 'high' : 'auto'}
-                                                    decoding="async"
-                                                    draggable={false}
-                                                    className="h-full w-full select-none object-cover"
-                                                />
-                                            ) : null}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <div className="group relative hidden w-full overflow-hidden rounded-2xl bg-[#0d0d0e] lg:block">
-                            {imageGallery.length > 1 ? (
-                                <>
-                                    <button
-                                        onClick={() => cycleImage(-1)}
-                                        className="absolute left-3 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black opacity-0 shadow-lg transition-all hover:bg-white group-hover:opacity-100 md:flex"
-                                        aria-label="Previous"
-                                    >
-                                        <ChevronLeft size={18} />
-                                    </button>
-                                    <button
-                                        onClick={() => cycleImage(1)}
-                                        className="absolute right-3 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black opacity-0 shadow-lg transition-all hover:bg-white group-hover:opacity-100 md:flex"
-                                        aria-label="Next"
-                                    >
-                                        <ChevronRight size={18} />
-                                    </button>
-                                </>
-                            ) : null}
-
-                            <div
-                                onTouchStart={(event) => {
-                                    // Ignore multi-finger gestures (pinch-zoom) so they
-                                    // don't get misread as a horizontal swipe.
-                                    imageTouchStartXRef.current =
-                                        event.touches.length === 1 ? event.touches[0]?.clientX ?? null : null;
-                                }}
-                                onTouchEnd={(event) => {
-                                    const startX = imageTouchStartXRef.current;
-                                    imageTouchStartXRef.current = null;
-                                    // Bail if the gesture ever became multi-touch (zoom).
-                                    if (startX === null || imageGallery.length < 2 || event.touches.length > 0) return;
-                                    const endX = event.changedTouches[0]?.clientX ?? startX;
-                                    const delta = endX - startX;
-                                    if (delta < -50) cycleImage(1);
-                                    else if (delta > 50) cycleImage(-1);
-                                }}
-                                style={{ touchAction: 'pan-y pinch-zoom' }}
-                                className="relative aspect-[4/5] w-full sm:aspect-[3/4]"
-                            >
-                                <img
-                                    key={currentImage}
-                                    src={mainImage.src}
-                                    srcSet={mainImage.srcSet}
-                                    sizes="(max-width: 1279px) 100vw, 55vw"
-                                    alt={`${product.title} ${selectedImageIdx + 1}`}
-                                    loading={selectedImageIdx === 0 ? 'eager' : 'lazy'}
-                                    fetchpriority={selectedImageIdx === 0 ? 'high' : 'auto'}
-                                    decoding="async"
-                                    draggable={false}
-                                    onLoad={(event) => {
-                                        const target = event.currentTarget;
-                                        captureImageAspectRatio(currentImage, target.naturalWidth, target.naturalHeight);
-                                    }}
-                                    className={`block h-full w-full select-none ${
-                                        useContainedMainImage ? 'object-contain bg-[#0a0a0b]' : 'object-cover'
-                                    }`}
-                                />
-                                <button type="button" onClick={() => setShowImageLightbox(true)} className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80" aria-label="Zoom product image">
-                                    <ZoomIn size={18} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {imageGallery.length > 1 ? (
-                            <div
-                                onScroll={(event) => {
-                                    // Same frontier idea as the mobile strip: a 20-image product
-                                    // must not fire 20 thumbnail requests on first paint.
-                                    const { scrollLeft, scrollWidth, clientWidth } = event.currentTarget;
-                                    if (galleryScrollFrame.current) return;
-                                    galleryScrollFrame.current = window.requestAnimationFrame(() => {
-                                        galleryScrollFrame.current = 0;
-                                        const perItem = scrollWidth / Math.max(imageGallery.length, 1);
-                                        const rightmost = Math.ceil((scrollLeft + clientWidth) / perItem);
-                                        setMaxSlideLoaded((frontier) => Math.max(frontier, rightmost));
-                                    });
-                                }}
-                                className="-mx-1 hidden gap-2.5 overflow-x-auto px-1 pb-2 pt-1 scrollbar-none lg:flex"
-                            >
-                                {imageGallery.map((image, index) => {
-                                    const active = selectedImageIdx === index;
-                                    const thumbnailImage = getResponsiveShopifyImageSet(image, [120, 180, 240, 320]);
-                                    const loadThumbnail = index <= Math.max(maxSlideLoaded, THUMBNAILS_LOADED_UPFRONT - 1) || active;
-                                    return (
-                                        <button
-                                            key={`thumb-${index}`}
-                                            onClick={() => {
-                                                setSelectedImageIdx(index);
-                                                setMaxSlideLoaded((frontier) => Math.max(frontier, index + 1));
-                                            }}
-                                            aria-label={`Show image ${index + 1}`}
-                                            aria-current={active ? 'true' : undefined}
-                                            className={`relative w-[82px] shrink-0 overflow-hidden rounded-xl transition-all md:w-[96px] ${
-                                                active ? 'ring-2 ring-inset ring-white' : 'opacity-55 hover:opacity-95'
-                                            }`}
-                                            >
-                                                {loadThumbnail ? (
-                                                    <img
-                                                        src={thumbnailImage.src}
-                                                        srcSet={thumbnailImage.srcSet}
-                                                        sizes="(max-width: 768px) 82px, 96px"
-                                                        alt={`View ${index + 1}`}
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        className="aspect-[3/4] w-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <span className="block aspect-[3/4] w-full bg-white/[0.06]" />
-                                                )}
-                                            </button>
-                                    );
-                                })}
-                            </div>
-                        ) : null}
-                    </div>
+                    <ProductGallery
+                        images={imageGallery}
+                        title={product.title}
+                        onImageChange={handleGalleryImageChange}
+                    />
 
                     <div className="flex min-w-0 flex-col gap-6">
                         <div>
@@ -917,7 +658,7 @@ const CatalogProductPage: React.FC = () => {
                                     aria-label="Share this product"
                                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)] transition-all hover:scale-105 hover:border-white/30 hover:bg-white/[0.1]"
                                 >
-                                    <img src="/images/icons/share.png" alt="" className="h-full w-full object-contain" />
+                                    <img src={getShopifySizedImage('/images/icons/share.png', 64)} alt="" width={20} height={20} decoding="async" className="h-full w-full object-contain" />
                                 </button>
                             </div>
                             {shareCopied ? <p className="mt-1 text-right text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-400">Link copied</p> : null}
@@ -951,7 +692,19 @@ const CatalogProductPage: React.FC = () => {
                                 href={product.seller_id ? `/catalog?seller_id=${encodeURIComponent(product.seller_id)}` : '/catalog'}
                                 className="mt-3 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/45 transition-colors hover:text-white"
                             >
-                                {product.seller_logo ? <img src={product.seller_logo} alt="" className="h-5 w-5 rounded-full object-cover" /> : null}
+                                {/* Seller logos are uploaded at full size: a 2000px PNG decoded
+                                    for a 20px slot is a dropped frame on the way past the price. */}
+                                {product.seller_logo ? (
+                                    <img
+                                        src={getShopifySizedImage(product.seller_logo, 64)}
+                                        alt=""
+                                        width={20}
+                                        height={20}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="h-5 w-5 rounded-full object-cover"
+                                    />
+                                ) : null}
                                 by <span className="text-white/80">{product.seller_name || 'Juno Label'}</span><span aria-hidden="true">→</span>
                             </a>
 
@@ -979,31 +732,30 @@ const CatalogProductPage: React.FC = () => {
                                             {option.name.toLowerCase().includes('size') && hasSizingGuide ? (
                                                 <button
                                                     type="button"
-                                                    onClick={() => { Funnel.trackSubEvent('view_item', 'size_guide_opened', undefined, { product_id: product.id }); setShowSizeGuide(true); }}
-                                                    className="shrink-0 text-[11px] font-bold text-white/70 underline underline-offset-4 transition-colors hover:text-white"
+                                                    onClick={() => openSizeGuide('chart')}
+                                                    className="shrink-0 rounded text-[11px] font-bold text-white/70 underline underline-offset-4 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-4 focus-visible:ring-offset-[#050505]"
                                                 >
                                                     Size chart
                                                 </button>
                                             ) : null}
                                         </div>
-                                        {/* The quiz is Juno's edge over a static chart, so it sits
-                                            above the size buttons, before the guess happens. */}
+                                        {/* Offered before the guess happens, but quieter than the
+                                            size buttons themselves: this is the way out of a
+                                            decision, not the decision. */}
                                         {option.name.toLowerCase().includes('size') && hasApprovedSizing ? (
                                             <button
-                                                onClick={() => { Funnel.trackSubEvent('view_item', 'size_guide_opened', undefined, { product_id: product.id }); setShowSizeGuide(true); }}
-                                                className="group mb-3 flex w-full items-center gap-3 rounded-2xl border border-primary/45 bg-gradient-to-r from-primary/20 to-secondary/12 p-4 text-left transition-all hover:border-primary/70 hover:from-primary/25 hover:to-secondary/18"
+                                                type="button"
+                                                onClick={() => openSizeGuide('quiz')}
+                                                className="group mb-3 flex w-full items-center gap-3.5 rounded-2xl bg-white/[0.11] px-4 py-4 text-left transition-colors hover:bg-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
                                             >
-                                                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary text-white shadow-[0_8px_22px_rgba(220,10,40,0.3)]">
-                                                    <Ruler size={18} />
+                                                <Ruler size={19} className="shrink-0 text-primary" />
+                                                <span className="min-w-0 flex-1 text-[15px] font-black tracking-[-0.015em] text-white">
+                                                    Not sure? Find your size
                                                 </span>
-                                                <span className="min-w-0 flex-1">
-                                                    <span className="flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-white">
-                                                        Take the size quiz
-                                                        <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[8px] tracking-[0.1em]">AI</span>
-                                                    </span>
-                                                    <span className="mt-0.5 block text-[11px] text-white/60">{quizQuestionCount ? `${quizQuestionCount} quick questions` : 'A few quick questions'} and we pick your size in this brand</span>
+                                                <span className="shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white/85">
+                                                    {quizQuestionCount ? `${quizQuestionCount} taps` : 'Quick'}
                                                 </span>
-                                                <ChevronRight size={17} className="text-white/45 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
+                                                <ChevronRight size={18} className="shrink-0 text-white/50 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
                                             </button>
                                         ) : null}
 
@@ -1133,7 +885,7 @@ const CatalogProductPage: React.FC = () => {
                                     <Zap size={18} className="fill-white" />
                                     {isBuyingNow ? 'Going to checkout...' : `Buy now · ${formatCurrency(currentPrice * quantity)}`}
                                 </span>
-                                <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-[shimmer_2.8s_ease-in-out_infinite]" />
+                                <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-[shimmer_2.8s_ease-in-out_infinite] motion-reduce:animate-none" />
                             </motion.button>
 
                             <motion.button
@@ -1222,62 +974,13 @@ const CatalogProductPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div ref={reviewsAnchorRef}>
-                        {rating || reviewCount ? (
-                            <div id="ratings" className="scroll-mt-24 border-t border-white/[0.08] pt-6">
-                                <h2 className="text-lg font-black uppercase tracking-[-0.02em] text-white md:text-xl">Ratings and reviews</h2>
-                                <div className="mt-4 flex items-start gap-5">
-                                    <div className="shrink-0 text-center">
-                                        <p className="flex items-baseline gap-1 text-4xl font-black text-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-                                            {(rating ?? 0).toFixed(1)}
-                                            <Star size={18} className="fill-amber-300 text-amber-300" />
-                                        </p>
-                                        <p className="mt-1 text-[11px] text-white/40">
-                                            {new Intl.NumberFormat("en-PK").format(reviewCount)} ratings
-                                        </p>
-                                    </div>
-                                    <div className="min-w-0 flex-1 space-y-1">
-                                        {[5, 4, 3, 2, 1].map((star) => {
-                                            const count = ratingDistribution?.[String(star)] ?? 0;
-                                            const width = reviewCount ? (count / reviewCount) * 100 : 0;
-                                            return (
-                                                <div key={star} className="flex items-center gap-2">
-                                                    <span className="w-3 text-right text-[11px] font-semibold text-white/50">{star}</span>
-                                                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
-                                                        <span className="block h-full rounded-full bg-gradient-to-r from-primary to-secondary" style={{ width: `${width}%` }} />
-                                                    </span>
-                                                    <span className="w-6 text-[11px] text-white/35">{count}</span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
 
-                                {!reviewsLoaded ? (
-                                    <div className="mt-5 space-y-3" aria-label="Loading reviews">
-                                        {[0, 1, 2].map((index) => (
-                                            <div key={index} className="h-24 animate-pulse rounded-2xl bg-white/[0.05]" />
-                                        ))}
-                                    </div>
-                                ) : reviews.length ? (
-                                    <div className="mt-5 space-y-3">
-                                        {reviews.map((review) => <ReviewCard key={review.id} review={review} />)}
-                                        {reviewCount > reviews.length ? (
-                                            <button
-                                                type="button"
-                                                onClick={openReviewsModal}
-                                                className="w-full rounded-2xl border border-white/15 bg-white/[0.03] py-3 text-[13px] font-bold text-white transition-colors hover:border-white/30 hover:bg-white/[0.06]"
-                                            >
-                                                Read all {new Intl.NumberFormat("en-PK").format(reviewCount)} reviews
-                                            </button>
-                                        ) : null}
-                                    </div>
-                                ) : (
-                                    <p className="mt-4 text-[13px] text-white/45">No written reviews for this piece yet.</p>
-                                )}
-                            </div>
-                        ) : null}
-                        </div>
+                        <ProductReviewsSection
+                            productId={product.id}
+                            rating={rating}
+                            reviewCount={reviewCount}
+                            ratingDistribution={ratingDistribution}
+                        />
 
                         {asArray(product.tags).length > 0 ? (
                             <div className="flex flex-wrap gap-1.5">
@@ -1294,38 +997,19 @@ const CatalogProductPage: React.FC = () => {
                     </div>
                 </div>
 
-                <div ref={relatedAnchorRef}>
-                {relatedProducts.length > 0 ? (
-                    <section className="mt-16 border-t border-white/[0.08] pt-10 md:mt-24 md:pt-14">
-                        <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-white/35">Keep exploring</p>
-                        <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.04em] text-white md:text-3xl">Similar pieces</h2>
-                        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
-                            {relatedProducts.map((related, index) => (
-                                <EditorialProductCard
-                                    key={related.id}
-                                    title={related.title}
-                                    sellerName={related.seller_name}
-                                    images={related.images}
-                                    badges={related.badges}
-                                    pricing={related.pricing}
-                                    inventory={related.inventory}
-                                    index={index}
-                                    to={`/catalog/${related.id}`}
-                                />
-                            ))}
-                        </div>
-                    </section>
-                ) : null}
-                </div>
+                <RelatedProductsSection productId={product.id} />
             </div>
 
+            {/* No backdrop blur on this bar: at 98% opacity it is invisible anyway,
+                and blurring behind a fixed element makes the phone re-composite the
+                viewport on every scroll frame. */}
             <AnimatePresence>
                 <motion.div
                     initial={{ y: '100%' }}
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
                     transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-                    className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#050505]/96 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_40px_rgba(0,0,0,0.8)] backdrop-blur-2xl lg:hidden"
+                    className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#050505]/[0.98] px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_40px_rgba(0,0,0,0.8)] lg:hidden"
                 >
                     {inStock ? (
                     <>
@@ -1368,7 +1052,7 @@ const CatalogProductPage: React.FC = () => {
                             >
                                 <ShoppingBag size={16} />
                                 {isAdding ? 'Adding…' : 'Add to bag'}
-                                <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-[shimmer_2.8s_ease-in-out_infinite]" />
+                                <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)] animate-[shimmer_2.8s_ease-in-out_infinite] motion-reduce:animate-none" />
                             </motion.button>
                         </div>
                     </>
@@ -1387,66 +1071,14 @@ const CatalogProductPage: React.FC = () => {
                         onClose={() => setShowSizeGuide(false)}
                         productId={product.id}
                         sizing={sizing}
+                        initialView={sizeGuideView}
                         sourceGuide={sourceSizingGuide}
                         selectedSize={Object.entries(selectedOptions).find(([name]) => name.toLowerCase().includes('size'))?.[1]}
-                        onSelectSize={selectRecommendedSize}
+                        onUseSize={handleUseSizeFromGuide}
                     />
                 </React.Suspense>
             ) : null}
 
-            <AnimatePresence>
-                {showImageLightbox ? (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal="true" aria-label="Product image zoom" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4" onClick={() => setShowImageLightbox(false)}>
-                        {/* Bounded width, not the raw original. Seller uploads run several
-                            MB; decoding one full-size on a low-RAM Android kills the tab. */}
-                        <img src={getResponsiveShopifyImageSet(currentImage, [1080, 1440]).src} alt={`${product.title} enlarged`} decoding="async" className="max-h-full max-w-full object-contain" onClick={(event) => event.stopPropagation()} />
-                        <button type="button" className="absolute right-5 top-5 rounded-full border border-white/20 px-4 py-2 text-xs font-bold text-white" onClick={() => setShowImageLightbox(false)}>Close</button>
-                    </motion.div>
-                ) : null}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {showReviewsModal ? (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="All reviews"
-                        className="fixed inset-0 z-[70] flex items-end bg-black/75 p-4 backdrop-blur-sm sm:items-center sm:justify-center"
-                        onClick={() => setShowReviewsModal(false)}
-                    >
-                        <motion.div
-                            initial={{ y: 24 }}
-                            animate={{ y: 0 }}
-                            exit={{ y: 24 }}
-                            className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0a0a0b] p-5 shadow-2xl"
-                            onClick={(event) => event.stopPropagation()}
-                        >
-                            <div className="mb-5 flex items-center justify-between gap-4">
-                                <h2 className="text-lg font-black uppercase tracking-[-0.02em] text-white">All reviews</h2>
-                                <button type="button" onClick={() => setShowReviewsModal(false)} className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/[0.06]">Close</button>
-                            </div>
-                            {isLoadingMoreReviews && modalReviews.length === 0 ? (
-                                <p className="text-sm text-white/50">Loading reviews…</p>
-                            ) : (
-                                <div className="space-y-3">{modalReviews.map((review) => <ReviewCard key={review.id} review={review} />)}</div>
-                            )}
-                            {modalReviews.length < reviewCount ? (
-                                <button
-                                    type="button"
-                                    onClick={() => void loadModalReviews(modalReviewPage + 1)}
-                                    disabled={isLoadingMoreReviews}
-                                    className="mt-4 w-full rounded-2xl border border-white/15 bg-white/[0.03] py-3 text-[13px] font-bold text-white transition-colors hover:border-white/30 hover:bg-white/[0.06] disabled:opacity-50"
-                                >
-                                    {isLoadingMoreReviews ? 'Loading…' : 'Load more reviews'}
-                                </button>
-                            ) : null}
-                        </motion.div>
-                    </motion.div>
-                ) : null}
-            </AnimatePresence>
 
             <style>{`
                 @keyframes shimmer {
