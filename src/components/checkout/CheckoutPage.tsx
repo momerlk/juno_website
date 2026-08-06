@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShoppingBag, User, Mail, CheckCircle, ChevronDown, ChevronRight, Copy, Loader2, Zap, Truck } from 'lucide-react';
-import CitySelectModal from './CitySelectModal';
+import { User, Mail, CheckCircle, ChevronDown, Copy, Loader2, Zap, Truck } from 'lucide-react';
+import { getShopifySizedImage } from '../../utils/shopifyImage';
+import CheckoutSummaryItems from './CheckoutSummaryItems';
+import CheckoutTextField from './CheckoutTextField';
+import CityField from './CityField';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Commerce, GuestCommerce } from '../../api/commerceApi';
 import { uploadFileAndGetUrl } from '../../api/shared';
@@ -100,7 +103,6 @@ const CheckoutPage: React.FC = () => {
     const [paymentProofUrl, setPaymentProofUrl] = useState('');
     const [isUploadingProof, setIsUploadingProof] = useState(false);
     const [copiedBankDetail, setCopiedBankDetail] = useState<string | null>(null);
-    const [showCityModal, setShowCityModal] = useState(false);
     const [isSummaryOpen, setIsSummaryOpen] = useState(true);
     const hasTrackedInitiateCheckout = React.useRef(false);
     const hasTrackedFormStart = React.useRef(false);
@@ -333,6 +335,14 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
+    // Stable identities so the memoised city picker is not re-rendered (or reset)
+    // by unrelated checkout state such as the draft autosave.
+    const updateFieldRef = useRef(updateField);
+    updateFieldRef.current = updateField;
+    const selectCity = React.useCallback((city: string) => {
+        updateFieldRef.current('city', city);
+    }, []);
+
     const handlePaymentProofChange = async (file: File | null) => {
         setPaymentProof(file);
         setPaymentProofUrl('');
@@ -505,62 +515,7 @@ const CheckoutPage: React.FC = () => {
                                 </p>
                             </div>
 
-                            <div className={`space-y-3.5 ${isSummaryOpen ? '' : 'hidden'}`}>
-                                {checkoutItems.map((item, index) => (
-                                    <motion.div
-                                        key={`${item.product_id || 'product'}-${item.variant_id || 'variant'}-${index}`}
-                                        initial={{ opacity: 0, x: -8 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.1 + index * 0.04 }}
-                                        className="flex gap-4"
-                                    >
-                                        <div className="h-20 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/[0.08] bg-white/5">
-                                            {item.image_url ? (
-                                                <img
-                                                    src={item.image_url}
-                                                    alt={item.product_title || 'Product'}
-                                                    className="h-full w-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="flex h-full w-full items-center justify-center">
-                                                    <ShoppingBag size={18} className="text-white/20" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[14px] text-white/45">
-                                                {item.seller_name || 'Juno Label'}
-                                            </p>
-                                            <h3
-                                                className="mt-1 line-clamp-1 text-white uppercase"
-                                                style={{
-                                                    fontFamily: 'Montserrat, sans-serif',
-                                                    fontWeight: 800,
-                                                    fontSize: '1rem',
-                                                    letterSpacing: '-0.03em',
-                                                }}
-                                            >
-                                                {item.product_title || 'Product'}
-                                            </h3>
-                                            {item.variant_title && (
-                                                <p className="mt-1 text-[14px] text-white/55">{item.variant_title}</p>
-                                            )}
-                                            <p className="mt-1 text-[14px] text-white/40">Qty · {item.quantity}</p>
-                                        </div>
-                                        <p
-                                            className="text-white shrink-0"
-                                            style={{
-                                                fontFamily: 'Montserrat, sans-serif',
-                                                fontWeight: 900,
-                                                fontSize: '1rem',
-                                                letterSpacing: '-0.03em',
-                                            }}
-                                        >
-                                            {formatCurrency(item.price * item.quantity)}
-                                        </p>
-                                    </motion.div>
-                                ))}
-                            </div>
+                            <CheckoutSummaryItems items={checkoutItems} hidden={!isSummaryOpen} />
 
                             {/* Breakdown — visible on mobile too */}
                             <div className="mt-5 border-t border-white/[0.08] pt-4 space-y-2.5 lg:hidden">
@@ -635,10 +590,10 @@ const CheckoutPage: React.FC = () => {
                                     error={errors.full_name}
                                     icon={<User size={16} className="text-white/40" />}
                                 >
-                                    <input
+                                    <CheckoutTextField
                                         type="text"
                                         value={formData.full_name}
-                                        onChange={(e) => updateField('full_name', e.target.value)}
+                                        onCommit={(next) => updateField('full_name', next)}
                                         className={inputClass(errors.full_name, true)}
                                         placeholder="Enter your full name"
                                         autoComplete="name"
@@ -649,14 +604,14 @@ const CheckoutPage: React.FC = () => {
                                     {/* The country code is fixed, so it is furniture, not an input. */}
                                     <div className="flex items-stretch gap-2">
                                         <span className="flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.1] bg-black/40 px-3.5 text-[16px] font-semibold text-white/80">
-                                            <img src="/images/icons/pakistan.png" alt="" className="h-5 w-5" />
+                                            <img src={getShopifySizedImage('/images/icons/pakistan.png', 64)} alt="" width={20} height={20} decoding="async" className="h-5 w-5" />
                                             +92
                                         </span>
-                                        <input
+                                        <CheckoutTextField
                                             type="tel"
                                             inputMode="tel"
                                             value={formData.phone_number}
-                                            onChange={(e) => updateField('phone_number', e.target.value)}
+                                            onCommit={(next) => updateField('phone_number', next)}
                                             className={inputClass(errors.phone_number, false)}
                                             placeholder="0300 1234567"
                                             autoComplete="tel"
@@ -669,11 +624,11 @@ const CheckoutPage: React.FC = () => {
                                     hint="for your receipt"
                                     icon={<Mail size={16} className="text-white/40" />}
                                 >
-                                    <input
+                                    <CheckoutTextField
                                         type="email"
                                         inputMode="email"
                                         value={formData.email || ''}
-                                        onChange={(e) => updateField('email', e.target.value)}
+                                        onCommit={(next) => updateField('email', next)}
                                         className={inputClass(undefined, true)}
                                         placeholder="you@example.com"
                                         autoComplete="email"
@@ -695,10 +650,10 @@ const CheckoutPage: React.FC = () => {
 
                             <div className="space-y-4">
                                 <Field label="Address" required error={errors.address_line1}>
-                                    <input
+                                    <CheckoutTextField
                                         type="text"
                                         value={formData.address_line1}
-                                        onChange={(e) => updateField('address_line1', e.target.value)}
+                                        onCommit={(next) => updateField('address_line1', next)}
                                         className={inputClass(errors.address_line1, false)}
                                         placeholder="House number, street number, area"
                                         autoComplete="street-address"
@@ -706,10 +661,10 @@ const CheckoutPage: React.FC = () => {
                                 </Field>
 
                                 <Field label="Apartment, suite, floor" hint="optional">
-                                    <input
+                                    <CheckoutTextField
                                         type="text"
                                         value={formData.address_line2 || ''}
-                                        onChange={(e) => updateField('address_line2', e.target.value)}
+                                        onCommit={(next) => updateField('address_line2', next)}
                                         className={inputClass(undefined, false)}
                                         placeholder="Apartment, suite, floor"
                                         autoComplete="address-line2"
@@ -718,26 +673,19 @@ const CheckoutPage: React.FC = () => {
 
                                 <div className="grid gap-4 sm:grid-cols-[1.4fr_1fr]">
                                     <Field label="City" required error={errors.city}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowCityModal(true)}
-                                            className={`flex w-full items-center justify-between rounded-xl border bg-black/40 px-4 py-4 text-left text-[16px] transition-colors ${
-                                                errors.city ? 'border-red-500/50' : 'border-white/[0.1] hover:border-white/35'
-                                            }`}
-                                        >
-                                            <span className={formData.city ? 'text-white' : 'text-white/30'}>
-                                                {formData.city || 'Select city'}
-                                            </span>
-                                            <ChevronRight size={16} className="shrink-0 text-white/40" />
-                                        </button>
+                                        <CityField
+                                            value={formData.city}
+                                            hasError={Boolean(errors.city)}
+                                            onSelect={selectCity}
+                                        />
                                     </Field>
 
                                     <Field label="Postal code" hint="optional">
-                                        <input
+                                        <CheckoutTextField
                                             type="text"
                                             inputMode="numeric"
                                             value={formData.postal_code || ''}
-                                            onChange={(e) => updateField('postal_code', e.target.value)}
+                                            onCommit={(next) => updateField('postal_code', next)}
                                             className={inputClass(undefined, false)}
                                             placeholder="e.g. 74000"
                                             autoComplete="postal-code"
@@ -748,14 +696,14 @@ const CheckoutPage: React.FC = () => {
                                 <Field label="Alternate phone for delivery" hint="optional" error={errors.alternate_phone_number}>
                                     <div className="flex items-stretch gap-2">
                                         <span className="flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.1] bg-black/40 px-3.5 text-[16px] font-semibold text-white/80">
-                                            <img src="/images/icons/pakistan.png" alt="" className="h-5 w-5" />
+                                            <img src={getShopifySizedImage('/images/icons/pakistan.png', 64)} alt="" width={20} height={20} decoding="async" className="h-5 w-5" />
                                             +92
                                         </span>
-                                        <input
+                                        <CheckoutTextField
                                             type="tel"
                                             inputMode="tel"
                                             value={formData.alternate_phone_number || ''}
-                                            onChange={(e) => updateField('alternate_phone_number', e.target.value)}
+                                            onCommit={(next) => updateField('alternate_phone_number', next)}
                                             className={inputClass(undefined, false)}
                                             placeholder="0300 1234567"
                                             autoComplete="tel"
@@ -953,13 +901,6 @@ const CheckoutPage: React.FC = () => {
                 </div>
             </div>
 
-            <CitySelectModal
-                isOpen={showCityModal}
-                selectedCity={formData.city}
-                onClose={() => setShowCityModal(false)}
-                onSelect={(city) => { updateField('city', city); setShowCityModal(false); }}
-            />
-
             {/* Sticky mobile Place Order bar */}
             <div
                 className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#050505]/95 backdrop-blur-xl md:hidden"
@@ -1032,6 +973,7 @@ const CheckoutPage: React.FC = () => {
                     </motion.button>
                 </div>
             </div>
+
         </div>
     );
 };

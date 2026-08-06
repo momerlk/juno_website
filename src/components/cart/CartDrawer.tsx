@@ -286,7 +286,22 @@ const CartDrawer: React.FC = () => {
                                                 </div>
                                             </section>
                                         ) : null)}
-                                        {isLoadingRecommendations ? <div className="mt-6 h-28 animate-pulse rounded-2xl bg-white/[0.04]" aria-label="Loading complete-the-look suggestions" /> : null}
+                                        {isLoadingRecommendations ? (
+                                            <section className="mt-6" aria-label="Loading complete-the-look suggestions">
+                                                <p className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-white/40">
+                                                    Complete the look
+                                                </p>
+                                                <div className="flex gap-2.5 overflow-hidden">
+                                                    {[0, 1, 2].map((index) => (
+                                                        <div key={index} className="w-28 shrink-0 animate-pulse">
+                                                            <div className="aspect-[4/5] rounded-xl bg-white/[0.06]" />
+                                                            <div className="mt-2 h-3 w-20 rounded bg-white/[0.06]" />
+                                                            <div className="mt-1.5 h-3 w-12 rounded bg-white/[0.06]" />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </section>
+                                        ) : null}
 
                                     </div>
                                 )}
