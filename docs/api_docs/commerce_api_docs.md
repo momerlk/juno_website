@@ -64,6 +64,7 @@ generate a fresh prompt. Only allow confirmation when a `ready` review has no mi
 
 Auth:
 - `GET /api/v2/commerce/cart` — user auth required
+- `GET /api/v2/commerce/cart/complete-the-look` — user auth required
 - `POST /api/v2/commerce/cart` — user auth required
 - `DELETE /api/v2/commerce/cart/items` — user auth required
 - `GET /api/v2/commerce/cart/shipping-estimate` — user auth required
@@ -80,6 +81,7 @@ Auth:
 - `GET /api/v2/support/link` — public
 - `GET /api/v2/track/{token}` — public route
 - `GET /api/v2/commerce/guest/cart` — public guest cart route
+- `GET /api/v2/commerce/guest/cart/complete-the-look` — public guest cart route
 - `POST /api/v2/commerce/guest/cart` — public guest cart route
 - `DELETE /api/v2/commerce/guest/cart/items` — public guest cart route
 - `GET /api/v2/commerce/guest/cart/shipping-estimate` — public
@@ -444,6 +446,20 @@ to resend the current order details to the customer and all relevant sellers.
 ---
 
 ## Cart Endpoints
+
+### Complete The Look
+`GET /api/v2/commerce/cart/complete-the-look`
+
+Returns up to six active, in-stock complementary products per brand already in
+the signed-in cart. It never returns a product already in the cart. A cart with
+a top gets same-brand bottoms and accessories; a cart with a bottom gets tops
+and accessories; when both are already present, it gets accessories only. The
+response is `{ "recommendations": [{ "seller_id", "seller_name",
+"cart_product_ids", "products" }] }`. An empty cart or a brand without
+complementary inventory returns an empty `recommendations` array.
+
+Guests use `GET /api/v2/commerce/guest/cart/complete-the-look` with the same
+`X-Guest-Cart-Id` header as other guest-cart calls.
 
 ### Get Cart
 `GET /api/v2/commerce/cart`

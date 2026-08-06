@@ -26,6 +26,7 @@ import type {
     OrderTracking,
     Order,
     PaymentMethodsResponse,
+    CompleteTheLookResponse,
 } from "./api.types";
 
 // ============================================================================
@@ -47,6 +48,11 @@ export namespace Commerce {
      */
     export async function getCart(token?: string): Promise<APIResponse<Cart>> {
         return request(`${BASE_PATH}/cart`, 'GET', undefined, token || getUserToken());
+    }
+
+    /** Complementary same-brand products for the current user cart. */
+    export async function getCompleteTheLook(token?: string): Promise<APIResponse<CompleteTheLookResponse>> {
+        return request(`${BASE_PATH}/cart/complete-the-look`, 'GET', undefined, token || getUserToken());
     }
 
     /**
@@ -218,6 +224,13 @@ export namespace GuestCommerce {
         const headers = getHeaders(guestCartId);
         const resp = await fetch(`${API_BASE_URL}${BASE_PATH}/cart`, { method: 'GET', headers });
         return handleGuestResponse<GuestCartResponse>(resp);
+    }
+
+    /** Complementary same-brand products for a guest cart. */
+    export async function getCompleteTheLook(guestCartId: string): Promise<APIResponse<CompleteTheLookResponse>> {
+        const headers = getHeaders(guestCartId);
+        const resp = await fetch(`${API_BASE_URL}${BASE_PATH}/cart/complete-the-look`, { method: 'GET', headers });
+        return handleGuestResponse<CompleteTheLookResponse>(resp);
     }
 
     /**

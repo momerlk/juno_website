@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight, Zap, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useGuestCart } from '../../contexts/GuestCartContext';
+import { GuestCommerce } from '../../api/commerceApi';
+import type { CompleteTheLookRecommendation } from '../../api/api.types';
 import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
 
 const formatCurrency = (value: number) =>
@@ -16,6 +18,51 @@ const getCardImage = (url?: string) =>
 const CartDrawer: React.FC = () => {
     const navigate = useNavigate();
     const { isCartOpen, setCartOpen, optimisticCart, itemCount, cartTotal, removeItem, updateQuantity, isHydrated } = useGuestCart();
+    const [recommendations, setRecommendations] = useState<CompleteTheLookRecommendation[]>([]);
+    const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+    const recommendationsKeyRef = useRef<string | null>(null);
+    const recommendationItemsRef = useRef<Array<{ product_id: string; variant_id: string; quantity: number }>>([]);
+    const cartProductKey = useMemo(
+        () => optimisticCart.map(({ product_id, variant_id }) => `${product_id}:${variant_id}`).sort().join('|'),
+        [optimisticCart]
+    );
+    recommendationItemsRef.current = optimisticCart.map(({ product_id, variant_id }) => ({ product_id, variant_id, quantity: 1 }));
+
+    useEffect(() => {
+        if (!cartProductKey) {
+            recommendationsKeyRef.current = null;
+            setRecommendations([]);
+            return;
+        }
+        if (!isCartOpen) return;
+        if (recommendationsKeyRef.current === cartProductKey) return;
+
+        let cancelled = false;
+        setRecommendations([]);
+        setIsLoadingRecommendations(true);
+        void (async () => {
+            // The storefront cart stays local for instant quantity changes. Mirror it
+            // only for this server-owned recommendation request, then cache by items.
+            const [firstItem, ...remainingItems] = recommendationItemsRef.current;
+            if (!firstItem) return;
+            const first = await GuestCommerce.addToCart(firstItem);
+            if (!first.ok) return;
+            const guestCartId = first.body.guest_cart_id;
+            const additions = await Promise.all(remainingItems.map((item) =>
+                GuestCommerce.addToCart(item, guestCartId)
+            ));
+            if (additions.some((response) => !response.ok)) return;
+
+            const response = await GuestCommerce.getCompleteTheLook(guestCartId);
+            if (cancelled || !response.ok) return;
+            recommendationsKeyRef.current = cartProductKey;
+            setRecommendations(response.body.recommendations ?? []);
+        })().catch(() => undefined).finally(() => {
+            if (!cancelled) setIsLoadingRecommendations(false);
+        });
+
+        return () => { cancelled = true; };
+    }, [cartProductKey, isCartOpen]);
     const handleCheckout = () => {
         navigate('/checkout');
         window.requestAnimationFrame(() => setCartOpen(false));
@@ -128,11 +175,8 @@ const CartDrawer: React.FC = () => {
                                                 (() => {
                                                     const itemImage = getCardImage(item.image_url);
                                                     return (
-                                                <motion.div
+                                                <div
                                                     key={`${item.product_id || 'p'}-${item.variant_id || 'v'}-${index}`}
-                                                    initial={{ opacity: 0, y: 8 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: Math.min(index * 0.035, 0.18) }}
                                                     className="flex gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3 transition-colors hover:border-white/15"
                                                 >
                                                     {/* Image */}
@@ -207,11 +251,42 @@ const CartDrawer: React.FC = () => {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </motion.div>
+                                                </div>
                                                     );
                                                 })()
                                             ))}
                                         </div>
+
+                                        {recommendations.map((recommendation) => recommendation.products.length ? (
+                                            <section key={recommendation.seller_id} className="mt-6">
+                                                <p className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-white/40">
+                                                    Complete the look · {recommendation.seller_name}
+                                                </p>
+                                                <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+                                                    {recommendation.products.map((product) => {
+                                                        const image = getCardImage(product.images?.[0]);
+                                                        const price = product.pricing.discounted
+                                                            ? product.pricing.discounted_price ?? product.pricing.price
+                                                            : product.pricing.price;
+                                                        return (
+                                                            <Link
+                                                                key={product.id}
+                                                                to={`/catalog/${product.id}`}
+                                                                onClick={() => setCartOpen(false)}
+                                                                className="group w-28 shrink-0"
+                                                            >
+                                                                <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d0e] transition-colors group-hover:border-white/20">
+                                                                    <img src={image.src} srcSet={image.srcSet} sizes="112px" alt={product.title} loading="lazy" decoding="async" className="aspect-[4/5] w-full object-cover" />
+                                                                </div>
+                                                                <p className="mt-1.5 line-clamp-1 text-[11px] font-bold text-white/80">{product.title}</p>
+                                                                <p className="text-[11px] font-black text-white">{formatCurrency(price)}</p>
+                                                            </Link>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </section>
+                                        ) : null)}
+                                        {isLoadingRecommendations ? <div className="mt-6 h-28 animate-pulse rounded-2xl bg-white/[0.04]" aria-label="Loading complete-the-look suggestions" /> : null}
 
                                     </div>
                                 )}

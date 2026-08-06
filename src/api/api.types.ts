@@ -938,6 +938,17 @@ export interface GuestCartResponse {
     cart: GuestCart;
 }
 
+export interface CompleteTheLookRecommendation {
+    seller_id: string;
+    seller_name: string;
+    cart_product_ids: string[];
+    products: CatalogProduct[];
+}
+
+export interface CompleteTheLookResponse {
+    recommendations: CompleteTheLookRecommendation[];
+}
+
 export interface ParentOrder {
     id: string;
     user_id: string;
