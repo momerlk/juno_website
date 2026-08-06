@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useInView } from 'react-intersection-observer';
 import {
     ArrowLeft,
     Check,
@@ -23,7 +24,8 @@ import { Funnel } from '../../api/analyticsApi';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { useTrackProductView } from '../../hooks/useFunnelAnalytics';
 import CatalogNavbar from './CatalogNavbar';
-import SizeGuideModal from './SizeGuideModal';
+// Most shoppers never open it, so it leaves the product route's chunk.
+const SizeGuideModal = React.lazy(() => import('./SizeGuideModal'));
 import EditorialProductCard from '../shared/editorial/EditorialProductCard';
 import { toTikTokProductContent, trackTikTokViewContent } from '../../utils/tiktokPixel';
 import { getResponsiveShopifyImageSet } from '../../utils/shopifyImage';
@@ -32,6 +34,8 @@ const formatCurrency = (value?: number) =>
     `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
 
 const DEFAULT_DELIVERY_DAYS = 7;
+// Roughly what fits in the desktop thumbnail rail; the rest load as it scrolls.
+const THUMBNAILS_LOADED_UPFRONT = 4;
 // Platform policy copy. Update these two in one place when the policy changes.
 const RETURN_WINDOW_DAYS = 7;
 const SALE_LABEL = 'Azaadi Sale';
@@ -140,6 +144,10 @@ const ReviewCard: React.FC<{ review: ProductReview }> = ({ review }) => (
     </div>
 );
 
+// Below-the-fold sections fetch a screen early: soon enough that the data is
+// there on arrival, late enough that first paint never pays for it.
+const NEAR_VIEWPORT = { triggerOnce: true, rootMargin: '600px 0px' } as const;
+
 const CatalogProductPage: React.FC = () => {
     const { productId, genderOrId } = useParams<{ productId?: string; genderOrId?: string }>();
     const actualProductId = productId || genderOrId || '';
@@ -174,6 +182,9 @@ const CatalogProductPage: React.FC = () => {
     const unavailableShownRef = useRef<string | null>(null);
     const { addItem, setCartOpen } = useGuestCart();
     const navigate = useNavigate();
+    const { ref: reviewsAnchorRef, inView: reviewsNear } = useInView(NEAR_VIEWPORT);
+    const { ref: relatedAnchorRef, inView: relatedNear } = useInView(NEAR_VIEWPORT);
+    const { ref: sizingAnchorRef, inView: sizingNear } = useInView(NEAR_VIEWPORT);
 
     useTrackProductView(actualProductId);
 
@@ -189,7 +200,6 @@ const CatalogProductPage: React.FC = () => {
 
             setIsLoading(true);
             setError(null);
-            setSizing(null);
 
             try {
                 const productResponse = await Catalog.getProduct(actualProductId);
@@ -219,14 +229,6 @@ const CatalogProductPage: React.FC = () => {
                 setQuantity(1);
                 setShowAddedFeedback(false);
                 setIsLoading(false);
-
-                void Sizing.getProductSizing(actualProductId)
-                    .then((sizingResponse) => {
-                        if (!cancelled && sizingResponse.ok) setSizing(sizingResponse.body);
-                    })
-                    .catch(() => {
-                        // Sizing is optional. The product remains fully purchasable if it is unavailable.
-                    });
             } catch {
                 if (!cancelled) {
                     setError('Could not load this product.');
@@ -241,15 +243,22 @@ const CatalogProductPage: React.FC = () => {
         };
     }, [actualProductId]);
 
+    // Reset separately from the fetch: the fetch now waits for the section to
+    // approach the viewport, so it must not drag the reset along with it.
     useEffect(() => {
-        let cancelled = false;
         setReviews([]);
         setReviewTotalCount(null);
         setReviewsLoaded(false);
         setShowReviewsModal(false);
         setModalReviews([]);
         setModalReviewPage(0);
-        if (!actualProductId) return undefined;
+        setRelatedProducts([]);
+        setSizing(null);
+    }, [actualProductId]);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!actualProductId || !reviewsNear) return undefined;
         void Catalog.getProductReviews(actualProductId).then((response) => {
             if (!cancelled) {
                 if (response.ok) {
@@ -262,13 +271,11 @@ const CatalogProductPage: React.FC = () => {
             if (!cancelled) setReviewsLoaded(true);
         });
         return () => { cancelled = true; };
-    }, [actualProductId]);
+    }, [actualProductId, reviewsNear]);
 
     useEffect(() => {
         let cancelled = false;
-        setRelatedProducts([]);
-
-        if (!actualProductId) return undefined;
+        if (!actualProductId || !relatedNear) return undefined;
         void Catalog.getRelatedProducts(actualProductId, 4).then((response) => {
             if (!cancelled && response.ok) setRelatedProducts(asArray(response.body).slice(0, 4));
         });
@@ -276,7 +283,17 @@ const CatalogProductPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [actualProductId]);
+    }, [actualProductId, relatedNear]);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!actualProductId || !sizingNear) return undefined;
+        // Sizing is optional. The product stays fully purchasable without it.
+        void Sizing.getProductSizing(actualProductId)
+            .then((response) => { if (!cancelled && response.ok) setSizing(response.body); })
+            .catch(() => undefined);
+        return () => { cancelled = true; };
+    }, [actualProductId, sizingNear]);
 
     useEffect(() => {
         if (!product) return;
@@ -561,7 +578,11 @@ const CatalogProductPage: React.FC = () => {
 
     const cycleImage = (dir: 1 | -1) => {
         if (imageGallery.length < 2) return;
-        setSelectedImageIdx((current) => (current + dir + imageGallery.length) % imageGallery.length);
+        setSelectedImageIdx((current) => {
+            const next = (current + dir + imageGallery.length) % imageGallery.length;
+            setMaxSlideLoaded((frontier) => Math.max(frontier, next + 1));
+            return next;
+        });
     };
 
     if (isLoading) {
@@ -599,6 +620,43 @@ const CatalogProductPage: React.FC = () => {
     const rating = product.rating;
     const estimatedDeliveryDays = product.shipping_details?.estimated_delivery_days || DEFAULT_DELIVERY_DAYS;
     const deliveryDate = addDays(today, estimatedDeliveryDays);
+
+    // On mobile the sticky bar carries the price above the fold; this stays the
+    // in-page price for desktop and for anyone who scrolls.
+    const priceBlock = (
+        <div className="mt-4 space-y-2">
+            {discountPercentage > 0 ? <AzaadiSaleBadge /> : null}
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span
+                    className="text-white"
+                    style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontWeight: 900,
+                        fontSize: 'clamp(1.9rem, 4vw, 2.75rem)',
+                        letterSpacing: '-0.05em',
+                    }}
+                >
+                    {formatCurrency(currentPrice)}
+                </span>
+                {compareAt ? (
+                    <>
+                        <span className="text-lg font-semibold text-white/35 line-through decoration-primary/70 decoration-2 md:text-xl">
+                            {formatCurrency(compareAt)}
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-3.5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-white shadow-[0_8px_24px_rgba(220,10,40,0.4)] md:text-[15px]">
+                            {discountPercentage > 0 ? (
+                                <>
+                                    <span>-{discountPercentage}%</span>
+                                    <span className="h-3 w-px bg-white/40" />
+                                </>
+                            ) : null}
+                            <span>Save {formatCurrency(compareAt - currentPrice)}</span>
+                        </span>
+                    </>
+                ) : null}
+            </div>
+        </div>
+    );
 
     const deliveryAndReturns = (
         <div className="divide-y divide-white/[0.07] overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025]">
@@ -755,29 +813,51 @@ const CatalogProductPage: React.FC = () => {
                         </div>
 
                         {imageGallery.length > 1 ? (
-                            <div className="-mx-1 hidden gap-2.5 overflow-x-auto px-1 pb-2 pt-1 scrollbar-none lg:flex">
+                            <div
+                                onScroll={(event) => {
+                                    // Same frontier idea as the mobile strip: a 20-image product
+                                    // must not fire 20 thumbnail requests on first paint.
+                                    const { scrollLeft, scrollWidth, clientWidth } = event.currentTarget;
+                                    if (galleryScrollFrame.current) return;
+                                    galleryScrollFrame.current = window.requestAnimationFrame(() => {
+                                        galleryScrollFrame.current = 0;
+                                        const perItem = scrollWidth / Math.max(imageGallery.length, 1);
+                                        const rightmost = Math.ceil((scrollLeft + clientWidth) / perItem);
+                                        setMaxSlideLoaded((frontier) => Math.max(frontier, rightmost));
+                                    });
+                                }}
+                                className="-mx-1 hidden gap-2.5 overflow-x-auto px-1 pb-2 pt-1 scrollbar-none lg:flex"
+                            >
                                 {imageGallery.map((image, index) => {
                                     const active = selectedImageIdx === index;
                                     const thumbnailImage = getResponsiveShopifyImageSet(image, [120, 180, 240, 320]);
+                                    const loadThumbnail = index <= Math.max(maxSlideLoaded, THUMBNAILS_LOADED_UPFRONT - 1) || active;
                                     return (
                                         <button
                                             key={`thumb-${index}`}
-                                            onClick={() => setSelectedImageIdx(index)}
+                                            onClick={() => {
+                                                setSelectedImageIdx(index);
+                                                setMaxSlideLoaded((frontier) => Math.max(frontier, index + 1));
+                                            }}
                                             aria-label={`Show image ${index + 1}`}
                                             aria-current={active ? 'true' : undefined}
                                             className={`relative w-[82px] shrink-0 overflow-hidden rounded-xl transition-all md:w-[96px] ${
                                                 active ? 'ring-2 ring-inset ring-white' : 'opacity-55 hover:opacity-95'
                                             }`}
                                             >
-                                                <img
-                                                src={thumbnailImage.src}
-                                                srcSet={thumbnailImage.srcSet}
-                                                sizes="(max-width: 768px) 82px, 96px"
-                                                alt={`View ${index + 1}`}
-                                                loading="lazy"
-                                                decoding="async"
-                                                className="aspect-[3/4] w-full object-cover"
-                                                />
+                                                {loadThumbnail ? (
+                                                    <img
+                                                        src={thumbnailImage.src}
+                                                        srcSet={thumbnailImage.srcSet}
+                                                        sizes="(max-width: 768px) 82px, 96px"
+                                                        alt={`View ${index + 1}`}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        className="aspect-[3/4] w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="block aspect-[3/4] w-full bg-white/[0.06]" />
+                                                )}
                                             </button>
                                     );
                                 })}
@@ -854,9 +934,9 @@ const CatalogProductPage: React.FC = () => {
                                         ))}
                                     </div>
                                     <span className="text-sm font-bold text-white">{product.rating.toFixed(1)}</span>
-                                    {!reviewsLoaded ? (
-                                        <span className="h-4 w-16 animate-pulse rounded bg-white/[0.12]" aria-label="Loading reviews" />
-                                    ) : reviews.length ? (
+                                    {/* Count comes from the product payload, so the link is correct
+                                        before the deferred reviews request has even started. */}
+                                    {reviewCount ? (
                                         <>
                                             <span className="text-white/20">|</span>
                                             <a href="#ratings" className="text-sm font-semibold text-white/60 underline-offset-4 hover:text-white hover:underline">
@@ -875,45 +955,12 @@ const CatalogProductPage: React.FC = () => {
                                 by <span className="text-white/80">{product.seller_name || 'Juno Label'}</span><span aria-hidden="true">→</span>
                             </a>
 
-                            {discountPercentage > 0 ? (
-                                <div className="mt-4">
-                                    <AzaadiSaleBadge />
-                                </div>
-                            ) : null}
-
-                            <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                                <span
-                                    className="text-white"
-                                    style={{
-                                        fontFamily: 'Montserrat, sans-serif',
-                                        fontWeight: 900,
-                                        fontSize: 'clamp(1.9rem, 4vw, 2.75rem)',
-                                        letterSpacing: '-0.05em',
-                                    }}
-                                >
-                                    {formatCurrency(currentPrice)}
-                                </span>
-                                {compareAt ? (
-                                    <>
-                                        <span className="text-lg font-semibold text-white/35 line-through decoration-primary/70 decoration-2 md:text-xl">
-                                            {formatCurrency(compareAt)}
-                                        </span>
-                                        <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-3.5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-white shadow-[0_8px_24px_rgba(220,10,40,0.4)] md:text-[15px]">
-                                            {discountPercentage > 0 ? (
-                                                <>
-                                                    <span>-{discountPercentage}%</span>
-                                                    <span className="h-3 w-px bg-white/40" />
-                                                </>
-                                            ) : null}
-                                            <span>Save {formatCurrency(compareAt - currentPrice)}</span>
-                                        </span>
-                                    </>
-                                ) : null}
-                            </div>
+                            {priceBlock}
                         </div>
 
                         {deliveryAndReturns}
 
+                        <div ref={sizingAnchorRef}>
                         {asArray(product.options).length > 0 ? (
                             <div ref={sizeSectionRef} className="scroll-mt-24 space-y-4">
                                 {asArray(product.options).map((option) => (
@@ -1047,6 +1094,7 @@ const CatalogProductPage: React.FC = () => {
                                 ))}
                             </div>
                         ) : null}
+                        </div>
 
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
@@ -1174,6 +1222,7 @@ const CatalogProductPage: React.FC = () => {
                             </div>
                         </div>
 
+                        <div ref={reviewsAnchorRef}>
                         {rating || reviewCount ? (
                             <div id="ratings" className="scroll-mt-24 border-t border-white/[0.08] pt-6">
                                 <h2 className="text-lg font-black uppercase tracking-[-0.02em] text-white md:text-xl">Ratings and reviews</h2>
@@ -1204,7 +1253,13 @@ const CatalogProductPage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {reviews.length ? (
+                                {!reviewsLoaded ? (
+                                    <div className="mt-5 space-y-3" aria-label="Loading reviews">
+                                        {[0, 1, 2].map((index) => (
+                                            <div key={index} className="h-24 animate-pulse rounded-2xl bg-white/[0.05]" />
+                                        ))}
+                                    </div>
+                                ) : reviews.length ? (
                                     <div className="mt-5 space-y-3">
                                         {reviews.map((review) => <ReviewCard key={review.id} review={review} />)}
                                         {reviewCount > reviews.length ? (
@@ -1222,6 +1277,7 @@ const CatalogProductPage: React.FC = () => {
                                 )}
                             </div>
                         ) : null}
+                        </div>
 
                         {asArray(product.tags).length > 0 ? (
                             <div className="flex flex-wrap gap-1.5">
@@ -1238,6 +1294,7 @@ const CatalogProductPage: React.FC = () => {
                     </div>
                 </div>
 
+                <div ref={relatedAnchorRef}>
                 {relatedProducts.length > 0 ? (
                     <section className="mt-16 border-t border-white/[0.08] pt-10 md:mt-24 md:pt-14">
                         <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-white/35">Keep exploring</p>
@@ -1259,6 +1316,7 @@ const CatalogProductPage: React.FC = () => {
                         </div>
                     </section>
                 ) : null}
+                </div>
             </div>
 
             <AnimatePresence>
@@ -1271,12 +1329,23 @@ const CatalogProductPage: React.FC = () => {
                 >
                     {inStock ? (
                     <>
-                        <div className="mb-2.5 text-center text-[10px] text-white/55">
-                            {sizeError && !hasSelectedSize ? (
-                                <span className="text-[13px] font-bold text-primary">Select a size first</span>
-                            ) : (
-                                <>Arrives <span className="font-bold text-white">{fmtDay(deliveryDate)}</span></>
-                            )}
+                        {/* Price rides the bar so it is on screen at every scroll position. */}
+                        <div className="mx-auto mb-2.5 flex max-w-lg items-baseline justify-between gap-3">
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-[19px] font-black tracking-[-0.03em] text-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                                    {formatCurrency(currentPrice * quantity)}
+                                </span>
+                                {compareAt ? (
+                                    <span className="text-[12px] font-semibold text-white/35 line-through">{formatCurrency(compareAt * quantity)}</span>
+                                ) : null}
+                            </div>
+                            <span className="text-[10px] text-white/55">
+                                {sizeError && !hasSelectedSize ? (
+                                    <span className="text-[13px] font-bold text-primary">Select a size first</span>
+                                ) : (
+                                    <>Arrives <span className="font-bold text-white">{fmtDay(deliveryDate)}</span></>
+                                )}
+                            </span>
                         </div>
 
                         {/* Unselected size keeps both buttons live: tapping scrolls to the
@@ -1311,15 +1380,19 @@ const CatalogProductPage: React.FC = () => {
                 </motion.div>
             </AnimatePresence>
 
-            <SizeGuideModal
-                isOpen={showSizeGuide}
-                onClose={() => setShowSizeGuide(false)}
-                productId={product.id}
-                sizing={sizing}
-                sourceGuide={sourceSizingGuide}
-                selectedSize={Object.entries(selectedOptions).find(([name]) => name.toLowerCase().includes('size'))?.[1]}
-                onSelectSize={selectRecommendedSize}
-            />
+            {showSizeGuide ? (
+                <React.Suspense fallback={null}>
+                    <SizeGuideModal
+                        isOpen={showSizeGuide}
+                        onClose={() => setShowSizeGuide(false)}
+                        productId={product.id}
+                        sizing={sizing}
+                        sourceGuide={sourceSizingGuide}
+                        selectedSize={Object.entries(selectedOptions).find(([name]) => name.toLowerCase().includes('size'))?.[1]}
+                        onSelectSize={selectRecommendedSize}
+                    />
+                </React.Suspense>
+            ) : null}
 
             <AnimatePresence>
                 {showImageLightbox ? (

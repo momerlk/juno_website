@@ -1,3 +1,19 @@
+// Two resizers, one entry point. Shopify-hosted images use Shopify's own
+// `_640x` filename form; everything else (seller uploads land on
+// storage.googleapis.com and ship multi-MB originals) goes through the Netlify
+// Image CDN, which is where this site is already served from.
+const NETLIFY_RESIZABLE_HOSTS = ['storage.googleapis.com'];
+
+const isNetlifyResizable = (url: string) =>
+    import.meta.env.PROD &&
+    url.startsWith('https://') &&
+    NETLIFY_RESIZABLE_HOSTS.some((host) => url.startsWith(`https://${host}/`));
+
+// webp, not avif: still ~30% under JPEG and safe back to Safari 14, and a
+// format the browser cannot decode is a blank product image, not a slow one.
+const getNetlifySizedImage = (url: string, width: number) =>
+    `/.netlify/images?url=${encodeURIComponent(url)}&w=${width}&fm=webp&q=72`;
+
 const isShopifyImage = (url: string) =>
     typeof url === 'string' &&
     (url.includes('cdn.shopify.com') || url.includes('shopify.com/s/files/'));
@@ -21,7 +37,8 @@ const getThumbnailWidthCeiling = () => {
 };
 
 export const getShopifySizedImage = (url: string, width: number): string => {
-    if (!url || !isShopifyImage(url) || width <= 0) return url;
+    if (!url || width <= 0) return url;
+    if (!isShopifyImage(url)) return isNetlifyResizable(url) ? getNetlifySizedImage(url, width) : url;
 
     try {
         const parts = url.split('?');
@@ -41,7 +58,7 @@ export const getShopifySizedImage = (url: string, width: number): string => {
 
 export const getResponsiveShopifyImageSet = (url: string, widths: number[]) => {
     if (!url) return { src: url, srcSet: undefined as string | undefined };
-    if (!isShopifyImage(url)) return { src: url, srcSet: undefined as string | undefined };
+    if (!isShopifyImage(url) && !isNetlifyResizable(url)) return { src: url, srcSet: undefined as string | undefined };
 
     const validWidths = widths.filter((width) => width > 0);
     const widthCeiling = getThumbnailWidthCeiling();

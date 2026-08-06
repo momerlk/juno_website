@@ -1,3 +1,8 @@
+# Hosts the Netlify Image CDN is allowed to resize. Seller uploads live here;
+# without the allowlist /.netlify/images returns 400 for them.
+[images]
+  remote_images = ["https://storage\\.googleapis\\.com/.*"]
+
 [[redirects]]
   from = "/catalog/:productId"
   to = "https://api.juno.com.pk/catalog/:productId"
