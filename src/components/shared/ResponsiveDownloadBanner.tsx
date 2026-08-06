@@ -16,9 +16,9 @@ const ResponsiveDownloadBanner: React.FC<ResponsiveDownloadBannerProps> = ({
       aria-label="Download the Juno app"
     >
       <picture>
-        <source media="(max-width: 767px)" srcSet="/images/misc/portrait_banner.png" />
+        <source media="(max-width: 767px)" srcSet="/images/misc/spiderman_portrait_banner.png" />
         <img
-          src="/images/misc/landscape_banner.png"
+          src="/images/misc/spiderman_landscape_banner.png"
           alt="Download the Juno app"
           className={`block w-full bg-[#090909] transition-transform duration-500 group-hover:scale-[1.01] ${
             rounded ? 'rounded-[1.5rem] md:rounded-[2rem]' : ''
