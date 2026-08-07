@@ -10,6 +10,7 @@ export type OrderStatus =
   | "delivery_attempted"
   | "cancelled"
   | "returned"
+  | "exchanged"
   | "refunded"
   | "fulfilled";
 

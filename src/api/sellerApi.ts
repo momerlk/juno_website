@@ -93,6 +93,7 @@ function normalizeOrderStatus(status?: string): Order["status"] {
     case "delivered":
     case "cancelled":
     case "returned":
+    case "exchanged":
     case "fulfilled":
     case "refunded":
       return normalized as Order["status"];
@@ -406,20 +407,6 @@ export namespace Seller {
 
   export async function getStatements(token: string): Promise<APIResponse<SellerStatement[]>> {
     return request('/commerce/seller/statements', 'GET', undefined, token);
-  }
-
-  export async function getStatementInvoice(statementId: string, token: string): Promise<APIResponse<{ html: string }>> {
-    const response = await fetch(`${API_BASE_URL}/commerce/seller/statements/${encodeURIComponent(statementId)}/invoice`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const html = await response.text();
-    return response.ok
-      ? { status: response.status, ok: true, body: { html } }
-      : { status: response.status, ok: false, body: { message: html || 'Could not load invoice' } };
-  }
-
-  export async function getStatementPaymentProof(statementId: string, token: string): Promise<APIResponse<{ url: string }>> {
-    return request(`/commerce/seller/statements/${encodeURIComponent(statementId)}/payment-proof`, 'GET', undefined, token);
   }
 
   export async function GetOnboardingStatus(token: string): Promise<APIResponse<any>> {

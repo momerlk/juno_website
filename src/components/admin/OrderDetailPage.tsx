@@ -7,6 +7,7 @@ import { Card } from '@astryxdesign/core/Card';
 import { Dialog } from '@astryxdesign/core/Dialog';
 import { Heading } from '@astryxdesign/core/Heading';
 import { TextInput } from '@astryxdesign/core/TextInput';
+import { Selector } from '@astryxdesign/core/Selector';
 import { VStack } from '@astryxdesign/core/VStack';
 import {
   ArrowLeft,
@@ -26,6 +27,7 @@ import { uploadFileAndGetUrl } from '../../api/shared';
 import type { AddressReview, DeliveryBooking, Order, ParentOrder } from '../../api/api.types';
 import type { Product, Variant } from '../../constants/types';
 import type { Seller } from '../../constants/seller';
+import { CLOSED_ORDER_REASONS, ClosedOrderReasonDialog } from './ClosedOrderReasonDialog';
 
 const ORDER_STATUSES = [
   'pending',
@@ -38,6 +40,8 @@ const ORDER_STATUSES = [
   'delivered',
   'cancelled',
   'returned',
+  'exchanged',
+  'refunded',
 ] as const;
 
 const DEX_ROW_COLUMNS = [
@@ -235,6 +239,11 @@ const OrderDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [newStatus, setNewStatus] = useState<string>('pending');
+  const [closedStatus, setClosedStatus] = useState<string | null>(null);
+  const [closedReason, setClosedReason] = useState<string>(CLOSED_ORDER_REASONS[0]);
+  const [replacementOrders, setReplacementOrders] = useState<Order[]>([]);
+  const [replacementOrderId, setReplacementOrderId] = useState('');
+  const [exchangeReplacementOpen, setExchangeReplacementOpen] = useState(false);
 
   const [warehouseLat, setWarehouseLat] = useState('');
   const [warehouseLng, setWarehouseLng] = useState('');
@@ -386,11 +395,47 @@ const OrderDetailPage: React.FC = () => {
 
   const handleUpdateStatus = async (status: string) => {
     if (!selectedChildId) return;
+    if (['exchanged', 'refunded', 'returned'].includes(status)) return setClosedStatus(status);
+    const note = status === 'packed' ? window.prompt('Packing note (required)')?.trim() : undefined;
+    if (status === 'packed' && !note) return;
     setNewStatus(status);
     await runUpdate(
-      () => AdminPortal.bulkUpdateOrders({ updates: [{ order_id: selectedChildId, status }] }),
+      () => AdminCommerce.updateOrderStatus(selectedChildId, { status, ...(note ? { note } : {}) }),
       'Order status updated.'
     );
+  };
+
+  const confirmClosedStatus = async () => {
+    if (!selectedChildId || !closedStatus) return;
+    const status = closedStatus;
+    setNewStatus(status);
+    const updated = await runUpdate(() => AdminCommerce.updateOrderStatus(selectedChildId, { status, reason: closedReason }), 'Order status updated.');
+    if (updated) setClosedStatus(null);
+  };
+
+  const openExchangeReplacement = async () => {
+    if (!selectedChild || selectedChild.status !== 'exchanged') return;
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const response = await AdminPortal.listOrders();
+      if (!response.ok) throw new Error((response.body as any)?.message || 'Could not load replacement orders');
+      const body = response.body as any;
+      const orders = Array.isArray(body) ? body : Array.isArray(body?.orders) ? body.orders : [];
+      setReplacementOrders(orders.filter((order: Order) => order.id !== selectedChild.id && order.seller_id === selectedChild.seller_id));
+      setReplacementOrderId('');
+      setExchangeReplacementOpen(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load replacement orders');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const saveExchangeReplacement = async () => {
+    if (!selectedChildId || !replacementOrderId) return;
+    const updated = await runUpdate(() => AdminPortal.setExchangeReplacement(selectedChildId, replacementOrderId), 'Replacement order linked. DEX COD will be PKR 400.');
+    if (updated) setExchangeReplacementOpen(false);
   };
 
   const handleCancelSelectedChild = async () => {
@@ -844,6 +889,8 @@ const OrderDetailPage: React.FC = () => {
               ))}
             </select>
 
+            {selectedChild?.status === 'exchanged' ? <Button label="Link replacement order" variant="secondary" onClick={() => void openExchangeReplacement()} isDisabled={isUpdating} width="100%" /> : null}
+
             <Button label="Resend order update emails" onClick={() => selectedChildId && void runUpdate(() => AdminCommerce.resendOrderUpdate(selectedChildId), 'Current order update emailed to customer and seller.')} isDisabled={isUpdating || !selectedChildId} width="100%" />
 
             <Button label="Cancel order" variant="destructive" icon={<Ban size={14} />} onClick={handleCancelSelectedChild} isDisabled={isUpdating || !selectedChildId} width="100%" />
@@ -899,6 +946,20 @@ const OrderDetailPage: React.FC = () => {
               ))}
               <label className="text-sm text-neutral-300">Payment method<select value={detailsDraft.payment_method || 'cod'} onChange={(event) => setDetailsDraft((current) => ({ ...current, payment_method: event.target.value }))} className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"><option value="cod">Cash on delivery</option><option value="bank_deposit">Bank deposit</option></select></label>
               <Button label="Save all order details" variant="primary" onClick={() => void saveOrderDetails()} isLoading={isUpdating} width="100%" />
+            </VStack>
+          </Card>
+        </Dialog>
+      )}
+      <ClosedOrderReasonDialog isOpen={Boolean(closedStatus)} status={closedStatus || 'returned'} reason={closedReason} onReasonChange={setClosedReason} onCancel={() => setClosedStatus(null)} onConfirm={() => void confirmClosedStatus()} isSaving={isUpdating} />
+      {exchangeReplacementOpen && (
+        <Dialog isOpen onOpenChange={(isOpen) => !isOpen && setExchangeReplacementOpen(false)} purpose="form" width="520px">
+          <Card padding={4}>
+            <VStack gap={4}>
+              <Heading level={2}>Link replacement order</Heading>
+              <p className="text-sm text-neutral-400">The replacement keeps its normal brand payout. Its manual DEX booking collects PKR 400 COD and its statement includes this exchanged order as a zero-payable reference.</p>
+              <Selector label="Replacement order" value={replacementOrderId} onChange={setReplacementOrderId} placeholder="Choose an order from this seller" hasSearch options={replacementOrders.map((order) => ({ value: order.id, label: `${order.order_number || order.id} · ${order.status}` }))} />
+              <Button label="Link replacement" onClick={() => void saveExchangeReplacement()} isLoading={isUpdating} isDisabled={!replacementOrderId} width="100%" />
+              <Button label="Cancel" variant="secondary" onClick={() => setExchangeReplacementOpen(false)} isDisabled={isUpdating} width="100%" />
             </VStack>
           </Card>
         </Dialog>

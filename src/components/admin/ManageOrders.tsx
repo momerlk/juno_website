@@ -22,6 +22,7 @@ import { uploadFile } from "../../api/shared";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
 import { Lightbox } from "@astryxdesign/core/Lightbox";
+import { CLOSED_ORDER_REASONS, ClosedOrderReasonDialog } from "./ClosedOrderReasonDialog";
 
 type OrderView =
   | "all"
@@ -37,7 +38,6 @@ type OrderView =
 const ORDER_STATUSES = [
   "pending",
   "confirmed",
-  "packed",
   "handed_to_rider",
   "at_warehouse",
   "out_for_delivery",
@@ -45,6 +45,8 @@ const ORDER_STATUSES = [
   "delivered",
   "cancelled",
   "returned",
+  "exchanged",
+  "refunded",
 ] as const;
 
 const PAGE_SIZE = 30;
@@ -82,6 +84,12 @@ const asArray = (value: any): any[] => {
 
 const money = (value?: number) =>
   `Rs ${new Intl.NumberFormat("en-PK", { maximumFractionDigits: 0 }).format(value ?? 0)}`;
+
+const netOffValue = (row: Record<string, any>, ...keys: string[]) =>
+  keys.map((key) => row[key]).find((value) => value !== undefined && value !== null && value !== "");
+
+const dexMoney = (value: any) =>
+  `Rs ${new Intl.NumberFormat("en-PK", { maximumFractionDigits: 2 }).format(Number(value ?? 0))}`;
 
 const dateTime = (value?: string) => {
   if (!value) return "-";
@@ -187,6 +195,8 @@ const ManageOrders: React.FC = () => {
   const [bulkStatus, setBulkStatus] =
     useState<(typeof ORDER_STATUSES)[number]>("confirmed");
   const [cancelReason, setCancelReason] = useState("Ops cancellation");
+  const [closedReason, setClosedReason] = useState<string>(CLOSED_ORDER_REASONS[0]);
+  const [closedStatusOpen, setClosedStatusOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -384,6 +394,7 @@ const ManageOrders: React.FC = () => {
 
   const applyBulkStatus = async () => {
     if (selectedIds.length === 0) return;
+    if (["returned", "exchanged", "refunded"].includes(bulkStatus)) return setClosedStatusOpen(true);
     setSaving(true);
     setError(null);
     try {
@@ -402,6 +413,21 @@ const ManageOrders: React.FC = () => {
       setError(
         err instanceof Error ? err.message : "Failed to update selected orders",
       );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmBulkClosedStatus = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const responses = await Promise.all(selectedIds.map((orderId) => AdminCommerce.updateOrderStatus(orderId, { status: bulkStatus, reason: closedReason })));
+      if (responses.some((response) => !response.ok)) throw new Error((responses.find((response) => !response.ok)?.body as any)?.message || "Failed to update selected orders");
+      setClosedStatusOpen(false);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update selected orders");
     } finally {
       setSaving(false);
     }
@@ -531,6 +557,7 @@ const ManageOrders: React.FC = () => {
           (res.body as any)?.message || "DEX statement could not be imported",
         );
       setDexPaymentResult(res.body);
+      setSelectedDexStatement(res.body);
       await load();
       await loadDexStatements();
       await loadBrandStatements();
@@ -1589,6 +1616,9 @@ const ManageOrders: React.FC = () => {
                   Upload the Net-Off workbook. DEX payments and seller
                   statements are created by the server.
                 </p>
+                <p className="mt-2 text-xs text-neutral-500">
+                  Returned parcels may have blank COD/tax cells and a negative Return Shipping Fee or Failed Delivery Fee.
+                </p>
               </div>
               <button
                 onClick={() => setDexPaymentOpen(false)}
@@ -1689,7 +1719,13 @@ const ManageOrders: React.FC = () => {
                     </p>
                     <div className="mt-3 space-y-2">
                       {(selectedDexStatement.rows || []).map(
-                        (row: any, index: number) => (
+                        (row: any, index: number) => {
+                          const returnFee = netOffValue(row, "return_shipping_fee", "failed_delivery_fee", "Return Shipping Fee", "Failed Delivery Fee");
+                          const vat = netOffValue(row, "shipping_fee_vat", "vat", "Shipping Fee VAT");
+                          const payable = netOffValue(row, "payable_amount", "dex_paid", "Payable Amount");
+                          const packageStatus = netOffValue(row, "package_status", "status", "Package Status");
+                          const isReturned = /returned/i.test(String(packageStatus || "")) || Number(payable) < 0;
+                          return (
                           <div
                             key={`${row.tracking_number || index}-${index}`}
                             className="rounded border border-white/10 p-2"
@@ -1706,8 +1742,10 @@ const ManageOrders: React.FC = () => {
                               Order: {row.matched_order_id || "-"} · matched by:{" "}
                               {row.matched_by || "-"}
                             </p>
+                            {isReturned ? <p className="mt-1 text-amber-300">Courier return deduction: fee {dexMoney(returnFee)} · VAT {dexMoney(vat)} · payable {dexMoney(payable)}</p> : null}
                           </div>
-                        ),
+                          );
+                        },
                       )}
                     </div>
                   </div>
@@ -1868,7 +1906,7 @@ const ManageOrders: React.FC = () => {
                     onClick={() => void printBrandStatement("invoice")}
                     className="rounded-md border border-white/10 px-3 py-2 text-xs text-white"
                   >
-                    Print invoice
+                    {selectedBrandStatement.status === "open" ? "Preview invoice" : "Print invoice"}
                   </button>
                 </div>
                 {selectedBrandStatement.status === "open" && (
@@ -1985,6 +2023,15 @@ const ManageOrders: React.FC = () => {
         </div>
       )}
 
+      <ClosedOrderReasonDialog
+        isOpen={closedStatusOpen}
+        status={bulkStatus}
+        reason={closedReason}
+        onReasonChange={setClosedReason}
+        onCancel={() => setClosedStatusOpen(false)}
+        onConfirm={() => void confirmBulkClosedStatus()}
+        isSaving={saving}
+      />
       {dmDraftOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60">
           <button

@@ -217,6 +217,10 @@ export namespace AdminCommerce {
         return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/tracking/eta`, 'PATCH', { eta }, getToken());
     }
 
+    export async function updateOrderStatus(orderId: string, payload: { status: string; note?: string; reason?: string }): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/status`, 'PATCH', payload, getToken());
+    }
+
     export async function getCustomerReceipt(orderId: string): Promise<APIResponse<{ html: string }>> {
         return request(`/commerce/orders/${encodeURIComponent(orderId)}/receipt`, 'GET', undefined, getToken());
     }
@@ -536,6 +540,10 @@ export namespace AdminPortal {
 
     export async function updateOrderItemVariant(orderId: string, itemId: string, variantId: string): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/items/${encodeURIComponent(itemId)}/variant`, 'PATCH', { variant_id: variantId }, getToken());
+    }
+
+    export async function setExchangeReplacement(orderId: string, replacementOrderId: string): Promise<APIResponse<any>> {
+        return request(`${BASE_PATH}/orders/${encodeURIComponent(orderId)}/exchange-replacement`, 'PATCH', { replacement_order_id: replacementOrderId }, getToken());
     }
 
     export async function bulkUpdateOrders(payload: {

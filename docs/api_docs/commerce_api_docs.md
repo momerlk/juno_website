@@ -139,6 +139,20 @@ Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` 
 
 `GET https://api.juno.com.pk/api/v2/commerce/seller/statements` requires seller authentication and returns only statements whose `seller_id` matches the logged-in seller. It is read-only; statement calculation and payment remain admin actions. It returns list records only. Seller statement detail, printable statement/invoice, and payment-proof signed download routes do not exist yet, so the seller UI must not offer those links. Frontend: load it on entry and refresh after a payment notification. Fallback: no seller action can alter payout data.
 
+## Closed-order reasons and settlement deductions
+
+Admins must set a `reason` when changing an order to `exchanged`, `refunded`, or `returned`. Valid reasons are `sizing_issue`, `quality_issue`, `defective_parcel`, `incorrect_product`, and `other`. Exchanges have no seller deduction. Refunds deduct 25% of the checkout-time `financials.brand_price`; returned parcels deduct that same 25% for `quality_issue` or `defective_parcel`, otherwise PKR 162 for return delivery. Legacy orders without that aggregate snapshot use the summed ordered variant/product brand prices, with saved item price only as a fallback. The recorded deduction is shown and netted in the next generated brand statement for that order.
+
+For an already returned parcel—including one automatically set to `returned` by DEX tracking—an admin submits the same status with its reason through the existing admin order update endpoint:
+
+```json
+{"status":"returned","reason":"sizing_issue"}
+```
+
+Sellers cannot set return reasons or any order status beyond the existing packing flow. Admin bulk status updates reject these three statuses because every one needs an individual reason.
+
+An admin can link a new replacement to an exchanged order through `PATCH /api/v2/admin/orders/{exchangedOrderID}/exchange-replacement` with `replacement_order_id`. This is an operations-only relationship: it makes the replacement's manual DEX COD PKR 400, and its delivered DEX statement includes the original as a zero-payable reference while paying only the replacement's normal brand-price payout.
+
 ## DEX manual tracking refresh
 
 `POST /api/v2/admin/logistics/orders/{orderID}/refresh-tracking` checks the saved manual DEX tracking number and returns the updated booking. It is admin-only and requires `DEX_TRACKING_POLL_ENABLED=true`. By default it uses DEX's public `POST https://www.dex.com.pk/api/get_package_history` response with `{"trackingNumber":"..."}`; `DEX_TRACKING_BASE_URL` may override the `/api` base for tests or an approved replacement. No request body is required.
@@ -1378,6 +1392,8 @@ Manually overrides the estimated delivery timestamp.
 | `delivery_attempted` | admin | Rider attempted delivery, will retry |
 | `cancelled` | seller/admin | Order cancelled |
 | `returned` | admin | Parcel returned to warehouse/seller |
+| `exchanged` | admin | Customer exchange completed; no seller penalty |
+| `refunded` | admin | Refund completed; 25% brand-price quality penalty |
 
 ---
 
