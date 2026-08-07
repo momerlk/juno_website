@@ -229,6 +229,14 @@ export namespace AdminCommerce {
         return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/processing-receipt`, 'GET', undefined, getToken());
     }
 
+    export async function downloadOrderAirwayBill(orderId: string): Promise<Blob> {
+        return downloadAirwayBillPDF(`${BASE_PATH}/${encodeURIComponent(orderId)}/airway-bill/download`);
+    }
+
+    export async function downloadAirwayBills(orderIds: string[]): Promise<Blob> {
+        return downloadAirwayBillPDF(`${BASE_PATH.replace('/admin/orders', '/admin/airway-bills')}/download`, orderIds);
+    }
+
     export async function getPackingPhoto(orderId: string, objectName: string): Promise<string> {
         return getPrivateImageUrl(`${BASE_PATH}/${encodeURIComponent(orderId)}/packing-photo?object=${encodeURIComponent(objectName)}`, getToken());
     }
@@ -241,6 +249,17 @@ export namespace AdminCommerce {
         return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/update-notice`, 'POST', undefined, getToken());
     }
 
+}
+
+async function downloadAirwayBillPDF(path: string, orderIds?: string[]): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: orderIds ? 'POST' : 'GET',
+        headers: { Authorization: `Bearer ${getToken()}`, ...(orderIds ? { 'Content-Type': 'application/json' } : {}) },
+        body: orderIds ? JSON.stringify({ order_ids: orderIds }) : undefined,
+    });
+    if (response.ok) return response.blob();
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.message || body?.error?.message || 'Could not download packing receipt and airway bill');
 }
 
 export namespace AdminPortal {

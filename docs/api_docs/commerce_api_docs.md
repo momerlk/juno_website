@@ -96,6 +96,7 @@ Auth:
 - `GET /api/v2/commerce/seller/orders/{id}/booking` — seller auth required; DEX booking status, tracking number, and history
 - `GET /api/v2/commerce/seller/orders/{id}/airway-bill` — seller auth required; staff-uploaded DEX airway-bill URL
 - `POST /api/v2/commerce/seller/airway-bills/download` — seller auth required; combines selected seller-owned labels into one PDF
+- `GET /api/v2/commerce/seller/orders/{id}/airway-bill/download` — seller auth required; packing receipt then label PDF
 - `POST /api/v2/commerce/seller/orders/{id}/packing` — seller auth required
 - `GET /api/v2/commerce/seller/statements` — seller auth required; statement list only
 - `POST /api/v2/admin/logistics/orders/{orderID}/refresh-tracking` — admin auth required
@@ -106,6 +107,7 @@ Auth:
 - `PUT /api/v2/commerce/admin/orders/{id}/tracking/warehouse` — admin auth required
 - `PATCH /api/v2/commerce/admin/orders/{id}/tracking/eta` — admin auth required
 - `GET /api/v2/commerce/admin/orders/{id}/processing-receipt` — admin auth required, price-free seller packing receipt
+- `GET /api/v2/commerce/admin/orders/{id}/airway-bill/download` and `POST /api/v2/commerce/admin/airway-bills/download` — admin auth required; packing receipt then label PDF
 - `PATCH /api/v2/commerce/admin/orders/{id}/details` — admin auth required; updates customer, address, payment, parent, and child snapshots
 - `POST /api/v2/commerce/admin/orders/{id}/update-notice` — admin auth required; resends the current order update to customer and seller emails
 - `POST /api/v2/commerce/admin/dm-orders` — admin auth required
@@ -1235,7 +1237,7 @@ Returns full details of a specific child order.
 
 `GET /api/v2/commerce/seller/orders/{id}/airway-bill` returns `{ "url": "..." }` for the airway bill uploaded by Juno operations. Both endpoints return `404` when the booking or label does not exist and reject another seller's order. `GET /api/v2/commerce/orders/{id}/airway-bill` returns the same stored public URL without authentication for simple seller/admin downloads.
 
-`POST /api/v2/commerce/seller/airway-bills/download` accepts selected seller order IDs and returns a downloadable `application/pdf` with each matching airway bill in request order. It accepts 1–50 unique IDs, rejects another seller's order, and fails the whole request if any selected order lacks a valid PDF label.
+`POST /api/v2/commerce/seller/airway-bills/download` accepts selected seller order IDs and returns a downloadable `application/pdf`. For every order, one large-image packing receipt page per ordered variant appears immediately before the DEX airway-bill page. It accepts 1–50 unique IDs, rejects another seller's order, and fails the whole request if any selected order lacks a valid PDF label or usable variant image. The same layout is available to admin operations through `GET /api/v2/commerce/admin/orders/{id}/airway-bill/download` and `POST /api/v2/commerce/admin/airway-bills/download`.
 
 ```json
 {"order_ids": ["order-1", "order-2"]}

@@ -171,6 +171,24 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  const downloadPackingPacket = async () => {
+    if (!seller?.token || !order?.id) return;
+    setDocAction('airway-bill');
+    setError(null);
+    try {
+      const url = URL.createObjectURL(await api.Seller.DownloadOrderAirwayBill(seller.token, order.id));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `juno-packing-${order.order_number || order.id}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not download the packing receipt and airway bill');
+    } finally {
+      setDocAction(null);
+    }
+  };
+
   const uploadEvidence = async (file: File | undefined, key: string) => {
     if (!file || !seller?.token) return;
     setUploadingEvidence(key);
@@ -355,7 +373,7 @@ const OrderDetailPage: React.FC = () => {
               <div className="space-y-1 text-xs text-neutral-400">
                 <p>Current: <span className="text-white">{safeTrackingLabel(tracking?.current_status || order.status)}</span></p>
                 {booking?.tracking_number ? <p>DEX tracking: <span className="text-white">{booking.tracking_number}</span></p> : null}
-                {airwayBillURL ? <p>Airway bill: <a href={airwayBillURL} target="_blank" rel="noreferrer" download className="text-primary underline">Download airway bill <ExternalLink size={11} className="inline" /></a></p> : null}
+                {airwayBillURL ? <Button label="Download packing receipt + airway bill" size="sm" variant="secondary" onClick={() => void downloadPackingPacket()} isLoading={docAction === 'airway-bill'} /> : null}
                 {booking?.tracking_url ? <p>Tracking link: <a href={booking.tracking_url} target="_blank" rel="noreferrer" className="text-primary underline">Track parcel <ExternalLink size={11} className="inline" /></a></p> : null}
                 {tracking?.estimated_delivery ? <p>Estimated delivery: <span className="text-white">{new Date(tracking.estimated_delivery).toLocaleDateString('en-PK')}</span></p> : null}
                 {booking?.last_checked_at ? <p>Last checked: <span className="text-white">{new Date(booking.last_checked_at).toLocaleString()}</span></p> : null}

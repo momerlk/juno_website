@@ -200,6 +200,7 @@ const ManageOrders: React.FC = () => {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [downloadingPackingPackets, setDownloadingPackingPackets] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dmDraftOpen, setDMDraftOpen] = useState(false);
   const [dmQuizLink, setDMQuizLink] = useState("");
@@ -430,6 +431,24 @@ const ManageOrders: React.FC = () => {
       setError(err instanceof Error ? err.message : "Failed to update selected orders");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const downloadPackingPackets = async () => {
+    if (!selectedIds.length) return;
+    setDownloadingPackingPackets(true);
+    setError(null);
+    try {
+      const url = URL.createObjectURL(await AdminCommerce.downloadAirwayBills(selectedIds));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "juno-packing-airway-bills.pdf";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not download packing receipts and airway bills");
+    } finally {
+      setDownloadingPackingPackets(false);
     }
   };
 
@@ -1028,6 +1047,13 @@ const ManageOrders: React.FC = () => {
                 className="inline-flex items-center gap-1 rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10 disabled:opacity-40"
               >
                 <Copy size={14} /> Get DEX booking details
+              </button>
+              <button
+                disabled={saving || downloadingPackingPackets || selectedIds.length === 0}
+                onClick={() => void downloadPackingPackets()}
+                className="inline-flex items-center gap-1 rounded-md border border-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/10 disabled:opacity-40"
+              >
+                <Copy size={14} /> {downloadingPackingPackets ? "Preparing PDFs…" : "Download packing PDFs"}
               </button>
               <button
                 disabled={saving}

@@ -328,6 +328,24 @@ const ManageOrders: React.FC = () => {
     }
   };
 
+  const downloadAirwayBill = async (order: Order) => {
+    if (!seller?.token || !order.id) return;
+    setIsDownloadingAirwayBills(true);
+    setError(null);
+    try {
+      const url = URL.createObjectURL(await api.Seller.DownloadOrderAirwayBill(seller.token, order.id));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `juno-packing-${order.order_number || order.id}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not download packing receipt and airway bill');
+    } finally {
+      setIsDownloadingAirwayBills(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card padding={0}>
@@ -540,7 +558,7 @@ const ManageOrders: React.FC = () => {
                         <td colSpan={9} className="p-3">
                           <div className="mb-3 flex items-center justify-between gap-3">
                             <p className="text-xs uppercase tracking-wide text-neutral-500">Order items</p>
-                            {order.id && airwayBillByOrderId[order.id] ? <a href={airwayBillByOrderId[order.id]} target="_blank" rel="noreferrer" download className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-white">Download airway bill</a> : null}
+                            {order.id && airwayBillByOrderId[order.id] ? <Button label="Download packing PDF" variant="primary" size="sm" onClick={() => void downloadAirwayBill(order)} isLoading={isDownloadingAirwayBills} /> : null}
                           </div>
                           {isDetailsLoading ? (
                             <p className="text-xs text-neutral-400">Loading order item details...</p>

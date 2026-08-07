@@ -375,6 +375,16 @@ export namespace Seller {
     throw new Error(body?.message || body?.error?.message || 'Could not download airway bills');
   }
 
+  export async function DownloadOrderAirwayBill(token: string, orderId: string): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/commerce/seller/orders/${encodeURIComponent(orderId)}/airway-bill/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) return response.blob();
+
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.message || body?.error?.message || 'Could not download packing receipt and airway bill');
+  }
+
   export async function GetOrderPackingPhoto(token: string, orderId: string, objectName: string): Promise<string> {
     return getPrivateImageUrl(`/commerce/seller/orders/${encodeURIComponent(orderId)}/packing-photo?object=${encodeURIComponent(objectName)}`, token);
   }

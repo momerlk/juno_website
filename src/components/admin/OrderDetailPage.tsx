@@ -525,6 +525,24 @@ const OrderDetailPage: React.FC = () => {
     popup.document.write(res.body.html); popup.document.close(); popup.focus(); popup.print();
   };
 
+  const downloadPackingPacket = async () => {
+    if (!selectedChildId) return;
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const url = URL.createObjectURL(await AdminCommerce.downloadOrderAirwayBill(selectedChildId));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `juno-packing-${selectedChild?.order_number || selectedChildId}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not download the packing receipt and airway bill');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const saveOrderDetails = async () => {
     if (!selectedChildId) return;
     if (!detailsDraft.full_name?.trim() || !detailsDraft.phone_number?.trim() || !detailsDraft.address_line1?.trim() || !detailsDraft.city?.trim()) {
@@ -780,7 +798,7 @@ const OrderDetailPage: React.FC = () => {
               <input value={bookingDraft.consignment_number} onChange={(event) => setBookingDraft({ consignment_number: event.target.value })} placeholder="DEX tracking number" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary" />
               <label className="text-xs text-neutral-400">Airway bill (PDF, JPG or PNG, max 10 MB)<input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => setAirwayBillFile(event.target.files?.[0] || null)} className="mt-1 block w-full text-xs text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-black" /></label>
               <div className="grid grid-cols-2 gap-2"><Button label="Save DEX booking" variant="primary" onClick={() => void saveManualDexBooking()} isLoading={isUpdating} isDisabled={!selectedChildId || !bookingDraft.consignment_number.trim() || !airwayBillFile} width="100%" /><Button label="Copy booking rows" icon={<Copy size={14} />} onClick={() => void copyDexBookingRows()} isDisabled={!selectedChildId} width="100%" /></div>
-              {booking && <div className="border-t border-white/10 pt-3 text-xs text-neutral-400"><div className="flex items-center justify-between gap-2"><p>DEX tracking: <span className="text-white">{booking.tracking_number || booking.consignment_number || '-'}</span></p><Button label="Refresh DEX" size="sm" onClick={() => void refreshDexTracking()} isLoading={isUpdating} /></div>{booking.tracking_url && <p className="mt-1">Tracking link: <a href={booking.tracking_url} target="_blank" rel="noreferrer" className="text-primary underline">Track parcel</a></p>}{booking.airway_bill_url && <p className="mt-1">Airway bill: <a href={booking.airway_bill_url} target="_blank" rel="noreferrer" className="text-primary underline">Open airway bill</a></p>}<p className="mt-1">Status: <span className="text-white">{booking.status.replace(/_/g, ' ')}</span></p>{booking.dex_raw_status && <p className="mt-1">DEX status: <span className="text-white">{booking.dex_raw_status}</span></p>}<p className="mt-1">Booked at: {booking.booked_at || booking.booking_time || '-'}</p><p className="mt-1">Last checked: {booking.last_checked_at || '-'}</p>{booking.tracking_history?.length ? <div className="mt-3 space-y-2 border-t border-white/10 pt-3"><p className="font-semibold text-white">DEX updates</p>{booking.tracking_history.map((event, index) => <p key={`${event.status}-${event.occurred_at || index}-${index}`}><span className="text-white">{event.status.replace(/_/g, ' ')}</span>{event.location ? ` · ${event.location}` : ''}{event.occurred_at ? ` · ${new Date(event.occurred_at).toLocaleString()}` : ''}{event.raw_status ? ` (${event.raw_status})` : ''}</p>)}</div> : null}</div>}
+              {booking && <div className="border-t border-white/10 pt-3 text-xs text-neutral-400"><div className="flex items-center justify-between gap-2"><p>DEX tracking: <span className="text-white">{booking.tracking_number || booking.consignment_number || '-'}</span></p><Button label="Refresh DEX" size="sm" onClick={() => void refreshDexTracking()} isLoading={isUpdating} /></div>{booking.tracking_url && <p className="mt-1">Tracking link: <a href={booking.tracking_url} target="_blank" rel="noreferrer" className="text-primary underline">Track parcel</a></p>}{booking.airway_bill_url && <div className="mt-2"><Button label="Download packing receipt + airway bill" size="sm" variant="secondary" onClick={() => void downloadPackingPacket()} isLoading={isUpdating} /></div>}<p className="mt-1">Status: <span className="text-white">{booking.status.replace(/_/g, ' ')}</span></p>{booking.dex_raw_status && <p className="mt-1">DEX status: <span className="text-white">{booking.dex_raw_status}</span></p>}<p className="mt-1">Booked at: {booking.booked_at || booking.booking_time || '-'}</p><p className="mt-1">Last checked: {booking.last_checked_at || '-'}</p>{booking.tracking_history?.length ? <div className="mt-3 space-y-2 border-t border-white/10 pt-3"><p className="font-semibold text-white">DEX updates</p>{booking.tracking_history.map((event, index) => <p key={`${event.status}-${event.occurred_at || index}-${index}`}><span className="text-white">{event.status.replace(/_/g, ' ')}</span>{event.location ? ` · ${event.location}` : ''}{event.occurred_at ? ` · ${new Date(event.occurred_at).toLocaleString()}` : ''}{event.raw_status ? ` (${event.raw_status})` : ''}</p>)}</div> : null}</div>}
             </VStack>
           </Card>
 
