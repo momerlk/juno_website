@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Clock3, Menu } from 'lucide-react';
 import { Theme } from '@astryxdesign/core/theme';
 import '@astryxdesign/core/astryx.css';
@@ -7,11 +7,19 @@ import { junoAdminTheme } from '../admin/juno-admin';
 import '../admin/junoAdminTheme.css';
 import Sidebar, { navigation } from './Sidebar';
 import { SellerQueueProvider } from '../../contexts/SellerQueueContext';
+import { useSellerAuth } from '../../contexts/SellerAuthContext';
 
 const SellerDashboardInner: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { pathname } = useLocation();
+  const { seller } = useSellerAuth();
+  const isFastTrack = Boolean(seller?.user?.is_fast_track && seller?.user?.status !== 'active');
+  const root = pathname.startsWith('/studio') ? '/studio' : '/seller';
+
+  if (isFastTrack && !pathname.endsWith('/dashboard/profile')) {
+    return <Navigate to={`${root}/dashboard/profile`} replace />;
+  }
 
   const pageMeta = useMemo(() => {
     const sortedNav = [...navigation].sort((a, b) => b.href.length - a.href.length);
@@ -62,6 +70,12 @@ const SellerDashboardInner: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {isFastTrack && (
+          <div className="mx-4 mt-4 rounded-lg border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100 md:mx-6 lg:mx-8">
+            Fast-track account: product, inventory, order, payout, and analytics tools unlock after onboarding.
+          </div>
+        )}
 
         <main className="flex-1 overflow-y-auto p-4 scrollbar-hide md:p-6 lg:p-8">
           <Outlet />

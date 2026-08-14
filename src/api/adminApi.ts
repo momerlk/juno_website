@@ -6,6 +6,7 @@ export const api_url = API_BASE_URL;
 
 const ADMIN_ACCESS_TOKEN_KEY = 'admin_token';
 const ADMIN_REFRESH_TOKEN_KEY = 'admin_refresh_token';
+const ANALYTICS_REQUEST_TIMEOUT = 60_000;
 
 function getAdminAccessToken(payload: { token?: string; access_token?: string } | null | undefined) {
     return payload?.access_token ?? payload?.token ?? undefined;
@@ -159,7 +160,7 @@ export namespace AdminAnalytics {
         if (params?.from) search.set('from', params.from);
         if (params?.to) search.set('to', params.to);
         const query = search.toString();
-        return request(`/admin/analytics/funnel${query ? `?${query}` : ''}`, 'GET', undefined, getToken());
+        return request(`/admin/analytics/funnel${query ? `?${query}` : ''}`, 'GET', undefined, getToken(), false, ANALYTICS_REQUEST_TIMEOUT);
     }
 
     export async function getAppFunnel(params?: { from?: string; to?: string }): Promise<APIResponse<AdminFunnelResponse>> {
@@ -167,7 +168,7 @@ export namespace AdminAnalytics {
         if (params?.from) search.set('from', params.from);
         if (params?.to) search.set('to', params.to);
         const query = search.toString();
-        return request(`/admin/analytics/app-funnel${query ? `?${query}` : ''}`, 'GET', undefined, getToken());
+        return request(`/admin/analytics/app-funnel${query ? `?${query}` : ''}`, 'GET', undefined, getToken(), false, ANALYTICS_REQUEST_TIMEOUT);
     }
 
     export async function getFunnelDiagnostics(params?: { from?: string; to?: string }): Promise<APIResponse<AdminFunnelDiagnosticsResponse>> {

@@ -118,6 +118,7 @@ const SellerOnboarding: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [fastTrackBusinessName, setFastTrackBusinessName] = useState('');
   const [draftAvailable, setDraftAvailable] = useState<{ step: number; draft_data: any } | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
@@ -293,6 +294,23 @@ const SellerOnboarding: React.FC = () => {
         return;
       }
       setSubmitted(true);
+    } catch {
+      alert('Failed to connect. Please check your internet and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFastTrackSubmit = async () => {
+    if (!fastTrackBusinessName.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const resp = await SellerApi.Auth.RegisterFastTrack({ business_name: fastTrackBusinessName.trim() });
+      if (!resp.ok) {
+        alert((resp.body as any)?.error || (resp.body as any)?.message || 'Registration failed. Please try again.');
+        return;
+      }
+      navigate(`${prefix}/dashboard/profile`);
     } catch {
       alert('Failed to connect. Please check your internet and try again.');
     } finally {
@@ -985,6 +1003,17 @@ const SellerOnboarding: React.FC = () => {
                 {steps[currentStep].title}
               </h1>
             </div>
+
+            {currentStep === 0 && (
+              <div className="mb-8 rounded-xl border border-white/[0.08] bg-white/[0.03] p-5">
+                <p className="text-sm font-semibold text-white">Start fast</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/45">Add your business name now. You can complete the rest later; operational tools stay locked until then.</p>
+                <div className="mt-4 flex gap-2">
+                  <input value={fastTrackBusinessName} onChange={(event) => setFastTrackBusinessName(event.target.value)} placeholder="Business name" className="min-w-0 flex-1 rounded-lg border border-white/[0.1] bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-primary/60" />
+                  <button type="button" onClick={handleFastTrackSubmit} disabled={!fastTrackBusinessName.trim() || isSubmitting} className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-black disabled:opacity-40">Start</button>
+                </div>
+              </div>
+            )}
 
             {/* Animated content */}
             <AnimatePresence mode="wait">

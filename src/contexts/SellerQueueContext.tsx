@@ -27,7 +27,7 @@ export const SellerQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!seller?.token) return;
+    if (!seller?.token || (seller.user?.is_fast_track && seller.user?.status !== 'active')) return;
     setIsLoading(true);
     try {
       const res = await api.Seller.Queue.List(seller.token);
@@ -40,7 +40,7 @@ export const SellerQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [seller?.token]);
 
   useEffect(() => {
-    if (!seller?.token) {
+    if (!seller?.token || (seller.user?.is_fast_track && seller.user?.status !== 'active')) {
       setItems([]);
       return;
     }

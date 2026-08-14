@@ -99,6 +99,23 @@ const asISOString = (value?: string) => value ? new Date(`${value}T00:00:00.000Z
 type FunnelType = 'website' | 'app';
 type EventFilter = FunnelStageEvent | 'all';
 type OutcomeFilter = 'all' | 'incomplete' | 'purchased';
+type BenchmarkStatus = 'below' | 'meets' | 'above';
+
+const WEBSITE_FUNNEL_BENCHMARKS: Partial<Record<FunnelStageEvent, { baseEvent: FunnelStageEvent; min: number; max: number; label: string }>> = {
+  add_to_cart: { baseEvent: 'view_item', min: 0.05, max: 0.07, label: '5–7% of product views' },
+  begin_checkout: { baseEvent: 'add_to_cart', min: 0.35, max: 0.45, label: '~40% of bag adds' },
+  purchase: { baseEvent: 'view_item', min: 0.01, max: 0.02, label: '1–2% of product views' },
+};
+
+const benchmarkStatus = (rate: number, benchmark: { min: number; max: number }): BenchmarkStatus => (
+  rate < benchmark.min ? 'below' : rate > benchmark.max ? 'above' : 'meets'
+);
+
+const BENCHMARK_BADGES: Record<BenchmarkStatus, { label: string; variant: 'error' | 'success' | 'info' }> = {
+  below: { label: 'Below standard', variant: 'error' },
+  meets: { label: 'Meets standard', variant: 'success' },
+  above: { label: 'Above standard', variant: 'info' },
+};
 
 const normalizeJourney = (journey: Partial<AdminCheckoutJourneySummary>): AdminCheckoutJourneySummary => ({
   journey_id: journey.journey_id || '',
@@ -220,7 +237,12 @@ const AnalyticsFunnelPage: React.FC = () => {
     const lost = previous ? Math.max(previous.count - stage.count, 0) : 0;
     return { ...stage, previous, lost, lossRate: previous ? share(lost, previous.count) : 0 };
   }), [funnel]);
-  const biggestLeak = useMemo(() => funnelSteps.slice(1).reduce<typeof funnelSteps[number] | null>((worst, step) => !worst || step.lost > worst.lost ? step : worst, null), [funnelSteps]);
+  const funnelBenchmarks = useMemo(() => new Map(funnelSteps.map((step) => {
+    const benchmark = funnelType === 'website' ? WEBSITE_FUNNEL_BENCHMARKS[step.event] : undefined;
+    if (!benchmark) return [step.event, undefined] as const;
+    const rate = share(step.count, stageCount(benchmark.baseEvent));
+    return [step.event, { ...benchmark, rate, status: benchmarkStatus(rate, benchmark) }] as const;
+  })), [funnelSteps, funnelType, stageCount]);
 
   const diagnosticCount = useCallback((subEvent: string, detail?: string) => diagnostics
     .filter((row) => row.event === 'begin_checkout' && row.sub_event === subEvent && (detail === undefined || row.detail === detail))
@@ -423,18 +445,6 @@ const AnalyticsFunnelPage: React.FC = () => {
         </Card>
       )}
 
-      {!error && !isLoading && biggestLeak && biggestLeak.lost > 0 && (
-        <Banner
-          status="warning"
-          title={`Biggest leak: ${formatCount(biggestLeak.lost)} lost between ${EVENT_LABELS[biggestLeak.previous?.event || biggestLeak.event].toLowerCase()} and ${EVENT_LABELS[biggestLeak.event].toLowerCase()}`}
-          description={
-            funnelType === 'website' && stallReasons.rows.length
-              ? `${formatPercent(biggestLeak.lossRate)} of that step drops off. Most common stall in checkout journeys: ${stallReasons.rows[0].label} (${formatCount(stallReasons.rows[0].count)} of ${formatCount(stallReasons.total)} incomplete).`
-              : `${formatPercent(biggestLeak.lossRate)} of the people who reached the previous step never took this one.`
-          }
-        />
-      )}
-
       {!error && (isLoading || stages.length > 0) && (
         <Grid columns={{ minWidth: 190, max: 5 }} gap={3}>
           {funnelSteps.map((step, index) => (
@@ -442,7 +452,10 @@ const AnalyticsFunnelPage: React.FC = () => {
               <VStack gap={3}>
                 <HStack hAlign="between" vAlign="center" gap={2}>
                   <Text type="label" color="secondary">{EVENT_LABELS[step.event]}</Text>
-                  {!isLoading && biggestLeak?.event === step.event && step.lost > 0 && <Badge variant="error" label="Worst leak" />}
+                  {!isLoading && (() => {
+                    const benchmark = funnelBenchmarks.get(step.event);
+                    return benchmark && <Badge {...BENCHMARK_BADGES[benchmark.status]} />;
+                  })()}
                 </HStack>
                 <Heading level={3}>{isLoading ? '—' : formatCount(step.count)}</Heading>
                 {index === 0 ? (
@@ -451,6 +464,7 @@ const AnalyticsFunnelPage: React.FC = () => {
                   <VStack gap={1}>
                     <ProgressBar label={`${EVENT_LABELS[step.event]} conversion`} isLabelHidden value={isLoading ? 0 : step.conversion * 100} max={100} variant="accent" />
                     <Text type="supporting">{isLoading ? 'Loading…' : `${formatPercent(step.conversion)} continued · ${formatCount(step.lost)} lost here`}</Text>
+                    {!isLoading && funnelBenchmarks.get(step.event) && <Text type="supporting">{formatPercent(funnelBenchmarks.get(step.event)!.rate)} vs {funnelBenchmarks.get(step.event)!.label}</Text>}
                   </VStack>
                 )}
               </VStack>

@@ -32,6 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setIsOpen, isCollapsed, onToggleColla
   const navigate = useNavigate();
   const root = pathname.startsWith('/studio') ? '/studio' : '/seller';
   const isVerified = Boolean(seller?.user?.verified);
+  const isFastTrack = Boolean(seller?.user?.is_fast_track && seller?.user?.status !== 'active');
 
   return (
     <SideNav
@@ -41,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setIsOpen, isCollapsed, onToggleColla
       footer={<VStack gap={2}><Divider /><SideNavSection title="Brand account"><SideNavItem label={seller?.user?.business_name || 'Your brand'} icon={Store} isDisabled /></SideNavSection><Button label="WhatsApp support" variant="ghost" size="sm" icon={<MessageCircle size={14} />} onClick={() => window.open('https://wa.me/923158972405', '_blank', 'noopener,noreferrer')} /><Button label="Sign out" variant="ghost" size="sm" icon={<LogOut size={14} />} onClick={logout} /></VStack>}
     >
       <SideNavSection title="Workspace">
-        {navigation.map((item) => {
+        {navigation.filter((item) => !isFastTrack || item.name === 'Profile').map((item) => {
           const href = `${root}${item.href}`;
           return <SideNavItem key={item.name} href={href} label={item.name} icon={item.icon} isSelected={pathname === href || (item.href !== '/dashboard' && pathname.startsWith(`${href}/`))} onClick={(event) => { event.preventDefault(); navigate(href); setIsOpen(false); }} />;
         })}

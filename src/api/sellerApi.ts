@@ -237,6 +237,10 @@ export namespace Auth {
         };
     }
 
+    export interface FastTrackRegisterRequest {
+        business_name: string;
+    }
+
     export async function Login(email: string, password: string): Promise<APIResponse<LoginResponse>> {
         const response = await request<LoginResponse>("/seller/auth/login", "POST", { email, password }, undefined, true);
         if (response.ok && response.body && typeof response.body === 'object') {
@@ -247,6 +251,14 @@ export namespace Auth {
 
     export async function Register(data: RegisterRequest): Promise<APIResponse<any>> {
         return await request("/seller/auth/register", "POST", data, undefined, true);
+    }
+
+    export async function RegisterFastTrack(data: FastTrackRegisterRequest): Promise<APIResponse<any>> {
+        const response = await request("/seller/auth/register/fast-track", "POST", data, undefined, true);
+        if (response.ok && response.body && typeof response.body === 'object') {
+            persistSellerAuth(response.body as LoginResponse, (response.body as LoginResponse).seller);
+        }
+        return response;
     }
 
     export async function SaveDraft(email: string, step: number, draft_data: object): Promise<APIResponse<any>> {

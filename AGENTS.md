@@ -1,112 +1,37 @@
-# Project Overview
+# Repository Guidelines
 
-## Context & Understanding
-- Review the repository docs before reading any raw files so context stays accurate and focused.
-- Only read raw files when explicitly instructed to do so for code modification or specific, detailed file investigation.
+## Project Structure & Module Organization
 
-Juno is a curated marketplace for Pakistan's independent fashion labels. The platform is designed to prioritize **indie brands** and their stories as the primary discovery mechanism, with AI-driven features and a "swipe-to-shop" interface serving as secondary tools for conversion.
+- `src/` contains the React application. Keep domain UI in `src/components/` (for example, `seller/` and `admin/`), shared state in `src/contexts/`, API clients in `src/api/` and `src/api.tsx`, and reusable helpers in `src/hooks/` and `src/utils/`.
+- `src/data/` and `src/constants/` hold local content and configuration. Put public, directly served assets in `public/`; brand assets belong in `public/brand_logos/`, `public/brand_banners/`, and `public/juno_logos/`.
+- Product and API references live in `PRODUCT.md` and `docs/`. Treat generated `dist/` output as build-only.
 
-The application serves as the main ecosystem hub, connecting shoppers with original creators through a unified experience.
+## Build, Lint, and Development
 
-**Main Technologies:**
+- `npm install` installs dependencies.
+- `npm run dev` starts Vite for local development (bound to the network host).
+- `npm run lint` runs ESLint across the repository.
+- `npm run build` type-checks through Vite's build pipeline and writes the production bundle to `dist/`.
+- `npm run preview` serves the built bundle for a final local check.
 
-*   **Frontend:** React, Vite, TypeScript, Tailwind CSS
-*   **Routing:** `react-router-dom`
-*   **Animation:** Framer Motion (used for brand showcases, marquees, and interactions)
-*   **State Management:** React Context API for role-based authentication
-*   **API Communication:** Configured in `src/api.tsx`.
+Run `npm run lint && npm run build` before opening a pull request. No automated test runner is currently configured; add focused tests only when introducing non-trivial, testable logic and include the command needed to run them.
 
-**Architecture:**
+## Coding Style & Naming Conventions
 
-The application is modular and role-oriented:
+Use TypeScript and React function components. Match existing file formatting: two-space indentation, single quotes, and semicolons. Name components in PascalCase (`ProductCard.tsx`), hooks as `useX` (`useCart.ts`), and utilities in camelCase. Prefer existing helpers and API types over new abstractions.
 
-*   **Main Website:** A high-impact, brand-first landing page featuring brand showcases, curated discovery, and community testimonials.
-*   **Blog:** MDX-powered section for founder stories and fashion discovery articles.
-*   **Seller Dashboard:** A specialized "Studio" for labels to manage inventory, analytics, and brand presence.
-*   **Admin Dashboard:** Platform management for orders, sellers, users, and delivery logistics.
-*   **Ambassador Dashboard:** Tracking for brand ambassadors and campus leads.
-*   **Work Dashboard:** Internal management for employee operations.
+The storefront and seller UI use the Juno red-to-pink/orange gradient (`from-primary to-secondary`) and high-contrast headings. Do not introduce Astryx outside admin-portal UI; admin work must follow the Astryx workflow documented in the project instructions.
 
-# Building and Running
+## Commits & Pull Requests
 
-**Prerequisites:**
+Use concise, scoped, imperative commits, following the existing history: `feat (checkout): improve city selector` or `fix (cart): preserve checkout navigation`. Keep each commit focused.
 
-*   Node.js and npm
+PRs should explain the user-visible change, link the relevant issue when available, list validation performed, and include screenshots or a short recording for visual changes. Call out API, checkout, pricing, or asset changes explicitly.
 
-**Installation:**
+## Configuration & Safety
 
-```bash
-npm install
-```
+Do not commit secrets or production credentials. Preserve real partner brand names, logos, banners, and testimonial content; these are binding product assets. Verify cart, checkout, and order-tracking changes against the documented API contracts in `docs/api_docs/`.
 
-**Development:**
+## Repository Scope
 
-```bash
-npm run dev
-```
-
-**Production Build:**
-
-```bash
-npm run build
-```
-
-# Development Conventions
-
-*   **Brand-First Design:** All visual updates must prioritize brand campaign imagery and founder narratives over generic platform features.
-*   **Styling Standards:**
-    *   **Colors:** Use the standardized Red-to-Pink/Orange gradient for primary actions and accents.
-    *   **Gradients:** Use `from-primary to-secondary` (Red to Pink) consistently across the site. Avoid mixing with other colors (blues/greens) in main UI components.
-    *   **Typography:** Use high-contrast font weights (Black/ExtraBold) for headlines to maintain the "Indie Spirit" aesthetic.
-*   **Components:** Organized by domain (e.g., `seller`, `admin`, `shared`).
-*   **Assets:**
-    *   Juno Logos: `public/juno_logos/**` (Use white `icon+text` for dark backgrounds).
-    *   Brand Logos: `public/brand_logos/**`.
-    *   Brand Banners: `public/brand_banners/**` (Used for the cinematic Brand Showcase).
-    *   Partner Logos: `public/dark_logos/**` (Used for the Ecosystem section).
-
-## Gemini Added Memories
-- **[REBRAND]** Executed a complete marketing pivot: shifted the mission from "swipe-to-shop app" to "Home of Pakistan's Indie Brands."
-- Standardized styling to a strict Red + Pink gradient and high-contrast typography.
-- Implemented the `BrandShowcase` (marquee campaign imagery) and `TestimonialsSection` (Community Wall).
-- Redesigned the `Hero`, `BrandsSection` (logo ticker), and `JunoApp` (ecosystem partners) to align with the new brand-first strategy.
-- Implemented 'Buy Now' button feature in Juno app (Feed and Product Details screens) allowing instant single-item checkout using Orders.CreateOrder.
-- **[SELLER PORTAL PHILOSOPHY]** The seller portal should feel like joining a movement, not filling out admin paperwork. Use `src/components/seller/SellerOnboarding.tsx` and `src/components/seller/JunoStudioLanding.tsx` as the design reference for portal upgrades.
-- The first approved-seller touchpoint should explain why Juno exists, who the buyers are, and why this is better than selling through Instagram DMs. Make sellers feel proud to be on the platform.
-- Analytics should look and feel more like Instagram-style brand intelligence than spreadsheet reporting. Prioritize saves, profile visits, story performance, browsing geography, and audience signals.
-- Inventory UX should stay brutally simple. The minimum viable listing is product name, price, and quantity. Size guide is optional, but the portal should visibly reward it because it improves buyer confidence.
-- The portal should teach as it operates. Add short educational guidance for product photography, product descriptions, and drop strategy directly inside seller flows.
-- Seller community is part of retention. Make room in the portal for invite-only WhatsApp or private-channel touchpoints, weekly tips, collaboration, and support between brands.
-
-<!-- ASTRYX:START -->
-Astryx v0.1.8 · 90+ components
-CLI: run every command as `npx astryx <cmd>` (shown below as `astryx ...`).
-
-SCOPE — Use Astryx only for admin-portal UI work or when the user explicitly asks for it. Do not introduce Astryx into storefront, seller, checkout, or existing shared UI; preserve their established design systems.
-
-SETUP (only when using Astryx, in the relevant app entry) — without these, components render unstyled:
-  import "@astryxdesign/core/reset.css";
-  import "@astryxdesign/core/astryx.css";
-
-WORKFLOW — for in-scope Astryx UI only, discover, don't guess. Before writing UI:
-1. `astryx build "<idea>"` — START HERE: returns a kit (closest [page] + [block]s + [component]s). No args = full playbook.
-2. `astryx template <name> [--skeleton]` — scaffold the [page]/[block]s it named, or study their layout. Templates are reference code.
-3. `astryx component <Name>` — props + examples for every component you use.
-
-RULES:
-- No <div> — components do all layout/spacing. Full page → AppShell; sidebar nav → SideNav.
-- Frame first: pick the shell (AppShell / Layout+LayoutPanel) and budget regions in px BEFORE writing content (`astryx docs layout`).
-- Dense data = rows (Table, List/Item) edge-to-edge — never Card-wrapped list items. Card = dashboard widgets, galleries, settings groups only.
-- Status → StatusDot/Token; Badge only for counts and enumerated states, never decoration.
-- Custom styling: component props first; else Tailwind utilities backed by tokens (bg-surface, text-primary, rounded-lg) via tailwind-theme.css. No raw hex/px.
-- Tokens for every value (`astryx docs tokens`). Brand/accent via `astryx theme` — never override --color-* in :root.
-- SELF-CHECK before you finish: re-read the file and replace any style={{…}}, raw <div>/<span> layout, imported .css/@apply, or hardcoded/arbitrary value (e.g. bg-[#fff], p-[13px]) with the component or a token-backed utility. If unsure a component/prop exists, run `astryx component <Name>` / `astryx search "<thing>"`; don't hand-roll CSS.
-
-MORE CLI:
-  search "<query>"   find any component / hook / doc / template / block
-  component --list   90+ components by category
-  template --list    page + block recipes
-  docs <topic>       color, elevation, icons, illustrations, internationalization, layout, migration, motion, principles, shape, spacing, styling, theme, tokens, typography
-  swizzle <Name>     eject component source for deep customization
-  upgrade --apply    run after any @astryxdesign/core bump
-<!-- ASTRYX:END -->
+Work only in this `juno_website` repository. Do not modify the separate API codebase or any other repository, even when a request would benefit from a backend change; refuse that portion and explain that it requires work in the owning repository.

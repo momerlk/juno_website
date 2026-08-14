@@ -1,136 +1,47 @@
-# Project Overview
+# CLAUDE.md
 
-## Context Navigation
-1. ALWAYS query the knowledge graph first
-2. Only read raw files if I explicitly say so
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Juno is the premier curated marketplace for Pakistan's independent labels. The platform is designed to prioritize **indie brands** and their stories as the primary discovery mechanism, with AI-driven features and a "swipe-to-shop" interface serving as secondary tools for conversion.
-
-The application serves as the main ecosystem hub, connecting shoppers with original creators through a unified experience.
-
-**Main Technologies:**
-
-*   **Frontend:** React, Vite, TypeScript, Tailwind CSS
-*   **Routing:** `react-router-dom`
-*   **Animation:** Framer Motion (used for brand showcases, marquees, and interactions)
-*   **State Management:** React Context API for role-based authentication
-*   **API Communication:** Configured in `src/api.tsx`.
-
-**Architecture:**
-
-The application is modular and role-oriented:
-
-*   **Main Website:** A high-impact, brand-first landing page featuring brand showcases, curated discovery, and community testimonials.
-*   **Blog:** MDX-powered section for founder stories and fashion discovery articles.
-*   **Seller Dashboard:** A specialized "Studio" for labels to manage inventory, analytics, and brand presence.
-*   **Admin Dashboard:** Platform management for orders, sellers, users, and delivery logistics.
-*   **Ambassador Dashboard:** Tracking for brand ambassadors and campus leads.
-*   **Work Dashboard:** Internal management for employee operations.
-
-# Building and Running
-
-**Prerequisites:**
-
-*   Node.js and npm
-
-**Installation:**
+## Commands
 
 ```bash
-npm install
+npm install          # install deps
+npm run dev           # Vite dev server (bound to network host, --host)
+npm run lint           # ESLint across repo
+npm run build           # tsc build + Vite production bundle -> dist/
+npm run preview          # serve the built dist/ bundle
 ```
 
-**Development:**
+No test runner is configured. Run `npm run lint && npm run build` before opening a PR — the build step is also the type-check.
 
-```bash
-npm run dev
-```
+## Architecture
 
-**Production Build:**
+Single-page React app (Vite + TS + react-router-dom 7), one `App.tsx` mounting **four role-oriented surfaces** behind one router, split by lazy `import()` per route (`lazyWithRetry` wrapper, `src/utils/lazyWithRetry.ts`) so each surface's JS only loads when visited:
 
-```bash
-npm run build
-```
+- **Storefront** — `/`, `/catalog`, `/catalog/:productId`, `/wishlist`, `/checkout*`, `/track*`, `/size-quiz/:token`, policy pages. Components in `src/components/catalog/`, `src/components/checkout/`, `src/components/cart/`, `src/components/landing/`, `src/components/policies/`.
+- **Seller "Studio"** — `/studio`, `/seller/*` and `/studio/*` are parallel route trees mounting the *same* dashboard components (`SellerDashboard` nested routes: inventory, orders, order-processing, statements, analytics, profile). Auth/session via `SellerAuthContext`; a separate `JunoStudioContext` wraps studio-specific state. `ProtectedRoute` gates the dashboard.
+- **Admin** — `/admin/*`, gated by `AdminProtectedRoute` + `AdminAuthContext`. This is the **only** surface allowed to use the Astryx design system (`@astryxdesign/core`) — see Astryx rules below. Never introduce Astryx into storefront/seller/checkout.
+- **Ambassador/Work dashboards** — referenced in product docs but not present as routes in `App.tsx` at present; verify before assuming they exist.
 
-# Development Conventions
+All four auth/session providers (`AdminAuthProvider`, `SellerAuthProvider`, `JunoStudioProvider`, `GuestCartProvider`) wrap the entire routed tree in `App.tsx`, not per-surface — state for a role is available everywhere, so guard access at the route/component level via the `ProtectedRoute` components, not at the provider level.
 
-*   **Brand-First Design:** All visual updates must prioritize brand campaign imagery and founder narratives over generic platform features.
-*   **Styling Standards:**
-    *   **Colors:** Use the standardized Red-to-Pink/Orange gradient for primary actions and accents.
-    *   **Gradients:** Use `from-primary to-secondary` (Red to Pink) consistently across the site. Avoid mixing with other colors (blues/greens) in main UI components.
-    *   **Typography:** Use high-contrast font weights (Black/ExtraBold) for headlines to maintain the "Indie Spirit" aesthetic.
-*   **Components:** Organized by domain (e.g., `seller`, `admin`, `shared`).
-*   **Assets:**
-    *   Juno Logos: `public/juno_logos/**` (Use white `icon+text` for dark backgrounds).
-    *   Brand Logos: `public/brand_logos/**`.
-    *   Brand Banners: `public/brand_banners/**` (Used for the cinematic Brand Showcase).
-    *   Partner Logos: `public/dark_logos/**` (Used for the Ecosystem section).
+Route path also drives page `<title>` (`getPageTitle` in `App.tsx`) and analytics tagging (Microsoft Clarity via `src/utils/clarity.ts`, funnel page views via `src/hooks/useFunnelAnalytics.ts`) — new routes need entries in both if they should get correct titles/analytics.
 
-## Claude Added Memories
-- **[REBRAND]** Executed a complete marketing pivot: shifted the mission from "swipe-to-shop app" to "Home of Pakistan's Indie Brands."
-- Standardized styling to a strict Red + Pink gradient and high-contrast typography.
-- Implemented the `BrandShowcase` (marquee campaign imagery) and `TestimonialsSection` (Community Wall).
-- Redesigned the `Hero`, `BrandsSection` (logo ticker), and `JunoApp` (ecosystem partners) to align with the new brand-first strategy.
-- Implemented 'Buy Now' button feature in Juno app (Feed and Product Details screens) allowing instant single-item checkout using Orders.CreateOrder.
-- **[SELLER PORTAL PHILOSOPHY]** The seller portal should feel like joining a movement, not filling out admin paperwork. Use `src/components/seller/SellerOnboarding.tsx` and `src/components/seller/JunoStudioLanding.tsx` as the style reference for portal upgrades.
-- The first post-approval touchpoint should explain why Juno exists, who the buyers are, and why selling here is different from Instagram DMs. Sellers should feel proud to be on Juno.
-- Seller dashboards should prioritize brand story analytics over spreadsheet-style reporting: saves, profile visits, story performance, and browsing demographics should be foregrounded whenever possible.
-- Inventory management should feel brutally simple. Minimum viable listing inputs are product name, price, and quantity. Size guide is optional but should be visibly incentivized with trust/conversion cues.
-- Education belongs inside the portal. Include short guidance surfaces for photography, product descriptions, and drop strategy because better seller inputs directly improve buyer trust and GMV.
-- Community is part of the product. Seller-facing surfaces should make room for invite-only community touchpoints like WhatsApp groups, weekly tips, and collaborative founder support.
+Backend is external; this repo is a pure client. `src/api/` holds per-domain API clients (e.g. `sellerApi.ts`); request/response contracts are documented per-domain in `docs/api_docs/*.md` (commerce, catalog, seller, admin, identity, analytics, sizing, media, notifications, interactions, closet) — check the relevant doc before changing a call shape. `docs/order-processing/` and `docs/schemas/` hold operational/process docs (refund/return/exchange policy, order processing, accounting).
 
+## Design systems (two, strictly scoped)
 
-## Frontend design aesthetics
-DISTILLED_AESTHETICS_PROMPT = """
-<frontend_aesthetics>
-You tend to converge toward generic, "on distribution" outputs. In frontend design, this creates what users call the "AI slop" aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight. Focus on:
+- **Storefront/seller/checkout**: hand-rolled Tailwind, Red→Pink/Orange gradient identity (`from-primary to-secondary`, colors defined in `tailwind.config.js`), high-contrast Black/ExtraBold headline typography. Avoid blue/green accents in these surfaces.
+- **Admin only**: Astryx (`@astryxdesign/core`, invoked via `npx astryx <cmd>`). No raw `<div>` layout, no raw hex/px, no `style={{}}` — components + token-backed Tailwind utilities only. Before writing admin UI, run `astryx build "<idea>"` to discover the right kit; run `astryx component <Name>` for props. Full workflow/rules are embedded in `AGENTS.md`.
 
-Typography: Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts like Arial and Inter; opt instead for distinctive choices that elevate the frontend's aesthetics.
+Do not mix the two systems across surface boundaries.
 
-Color & Theme: Commit to a cohesive aesthetic. Use CSS variables for consistency. Dominant colors with sharp accents outperform timid, evenly-distributed palettes. Draw from IDE themes and cultural aesthetics for inspiration.
+## Content and brand assets are binding
 
-Motion: Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML. Use Motion library for React when available. Focus on high-impact moments: one well-orchestrated page load with staggered reveals (animation-delay) creates more delight than scattered micro-interactions.
+Partner brand names, logos (`public/brand_logos/**`), banners (`public/brand_banners/**`), and testimonial/community-wall quotes are real and must never be fabricated or altered. `public/dark_logos/**` (ecosystem/partner logos) is the one asset set that may be placeholder. Juno's own logos live in `public/juno_logos/**` (use the white icon+text variant on dark backgrounds).
 
-Backgrounds: Create atmosphere and depth rather than defaulting to solid colors. Layer CSS gradients, use geometric patterns, or add contextual effects that match the overall aesthetic.
+## Conventions
 
-Avoid generic AI-generated aesthetics:
-- Overused font families (Inter, Roboto, Arial, system fonts)
-- Clichéd color schemes (particularly purple gradients on white backgrounds)
-- Predictable layouts and component patterns
-- Cookie-cutter design that lacks context-specific character
+TypeScript, React function components, two-space indent, single quotes, semicolons. PascalCase components (`ProductCard.tsx`), `useX` hooks, camelCase utilities. Prefer existing helpers/API types in `src/hooks/`, `src/utils/`, `src/api/` over new abstractions. Commits: `feat (scope): message` / `fix (scope): message`, following existing `git log` style.
 
-Interpret creatively and make unexpected choices that feel genuinely designed for the context. Vary between light and dark themes, different fonts, different aesthetics. You still tend to converge on common choices (Space Grotesk, for example) across generations. Avoid this: it is critical that you think outside the box!
-</frontend_aesthetics>
-"""
-
-<!-- ASTRYX:START -->
-Astryx v0.1.8 · 90+ components
-CLI: run every command as `npx astryx <cmd>` (shown below as `astryx ...`).
-
-SCOPE — Use Astryx only for admin-portal UI work or when the user explicitly asks for it. Do not introduce Astryx into storefront, seller, checkout, or existing shared UI; preserve their established design systems.
-
-SETUP (only when using Astryx, in the relevant app entry) — without these, components render unstyled:
-  import "@astryxdesign/core/reset.css";
-  import "@astryxdesign/core/astryx.css";
-
-WORKFLOW — for in-scope Astryx UI only, discover, don't guess. Before writing UI:
-1. `astryx build "<idea>"` — START HERE: returns a kit (closest [page] + [block]s + [component]s). No args = full playbook.
-2. `astryx template <name> [--skeleton]` — scaffold the [page]/[block]s it named, or study their layout. Templates are reference code.
-3. `astryx component <Name>` — props + examples for every component you use.
-
-RULES:
-- No <div> — components do all layout/spacing. Full page → AppShell; sidebar nav → SideNav.
-- Frame first: pick the shell (AppShell / Layout+LayoutPanel) and budget regions in px BEFORE writing content (`astryx docs layout`).
-- Dense data = rows (Table, List/Item) edge-to-edge — never Card-wrapped list items. Card = dashboard widgets, galleries, settings groups only.
-- Status → StatusDot/Token; Badge only for counts and enumerated states, never decoration.
-- Custom styling: component props first; else Tailwind utilities backed by tokens (bg-surface, text-primary, rounded-lg) via tailwind-theme.css. No raw hex/px.
-- Tokens for every value (`astryx docs tokens`). Brand/accent via `astryx theme` — never override --color-* in :root.
-- SELF-CHECK before you finish: re-read the file and replace any style={{…}}, raw <div>/<span> layout, imported .css/@apply, or hardcoded/arbitrary value (e.g. bg-[#fff], p-[13px]) with the component or a token-backed utility. If unsure a component/prop exists, run `astryx component <Name>` / `astryx search "<thing>"`; don't hand-roll CSS.
-
-MORE CLI:
-  search "<query>"   find any component / hook / doc / template / block
-  component --list   90+ components by category
-  template --list    page + block recipes
-  docs <topic>       color, elevation, icons, illustrations, internationalization, layout, migration, motion, principles, shape, spacing, styling, theme, tokens, typography
-  swizzle <Name>     eject component source for deep customization
-  upgrade --apply    run after any @astryxdesign/core bump
-<!-- ASTRYX:END -->
+See `AGENTS.md` for the full contributor guide and `PRODUCT.md` for product positioning/principles.
