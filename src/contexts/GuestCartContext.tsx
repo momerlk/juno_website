@@ -42,7 +42,8 @@ interface GuestCartContextValue {
 }
 
 const STORAGE_KEYS = {
-    CART_SNAPSHOT: 'juno_guest_cart_snapshot',
+    CART_SNAPSHOT: 'juno_guest_cart_snapshot_v2',
+    LEGACY_CART_SNAPSHOT: 'juno_guest_cart_snapshot',
 };
 
 const GuestCartContext = createContext<GuestCartContextValue | undefined>(undefined);
@@ -96,6 +97,9 @@ export const GuestCartProvider: React.FC<{ children: ReactNode }> = ({ children 
     }, []);
 
     useEffect(() => {
+        // Variant IDs were repaired in the catalog. A cart saved before that
+        // repair can still point at an old, ambiguous ID, so never restore it.
+        localStorage.removeItem(STORAGE_KEYS.LEGACY_CART_SNAPSHOT);
         const storedSnapshot = loadFromStorage<GuestCart | null>(STORAGE_KEYS.CART_SNAPSHOT, null);
         const rawItems = Array.isArray(storedSnapshot?.items) ? storedSnapshot.items : [];
         const items = rawItems.filter((item) => isValidCartItem(item));
