@@ -135,13 +135,13 @@ const viewMatches = (order: any, view: OrderView) => {
   const status = orderStatus(order);
   if (view === "all") return true;
   if (view === "open")
-    return !["delivered", "cancelled", "returned"].includes(status);
+    return !["delivered", "cancelled", "returned", "exchanged"].includes(status);
   if (view === "delivery")
     return ["handed_to_rider", "at_warehouse", "out_for_delivery"].includes(
       status,
     );
   if (view === "exceptions")
-    return ["delivery_attempted", "cancelled", "returned"].includes(status);
+    return ["delivery_attempted", "cancelled", "returned", "exchanged"].includes(status);
   if (view === "closed")
     return ["delivered", "cancelled", "returned"].includes(status);
   return status === view;
