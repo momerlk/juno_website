@@ -4,11 +4,16 @@ Seller registration, authentication, onboarding, catalog management, queue proce
 
 Route groups and auth:
 - `POST /api/v2/seller/auth/register` — public
+- `POST /api/v2/seller/auth/register/fast-track` — public
 - `POST /api/v2/seller/auth/login` — public
 - `POST /api/v2/seller/auth/refresh` — public
 - `POST /api/v2/seller/auth/register/draft` — public
 - `GET /api/v2/seller/auth/register/draft` — public
 - All other `/api/v2/seller/*` endpoints require seller auth: `Authorization: Bearer <seller_token>`
+
+## Fast-track registration
+
+`POST /api/v2/seller/auth/register/fast-track` creates a pending account from required `business_name` and `phone_number` fields, and returns the standard seller auth response with `seller.is_fast_track: true`. Phone numbers must be valid Pakistan mobile numbers and are stored in canonical `+92` format. Fast-track sellers can render the portal and edit their profile, but cannot create products, change inventory or pricing, or fulfill/change orders until an admin activates the account. `GET /api/v2/seller/onboarding/status` also returns `is_fast_track`.
 
 ## Settlement statements
 
@@ -20,6 +25,7 @@ Seller settlement reads are under `/api/v2/commerce/seller/statements` and alway
 - `GET /api/v2/commerce/seller/statements/{id}/payment-proof` returns the stored `{ "url": "..." }` only for a paid statement with a proof object. The ownership check happens before the URL is returned.
 
 Statements belonging to another seller return `404`; the portal should show no action rather than retrying with a browser-supplied seller ID.
+
 
 ---
 
@@ -338,12 +344,12 @@ Auth: public
 **Body**
 ```json
 {
-  "email": "ahmed@mybrand.pk",
+  "email": "Wear it out",
   "password": "secret123"
 }
 ```
 
-`email` accepts either the seller email address or business name. Business-name matching is case-insensitive; the request field remains `email` for compatibility.
+The `email` field accepts the registered email address or business name. Business-name matching is case-insensitive.
 
 **Response `200`**: `SellerAuthResponse`
 
@@ -582,6 +588,8 @@ Set `variants[].image_url` to the product-image URL that should be displayed whe
 **Response `201`**: `catalog.Product`
 
 If a variant `sku` is omitted, the API generates one automatically using a deterministic `SKU-...` format to keep seller SKUs consistent.
+
+Every variant also requires a non-empty `id` that is unique within its product. Duplicate IDs are rejected because checkout uses the ID to preserve the customer’s exact selection.
 
 **Common errors**
 - `400 INVALID_BODY` — malformed JSON
@@ -899,7 +907,7 @@ Auth: seller token required
 
 Seller order processing uses `POST /api/v2/commerce/seller/orders/{id}/packing`; legacy fulfillment/status mutation routes are not exposed. Sellers cannot confirm, hand over, cancel, or otherwise advance an order.
 
-Upload one private image per order item and one private image of the complete sealed parcel first:
+Upload one private image of the complete sealed parcel and any optional per-item images first:
 
 `POST /api/v2/files/upload` with a seller bearer token, multipart `file`, and `visibility=private` returns `file.object`. Submit those object names:
 
@@ -910,9 +918,17 @@ Upload one private image per order item and one private image of the complete se
 }
 ```
 
-Every order item needs one image and the parcel image is mandatory. Juno verifies each object is a private image uploaded by the logged-in seller, marks the confirmed order `packed`, records the seller/timestamp, and emails Juno operations. Another seller's object or order is rejected.
+The parcel image is mandatory and per-item images are optional. Juno verifies each supplied object is a private image uploaded by the logged-in seller, marks the confirmed order `packed`, records the seller/timestamp, and emails Juno operations. Another seller's object or order is rejected.
 
 See [Commerce Module Packing Docs](../commerce/docs.md#seller-packing-evidence) for the response and errors.
+
+### Delivery booking and airway bill
+
+After Juno books DEX, the owning seller can read the courier updates with `GET /api/v2/commerce/seller/orders/{id}/booking`. It returns the booking status, tracking number, latest DEX status/check time, and tracking history.
+
+`GET /api/v2/commerce/seller/orders/{id}/airway-bill` returns `{ "url": "..." }` for the airway bill uploaded by Juno staff. Both routes reject another seller's order and return `404` until Juno has created the booking or uploaded the label. For an unauthenticated public download, use `GET /api/v2/commerce/orders/{id}/airway-bill`.
+
+To re-open private packing evidence, use `GET /api/v2/commerce/seller/orders/{id}/packing-photo?object={file.object}`. The order's `packing_evidence` contains every `item_photos[].url` plus `packed_parcel_photo_url`; render all of them. The endpoint streams each saved parcel or item image inline and only accepts an object recorded on that seller's order.
 
 ---
 

@@ -242,6 +242,10 @@ export namespace AdminCommerce {
         return getPrivateImageUrl(`${BASE_PATH}/${encodeURIComponent(orderId)}/packing-photo?object=${encodeURIComponent(objectName)}`, getToken());
     }
 
+    export async function rejectPackingEvidence(orderId: string, reason?: string): Promise<APIResponse<CommerceChildOrder>> {
+        return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/packing/reject`, 'POST', reason ? { reason } : {}, getToken());
+    }
+
     export async function updateOrderDetails(orderId: string, payload: { payment_method: string; customer: Record<string, any> }): Promise<APIResponse<any>> {
         return request(`${BASE_PATH}/${encodeURIComponent(orderId)}/details`, 'PATCH', payload, getToken());
     }

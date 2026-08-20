@@ -120,20 +120,22 @@ All protected endpoints require `Authorization: Bearer <token>`.
 
 ### Submit packing
 
-`POST /api/v2/commerce/seller/orders/{id}/packing` marks the seller's confirmed order as `packed` while saving its evidence. Every order item needs a photo and the final packed parcel/AWB photo is required.
+`POST /api/v2/commerce/seller/orders/{id}/packing` marks the seller's confirmed order as `packed` while saving its evidence. The final packed parcel/AWB photo is required; per-item photos are optional.
 
 ```json
 {
-  "item_photos": [{"order_item_id": "item-1", "url": "private-object-name"}],
+  "item_photos": [],
   "packed_parcel_photo_url": "private-object-name"
 }
 ```
 
 Success returns the updated order with `packing_evidence`, including `submitted_by` and `submitted_at`. Missing evidence returns `400`; another seller receives `403`; an unknown order returns `404`. Repeating a completed request is safe and does not send another ready email. It appends the normal `packed` tracking milestone and emails Juno operations with the brand CC'd, including only the order number and seller portal link.
 
-**Storage contract:** upload every image with `POST /api/v2/files/upload`, seller bearer token, and `visibility=private`, then submit the returned `file.object` value—not a public or signed URL. The upload endpoint is otherwise public, but the token is required to establish private-object ownership. The service verifies every object is a private image uploaded by the authenticated seller before changing the order. No permanent download URL is returned or stored.
+`POST /api/v2/commerce/admin/orders/{id}/packing/reject` rejects a packed order's evidence. An optional `{"reason":"photo is unclear"}` body is recorded in tracking. The order returns to `confirmed`, `packing_evidence` is cleared, and its private media objects and file records are deleted so the seller can upload again.
 
-Sellers cannot use the generic status endpoint; packing is their only order mutation. Admins may set `packed` only with a non-empty `note` reason. A successful first packing submission sends the existing ready-for-collection email to Juno operations; recipients are application-owned, not deployment environment configuration. **Frontend notes:** upload one file per item plus the parcel/AWB photo, disable the button until all uploads succeed, then refresh the order. **Rollback/fallback:** hide this action; saved optional evidence remains intact.
+**Storage contract:** upload each supplied image with `POST /api/v2/files/upload`, seller bearer token, and `visibility=private`, then submit the returned `file.object` value—not a public or signed URL. The upload endpoint is otherwise public, but the token is required to establish private-object ownership. The service verifies every object is a private image uploaded by the authenticated seller before changing the order. No permanent download URL is returned or stored.
+
+Sellers cannot use the generic status endpoint; packing is their only order mutation. Admins may set `packed` only with a non-empty `note` reason. A successful first packing submission sends the existing ready-for-collection email to Juno operations; recipients are application-owned, not deployment environment configuration. **Frontend notes:** upload the parcel/AWB photo and any optional item photos, disable the button until uploads succeed, then refresh the order. **Rollback/fallback:** hide this action; saved optional evidence remains intact.
 
 Guest routes do not require authentication. They are keyed by `X-Guest-Cart-Id` so the website can persist a fast, anonymous cart for performance marketing traffic.
 

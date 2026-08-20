@@ -118,12 +118,16 @@ const orderStatus = (order: any) =>
 const statusClass = (status: string) => {
   if (["delivered"].includes(status))
     return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+  if (status === "packed")
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+  if (status === "confirmed")
+    return "border-blue-500/30 bg-blue-500/10 text-blue-300";
   if (["cancelled", "returned"].includes(status))
     return "border-red-500/30 bg-red-500/10 text-red-300";
   if (["delivery_attempted"].includes(status))
     return "border-amber-500/30 bg-amber-500/10 text-amber-300";
   if (
-    ["packed", "handed_to_rider", "at_warehouse", "out_for_delivery"].includes(
+    ["handed_to_rider", "at_warehouse", "out_for_delivery"].includes(
       status,
     )
   )

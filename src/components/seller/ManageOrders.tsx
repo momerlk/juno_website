@@ -34,6 +34,10 @@ const statusClass = (status?: string) => {
       return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
     case 'pending':
       return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+    case 'confirmed':
+      return 'border-blue-500/30 bg-blue-500/10 text-blue-300';
+    case 'packed':
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
     case 'cancelled':
     case 'returned':
       return 'border-red-500/30 bg-red-500/10 text-red-300';
@@ -266,12 +270,12 @@ const ManageOrders: React.FC = () => {
   const submitPackingEvidence = async (order: Order, detail: Order, draft: PackingDraft) => {
     if (!seller?.token || !order.id) return;
     const items = detail.order_items || [];
-    if (order.status !== 'confirmed' || !draft.parcelPhoto || items.some((item) => !item.id || !draft.itemPhotos[item.id])) return;
+    if (order.status !== 'confirmed' || !draft.parcelPhoto) return;
     setSubmittingPackingOrderId(order.id);
     setError(null);
     try {
       const response = await api.Seller.submitPackingEvidence(seller.token, order.id, {
-        item_photos: items.map((item) => ({ order_item_id: item.id!, url: draft.itemPhotos[item.id!] })),
+        item_photos: items.flatMap((item) => item.id && draft.itemPhotos[item.id] ? [{ order_item_id: item.id, url: draft.itemPhotos[item.id] }] : []),
         packed_parcel_photo_url: draft.parcelPhoto,
       });
       if (!response.ok || !response.body) throw new Error((response.body as any)?.message || 'Could not mark order packed');
@@ -552,7 +556,7 @@ const ManageOrders: React.FC = () => {
                       parcelPhoto: savedEvidence?.packed_parcel_photo_url || '',
                     };
                     const packingLocked = order.status !== 'confirmed' || Boolean(savedEvidence);
-                    const allPhotosReady = items.length > 0 && items.every((item) => item.id && draft.itemPhotos[item.id]) && Boolean(draft.parcelPhoto);
+                    const allPhotosReady = Boolean(draft.parcelPhoto);
                     rows.push(
                       <tr key={`${order.id}-items`} className="border-b border-white/5 bg-black/20">
                         <td colSpan={9} className="p-3">
@@ -598,7 +602,7 @@ const ManageOrders: React.FC = () => {
                                     </div>
                                   </div>
                                   <label className="mt-3 block border-t border-white/10 pt-3 text-[11px] text-neutral-400">
-                                    Packed item photo
+                                    Packed item photo (optional)
                                     <input
                                       type="file"
                                       accept="image/jpeg,image/png,image/webp"
@@ -607,7 +611,7 @@ const ManageOrders: React.FC = () => {
                                       className="mt-1 block w-full text-xs text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-black disabled:opacity-50"
                                     />
                                     <span className="mt-1 block text-[10px] text-neutral-500">
-                                      {item.id && draft.itemPhotos[item.id] ? 'Saved privately' : uploadingEvidence === `${order.id}:${item.id}` ? 'Uploading…' : item.id ? 'Photo required' : 'Order item ID is missing'}
+                                      {item.id && draft.itemPhotos[item.id] ? 'Saved privately' : uploadingEvidence === `${order.id}:${item.id}` ? 'Uploading…' : item.id ? 'Optional' : 'Order item ID is missing'}
                                     </span>
                                   </label>
                                 </div>

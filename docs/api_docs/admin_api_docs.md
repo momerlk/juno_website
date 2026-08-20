@@ -981,6 +981,11 @@ Returns all child orders across the platform.
 
 Returns the full child order including tracking snapshot and shipping address.
 
+### Reject Packing Evidence
+`POST /api/v2/commerce/admin/orders/{orderID}/packing/reject`
+
+Rejects a `packed` order's evidence, deletes its private packing photos, clears `packing_evidence`, and returns the order to `confirmed` so the seller can upload again. The optional body `{"reason":"photo is unclear"}` is recorded in the tracking timeline. Orders without submitted packing evidence return `400`.
+
 ### Verify Bank-Deposit Payment
 `POST /api/v2/admin/orders/{orderID}/payment/verify`
 

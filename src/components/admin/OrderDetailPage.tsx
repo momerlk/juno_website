@@ -51,7 +51,7 @@ const DEX_ROW_COLUMNS = [
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   confirmed: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  packed: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+  packed: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   handed_to_rider: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   at_warehouse: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
   out_for_delivery: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
@@ -351,7 +351,7 @@ const OrderDetailPage: React.FC = () => {
     let urls: string[] = [];
     const photos = children.flatMap((child) => {
       const evidence = child.packing_evidence;
-      return evidence ? [...evidence.item_photos, { order_item_id: 'parcel', url: evidence.packed_parcel_photo_url }].map((photo) => ({ childId: child.id, ...photo })) : [];
+      return evidence ? [...(evidence.item_photos || []), { order_item_id: 'parcel', url: evidence.packed_parcel_photo_url }].map((photo) => ({ childId: child.id, ...photo })) : [];
     });
     if (!photos.length) {
       setPackingPhotoUrls({});
@@ -403,6 +403,12 @@ const OrderDetailPage: React.FC = () => {
       () => AdminCommerce.updateOrderStatus(selectedChildId, { status, ...(note ? { note } : {}) }),
       'Order status updated.'
     );
+  };
+
+  const rejectPackingEvidence = async (childId: string) => {
+    const reason = window.prompt('Why is this packing evidence being rejected? (optional)');
+    if (reason === null) return;
+    await runUpdate(() => AdminCommerce.rejectPackingEvidence(childId, reason.trim() || undefined), 'Packing evidence rejected. The seller can upload it again.');
   };
 
   const confirmClosedStatus = async () => {
@@ -844,7 +850,7 @@ const OrderDetailPage: React.FC = () => {
                 {children.map((child) => {
                   const evidence = child.packing_evidence;
                   if (!evidence) return null;
-                  const photoByItemId = Object.fromEntries(evidence.item_photos.map((photo) => [photo.order_item_id, photo.url]));
+                  const photoByItemId = Object.fromEntries((evidence.item_photos || []).map((photo) => [photo.order_item_id, photo.url]));
                   return (
                     <div key={child.id} className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0">
                       <p className="mb-3 text-xs font-semibold text-white">{child.order_number || child.id}</p>
@@ -864,7 +870,10 @@ const OrderDetailPage: React.FC = () => {
                           {packingPhotoUrls[`${child.id}:${evidence.packed_parcel_photo_url}`] ? <button type="button" onClick={() => setPreviewPackingPhoto({ src: packingPhotoUrls[`${child.id}:${evidence.packed_parcel_photo_url}`], alt: 'Packed parcel with airway bill' })} className="mt-3 block w-full rounded-md focus:outline-none focus:ring-2 focus:ring-primary"><img src={packingPhotoUrls[`${child.id}:${evidence.packed_parcel_photo_url}`]} alt="Packed parcel with airway bill" className="h-44 w-full rounded-md object-cover transition-transform hover:scale-[1.02]" /></button> : <p className="mt-3 text-xs text-neutral-500">Loading parcel photo…</p>}
                         </div>
                       </div>
-                      {evidence.submitted_at ? <p className="mt-3 text-xs text-neutral-500">Submitted {new Date(evidence.submitted_at).toLocaleString()}</p> : null}
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                        {evidence.submitted_at ? <p className="text-xs text-neutral-500">Submitted {new Date(evidence.submitted_at).toLocaleString()}</p> : <span />}
+                        <Button label="Reject evidence" size="sm" variant="secondary" onClick={() => void rejectPackingEvidence(child.id)} isLoading={isUpdating} />
+                      </div>
                     </div>
                   );
                 })}

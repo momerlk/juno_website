@@ -16,7 +16,7 @@ import type { CatalogProduct, OrderTracking } from '../../api/api.types';
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   confirmed: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  packed: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+  packed: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   handed_to_rider: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   at_warehouse: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
   out_for_delivery: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
@@ -211,12 +211,12 @@ const OrderDetailPage: React.FC = () => {
   const markPacked = async () => {
     if (!seller?.token || !order?.id) return;
     const items = order.order_items || [];
-    if (order.status !== 'confirmed' || !parcelPhoto || items.some((item) => !item.id || !itemPhotos[item.id])) return;
+    if (order.status !== 'confirmed' || !parcelPhoto) return;
     setIsUpdating(true);
     setError(null);
     try {
       const response = await api.Seller.submitPackingEvidence(seller.token, order.id, {
-        item_photos: items.map((item) => ({ order_item_id: item.id!, url: itemPhotos[item.id!] })),
+        item_photos: items.flatMap((item) => item.id && itemPhotos[item.id] ? [{ order_item_id: item.id, url: itemPhotos[item.id] }] : []),
         packed_parcel_photo_url: parcelPhoto,
       });
       if (!response.ok) throw new Error((response.body as any)?.message || 'Could not mark order packed');
@@ -247,7 +247,7 @@ const OrderDetailPage: React.FC = () => {
 
   const shipping = order.shipping_address as any;
   const orderItems = order.order_items || [];
-  const allPackingPhotosReady = orderItems.length > 0 && orderItems.every((item) => item.id && itemPhotos[item.id]) && Boolean(parcelPhoto);
+  const allPackingPhotosReady = Boolean(parcelPhoto);
   const booking = order.delivery_booking;
   const status = String(order.status || 'pending');
   const packingLocked = order.status !== 'confirmed' || Boolean(order.packing_evidence);
@@ -347,7 +347,7 @@ const OrderDetailPage: React.FC = () => {
                   </div>
 
                   <div className="mt-4 border-t border-white/10 pt-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2">Packed Item Photo</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2">Packed Item Photo (optional)</p>
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -356,7 +356,7 @@ const OrderDetailPage: React.FC = () => {
                       className="block w-full text-xs text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-black disabled:opacity-50"
                     />
                     <p className="mt-2 text-xs text-neutral-400">
-                      {item.id && itemPhotos[item.id] ? 'Saved privately' : uploadingEvidence === item.id ? 'Uploading…' : item.id ? 'Photo required' : 'Order item ID is missing'}
+                      {item.id && itemPhotos[item.id] ? 'Saved privately' : uploadingEvidence === item.id ? 'Uploading…' : item.id ? 'Optional' : 'Order item ID is missing'}
                     </p>
                     {item.id && packingPhotoUrls[itemPhotos[item.id]] ? <img src={packingPhotoUrls[itemPhotos[item.id]]} alt={`Packed ${getItemTitle(item, catalogProducts[item.product_id])}`} className="mt-3 h-28 w-28 rounded-lg border border-white/10 object-cover" /> : null}
                   </div>
@@ -411,7 +411,7 @@ const OrderDetailPage: React.FC = () => {
                 {status === 'pending'
                   ? 'Juno operations are reviewing the delivery address. Wait for Confirmed before packing.'
                   : status === 'confirmed'
-                    ? 'Upload one photo per item plus the sealed parcel photo, then mark this order packed.'
+                    ? 'Upload the sealed parcel photo and any optional item photos, then mark this order packed.'
                     : status === 'packed'
                       ? 'Packing evidence received. Juno operations arrange the DEX handover.'
                       : 'This order is with the courier. Juno operations update its status from DEX.'}
@@ -433,7 +433,7 @@ const OrderDetailPage: React.FC = () => {
                 <Package size={16} className="text-primary" /> Packing Evidence
               </h3>
               <p className="text-xs text-neutral-400">
-                Upload one photo per item above, then one photo of the sealed parcel with its airway bill.
+                Upload the sealed parcel with its airway bill. Item photos are optional.
               </p>
 
               <label className="text-xs text-neutral-400">

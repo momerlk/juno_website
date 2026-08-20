@@ -17,7 +17,7 @@ type Step = {
 
 const groups: Record<Group, { label: string; summary: string }> = {
   prepare: { label: '1 · Before you pack', summary: 'Find the confirmed order and print its airway bill.' },
-  pack: { label: '2 · Pack & prove it', summary: 'Photograph every item and the sealed parcel, upload, mark packed.' },
+  pack: { label: '2 · Pack & prove it', summary: 'Photograph the sealed parcel, add any useful item photos, then mark packed.' },
 };
 
 const steps: Step[] = [
@@ -50,7 +50,7 @@ const steps: Step[] = [
   {
     group: 'pack',
     where: 'At your packing table',
-    title: 'Photograph every item',
+    title: 'Add item photos if useful',
     instruction: 'Take a clear photo of each item before it goes into the flyer or box, like the example.',
     image: '/images/seller_steps/packed_product_example_photo.jpg',
     imageKind: 'example',
@@ -59,8 +59,8 @@ const steps: Step[] = [
   {
     group: 'pack',
     where: 'Juno Studio → Orders',
-    title: 'Upload each item photo',
-    instruction: 'Upload each photo under its matching order item. Every item needs its own photo.',
+    title: 'Upload optional item photos',
+    instruction: 'If you took item photos, upload each one under its matching order item.',
     image: '/images/seller_steps/seller_step4.png',
     imageKind: 'screenshot',
   },
@@ -77,7 +77,7 @@ const steps: Step[] = [
     group: 'pack',
     where: 'Juno Studio → Orders',
     title: 'Upload and mark packed',
-    instruction: 'Upload the parcel photo, check every item photo is there, then select Mark packed.',
+    instruction: 'Upload the required parcel photo, add any optional item photos, then select Mark packed.',
     image: '/images/seller_steps/seller_step7.png',
     imageKind: 'screenshot',
     warning: 'Juno reviews this evidence before release. Missing or blurry photos send the order back to you and delay pickup.',
