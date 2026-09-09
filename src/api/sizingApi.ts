@@ -1,5 +1,6 @@
 /** Customer-safe normalized size charts and deterministic fit recommendations. */
-import { request, type APIResponse } from './core';
+import { API_BASE_URL, request, type APIResponse } from './core';
+import { getFunnelJourneyId } from './analyticsApi';
 import type { ProductSizing, SizeRecommendation, SizeRecommendationRequest, SizingQuiz } from './api.types';
 
 const BASE_PATH = '/sizing';
@@ -11,6 +12,17 @@ export const Sizing = {
 
     async getQuestionnaire(productId: string): Promise<APIResponse<SizingQuiz>> {
         return request(`${BASE_PATH}/products/${productId}/quiz`, 'GET', undefined, undefined, true);
+    },
+
+    async recordProgress(productId: string, stepId: string, stepIndex: number): Promise<void> {
+        const journeyId = getFunnelJourneyId();
+        if (!journeyId) return;
+        await fetch(`${API_BASE_URL}${BASE_PATH}/products/${encodeURIComponent(productId)}/progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Juno-Journey-Id': journeyId },
+            body: JSON.stringify({ step_id: stepId, step_index: stepIndex }),
+            keepalive: true,
+        });
     },
 
     async recommend(

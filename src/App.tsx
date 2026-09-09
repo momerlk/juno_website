@@ -45,6 +45,8 @@ const OrderDetailPage = lazyWithRetry(() => import('./components/admin/OrderDeta
 const AdminGuidePage = lazyWithRetry(() => import('./components/admin/AdminGuidePage'));
 const CatalogProductPage = lazyWithRetry(() => import('./components/catalog/CatalogProductPage'));
 const CatalogBrowsePage = lazyWithRetry(() => import('./components/catalog/CatalogBrowsePage'));
+const CatalogChoicePage = lazyWithRetry(() => import('./components/catalog/CatalogChoicePage'));
+const SwipeShopPage = lazyWithRetry(() => import('./components/catalog/SwipeShopPage'));
 const DownloadRedirect = lazyWithRetry(() => import('./components/DownloadRedirect'));
 const CheckoutPage = lazyWithRetry(() => import('./components/checkout/CheckoutPage'));
 const OrderConfirmationPage = lazyWithRetry(() => import('./components/checkout/OrderConfirmationPage'));
@@ -225,7 +227,8 @@ function RoutedApp() {
           <GuestCartProvider>
               <div className="min-h-screen bg-background text-white">
               <ScrollToTop />
-              {!isBackOfficePath && (
+              {/* Swipe shop owns the full viewport, so the strip stays off there. */}
+              {!isBackOfficePath && location.pathname !== '/catalog/swipe' && (
                 <div className="sticky top-0 z-[70] bg-gradient-to-r from-primary to-secondary px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] text-white sm:text-xs">
                   Free shipping on every order
                 </div>
@@ -233,14 +236,16 @@ function RoutedApp() {
               <AppErrorBoundary>
               <Suspense fallback={<AppShellFallback />}>
               <Routes>
-                  <Route path="/" element={<CatalogBrowsePage />} />
+                  <Route path="/" element={<CatalogChoicePage />} />
 
                 <Route path="/download" element={<DownloadRedirect />} />
                 
-                <Route path="/catalog" element={<CatalogBrowsePage />} />
-                <Route path="/catalog/all" element={<Navigate to="/catalog" replace />} />
-                <Route path="/catalog/women" element={<Navigate to="/catalog?genders=women" replace />} />
-                <Route path="/catalog/men" element={<Navigate to="/catalog?genders=men" replace />} />
+                <Route path="/catalog" element={<CatalogChoicePage />} />
+                <Route path="/catalog/legacy" element={<CatalogBrowsePage />} />
+                <Route path="/catalog/swipe" element={<SwipeShopPage />} />
+                <Route path="/catalog/all" element={<Navigate to="/catalog/legacy" replace />} />
+                <Route path="/catalog/women" element={<Navigate to="/catalog/legacy?genders=women" replace />} />
+                <Route path="/catalog/men" element={<Navigate to="/catalog/legacy?genders=men" replace />} />
                 <Route path="/catalog/:productId" element={<CatalogProductRedirect />} />
                 
                 <Route path="/wishlist" element={<WishlistPage />} />

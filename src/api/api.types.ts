@@ -283,11 +283,20 @@ export interface SizingQuestion {
     name?: string;
     label?: string;
     question?: string;
-    type?: 'select' | 'number' | string;
+    type?: 'select' | 'visual_single_select' | 'number' | string;
     required?: boolean;
     optional?: boolean;
     unit?: string;
-    options?: Array<string | { label?: string; value?: string }>;
+    options?: Array<string | {
+        label?: string;
+        value?: string;
+        measurement_band?: {
+            measurement: string;
+            min: number;
+            max: number;
+            unit: 'inches';
+        };
+    }>;
     illustrations?: Record<string, { light_url: string; dark_url: string }>;
     [key: string]: unknown;
 }

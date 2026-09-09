@@ -116,7 +116,7 @@ const IllustratedOptions: React.FC<{
     const panelAspect = spriteRatio ? spriteRatio / options.length : 1;
 
     return (
-        <div role="radiogroup" className="mt-5 grid gap-2" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+        <div role="radiogroup" className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-6">
             {options.map((option, index) => {
                 const selected = value === option.value;
                 return (
@@ -303,6 +303,7 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
             setError('Choose an option to continue.');
             return;
         }
+        void Sizing.recordProgress(productId, currentQuestion.id, quizStep).catch(() => undefined);
         if (isLastStep) void recommend();
         else setQuizStep((step) => step + 1);
     };
@@ -315,6 +316,7 @@ const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
         setAnswers(nextAnswers);
         setError(null);
         setRecommendation(null);
+        void Sizing.recordProgress(productId, currentQuestion.id, quizStep).catch(() => undefined);
         if (isLastStep) {
             void recommend(nextAnswers);
             return;
