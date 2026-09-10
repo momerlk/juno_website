@@ -7,8 +7,8 @@
 
 export const api_urls = {
     testing: "http://localhost:8080/api/v2",
-    production: "https://apijuno-yjc3zwhbia-ew.a.run.app/api/v2",
-    recsystem: "https://ai.juno.com.pk/api/v2",
+    production: "https://apijuno-60252382487.europe-west1.run.app/api/v2",
+    recsystem: "https://juno-ai-recsys-60252382487.europe-west1.run.app/api/v2",
 };
 
 // Environment-aware API URL configuration
@@ -22,7 +22,7 @@ if (import.meta.env.VITE_API_URL) {
 console.log(`API Base URL: ${base_url}`);
 
 export const API_BASE_URL = base_url;
-export const RECSYSTEM_BASE_URL = "https://junorecsys-710509977105.asia-south2.run.app";
+export const RECSYSTEM_BASE_URL = "https://juno-ai-recsys-60252382487.europe-west1.run.app";
 
 /**
  * API Response wrapper

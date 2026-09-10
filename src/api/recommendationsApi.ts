@@ -1,6 +1,6 @@
 import type { CatalogProduct } from './api.types';
 
-const BASE_URL = 'https://ai.juno.com.pk/api/v1';
+const BASE_URL = 'https://juno-ai-recsys-60252382487.europe-west1.run.app/api/v1';
 
 export type RecommendationItem = {
     id: string;
