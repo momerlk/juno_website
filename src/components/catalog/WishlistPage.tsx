@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Heart, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { Catalog, type CatalogProduct } from '../../api/api';
 import ProductCard from './ProductCard';
 
 const WishlistPage: React.FC = () => {
+    // Swipe deck links here with state so "back" returns to the deck, not the mode picker.
+    const fromSwipe = (useLocation().state as { from?: string } | null)?.from === 'swipe';
+    const backTo = fromSwipe ? '/catalog/swipe' : '/catalog';
     const [wishlistItems, setWishlistItems] = useState<CatalogProduct[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -60,11 +63,11 @@ const WishlistPage: React.FC = () => {
                     className="mb-8"
                 >
                     <Link
-                        to="/catalog"
+                        to={backTo}
                         className="mb-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-white/60 transition-colors hover:text-white"
                     >
                         <ArrowLeft size={14} />
-                        Back to Catalog
+                        {fromSwipe ? 'Back to swiping' : 'Back to Catalog'}
                     </Link>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -110,11 +113,11 @@ const WishlistPage: React.FC = () => {
                             Save products you love to find them here later
                         </p>
                         <Link
-                            to="/catalog"
+                            to={backTo}
                             className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-6 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white"
                         >
                             <ShoppingBag size={16} />
-                            Explore Catalog
+                            {fromSwipe ? 'Keep swiping' : 'Explore Catalog'}
                         </Link>
                     </motion.div>
                 ) : (

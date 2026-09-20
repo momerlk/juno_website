@@ -8,7 +8,6 @@
 export const api_urls = {
     testing: "http://localhost:8080/api/v2",
     production: "https://apijuno-60252382487.europe-west1.run.app/api/v2",
-    recsystem: "https://juno-ai-recsys-60252382487.europe-west1.run.app/api/v2",
 };
 
 // Environment-aware API URL configuration
@@ -22,7 +21,9 @@ if (import.meta.env.VITE_API_URL) {
 console.log(`API Base URL: ${base_url}`);
 
 export const API_BASE_URL = base_url;
-export const RECSYSTEM_BASE_URL = "https://juno-ai-recsys-60252382487.europe-west1.run.app";
+// Local recsys on dev, deployed service otherwise.
+export const RECSYSTEM_BASE_URL = import.meta.env.VITE_RECSYS_URL
+    || (import.meta.env.DEV ? "http://localhost:8090" : "https://juno-ai-recsys-60252382487.europe-west1.run.app");
 
 /**
  * API Response wrapper

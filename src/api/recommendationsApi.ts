@@ -1,6 +1,7 @@
 import type { CatalogProduct } from './api.types';
+import { RECSYSTEM_BASE_URL } from './core';
 
-const BASE_URL = 'https://juno-ai-recsys-60252382487.europe-west1.run.app/api/v1';
+const BASE_URL = `${RECSYSTEM_BASE_URL}/api/v1`;
 
 export type RecommendationItem = {
     id: string;
@@ -30,6 +31,9 @@ const normalizeProduct = (product: RecsysProduct): CatalogProduct => ({
     images: product.images?.length ? product.images : product.media?.images ?? [],
 });
 
+// Events doc asks for a monotonically increasing per-session sequence.
+let sequence = Date.now() % 1_000_000_000;
+
 const post = async <T,>(path: string, body: unknown): Promise<T> => {
     const response = await fetch(`${BASE_URL}${path}`, {
         method: 'POST',
@@ -41,13 +45,14 @@ const post = async <T,>(path: string, body: unknown): Promise<T> => {
 };
 
 export const Recommendations = {
-    async getShelf(user_id: string, session_id: string, refresh = false): Promise<RecommendationShelf> {
+    async getShelf(user_id: string, session_id: string, refresh = false, filters?: Record<string, unknown>): Promise<RecommendationShelf> {
         const shelf = await post<RecommendationShelf & { products: RecsysProduct[] }>('/recommendations', {
             user_id,
             session_id,
             num_products: 12,
             surface: 'swipe_shop',
             refresh,
+            filters,
         });
         return { ...shelf, products: shelf.products.map(normalizeProduct) };
     },
@@ -67,7 +72,7 @@ export const Recommendations = {
         void post('/events', {
             user_id,
             session_id,
-            events: [{ kind, product_id, request_id, position }],
+            events: [{ kind, product_id, request_id, position, sequence: sequence++ }],
         }).catch(() => undefined);
     },
 };

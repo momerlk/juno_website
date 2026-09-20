@@ -1,24 +1,46 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'framer-motion';
-import { ArrowLeft, ChevronRight, Heart, Info, LayoutGrid, RotateCcw, ShoppingBag, Truck, Undo2, X } from 'lucide-react';
-import type { CatalogProduct } from '../../api/api';
+import { ArrowLeft, Check, ChevronRight, Heart, LayoutGrid, RotateCcw, ShoppingBag, Truck, Undo2, X } from 'lucide-react';
+import type { CatalogProduct, ProductVariant } from '../../api/api';
 import { useGuestCart } from '../../contexts/GuestCartContext';
 import { Recommendations } from '../../api/recommendationsApi';
 import { getShopifySizedImage } from '../../utils/shopifyImage';
 
 // Used by: /catalog/swipe.
 // Purpose: full-screen, gesture-first shopping deck fed by the recommendation
-// engine. Right = save, left = pass, up = add to bag, tap photo edges = cycle
-// images, tap details = product page. Deck refills itself as it runs low.
+// engine. Right = save, left = pass, up = add to bag (size sheet when the
+// product has several sizes), tap photo edges = cycle images, tap details =
+// product page. Deck refills itself as it runs low and survives a round-trip
+// to the product page via sessionStorage.
 
 type SwipeAction = 'left' | 'right' | 'up';
 type DeckCard = { product: CatalogProduct; position: number; requestId?: string };
+type HistoryEntry = { card: DeckCard; action: SwipeAction; variantId?: string };
 
 const SWIPE_DISTANCE = 110;
 const SWIPE_VELOCITY = 650;
 const REFILL_AT = 3;
 const HINT_KEY = 'juno_swipe_hint_seen';
+const DECK_KEY = 'juno_swipe_deck';
+const GENDER_KEY = 'juno_swipe_gender';
+
+type Gender = 'women' | 'men' | 'all';
+const GENDERS: { value: Gender; label: string; hint: string }[] = [
+    { value: 'women', label: 'Women', hint: 'Womenswear only' },
+    { value: 'men', label: 'Men', hint: 'Menswear only' },
+    { value: 'all', label: 'Everything', hint: 'Show me it all' },
+];
+const readGender = (): Gender | null => {
+    try {
+        const value = localStorage.getItem(GENDER_KEY);
+        return GENDERS.some((option) => option.value === value) ? (value as Gender) : null;
+    } catch {
+        return null;
+    }
+};
+const DECK_TTL_MS = 30 * 60 * 1000;
+const ICON_BTN = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.08] transition hover:bg-white/[0.14]';
 
 const currency = (value?: number) => `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(value ?? 0)}`;
 
@@ -39,12 +61,26 @@ const getPrice = (product: CatalogProduct) => {
     return { price, compareAt, discount };
 };
 
+const availableVariants = (product: CatalogProduct) => (product.variants ?? []).filter((variant) => variant.available !== false);
+
 const buzz = (ms = 12) => {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.(ms);
 };
 
 const flyTarget = (action: SwipeAction, x: number, y: number) =>
     action === 'left' ? { x: -window.innerWidth * 1.3, y: y + 40 } : action === 'right' ? { x: window.innerWidth * 1.3, y: y + 40 } : { x, y: -window.innerHeight * 1.2 };
+
+const readSavedDeck = (): { deck: DeckCard[]; history: HistoryEntry[] } | null => {
+    try {
+        const raw = sessionStorage.getItem(DECK_KEY);
+        if (!raw) return null;
+        const saved = JSON.parse(raw) as { at: number; deck: DeckCard[]; history: HistoryEntry[] };
+        if (Date.now() - saved.at > DECK_TTL_MS || !Array.isArray(saved.deck)) return null;
+        return { deck: saved.deck, history: Array.isArray(saved.history) ? saved.history : [] };
+    } catch {
+        return null;
+    }
+};
 
 /* ---------------------------------------------------------------- card */
 
@@ -53,11 +89,12 @@ interface SwipeCardProps {
     depth: number; // 0 = top of deck
     pendingAction: SwipeAction | null; // set by buttons/keys on the top card
     onCommit: (action: SwipeAction) => void;
+    onRequestUp: () => boolean; // false = needs a size first, card snaps back
     onView: () => void;
     onInteract: () => void;
 }
 
-const SwipeCard: React.FC<SwipeCardProps> = ({ card, depth, pendingAction, onCommit, onView, onInteract }) => {
+const SwipeCard: React.FC<SwipeCardProps> = ({ card, depth, pendingAction, onCommit, onRequestUp, onView, onInteract }) => {
     const { product } = card;
     const x = useMotionValue(0);
     const y = useMotionValue(0);
@@ -65,21 +102,30 @@ const SwipeCard: React.FC<SwipeCardProps> = ({ card, depth, pendingAction, onCom
     const saveOpacity = useTransform(x, [16, SWIPE_DISTANCE], [0, 1]);
     const passOpacity = useTransform(x, [-SWIPE_DISTANCE, -16], [1, 0]);
     const bagOpacity = useTransform(y, [-SWIPE_DISTANCE, -16], [1, 0]);
-    const tint = useTransform(x, [-220, 0, 220], ['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)', 'rgba(255,24,24,0.22)']);
+    // Neutral darkening on any drag direction; the stamp icon carries the meaning.
+    const tint = useTransform([x, y], ([dx, dy]) => Math.min(0.55, Math.hypot(dx as number, dy as number) / 400));
     const ref = useRef<HTMLDivElement>(null);
     const committed = useRef(false);
     const [imageIndex, setImageIndex] = useState(0);
-    const images = product.images.length ? product.images : [];
+    const [loaded, setLoaded] = useState(false);
+    const images = product.images ?? [];
     const image = images[imageIndex] ? getShopifySizedImage(images[imageIndex], 900) : undefined;
     const { price, compareAt, discount } = getPrice(product);
     const active = depth === 0;
+    const sizes = availableVariants(product);
+
+    // Warm every shot of the top card so edge-taps never show a blank frame.
+    useEffect(() => {
+        if (!active) return;
+        (product.images ?? []).slice(1).forEach((src) => { new Image().src = getShopifySizedImage(src, 900); });
+    }, [active, product.images]);
 
     const fly = useCallback((action: SwipeAction) => {
         if (committed.current) return;
         committed.current = true;
         buzz();
         const target = flyTarget(action, x.get(), y.get());
-        const options = { duration: 0.32, ease: [0.3, 0, 0.8, 0.4] as [number, number, number, number] };
+        const options = { duration: 0.24, ease: [0.3, 0, 0.8, 0.4] as [number, number, number, number] };
         animate(x, target.x, options);
         animate(y, target.y, options).then(() => onCommit(action));
     }, [x, y, onCommit]);
@@ -101,31 +147,39 @@ const SwipeCard: React.FC<SwipeCardProps> = ({ card, depth, pendingAction, onCom
                 const { offset, velocity } = info;
                 const horizontal = Math.abs(offset.x) > Math.abs(offset.y);
                 if (horizontal && (Math.abs(offset.x) > SWIPE_DISTANCE || Math.abs(velocity.x) > SWIPE_VELOCITY)) fly(offset.x > 0 ? 'right' : 'left');
-                else if (!horizontal && (-offset.y > SWIPE_DISTANCE || -velocity.y > SWIPE_VELOCITY)) fly('up');
+                else if (!horizontal && (-offset.y > SWIPE_DISTANCE || -velocity.y > SWIPE_VELOCITY) && onRequestUp()) fly('up');
             }}
             onTap={(_, info) => {
                 if (!active || images.length < 2 || !ref.current) return;
                 const rect = ref.current.getBoundingClientRect();
                 const left = info.point.x - rect.left < rect.width / 2;
+                setLoaded(false);
                 setImageIndex((index) => (index + (left ? -1 : 1) + images.length) % images.length);
                 onInteract();
             }}
-            style={{ x, y, rotate, zIndex: 10 - depth }}
+            style={{ x, y, rotate, zIndex: 10 - depth, willChange: 'transform' }}
             initial={{ scale: 0.92, y: 24, opacity: 0 }}
             animate={{ scale: 1 - depth * 0.045, y: depth * 16, opacity: depth > 2 ? 0 : 1 }}
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
             transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-            className={`absolute inset-0 touch-none overflow-hidden rounded-[1.75rem] bg-[#151214] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)] ring-1 ring-white/10 ${active ? 'cursor-grab active:cursor-grabbing' : 'pointer-events-none'}`}
+            className={`absolute inset-0 touch-none overflow-hidden rounded-[1.75rem] bg-[#151214] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] ring-1 ring-white/10 ${active ? 'cursor-grab active:cursor-grabbing' : 'pointer-events-none'}`}
         >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-[#1c0f13] to-secondary/20" />
             {image ? (
-                <img key={image} src={image} alt={product.title} draggable={false} fetchPriority={active ? 'high' : 'auto'} className="h-full w-full select-none object-cover" />
-            ) : (
-                <div className="h-full w-full bg-gradient-to-br from-primary/30 via-[#1c0f13] to-secondary/20" />
-            )}
+                <img
+                    key={image}
+                    src={image}
+                    alt={product.title}
+                    draggable={false}
+                    fetchPriority={active ? 'high' : 'auto'}
+                    onLoad={() => setLoaded(true)}
+                    className={`relative h-full w-full select-none object-cover transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                />
+            ) : null}
 
             {/* legibility scrim */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-black/20" />
-            <motion.div style={{ background: tint }} className="pointer-events-none absolute inset-0" />
+            <motion.div style={{ opacity: tint }} className="pointer-events-none absolute inset-0 bg-black" />
 
             {/* image progress */}
             {images.length > 1 ? (
@@ -139,13 +193,14 @@ const SwipeCard: React.FC<SwipeCardProps> = ({ card, depth, pendingAction, onCom
             {/* badges */}
             <div className="pointer-events-none absolute left-4 top-7 flex gap-2">
                 {discount > 0 ? <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-black">-{discount}%</span> : null}
-                {product.badges?.best_seller ? <span className="rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white backdrop-blur">Best seller</span> : null}
+                {product.badges?.best_seller ? <span className="rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white">Best seller</span> : null}
+                {!sizes.length ? <span className="rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white/70">Sold out</span> : null}
             </div>
 
-            {/* swipe stamps */}
-            <motion.span style={{ opacity: saveOpacity }} className="pointer-events-none absolute left-5 top-14 -rotate-12 rounded-xl border-[3px] border-secondary px-3 py-1 text-3xl font-black uppercase tracking-[0.1em] text-secondary">Save</motion.span>
-            <motion.span style={{ opacity: passOpacity }} className="pointer-events-none absolute right-5 top-14 rotate-12 rounded-xl border-[3px] border-white px-3 py-1 text-3xl font-black uppercase tracking-[0.1em] text-white">Pass</motion.span>
-            <motion.span style={{ opacity: bagOpacity }} className="pointer-events-none absolute inset-x-0 top-1/3 mx-auto w-max rounded-xl border-[3px] border-white bg-black/40 px-4 py-1.5 text-3xl font-black uppercase tracking-[0.1em] text-white backdrop-blur">Add to bag</motion.span>
+            {/* swipe stamps: one big bare icon centred on the card, over the neutral tint */}
+            <motion.img src="/images/icons/heart.png" alt="Save" style={{ opacity: saveOpacity }} className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2" />
+            <motion.img src="/images/icons/cross.png" alt="Pass" style={{ opacity: passOpacity }} className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2" />
+            <motion.img src="/images/icons/cart.png" alt="Add to bag" style={{ opacity: bagOpacity }} className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2" />
 
             {/* details */}
             <div className="absolute inset-x-0 bottom-0 p-5 pb-6">
@@ -157,13 +212,16 @@ const SwipeCard: React.FC<SwipeCardProps> = ({ card, depth, pendingAction, onCom
                             <span className="text-xl font-black tracking-tight">{currency(price)}</span>
                             {compareAt ? <span className="text-sm font-semibold text-white/40 line-through">{currency(compareAt)}</span> : null}
                         </div>
-                        {product.shipping_details?.free_shipping ? <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/55"><Truck size={11} /> Free shipping</span> : null}
+                        <div className="mt-1 flex flex-wrap gap-x-3 text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">
+                            {product.shipping_details?.free_shipping ? <span className="inline-flex items-center gap-1"><Truck size={11} /> Free shipping</span> : null}
+                            {sizes.length > 1 ? <span>{sizes.length} sizes</span> : null}
+                        </div>
                     </div>
                     <button
                         type="button"
                         onClick={(event) => { event.stopPropagation(); onView(); }}
                         onPointerDown={(event) => event.stopPropagation()}
-                        className={`inline-flex h-10 items-center gap-1 rounded-full bg-white/[0.12] pl-4 pr-3 text-[11px] font-black uppercase tracking-[0.14em] text-white backdrop-blur transition hover:bg-white/20 ${active ? '' : 'invisible'}`}
+                        className={`inline-flex h-10 items-center gap-1 rounded-full bg-white/[0.12] pl-4 pr-3 text-[11px] font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/20 ${active ? '' : 'invisible'}`}
                     >
                         Details <ChevronRight size={15} />
                     </button>
@@ -173,49 +231,101 @@ const SwipeCard: React.FC<SwipeCardProps> = ({ card, depth, pendingAction, onCom
     );
 };
 
-/* ---------------------------------------------------------------- page */
+/* ---------------------------------------------------------------- size sheet */
 
-const ActionButton: React.FC<{ label: string; onClick: () => void; size?: 'sm' | 'md' | 'lg'; variant?: 'ghost' | 'primary'; disabled?: boolean; children: React.ReactNode }> = ({ label, onClick, size = 'md', variant = 'ghost', disabled, children }) => (
-    <motion.button
-        type="button"
-        aria-label={label}
-        title={label}
-        disabled={disabled}
-        onClick={onClick}
-        whileTap={{ scale: 0.86 }}
-        className={`flex shrink-0 items-center justify-center rounded-full transition disabled:opacity-30 ${size === 'lg' ? 'h-[68px] w-[68px]' : size === 'md' ? 'h-14 w-14' : 'h-11 w-11'} ${
-            variant === 'primary'
-                ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-[0_16px_40px_-8px_rgba(255,40,90,0.7)]'
-                : 'border border-white/[0.12] bg-white/[0.06] text-white backdrop-blur hover:bg-white/[0.12]'
-        }`}
-    >
-        {children}
-    </motion.button>
+const SizeSheet: React.FC<{ product: CatalogProduct; onPick: (variant: ProductVariant) => void; onClose: () => void }> = ({ product, onPick, onClose }) => {
+    const sizes = availableVariants(product);
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-30 flex flex-col justify-end" onClick={onClose}>
+            <div className="absolute inset-0 bg-black/60" />
+            <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+                onClick={(event) => event.stopPropagation()}
+                className="relative rounded-t-[1.75rem] bg-[#151214] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] ring-1 ring-white/10"
+            >
+                <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/50">Pick a size</p>
+                        <h3 className="mt-1 line-clamp-1 text-lg font-black tracking-[-0.03em]">{product.title}</h3>
+                    </div>
+                    <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.08]"><X size={16} /></button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {sizes.map((variant) => (
+                        <button
+                            key={variant.id}
+                            type="button"
+                            onClick={() => onPick(variant)}
+                            className="min-w-[3.25rem] rounded-full border border-white/20 px-4 py-2.5 text-xs font-black uppercase tracking-[0.08em] transition hover:border-white hover:bg-white hover:text-black"
+                        >
+                            {variant.title}
+                        </button>
+                    ))}
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+/* ---------------------------------------------------------------- gender quiz */
+
+const GenderQuiz: React.FC<{ current: Gender | null; onPick: (gender: Gender) => void }> = ({ current, onPick }) => (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-[1.75rem] bg-[#151214] p-6 text-center ring-1 ring-white/10">
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Juno AI</p>
+        <h2 className="mt-3 text-3xl font-black leading-[0.95] tracking-[-0.05em]">Who are we<br />shopping for?</h2>
+        <p className="mt-2 max-w-xs text-sm text-white/55">One tap. The deck tunes itself from here.</p>
+        <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
+            {GENDERS.map((option) => (
+                <motion.button
+                    key={option.value}
+                    type="button"
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => onPick(option.value)}
+                    className={`flex items-center justify-between rounded-full px-6 py-4 text-left transition ${current === option.value ? 'bg-gradient-to-r from-primary to-secondary' : 'border border-white/15 bg-white/[0.05] hover:border-white/40'}`}
+                >
+                    <span className="text-sm font-black uppercase tracking-[0.14em]">{option.label}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/60">{option.hint}</span>
+                </motion.button>
+            ))}
+        </div>
+    </motion.div>
 );
 
+/* ---------------------------------------------------------------- page */
+
 const SwipeShopPage: React.FC = () => {
-    const [deck, setDeck] = useState<DeckCard[]>([]);
-    const [history, setHistory] = useState<DeckCard[]>([]);
+    const [restored] = useState(readSavedDeck);
+    const [gender, setGender] = useState<Gender | null>(readGender);
+    const [askGender, setAskGender] = useState(() => !readGender());
+    const [deck, setDeck] = useState<DeckCard[]>(restored?.deck ?? []);
+    const [history, setHistory] = useState<HistoryEntry[]>(restored?.history ?? []);
     const [pendingAction, setPendingAction] = useState<SwipeAction | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [chosenVariant, setChosenVariant] = useState<ProductVariant | null>(null);
+    const [sizing, setSizing] = useState<DeckCard | null>(null);
+    const [toast, setToast] = useState<{ id: number; text: string; to?: string } | null>(null);
+    const [loading, setLoading] = useState(false);
     const [exhausted, setExhausted] = useState(false);
     const [error, setError] = useState('');
     const [showHint, setShowHint] = useState(() => { try { return !localStorage.getItem(HINT_KEY); } catch { return false; } });
     const [identity] = useState(() => ({ userId: `guest-${getIdentity('juno_recsys_user_id')}`, sessionId: getIdentity('juno_recsys_session_id') }));
-    const seen = useRef(new Set<string>());
+    const seen = useRef(new Set<string>([...(restored?.deck ?? []), ...(restored?.history ?? []).map((entry) => entry.card)].map((card) => card.product.id)));
+    const impressed = useRef(new Set<string>());
     const navigate = useNavigate();
-    const { addItem, itemCount, setCartOpen } = useGuestCart();
+    const { addItem, removeItem, itemCount, setCartOpen } = useGuestCart();
     const top = deck[0];
 
     const load = useCallback(async (refresh: boolean) => {
+        if (!gender) return;
         setLoading(true);
         setError('');
         try {
-            const shelf = await Recommendations.getShelf(identity.userId, identity.sessionId, refresh);
+            const shelf = await Recommendations.getShelf(identity.userId, identity.sessionId, refresh, gender === 'all' ? undefined : { gender });
             const fresh = shelf.products.filter((product) => !seen.current.has(product.id));
             fresh.forEach((product) => seen.current.add(product.id));
             const cards = fresh.map((product, position) => ({ product, position, requestId: shelf.request_id }));
-            cards.forEach((card) => Recommendations.sendEvent(identity.userId, identity.sessionId, 'impression', card.product.id, card.requestId, card.position));
             if (!cards.length) setExhausted(true);
             setDeck((current) => [...current, ...cards]);
         } catch {
@@ -223,22 +333,45 @@ const SwipeShopPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [identity]);
-
-    useEffect(() => { void load(false); }, [load]);
+    }, [identity, gender]);
 
     // Refill before the deck runs dry so the next card is never a spinner.
+    // Also the initial load: an empty deck is just a deck that needs refilling.
     useEffect(() => {
-        if (!loading && !error && !exhausted && deck.length <= REFILL_AT) void load(true);
-    }, [deck.length, loading, error, exhausted, load]);
+        if (askGender || !gender || loading || error || exhausted) return;
+        if (deck.length <= REFILL_AT) void load(deck.length > 0);
+    }, [askGender, gender, deck.length, loading, error, exhausted, load]);
+
+    // Survive a round-trip to the product page.
+    useEffect(() => {
+        try { sessionStorage.setItem(DECK_KEY, JSON.stringify({ at: Date.now(), deck, history })); } catch { /* storage unavailable */ }
+    }, [deck, history]);
+
+    const event = useCallback((kind: Parameters<typeof Recommendations.sendEvent>[2], card: DeckCard) =>
+        Recommendations.sendEvent(identity.userId, identity.sessionId, kind, card.product.id, card.requestId, card.position), [identity]);
+
+    // Impression = card actually reached the top, not merely fetched.
+    useEffect(() => {
+        if (!top || impressed.current.has(top.product.id)) return;
+        impressed.current.add(top.product.id);
+        event('impression', top);
+    }, [top, event]);
 
     // Warm the next few hero images.
     useEffect(() => {
         deck.slice(1, 4).forEach((card) => {
-            const src = card.product.images[0];
+            const src = card.product.images?.[0];
             if (src) new Image().src = getShopifySizedImage(src, 900);
         });
     }, [deck]);
+
+    useEffect(() => {
+        if (!toast) return;
+        const timer = window.setTimeout(() => setToast(null), 1800);
+        return () => window.clearTimeout(timer);
+    }, [toast]);
+
+    const notify = (text: string, to?: string) => setToast({ id: Date.now(), text, to });
 
     const dismissHint = useCallback(() => {
         if (!showHint) return;
@@ -246,24 +379,34 @@ const SwipeShopPage: React.FC = () => {
         try { localStorage.setItem(HINT_KEY, '1'); } catch { /* storage unavailable */ }
     }, [showHint]);
 
-    const event = useCallback((kind: Parameters<typeof Recommendations.sendEvent>[2], card: DeckCard) =>
-        Recommendations.sendEvent(identity.userId, identity.sessionId, kind, card.product.id, card.requestId, card.position), [identity]);
+    const pickGender = (next: Gender) => {
+        try { localStorage.setItem(GENDER_KEY, next); } catch { /* storage unavailable */ }
+        setAskGender(false);
+        if (next === gender) return;
+        // New audience, new deck.
+        seen.current.clear();
+        impressed.current.clear();
+        setDeck([]);
+        setHistory([]);
+        setExhausted(false);
+        setError('');
+        setGender(next);
+    };
 
-    const saveCard = (card: DeckCard) => {
-        event('save', card);
+    const setWishlisted = (id: string, on: boolean) => {
         try {
             const saved = JSON.parse(localStorage.getItem('juno_wishlist') || '[]');
-            if (Array.isArray(saved) && !saved.includes(card.product.id)) localStorage.setItem('juno_wishlist', JSON.stringify([...saved, card.product.id]));
+            if (!Array.isArray(saved)) return;
+            const next = on ? (saved.includes(id) ? saved : [...saved, id]) : saved.filter((entry: string) => entry !== id);
+            localStorage.setItem('juno_wishlist', JSON.stringify(next));
         } catch {
             // Saving to the recommendation service still succeeds if browser storage is unavailable.
         }
     };
 
-    const addToBag = (card: DeckCard) => {
+    const addToBag = (card: DeckCard, variant: ProductVariant) => {
         const { product } = card;
-        const variant = product.variants?.find((candidate) => candidate.available);
-        if (!variant) return;
-        addItem(product.id, variant.id, 1, product.pricing.brand_price ?? product.pricing.price, {
+        addItem(product.id, variant.id, 1, variant.brand_price ?? product.pricing.brand_price ?? variant.price ?? product.pricing.price, {
             seller_name: product.seller_name,
             product_title: product.title,
             variant_title: variant.title,
@@ -273,30 +416,32 @@ const SwipeShopPage: React.FC = () => {
             is_available: true,
             free_shipping: !!product.shipping_details?.free_shipping,
             delivery_days: product.shipping_details?.estimated_delivery_days || 7,
-            source: 'swipe',
         });
         event('add_to_cart', card);
-        setCartOpen(true);
+        notify(`Added ${variant.title ? `· ${variant.title}` : 'to bag'}`);
     };
 
     // Called by the card once it has flown off-screen.
     const commit = (action: SwipeAction) => {
         if (!top) return;
         if (action === 'left') event('dislike', top);
-        if (action === 'right') saveCard(top);
-        if (action === 'up') addToBag(top);
-        setHistory((past) => [top, ...past].slice(0, 10));
+        if (action === 'right') { event('save', top); setWishlisted(top.product.id, true); notify('Saved', '/wishlist'); }
+        if (action === 'up' && chosenVariant) addToBag(top, chosenVariant);
+        setHistory((past) => [{ card: top, action, variantId: chosenVariant?.id }, ...past].slice(0, 10));
         setDeck((current) => (current[0] === top ? current.slice(1) : current));
         setPendingAction(null);
+        setChosenVariant(null);
         dismissHint();
     };
 
     const undo = () => {
-        const [card, ...rest] = history;
-        if (!card || pendingAction) return;
+        const [entry, ...rest] = history;
+        if (!entry || pendingAction || askGender) return;
         buzz(8);
+        if (entry.action === 'right') setWishlisted(entry.card.product.id, false);
+        if (entry.action === 'up' && entry.variantId) removeItem(entry.card.product.id, entry.variantId);
         setHistory(rest);
-        setDeck((current) => [card, ...current]);
+        setDeck((current) => [entry.card, ...current]);
     };
 
     const view = () => {
@@ -305,15 +450,33 @@ const SwipeShopPage: React.FC = () => {
         navigate(`/catalog/${top.product.id}`);
     };
 
+    // Returns true when the card may fly up now; opens the size sheet otherwise.
+    const requestUp = (): boolean => {
+        if (!top || pendingAction) return false;
+        const sizes = availableVariants(top.product);
+        if (!sizes.length) { notify('Sold out'); return false; }
+        if (sizes.length === 1) { setChosenVariant(sizes[0]); return true; }
+        setSizing(top);
+        return false;
+    };
+
     const trigger = (action: SwipeAction) => {
-        if (!top || pendingAction) return;
+        if (!top || pendingAction || sizing || askGender) return;
+        if (action === 'up' && !requestUp()) return;
         setPendingAction(action);
+    };
+
+    const pickSize = (variant: ProductVariant) => {
+        setSizing(null);
+        setChosenVariant(variant);
+        setPendingAction('up');
     };
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (e.metaKey || e.ctrlKey || e.altKey) return;
-            if (e.key === 'ArrowLeft') trigger('left');
+            if (e.key === 'Escape') { setSizing(null); if (gender) setAskGender(false); }
+            else if (e.key === 'ArrowLeft') trigger('left');
             else if (e.key === 'ArrowRight') trigger('right');
             else if (e.key === 'ArrowUp') { e.preventDefault(); trigger('up'); }
             else if (e.key === 'Enter') view();
@@ -323,33 +486,27 @@ const SwipeShopPage: React.FC = () => {
         return () => window.removeEventListener('keydown', onKey);
     });
 
-    const ambient = top?.product.images[0] ? getShopifySizedImage(top.product.images[0], 48) : undefined;
-
     return (
         <div className="relative flex h-dvh select-none flex-col overflow-hidden overscroll-none bg-[#070607] text-white">
-            {/* ambient backdrop: tiny blurred copy of the hero, cheap to composite */}
-            <AnimatePresence>
-                {ambient ? <motion.div key={ambient} initial={{ opacity: 0 }} animate={{ opacity: 0.55 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }} style={{ backgroundImage: `url(${ambient})` }} className="pointer-events-none absolute inset-0 scale-125 bg-cover bg-center blur-3xl" /> : null}
-            </AnimatePresence>
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#070607]/70 via-transparent to-[#070607]" />
 
             {/* top bar */}
-            <header className="relative z-20 flex h-14 items-center justify-between px-3 pt-[env(safe-area-inset-top)]">
-                <Link to="/catalog" aria-label="Back" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] backdrop-blur transition hover:bg-white/[0.12]"><ArrowLeft size={18} /></Link>
-                <Link to="/" className="absolute left-1/2 -translate-x-1/2"><img src="/images/juno-logos/icon+text_white.png" alt="Juno" className="h-5 w-auto" /></Link>
-                <div className="flex items-center gap-2">
-                    <Link to="/catalog/legacy" aria-label="Browse catalog" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] backdrop-blur transition hover:bg-white/[0.12]"><LayoutGrid size={17} /></Link>
-                    <button type="button" onClick={() => setCartOpen(true)} aria-label="Bag" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] backdrop-blur transition hover:bg-white/[0.12]">
-                        <ShoppingBag size={17} />
-                        {itemCount > 0 ? <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary px-1 text-[9px] font-black">{itemCount > 9 ? '9+' : itemCount}</span> : null}
-                    </button>
-                </div>
+            <header className="relative z-20 flex h-14 items-center gap-2 px-3 pt-[env(safe-area-inset-top)]">
+                <Link to="/catalog" aria-label="Back" className={ICON_BTN}><ArrowLeft size={17} /></Link>
+                <Link to="/" className="mr-auto flex items-center pl-1"><img src="/images/juno-logos/icon+text_white.png" alt="Juno" className="h-[18px] w-auto" /></Link>
+                <button type="button" onClick={() => setAskGender(true)} aria-label="Change who you shop for" className="hidden h-9 items-center rounded-full border border-white/10 bg-white/[0.08] px-3 text-[10px] font-black uppercase tracking-[0.14em] transition hover:bg-white/[0.14] sm:flex">{GENDERS.find((option) => option.value === gender)?.label ?? 'Who?'}</button>
+                <motion.button type="button" whileTap={{ scale: 0.86 }} onClick={undo} disabled={!history.length} aria-label="Go back one card" title="Go back one card" className={`${ICON_BTN} disabled:opacity-30`}><Undo2 size={16} /></motion.button>
+                <Link to="/wishlist" state={{ from: 'swipe' }} aria-label="Saves" className={ICON_BTN}><Heart size={16} /></Link>
+                <Link to="/catalog/legacy" aria-label="Browse catalog" className={ICON_BTN}><LayoutGrid size={16} /></Link>
+                <button type="button" onClick={() => setCartOpen(true)} aria-label="Bag" className={`${ICON_BTN} relative`}>
+                    <ShoppingBag size={16} />
+                    {itemCount > 0 ? <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary px-1 text-[9px] font-black">{itemCount > 9 ? '9+' : itemCount}</span> : null}
+                </button>
             </header>
 
             {/* deck */}
             <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-3 pb-2 pt-1 sm:px-6">
                 <div className="relative h-full w-full max-w-[430px] max-h-[780px]">
-                    {error ? (
+                    {error && !deck.length ? (
                         <div className="flex h-full flex-col items-center justify-center rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-8 text-center">
                             <p className="text-lg font-bold">{error}</p>
                             <button type="button" onClick={() => void load(false)} className="mt-6 rounded-full bg-gradient-to-r from-primary to-secondary px-6 py-3 text-xs font-black uppercase tracking-[0.16em]">Try again</button>
@@ -363,20 +520,24 @@ const SwipeShopPage: React.FC = () => {
                             <p className="mt-2 max-w-xs text-sm text-white/55">Your saves shape the next round.</p>
                             <div className="mt-7 flex gap-3">
                                 <button type="button" onClick={() => { setExhausted(false); void load(true); }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-5 py-3 text-xs font-black uppercase tracking-[0.16em]"><RotateCcw size={14} /> New round</button>
-                                <Link to="/wishlist" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-3 text-xs font-black uppercase tracking-[0.16em]"><Heart size={14} /> Saves</Link>
+                                <Link to="/wishlist" state={{ from: 'swipe' }} className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-3 text-xs font-black uppercase tracking-[0.16em]"><Heart size={14} /> Saves</Link>
                             </div>
                         </div>
                     ) : null}
 
                     <AnimatePresence initial={false}>
                         {deck.slice(0, 3).map((card, depth) => (
-                            <SwipeCard key={card.product.id} card={card} depth={depth} pendingAction={depth === 0 ? pendingAction : null} onCommit={commit} onView={view} onInteract={dismissHint} />
+                            <SwipeCard key={card.product.id} card={card} depth={depth} pendingAction={depth === 0 ? pendingAction : null} onCommit={commit} onRequestUp={requestUp} onView={view} onInteract={dismissHint} />
                         ))}
                     </AnimatePresence>
 
                     <AnimatePresence>
-                        {showHint && top ? (
-                            <motion.button type="button" onClick={dismissHint} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-8 rounded-[1.75rem] bg-black/70 backdrop-blur-sm">
+                        {askGender ? <GenderQuiz key="quiz" current={gender} onPick={pickGender} /> : null}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                        {showHint && top && !askGender ? (
+                            <motion.button type="button" onClick={dismissHint} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-8 rounded-[1.75rem] bg-black/70">
                                 <div className="grid grid-cols-3 gap-6 text-center text-[10px] font-black uppercase tracking-[0.16em] text-white/80">
                                     <span className="flex flex-col items-center gap-3"><motion.span animate={{ x: [0, -14, 0] }} transition={{ repeat: Infinity, duration: 1.6 }} className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30"><X size={22} /></motion.span>Swipe left<br />pass</span>
                                     <span className="flex flex-col items-center gap-3"><motion.span animate={{ y: [0, -14, 0] }} transition={{ repeat: Infinity, duration: 1.6, delay: 0.3 }} className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30"><ShoppingBag size={22} /></motion.span>Swipe up<br />add to bag</span>
@@ -386,17 +547,25 @@ const SwipeShopPage: React.FC = () => {
                             </motion.button>
                         ) : null}
                     </AnimatePresence>
+
+                    <AnimatePresence>
+                        {sizing ? <SizeSheet key={sizing.product.id} product={sizing.product} onPick={pickSize} onClose={() => setSizing(null)} /> : null}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                        {toast ? (
+                            <motion.div key={toast.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-center">
+                                {toast.to ? (
+                                    <Link to={toast.to} state={{ from: 'swipe' }} className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-black shadow-lg"><Check size={14} /> {toast.text} <ChevronRight size={14} /></Link>
+                                ) : (
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-black shadow-lg"><Check size={14} /> {toast.text}</span>
+                                )}
+                            </motion.div>
+                        ) : null}
+                    </AnimatePresence>
                 </div>
             </main>
 
-            {/* actions */}
-            <footer className="relative z-20 flex items-center justify-center gap-3 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 sm:gap-4">
-                <ActionButton label="Undo" size="sm" onClick={undo} disabled={!history.length}><Undo2 size={18} /></ActionButton>
-                <ActionButton label="Pass" size="lg" onClick={() => trigger('left')} disabled={!top}><X size={30} strokeWidth={2.5} /></ActionButton>
-                <ActionButton label="Add to bag" size="md" onClick={() => trigger('up')} disabled={!top}><ShoppingBag size={22} /></ActionButton>
-                <ActionButton label="Save" size="lg" variant="primary" onClick={() => trigger('right')} disabled={!top}><Heart size={30} strokeWidth={2.5} fill="currentColor" /></ActionButton>
-                <ActionButton label="Details" size="sm" onClick={view} disabled={!top}><Info size={18} /></ActionButton>
-            </footer>
         </div>
     );
 };
