@@ -45,8 +45,6 @@ const OrderDetailPage = lazyWithRetry(() => import('./components/admin/OrderDeta
 const AdminGuidePage = lazyWithRetry(() => import('./components/admin/AdminGuidePage'));
 const CatalogProductPage = lazyWithRetry(() => import('./components/catalog/CatalogProductPage'));
 const CatalogBrowsePage = lazyWithRetry(() => import('./components/catalog/CatalogBrowsePage'));
-const CatalogChoicePage = lazyWithRetry(() => import('./components/catalog/CatalogChoicePage'));
-const SwipeShopPage = lazyWithRetry(() => import('./components/catalog/SwipeShopPage'));
 const DownloadRedirect = lazyWithRetry(() => import('./components/DownloadRedirect'));
 const CheckoutPage = lazyWithRetry(() => import('./components/checkout/CheckoutPage'));
 const OrderConfirmationPage = lazyWithRetry(() => import('./components/checkout/OrderConfirmationPage'));
@@ -236,13 +234,13 @@ function RoutedApp() {
               <AppErrorBoundary>
               <Suspense fallback={<AppShellFallback />}>
               <Routes>
-                  <Route path="/" element={<CatalogChoicePage />} />
+                  <Route path="/" element={<Navigate to="/catalog/legacy" replace />} />
 
                 <Route path="/download" element={<DownloadRedirect />} />
                 
-                <Route path="/catalog" element={<CatalogChoicePage />} />
+                <Route path="/catalog" element={<Navigate to="/catalog/legacy" replace />} />
                 <Route path="/catalog/legacy" element={<CatalogBrowsePage />} />
-                <Route path="/catalog/swipe" element={<SwipeShopPage />} />
+                <Route path="/catalog/swipe" element={<Navigate to="/catalog/legacy" replace />} />
                 <Route path="/catalog/all" element={<Navigate to="/catalog/legacy" replace />} />
                 <Route path="/catalog/women" element={<Navigate to="/catalog/legacy?genders=women" replace />} />
                 <Route path="/catalog/men" element={<Navigate to="/catalog/legacy?genders=men" replace />} />
